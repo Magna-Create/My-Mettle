@@ -16,6 +16,9 @@ interface LibraryDao {
     @Query("SELECT * FROM exercise WHERE archived = 0 ORDER BY name COLLATE NOCASE")
     suspend fun activeExercises(): List<ExerciseEntity>
 
+    @Query("SELECT * FROM exercise WHERE id = :exerciseId LIMIT 1")
+    suspend fun exercise(exerciseId: String): ExerciseEntity?
+
     @Query("SELECT * FROM exercise_memory WHERE exerciseId = :exerciseId LIMIT 1")
     suspend fun memory(exerciseId: String): ExerciseMemoryEntity?
 
