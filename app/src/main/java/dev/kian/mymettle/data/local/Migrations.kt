@@ -85,3 +85,24 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_mode_prescription_routineVersionId_slotId` ON `mode_prescription` (`routineVersionId`, `slotId`)")
     }
 }
+
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `session_review` (
+                `sessionId` TEXT NOT NULL,
+                `exerciseOrder` INTEGER,
+                `organisation` INTEGER,
+                `pacing` INTEGER,
+                `delayImpact` INTEGER,
+                `note` TEXT,
+                `recordedAt` TEXT NOT NULL,
+                `updatedAt` TEXT NOT NULL,
+                PRIMARY KEY(`sessionId`),
+                FOREIGN KEY(`sessionId`) REFERENCES `session`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+    }
+}
