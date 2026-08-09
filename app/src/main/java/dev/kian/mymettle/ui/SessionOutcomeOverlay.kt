@@ -26,20 +26,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.kian.mymettle.workout.CelebrationLevel
 import dev.kian.mymettle.workout.SessionAchievement
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SessionOutcomeOverlay() {
-    val context = LocalContext.current
-    val viewModel: N2WorkoutViewModel = viewModel(
-        factory = remember(context) { N2WorkoutViewModelFactory(context) },
-    )
+fun SessionOutcomeOverlay(viewModel: N2WorkoutViewModel) {
     val state = viewModel.uiState
     val workout = state.workout ?: return
     val achievement = state.achievement ?: return
@@ -73,7 +67,6 @@ fun SessionOutcomeOverlay() {
             }
 
             AchievementCard(achievement)
-
             HorizontalDivider()
 
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -86,30 +79,10 @@ fun SessionOutcomeOverlay() {
                     )
                 }
 
-                RatingRow(
-                    title = "Exercise order",
-                    value = exerciseOrder,
-                    labels = QUALITY_LABELS,
-                    onValueChange = { exerciseOrder = it },
-                )
-                RatingRow(
-                    title = "Organisation",
-                    value = organisation,
-                    labels = QUALITY_LABELS,
-                    onValueChange = { organisation = it },
-                )
-                RatingRow(
-                    title = "Pacing",
-                    value = pacing,
-                    labels = QUALITY_LABELS,
-                    onValueChange = { pacing = it },
-                )
-                RatingRow(
-                    title = "Delay impact",
-                    value = delayImpact,
-                    labels = DELAY_LABELS,
-                    onValueChange = { delayImpact = it },
-                )
+                RatingRow("Exercise order", exerciseOrder, QUALITY_LABELS) { exerciseOrder = it }
+                RatingRow("Organisation", organisation, QUALITY_LABELS) { organisation = it }
+                RatingRow("Pacing", pacing, QUALITY_LABELS) { pacing = it }
+                RatingRow("Delay impact", delayImpact, DELAY_LABELS) { delayImpact = it }
 
                 OutlinedTextField(
                     value = note,
@@ -136,10 +109,7 @@ fun SessionOutcomeOverlay() {
                     Text(if (state.savingReview) "Saving…" else if (review == null) "Save review" else "Update review")
                 }
 
-                TextButton(
-                    onClick = viewModel::leaveCompletedSession,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
+                TextButton(onClick = viewModel::leaveCompletedSession, modifier = Modifier.fillMaxWidth()) {
                     Text("Back to programme")
                 }
             }
