@@ -1,6 +1,9 @@
 package dev.kian.mymettle.ui
 
 import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -31,7 +34,7 @@ class N2WorkoutViewModel(
     private val repository: RoomWorkoutRepository,
     private val importer: LegacyV6Importer,
 ) : ViewModel() {
-    var uiState: N2WorkoutUiState = N2WorkoutUiState()
+    var uiState by mutableStateOf(N2WorkoutUiState())
         private set
 
     init {
