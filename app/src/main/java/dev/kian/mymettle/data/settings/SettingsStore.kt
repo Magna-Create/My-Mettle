@@ -22,13 +22,15 @@ class SettingsStore(context: Context) {
     private val dataStore = context.applicationContext.settingsDataStore
 
     suspend fun importLegacyRestTimer(settings: LegacyRestTimerSettings) {
-        dataStore.edit { preferences ->
-            preferences[Keys.restAutoStart] = settings.autoStart
-            preferences[Keys.restVibrationEnabled] = settings.vibrationEnabled
-            preferences[Keys.restVibrationStrength] = settings.vibrationStrength
-            preferences[Keys.restChimeEnabled] = settings.chimeEnabled
-            preferences[Keys.restBackgroundNotificationEnabled] = settings.backgroundNotificationEnabled
-        }
+        writeRestTimer(
+            RestTimerPreferences(
+                autoStart = settings.autoStart,
+                vibrationEnabled = settings.vibrationEnabled,
+                vibrationStrength = settings.vibrationStrength,
+                chimeEnabled = settings.chimeEnabled,
+                backgroundNotificationEnabled = settings.backgroundNotificationEnabled,
+            ),
+        )
     }
 
     suspend fun restTimerPreferences(): RestTimerPreferences {
@@ -40,6 +42,16 @@ class SettingsStore(context: Context) {
             chimeEnabled = preferences[Keys.restChimeEnabled] ?: false,
             backgroundNotificationEnabled = preferences[Keys.restBackgroundNotificationEnabled] ?: true,
         )
+    }
+
+    suspend fun writeRestTimer(value: RestTimerPreferences) {
+        dataStore.edit { preferences ->
+            preferences[Keys.restAutoStart] = value.autoStart
+            preferences[Keys.restVibrationEnabled] = value.vibrationEnabled
+            preferences[Keys.restVibrationStrength] = value.vibrationStrength
+            preferences[Keys.restChimeEnabled] = value.chimeEnabled
+            preferences[Keys.restBackgroundNotificationEnabled] = value.backgroundNotificationEnabled
+        }
     }
 
     private object Keys {
