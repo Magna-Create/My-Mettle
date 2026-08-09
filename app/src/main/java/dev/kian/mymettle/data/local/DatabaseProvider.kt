@@ -13,7 +13,7 @@ object DatabaseProvider {
             MyMettleDatabase::class.java,
             "my-mettle.db",
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
             .also { instance = it }
     }
