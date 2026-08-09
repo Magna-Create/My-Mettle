@@ -4,7 +4,7 @@ N2 rebuilds the daily workout loop natively before the visual system is customis
 
 ## Material baseline
 
-For this stage the app intentionally stays close to Google's current Material 3 / Material You behaviour, including dynamic system colour on Android 12+. The existing Compose BOM remains the stable dependency baseline. My Mettle-specific styling can change independently later.
+For this stage the app intentionally stays close to Google's current Material 3 / Material You behaviour, including dynamic system colour on Android 12+. My Mettle-specific styling can change independently after the workout/data behaviour is validated on-device.
 
 ## Four-mode policy
 
@@ -21,45 +21,93 @@ There is often no integer prescription between three sets in A and two sets in o
 
 The implementation lives in `workout/WorkoutModes.kt`. Future mode tuning or a user-facing mode editor should alter an equivalent configuration there rather than creating mode-specific branches across workout code.
 
-Completed Legacy sessions are not rewritten to the new semantics. Their stored session/exercise prescription snapshots remain the historical truth.
-
-## First interactive checkpoint
-
-The first N2 checkpoint exercises:
-
-- programme-day selection;
-- A/B/C/D planning and mode-relative exercise/set counts;
-- changing mode during the active interaction prototype while retaining entered exercise state;
-- calculator-style load entry with arithmetic and `×2`;
-- numeric repetition entry;
-- explicit set logging before rest begins, avoiding keyboard/timer races;
-- native rest presentation with `−15`, `+15`, pause/resume, minimise and protected end;
-- exercise completion and reopening;
-- session completion state.
-
-The UI still contains a demo routine fallback so the shell remains inspectable before a real Legacy dataset is installed.
+Completed sessions are not reinterpreted by later policy changes. Their stored session/exercise prescription snapshots remain historical truth.
 
 ## Room-backed workout lifecycle
 
-`RoomWorkoutRepository` now provides the persistence boundary underneath that prototype:
+`RoomWorkoutRepository` is the persistence boundary for the live workout:
 
 1. Read the active immutable routine version and selected programme day from Room.
-2. Reconstruct the imported Legacy A/B/C anchors for each slot.
+2. Reconstruct imported Legacy A/B/C anchors for each slot.
 3. Resolve native A/B/C/D through `WorkoutModePolicy`.
 4. Snapshot the resolved native prescription into a new `SessionExerciseEntity`.
 5. Create prescribed `SetRecordEntity` rows and update `AppStateEntity.activeSessionId` atomically.
-6. Persist set values/completion timestamps immediately.
+6. Persist set values/completion timestamps.
 7. Query previous completed sets by exercise identity rather than assuming the previous calendar week/day.
-8. Allow completed exercises to be reopened in persistence.
-9. Complete a session without falsely marking unperformed exercises as completed; remaining planned movements become `skipped`.
-10. Advance the ψ/φ/π/& training cycle without rewriting historical routine/session snapshots.
+8. Allow completed exercises to be reopened.
+9. Persist mid-session mode changes without deleting performed work.
+10. Complete a session without falsely marking unperformed exercises as completed; remaining target movements become `skipped`.
+11. Advance the ψ/φ/π/& training cycle without rewriting historical routine/session snapshots.
 
-The resolved session snapshot carries mode `A`, `B`, `C` or `D`, even though the imported routine continues to store its three Legacy anchors. This separation is intentional: future mode redesign should not require a database migration or reinterpret completed workouts.
+When a mode changes mid-session, the same immutable routine version is re-resolved. Moving upward can add missing exercises/sets. Moving downward can hide untouched excluded movements, while performed surplus work remains in the session as additional work.
 
-## Remaining N2 work
+## Live Material workout UI
 
-1. Bind the Material 3 workout screen to `RoomWorkoutRepository` when a real dataset is present, retaining the demo only as a fresh-install fallback.
-2. Persist active-session mode changes safely: newly required exercises/sets can be added, while already logged work must never be deleted when moving to an easier mode.
-3. Add mode-relative completion scoring and whole-session review.
-4. Promote the rest timer from in-process prototype state to Android-native background/notification integration.
-5. Add the user-facing path for the one-time Legacy data transfer/manual migration checkpoint.
+The current Train screen is backed directly by Room rather than demo data. It supports:
+
+- ψ / φ / π / & day selection;
+- A / B / C / D planning with exercise/set counts;
+- one-time Lite JSON import into an empty native database;
+- load/repetition logging;
+- calculator load entry such as `6.5 × 2`;
+- duration logging in seconds;
+- distance logging in metres;
+- previous-set context;
+- exercise complete/reopen;
+- persisted mid-session mode switching;
+- session completion.
+
+The workout ViewModel is hoisted above Navigation so Train, reflection and completion overlays share one owner/state instance.
+
+## Native rest timer
+
+The rest timer is intentionally separate from Compose workout state:
+
+- a user-started Android foreground service owns active countdown state;
+- target time is stored using elapsed realtime;
+- the Android notification renders its own countdown chronometer rather than waking Kotlin every second in background;
+- notification controls provide −15, pause/resume, +15 and End;
+- a separate Ready notification is posted on completion;
+- the in-app Material surface can minimise to a lozenge and recover after UI/process recreation.
+
+## Reflection and session outcome
+
+Completing an exercise can open the optional native reflection sheet:
+
+- target-muscle engagement 1–7;
+- form clean/mixed/poor;
+- vibe/enjoyment 1–7;
+- comfort good/fine/uncomfortable/pain;
+- optional note.
+
+Completing the session produces a deterministic achievement score against that session's stored target. A perfect D target and a perfect A target both score 100. Additional work can create a bounded bonus only after the selected target is met; bonus work cannot erase skipped target work.
+
+The optional whole-session review stores exercise order, organisation, pacing, delay impact and a note.
+
+## History
+
+Navigation currently exposes Train and History. History reads completed sessions from Room and shows:
+
+- original day/mode snapshots;
+- achievement score;
+- logged exercise/set detail;
+- per-exercise reflection;
+- whole-session review.
+
+Imported historical A/B/C sessions are shown using their original stored mode code rather than being silently relabelled to the new native semantics.
+
+## Device-test checkpoint
+
+N2 is now intended to be exercised on the target Galaxy device before expanding into N3. The first field test should cover:
+
+1. one-time Lite backup import;
+2. A/B/C/D exercise/set counts across ψ/φ/π;
+3. calculator, reps, duration and distance entry;
+4. background/minimised rest timer and notification controls;
+5. mode switch down and back up mid-session;
+6. exercise reflection and reopen;
+7. partial vs perfect session outcome;
+8. History contents;
+9. Android back behaviour.
+
+After this checkpoint, N3 moves into the Exercise Library, setup/hints progressive disclosure and native setup-photo capture/gallery rather than polishing the temporary Material visual treatment.
