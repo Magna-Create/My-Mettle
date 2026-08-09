@@ -21,6 +21,7 @@ import androidx.navigation.compose.rememberNavController
 private const val TRAIN_ROUTE = "train"
 private const val LIBRARY_ROUTE = "library"
 private const val HISTORY_ROUTE = "history"
+private const val SETTINGS_ROUTE = "settings"
 
 @Composable
 fun MyMettleApp() {
@@ -58,6 +59,12 @@ fun MyMettleApp() {
                     icon = { Text("◷") },
                     label = { Text("History") },
                 )
+                NavigationBarItem(
+                    selected = currentRoute == SETTINGS_ROUTE,
+                    onClick = { navController.navigate(SETTINGS_ROUTE) { launchSingleTop = true } },
+                    icon = { Text("⚙") },
+                    label = { Text("Settings") },
+                )
             }
         },
     ) { innerPadding ->
@@ -70,6 +77,7 @@ fun MyMettleApp() {
                 composable(TRAIN_ROUTE) { TrainScreen(workoutViewModel) }
                 composable(LIBRARY_ROUTE) { ExerciseLibraryScreen() }
                 composable(HISTORY_ROUTE) { HistoryScreen() }
+                composable(SETTINGS_ROUTE) { SettingsScreen() }
             }
             NativeRestTimerOverlay()
             ExerciseReflectionOverlay(workoutViewModel)
