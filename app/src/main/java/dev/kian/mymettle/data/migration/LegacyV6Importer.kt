@@ -3,6 +3,7 @@ package dev.kian.mymettle.data.migration
 import android.content.Context
 import androidx.room.withTransaction
 import dev.kian.mymettle.data.local.MyMettleDatabase
+import dev.kian.mymettle.data.local.entity.ModePrescriptionEntity
 import dev.kian.mymettle.data.settings.SettingsStore
 
 data class LegacyImportReport(
@@ -29,6 +30,10 @@ class LegacyV6Importer(
             )
         }
 
+        // Legacy routine versions intentionally reuse stable logical slot ids. The backup reader
+        // emits slots and their A/B/C prescriptions in the same nested order, so attach the
+        // containing routine-version id before Room writes the immutable history.
+        val versionedPrescriptions = versionModePrescriptions(snapshot)
         val decodedPhotos = photoImporter.import(snapshot.setupPhotos)
         try {
             settingsStore.importLegacyRestTimer(snapshot.restTimerSettings)
@@ -45,7 +50,7 @@ class LegacyV6Importer(
                 dao.upsertSetupMedia(decodedPhotos.media)
                 dao.upsertRoutineVersions(snapshot.routineVersions)
                 dao.upsertRoutineSlots(snapshot.routineSlots)
-                dao.upsertModePrescriptions(snapshot.modePrescriptions)
+                dao.upsertModePrescriptions(versionedPrescriptions)
                 dao.upsertTrainingCycles(snapshot.trainingCycles)
                 dao.upsertCompletedDays(snapshot.completedDays)
                 dao.upsertSessions(snapshot.sessions)
@@ -70,5 +75,27 @@ class LegacyV6Importer(
             setupPhotos = decodedPhotos.media.size,
             muscleAllocations = snapshot.muscleLoads.size,
         )
+    }
+
+    private fun versionModePrescriptions(snapshot: LegacyImportSnapshot): List<ModePrescriptionEntity> {
+        val modesPerSlot = 3
+        val expected = snapshot.routineSlots.size * modesPerSlot
+        if (snapshot.modePrescriptions.size != expected) {
+            throw LegacyImportException(
+                "Lite Legacy routine history is malformed: expected $expected mode prescriptions for ${snapshot.routineSlots.size} slot occurrences, received ${snapshot.modePrescriptions.size}.",
+            )
+        }
+
+        return snapshot.routineSlots.flatMapIndexed { slotIndex, slot ->
+            val start = slotIndex * modesPerSlot
+            snapshot.modePrescriptions.subList(start, start + modesPerSlot).map { prescription ->
+                if (prescription.slotId != slot.id) {
+                    throw LegacyImportException(
+                        "Lite Legacy routine history lost slot/prescription ordering at slot ${slot.id}.",
+                    )
+                }
+                prescription.copy(routineVersionId = slot.routineVersionId)
+            }
+        }
     }
 }

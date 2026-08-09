@@ -35,9 +35,27 @@ The Legacy restore path also accepts older bare-database backups, migrates them 
 
 The Kotlin app will not copy the single-object persistence pattern. It imports the Legacy representation into normalized Room tables and uses DataStore only for lightweight preferences.
 
+### Routine-history identity discovered from a real export
+
+Lite Legacy treats a routine slot id as the stable logical identity of that slot and deliberately reuses it across immutable routine versions. A slot can therefore appear in several routine versions while its position or A/B/C prescription changes.
+
+Native persistence must **not** key routine history by `slotId` alone. A historical slot occurrence is keyed by:
+
+```text
+(routineVersionId, slotId)
+```
+
+A mode prescription is keyed by:
+
+```text
+(routineVersionId, slotId, mode)
+```
+
+This was verified against a real field export before the native workout slice was built. It prevents newer routine versions from overwriting older slot/prescription history during migration.
+
 ## Identity
 
-The old Capacitor Android package is `dev.kian.gymapp` and still contains historical `Gym App` naming. The native application deliberately starts with a clean identity:
+The active Lite Legacy Android application is `dev.kian.mymettle.litelegacy` / `My Mettle Lite`. The native application deliberately starts with a separate clean identity:
 
 - release: `dev.kian.mymettle` / `My Mettle`
 - debug: `dev.kian.mymettle.dev` / `My Mettle Dev`
@@ -91,7 +109,7 @@ Native migration should decode each JPEG data URL once into app-private media st
 
 ### Muscle-load model
 
-Schema v6 stores an optional model on each exercise:
+Schema v6 supports an optional model on each exercise:
 
 ```text
 version: 1
@@ -104,6 +122,8 @@ allocations[]:
 ```
 
 The initial Room schema flattens this into per-muscle rows; importer mapping must repeat the model-level confidence/basis across those rows so no Legacy information is lost. We can normalize it further later if the progression engine benefits from a parent model table.
+
+The importer must also accept exports where this optional model is absent. `ExerciseMemory.targetMuscles` remains a separate descriptive field and must not be silently promoted into a structured muscle-load model during migration.
 
 ## Native rollout
 
@@ -123,7 +143,8 @@ The initial Room schema flattens this into per-muscle rows; importer mapping mus
 - Define the canonical My Mettle interchange archive.
 - Build and test a schema-v6 / backup-envelope-v1 Lite Legacy importer.
 - Decode Legacy setup-photo data URLs into native app-private JPEG files.
-- Import `muscleLoadModel` without losing proportions, roles, confidence or basis.
+- Import `muscleLoadModel` without losing proportions, roles, confidence or basis when present.
+- Preserve stable logical routine-slot identities without collapsing immutable routine-version history.
 - Validate an actual Lite Legacy export by counts, IDs and relationships before cutover.
 
 No native screen becomes the daily-driver source of truth until this layer is reliable.
