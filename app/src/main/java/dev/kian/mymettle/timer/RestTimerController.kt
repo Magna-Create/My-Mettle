@@ -72,6 +72,8 @@ class RestTimerController private constructor(context: Context) {
 
     fun stop() = send(RestTimerService.ACTION_STOP)
 
+    fun testAlert() = send(RestTimerService.ACTION_TEST_ALERT)
+
     fun dismissReady() {
         notifications.cancel(RestTimerService.READY_NOTIFICATION_ID)
         persistence.clear()
