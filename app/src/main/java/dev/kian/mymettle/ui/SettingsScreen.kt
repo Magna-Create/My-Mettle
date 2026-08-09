@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -110,6 +111,14 @@ fun SettingsScreen() {
                                 viewModel.update { it.copy(chimeEnabled = enabled) }
                             },
                         )
+
+                        Button(
+                            onClick = viewModel::testRestAlert,
+                            enabled = !state.saving,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Test rest alert")
+                        }
 
                         if (state.saving) {
                             Text("Saving…", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
