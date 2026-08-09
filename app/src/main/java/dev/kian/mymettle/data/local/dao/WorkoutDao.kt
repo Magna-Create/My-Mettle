@@ -148,6 +148,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM session_exercise WHERE sessionId = :sessionId ORDER BY position")
     suspend fun sessionExercises(sessionId: String): List<SessionExerciseEntity>
 
+    @Query("UPDATE session_exercise SET position = position + 10000 WHERE sessionId = :sessionId")
+    suspend fun offsetSessionExercisePositions(sessionId: String)
+
     @Query("SELECT * FROM set_record WHERE sessionExerciseId = :sessionExerciseId ORDER BY setIndex")
     suspend fun sets(sessionExerciseId: String): List<SetRecordEntity>
 

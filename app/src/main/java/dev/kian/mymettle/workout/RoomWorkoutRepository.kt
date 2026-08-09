@@ -67,7 +67,7 @@ class RoomWorkoutRepository(
 
     suspend fun plan(day: String, mode: TrainingMode): NativeWorkoutPlan {
         val state = dao.appState() ?: throw NativeWorkoutException("No native programme has been imported yet.")
-        return planForState(state, day, mode)
+        return planForRoutine(state.currentRoutineVersionId, day, mode)
     }
 
     suspend fun startSession(day: String, mode: TrainingMode): ActiveWorkout = database.withTransaction {
@@ -83,8 +83,6 @@ class RoomWorkoutRepository(
             throw NativeWorkoutException("The optional day remains locked until ψ, φ and π are complete.")
         }
 
-        // Match Lite's cycle behaviour: starting another core day after a finished core cycle opens
-        // a fresh cycle. The optional & day can instead close the existing completed core cycle.
         if (day in CORE_DAYS && completedCoreDays.containsAll(CORE_DAYS)) {
             dao.upsertTrainingCycles(listOf(cycle.copy(status = "closed", endedAt = now)))
             cycle = TrainingCycleEntity(
@@ -98,7 +96,7 @@ class RoomWorkoutRepository(
             state = state.copy(currentCycleId = cycle.id, updatedAt = now)
         }
 
-        val workoutPlan = planForState(state, day, mode)
+        val workoutPlan = planForRoutine(state.currentRoutineVersionId, day, mode)
         if (workoutPlan.exercises.isEmpty()) {
             throw NativeWorkoutException("$day has no exercises in ${mode.label}.")
         }
@@ -126,50 +124,19 @@ class RoomWorkoutRepository(
         val sets = mutableListOf<SetRecordEntity>()
         workoutPlan.exercises.forEachIndexed { position, planned ->
             val sessionExerciseId = id("session_exercise")
-            sessionExercises += SessionExerciseEntity(
-                id = sessionExerciseId,
+            sessionExercises += planned.toSessionExercise(
+                sessionExerciseId = sessionExerciseId,
                 sessionId = sessionId,
                 position = position,
-                exerciseId = planned.exerciseId,
-                slotId = planned.slotId,
-                exerciseNameSnapshot = planned.name,
-                importanceSnapshot = planned.importance.name.lowercase(),
-                trackingMetricSnapshot = planned.trackingMetric,
-                loadRelationshipSnapshot = planned.loadRelationship,
-                entryBasisSnapshot = planned.entryBasis,
-                bodyweightSnapshotKg = bodyweight,
-                plannedLoad = planned.plannedLoad,
-                prescriptionMode = mode.code,
-                prescriptionIncluded = true,
-                prescribedSets = planned.prescription.sets,
-                repMin = planned.prescription.repMin,
-                repMax = planned.prescription.repMax,
-                restSeconds = planned.prescription.restSeconds,
-                deferToAnd = false,
-                status = "planned",
-                note = null,
-                startedAt = null,
-                completedAt = null,
+                mode = mode,
+                bodyweight = bodyweight,
                 movementReason = "base_routine",
             )
-
-            repeat(planned.prescription.sets) { setIndex ->
-                val startsWithLoad = planned.trackingMetric == "load_reps" && planned.loadRelationship != "bodyweight"
-                sets += SetRecordEntity(
-                    id = id("set"),
-                    sessionExerciseId = sessionExerciseId,
-                    setIndex = setIndex,
-                    load = if (startsWithLoad) planned.plannedLoad else null,
-                    reps = null,
-                    durationSeconds = null,
-                    distanceMetres = null,
-                    unit = planned.defaultUnit,
-                    completedAt = null,
-                    note = null,
-                    warmUp = false,
-                    kind = "prescribed",
-                )
-            }
+            sets += prescribedSets(
+                sessionExerciseId = sessionExerciseId,
+                planned = planned,
+                indices = 0 until planned.prescription.sets,
+            )
         }
 
         dao.upsertSessions(listOf(session))
@@ -199,6 +166,89 @@ class RoomWorkoutRepository(
             )
         }
         return ActiveWorkout(session, exercises)
+    }
+
+    /**
+     * Re-resolve an active session against the same immutable routine version while preserving
+     * everything already performed. Exercises removed by the new mode remain in the session
+     * snapshot with prescriptionIncluded=false; performed surplus sets become additional sets.
+     */
+    suspend fun changeSessionMode(sessionId: String, mode: TrainingMode): ActiveWorkout = database.withTransaction {
+        val session = dao.session(sessionId) ?: throw NativeWorkoutException("Workout not found.")
+        if (session.status != "active") throw NativeWorkoutException("Only an active workout can change mode.")
+        if (session.mode == mode.code) return@withTransaction activeWorkout(sessionId)
+
+        val target = planForRoutine(session.routineVersionId, session.daySymbol, mode)
+        val existing = dao.sessionExercises(sessionId)
+        val existingBySlot = existing.associateBy { it.slotId }
+        val targetSlots = target.exercises.mapTo(mutableSetOf()) { it.slotId }
+        val bodyweight = session.bodyweightSnapshotKg
+
+        // Temporarily move every persisted position out of the unique-key range, then write the
+        // resolved target order back. This avoids transient uniqueness collisions during mode swaps.
+        dao.offsetSessionExercisePositions(sessionId)
+
+        val updatedExercises = mutableListOf<SessionExerciseEntity>()
+        val updatedSets = mutableListOf<SetRecordEntity>()
+
+        target.exercises.forEachIndexed { position, planned ->
+            val current = existingBySlot[planned.slotId]
+            if (current == null) {
+                val sessionExerciseId = id("session_exercise")
+                updatedExercises += planned.toSessionExercise(
+                    sessionExerciseId = sessionExerciseId,
+                    sessionId = sessionId,
+                    position = position,
+                    mode = mode,
+                    bodyweight = bodyweight,
+                    movementReason = "mode_switch_addition",
+                )
+                updatedSets += prescribedSets(
+                    sessionExerciseId = sessionExerciseId,
+                    planned = planned,
+                    indices = 0 until planned.prescription.sets,
+                )
+            } else {
+                updatedExercises += current.copy(
+                    position = position,
+                    plannedLoad = planned.plannedLoad,
+                    importanceSnapshot = planned.importance.name.lowercase(),
+                    prescriptionMode = mode.code,
+                    prescriptionIncluded = true,
+                    prescribedSets = planned.prescription.sets,
+                    repMin = planned.prescription.repMin,
+                    repMax = planned.prescription.repMax,
+                    restSeconds = planned.prescription.restSeconds,
+                    deferToAnd = false,
+                )
+
+                val currentSets = dao.sets(current.id)
+                val currentIndices = currentSets.mapTo(mutableSetOf()) { it.setIndex }
+                val missingIndices = (0 until planned.prescription.sets).filterNot { it in currentIndices }
+                updatedSets += prescribedSets(current.id, planned, missingIndices)
+                updatedSets += currentSets
+                    .filter { it.setIndex >= planned.prescription.sets && it.completedAt != null && it.kind == "prescribed" }
+                    .map { it.copy(kind = "additional") }
+            }
+        }
+
+        // Keep excluded movements as history. Untouched ones disappear from the active UI because
+        // prescriptionIncluded=false; performed ones remain available as already-done work.
+        existing
+            .filterNot { it.slotId in targetSlots }
+            .sortedBy { it.position }
+            .forEachIndexed { excludedIndex, current ->
+                updatedExercises += current.copy(
+                    position = target.exercises.size + excludedIndex,
+                    prescriptionMode = mode.code,
+                    prescriptionIncluded = false,
+                )
+            }
+
+        dao.upsertSessionExercises(updatedExercises)
+        if (updatedSets.isNotEmpty()) dao.upsertSets(updatedSets)
+        dao.upsertSessions(listOf(session.copy(mode = mode.code, editedAt = timestamp())))
+        activeWorkout(sessionId)
     }
 
     suspend fun saveSet(
@@ -246,11 +296,10 @@ class RoomWorkoutRepository(
 
         val now = timestamp()
         val exercises = dao.sessionExercises(sessionId)
-        // Do not turn unperformed movements into completed ones. Native analytics can now distinguish
-        // a genuinely completed exercise from one the user skipped when finishing the session.
         dao.upsertSessionExercises(
             exercises.map { exercise ->
                 if (exercise.status == "completed") exercise
+                else if (!exercise.prescriptionIncluded) exercise.copy(status = "skipped")
                 else exercise.copy(status = "skipped")
             },
         )
@@ -283,15 +332,14 @@ class RoomWorkoutRepository(
         activeWorkout(sessionId)
     }
 
-    private suspend fun planForState(
-        state: AppStateEntity,
+    private suspend fun planForRoutine(
+        routineVersionId: String,
         day: String,
         mode: TrainingMode,
     ): NativeWorkoutPlan {
-        val slots = dao.routineSlots(state.currentRoutineVersionId, day)
+        val slots = dao.routineSlots(routineVersionId, day)
         val exerciseById = dao.exercises(slots.map { it.exerciseId }.distinct()).associateBy { it.id }
-        val prescriptions = dao.modePrescriptions(state.currentRoutineVersionId)
-            .groupBy { it.slotId }
+        val prescriptions = dao.modePrescriptions(routineVersionId).groupBy { it.slotId }
 
         val modeExercises = slots.map { slot ->
             val exercise = exerciseById[slot.exerciseId]
@@ -324,10 +372,66 @@ class RoomWorkoutRepository(
         }
 
         return NativeWorkoutPlan(
-            routineVersionId = state.currentRoutineVersionId,
+            routineVersionId = routineVersionId,
             day = day,
             mode = mode,
             exercises = planned,
+        )
+    }
+
+    private fun PlannedWorkoutExercise.toSessionExercise(
+        sessionExerciseId: String,
+        sessionId: String,
+        position: Int,
+        mode: TrainingMode,
+        bodyweight: Double?,
+        movementReason: String,
+    ): SessionExerciseEntity = SessionExerciseEntity(
+        id = sessionExerciseId,
+        sessionId = sessionId,
+        position = position,
+        exerciseId = exerciseId,
+        slotId = slotId,
+        exerciseNameSnapshot = name,
+        importanceSnapshot = importance.name.lowercase(),
+        trackingMetricSnapshot = trackingMetric,
+        loadRelationshipSnapshot = loadRelationship,
+        entryBasisSnapshot = entryBasis,
+        bodyweightSnapshotKg = bodyweight,
+        plannedLoad = plannedLoad,
+        prescriptionMode = mode.code,
+        prescriptionIncluded = true,
+        prescribedSets = prescription.sets,
+        repMin = prescription.repMin,
+        repMax = prescription.repMax,
+        restSeconds = prescription.restSeconds,
+        deferToAnd = false,
+        status = "planned",
+        note = null,
+        startedAt = null,
+        completedAt = null,
+        movementReason = movementReason,
+    )
+
+    private fun prescribedSets(
+        sessionExerciseId: String,
+        planned: PlannedWorkoutExercise,
+        indices: Iterable<Int>,
+    ): List<SetRecordEntity> = indices.map { setIndex ->
+        val startsWithLoad = planned.trackingMetric == "load_reps" && planned.loadRelationship != "bodyweight"
+        SetRecordEntity(
+            id = id("set"),
+            sessionExerciseId = sessionExerciseId,
+            setIndex = setIndex,
+            load = if (startsWithLoad) planned.plannedLoad else null,
+            reps = null,
+            durationSeconds = null,
+            distanceMetres = null,
+            unit = planned.defaultUnit,
+            completedAt = null,
+            note = null,
+            warmUp = false,
+            kind = "prescribed",
         )
     }
 }
