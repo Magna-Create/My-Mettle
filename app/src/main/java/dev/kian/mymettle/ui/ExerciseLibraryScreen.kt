@@ -1,12 +1,13 @@
 package dev.kian.mymettle.ui
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,19 +22,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -69,9 +67,23 @@ fun ExerciseLibraryScreen() {
         factory = remember(context) { ExerciseLibraryViewModelFactory(context) },
     )
     val state = viewModel.uiState
+    var showCamera by remember { mutableStateOf(false) }
+    var cameraPermissionDenied by remember { mutableStateOf(false) }
+
     val addPhotosLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         state.selected?.exercise?.id?.let { exerciseId ->
             viewModel.addSetupPhotos(exerciseId, uris)
+        }
+    }
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        showCamera = granted
+        cameraPermissionDenied = !granted
+    }
+
+    fun openCamera() {
+        when (context.checkSelfPermission(Manifest.permission.CAMERA)) {
+            PackageManager.PERMISSION_GRANTED -> showCamera = true
+            else -> cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
@@ -133,8 +145,29 @@ fun ExerciseLibraryScreen() {
             item = selected,
             savingMedia = state.savingMedia,
             onDismiss = { viewModel.select(null) },
+            onTakePhoto = ::openCamera,
             onAddPhotos = { addPhotosLauncher.launch(arrayOf("image/*")) },
             onDeletePhoto = viewModel::deleteSetupPhoto,
+        )
+
+        if (showCamera) {
+            SetupCameraOverlay(
+                exerciseName = selected.exercise.name,
+                onCaptured = { captureFile ->
+                    showCamera = false
+                    viewModel.addCapturedSetupPhoto(selected.exercise.id, captureFile)
+                },
+                onDismiss = { showCamera = false },
+            )
+        }
+    }
+
+    if (cameraPermissionDenied) {
+        AlertDialog(
+            onDismissRequest = { cameraPermissionDenied = false },
+            title = { Text("Camera permission needed") },
+            text = { Text("My Mettle only uses the camera when you explicitly open setup-photo capture. You can still add existing photos without granting it.") },
+            confirmButton = { TextButton(onClick = { cameraPermissionDenied = false }) { Text("OK") } },
         )
     }
 
@@ -183,6 +216,7 @@ private fun ExerciseDetailSheet(
     item: LibraryExercise,
     savingMedia: Boolean,
     onDismiss: () -> Unit,
+    onTakePhoto: () -> Unit,
     onAddPhotos: () -> Unit,
     onDeletePhoto: (String) -> Unit,
 ) {
@@ -232,19 +266,22 @@ private fun ExerciseDetailSheet(
                             onDelete = { pendingDelete = it },
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Button(
-                        onClick = onAddPhotos,
-                        enabled = !savingMedia && item.setupMedia.size < 12,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            when {
-                                savingMedia -> "Processing…"
-                                item.setupMedia.size >= 12 -> "12 photo limit reached"
-                                else -> "Add photos from device"
-                            },
-                        )
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = onTakePhoto,
+                            enabled = !savingMedia && item.setupMedia.size < 12,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(if (savingMedia) "Processing…" else "Take photo")
+                        }
+                        OutlinedButton(
+                            onClick = onAddPhotos,
+                            enabled = !savingMedia && item.setupMedia.size < 12,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(if (item.setupMedia.size >= 12) "12 max" else "Add existing")
+                        }
                     }
                 }
 
