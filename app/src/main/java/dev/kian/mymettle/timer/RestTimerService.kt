@@ -64,6 +64,7 @@ class RestTimerService : Service() {
             ACTION_RESUME -> resumeTimer()
             ACTION_STOP -> stopTimer()
             ACTION_DISMISS_READY -> dismissReady()
+            ACTION_TEST_ALERT -> testAlert()
             else -> restoreAfterRestart()
         }
         return START_STICKY
@@ -75,6 +76,17 @@ class RestTimerService : Service() {
         handler.removeCallbacks(finishRunnable)
         serviceScope.cancel()
         super.onDestroy()
+    }
+
+    private fun testAlert() {
+        serviceScope.launch {
+            val preferences = runCatching { SettingsStore(applicationContext).restTimerPreferences() }
+                .getOrDefault(alertPreferences)
+            handler.post {
+                signalRestComplete(preferences)
+                stopSelf()
+            }
+        }
     }
 
     private fun startTimer(exerciseName: String, seconds: Int) {
@@ -382,6 +394,7 @@ class RestTimerService : Service() {
         const val ACTION_RESUME = "dev.kian.mymettle.timer.RESUME"
         const val ACTION_STOP = "dev.kian.mymettle.timer.STOP"
         const val ACTION_DISMISS_READY = "dev.kian.mymettle.timer.DISMISS_READY"
+        const val ACTION_TEST_ALERT = "dev.kian.mymettle.timer.TEST_ALERT"
 
         const val EXTRA_EXERCISE_NAME = "exercise_name"
         const val EXTRA_SECONDS = "seconds"

@@ -19,7 +19,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 
 private const val TRAIN_ROUTE = "train"
+private const val LIBRARY_ROUTE = "library"
 private const val HISTORY_ROUTE = "history"
+private const val SETTINGS_ROUTE = "settings"
 
 @Composable
 fun MyMettleApp() {
@@ -46,14 +48,22 @@ fun MyMettleApp() {
                     label = { Text("Train") },
                 )
                 NavigationBarItem(
+                    selected = currentRoute == LIBRARY_ROUTE,
+                    onClick = { navController.navigate(LIBRARY_ROUTE) { launchSingleTop = true } },
+                    icon = { Text("≡") },
+                    label = { Text("Library") },
+                )
+                NavigationBarItem(
                     selected = currentRoute == HISTORY_ROUTE,
-                    onClick = {
-                        navController.navigate(HISTORY_ROUTE) {
-                            launchSingleTop = true
-                        }
-                    },
+                    onClick = { navController.navigate(HISTORY_ROUTE) { launchSingleTop = true } },
                     icon = { Text("◷") },
                     label = { Text("History") },
+                )
+                NavigationBarItem(
+                    selected = currentRoute == SETTINGS_ROUTE,
+                    onClick = { navController.navigate(SETTINGS_ROUTE) { launchSingleTop = true } },
+                    icon = { Text("⚙") },
+                    label = { Text("Settings") },
                 )
             }
         },
@@ -65,7 +75,9 @@ fun MyMettleApp() {
         ) {
             NavHost(navController = navController, startDestination = TRAIN_ROUTE) {
                 composable(TRAIN_ROUTE) { TrainScreen(workoutViewModel) }
+                composable(LIBRARY_ROUTE) { ExerciseLibraryScreen() }
                 composable(HISTORY_ROUTE) { HistoryScreen() }
+                composable(SETTINGS_ROUTE) { SettingsScreen() }
             }
             NativeRestTimerOverlay()
             ExerciseReflectionOverlay(workoutViewModel)

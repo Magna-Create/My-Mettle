@@ -65,6 +65,7 @@ ksp {
 
 dependencies {
     val composeBom = platform(libs.androidx.compose.bom)
+    val cameraXVersion = "1.6.1"
 
     implementation(composeBom)
     implementation(libs.androidx.compose.ui)
@@ -73,10 +74,16 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.datastore.preferences)
+
+    implementation("androidx.camera:camera-core:$cameraXVersion")
+    implementation("androidx.camera:camera-camera2:$cameraXVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraXVersion")
+    implementation("androidx.camera:camera-view:$cameraXVersion")
 
     ksp(libs.androidx.room.compiler)
 
