@@ -23,6 +23,7 @@ import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.RoutineVersionEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
+import dev.kian.mymettle.data.local.entity.SessionReviewEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.data.local.entity.TrainingCycleEntity
 import dev.kian.mymettle.data.local.entity.UserProfileEntity
@@ -48,12 +49,13 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         SessionExerciseEntity::class,
         SetRecordEntity::class,
         ExerciseReflectionEntity::class,
+        SessionReviewEntity::class,
         ExperimentEntity::class,
         HealthObservationEntity::class,
         HealthIntegrationStateEntity::class,
         AppStateEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class MyMettleDatabase : RoomDatabase() {
