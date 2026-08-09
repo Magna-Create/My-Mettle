@@ -164,6 +164,8 @@ data class ExerciseSetupMediaEntity(
     val mimeType: String,
     val sortOrder: Int,
     val createdAt: String,
+    val width: Int,
+    val height: Int,
 )
 
 @Entity(tableName = "routine_version")

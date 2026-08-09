@@ -100,6 +100,9 @@ interface WorkoutDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertHealthIntegrationState(value: HealthIntegrationStateEntity)
 
+    @Query("SELECT COUNT(*) FROM user_profile")
+    suspend fun profileCount(): Int
+
     @Query("SELECT * FROM app_state WHERE id = 'primary' LIMIT 1")
     fun observeAppState(): Flow<AppStateEntity?>
 
