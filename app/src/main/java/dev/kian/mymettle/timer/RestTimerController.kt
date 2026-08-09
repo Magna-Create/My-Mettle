@@ -51,6 +51,7 @@ class RestTimerController private constructor(context: Context) {
     fun start(exerciseName: String, seconds: Int) {
         send(
             action = RestTimerService.ACTION_START,
+            foregroundStart = true,
             extras = {
                 putExtra(RestTimerService.EXTRA_EXERCISE_NAME, exerciseName)
                 putExtra(RestTimerService.EXTRA_SECONDS, seconds.coerceAtLeast(1))
@@ -81,12 +82,16 @@ class RestTimerController private constructor(context: Context) {
         _state.value = snapshot
     }
 
-    private fun send(action: String, extras: Intent.() -> Unit = {}) {
+    private fun send(
+        action: String,
+        foregroundStart: Boolean = false,
+        extras: Intent.() -> Unit = {},
+    ) {
         val intent = Intent(appContext, RestTimerService::class.java).apply {
             this.action = action
             extras()
         }
-        appContext.startForegroundService(intent)
+        if (foregroundStart) appContext.startForegroundService(intent) else appContext.startService(intent)
     }
 
     companion object {
