@@ -10,5 +10,6 @@ fun MyMettleApp() {
     Box(modifier = Modifier.fillMaxSize()) {
         RoomWorkoutScreen()
         NativeRestTimerOverlay()
+        SessionOutcomeOverlay()
     }
 }
