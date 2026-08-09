@@ -104,6 +104,8 @@ class ExerciseLibraryRepository(
                 )
             }
         }
+        val outputWidth = bitmap.width
+        val outputHeight = bitmap.height
 
         val id = "setup_${UUID.randomUUID()}"
         val directory = File(context.filesDir, "exercise-setup/${safeSegment(exerciseId)}").apply { mkdirs() }
@@ -132,8 +134,8 @@ class ExerciseLibraryRepository(
             mimeType = "image/jpeg",
             sortOrder = sortOrder,
             createdAt = Instant.now().toString(),
-            width = bitmap.width,
-            height = bitmap.height,
+            width = outputWidth,
+            height = outputHeight,
         )
     }
 
