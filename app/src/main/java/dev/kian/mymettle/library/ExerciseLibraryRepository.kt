@@ -55,7 +55,7 @@ class ExerciseLibraryRepository(
                 uris.take(capacity).forEachIndexed { index, uri ->
                     val media = writeSetupPhoto(
                         exerciseId = exercise.id,
-                        uri = uri,
+                        source = ImageDecoder.createSource(context.contentResolver, uri),
                         sortOrder = existing.size + index,
                     )
                     createdFiles += File(context.filesDir, media.relativePath)
@@ -68,6 +68,33 @@ class ExerciseLibraryRepository(
         } catch (error: Throwable) {
             withContext(Dispatchers.IO) { createdFiles.forEach(File::delete) }
             throw error
+        }
+        return exercise(exerciseId)
+    }
+
+    suspend fun addCapturedSetupPhoto(exerciseId: String, captureFile: File): LibraryExercise {
+        val exercise = dao.exercise(exerciseId) ?: throw NativeWorkoutException("Exercise not found.")
+        val existing = dao.setupMedia(exerciseId)
+        if (existing.size >= MAX_SETUP_PHOTOS) {
+            captureFile.delete()
+            throw NativeWorkoutException("This exercise already has $MAX_SETUP_PHOTOS setup photos.")
+        }
+
+        var createdFile: File? = null
+        try {
+            val media = withContext(Dispatchers.IO) {
+                writeSetupPhoto(
+                    exerciseId = exercise.id,
+                    source = ImageDecoder.createSource(captureFile),
+                    sortOrder = existing.size,
+                ).also { createdFile = File(context.filesDir, it.relativePath) }
+            }
+            database.withTransaction { dao.upsertSetupMedia(media) }
+        } catch (error: Throwable) {
+            withContext(Dispatchers.IO) { createdFile?.delete() }
+            throw error
+        } finally {
+            withContext(Dispatchers.IO) { captureFile.delete() }
         }
         return exercise(exerciseId)
     }
@@ -91,10 +118,9 @@ class ExerciseLibraryRepository(
 
     private fun writeSetupPhoto(
         exerciseId: String,
-        uri: Uri,
+        source: ImageDecoder.Source,
         sortOrder: Int,
     ): ExerciseSetupMediaEntity {
-        val source = ImageDecoder.createSource(context.contentResolver, uri)
         val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
             val width = info.size.width.coerceAtLeast(1)
