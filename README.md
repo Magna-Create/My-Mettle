@@ -31,10 +31,12 @@ AGP 8.13.2 is intentionally used for the migration foundation because it has a k
 
 The repository includes a small POSIX `gradlew` bootstrap pinned to Gradle 8.13. It downloads that distribution into the normal Gradle cache on first use and reuses it afterwards; no globally installed Gradle version is required.
 
+The Android build targets JVM 17. In Termux, the bootstrap automatically uses `$PREFIX/lib/jvm/java-17-openjdk` when `openjdk-17` is installed, avoiding Gradle desktop-Linux toolchain discovery on Android.
+
 From the repository root:
 
 ```sh
-pkg install -y curl unzip
+pkg install -y openjdk-17 curl unzip
 ./gradlew :app:assembleDebug
 cp app/build/outputs/apk/debug/app-debug.apk /sdcard/Download/My-Mettle-Dev.apk
 ```

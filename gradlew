@@ -9,6 +9,16 @@ GRADLE_BIN="$DIST_DIR/bin/gradle"
 ZIP_PATH="$CACHE_ROOT/gradle-$GRADLE_VERSION-bin.zip"
 DIST_URL="https://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip"
 
+# Termux installs OpenJDK outside the conventional desktop Linux locations
+# Gradle expects. Prefer the known Termux JDK 17 when it exists so users do not
+# need to export JAVA_HOME manually before every build.
+if [ -n "${PREFIX:-}" ] && [ -x "$PREFIX/lib/jvm/java-17-openjdk/bin/java" ]; then
+    JAVA_HOME="$PREFIX/lib/jvm/java-17-openjdk"
+    export JAVA_HOME
+    PATH="$JAVA_HOME/bin:$PATH"
+    export PATH
+fi
+
 if [ ! -x "$GRADLE_BIN" ]; then
     mkdir -p "$CACHE_ROOT"
     if [ ! -f "$ZIP_PATH" ]; then
