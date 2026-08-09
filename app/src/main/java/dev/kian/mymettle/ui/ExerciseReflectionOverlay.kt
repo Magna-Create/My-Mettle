@@ -18,23 +18,17 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExerciseReflectionOverlay() {
-    val context = LocalContext.current
-    val viewModel: N2WorkoutViewModel = viewModel(
-        factory = remember(context) { N2WorkoutViewModelFactory(context) },
-    )
+fun ExerciseReflectionOverlay(viewModel: N2WorkoutViewModel) {
     val state = viewModel.uiState
     val target = state.reflectionTarget ?: return
     val existing = state.reflection

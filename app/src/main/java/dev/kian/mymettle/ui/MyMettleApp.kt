@@ -9,7 +9,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -20,6 +23,10 @@ private const val HISTORY_ROUTE = "history"
 
 @Composable
 fun MyMettleApp() {
+    val context = LocalContext.current
+    val workoutViewModel: N2WorkoutViewModel = viewModel(
+        factory = remember(context) { N2WorkoutViewModelFactory(context) },
+    )
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: TRAIN_ROUTE
@@ -57,12 +64,12 @@ fun MyMettleApp() {
                 .padding(innerPadding),
         ) {
             NavHost(navController = navController, startDestination = TRAIN_ROUTE) {
-                composable(TRAIN_ROUTE) { RoomWorkoutScreen() }
+                composable(TRAIN_ROUTE) { TrainScreen(workoutViewModel) }
                 composable(HISTORY_ROUTE) { HistoryScreen() }
             }
             NativeRestTimerOverlay()
-            ExerciseReflectionOverlay()
-            SessionOutcomeOverlay()
+            ExerciseReflectionOverlay(workoutViewModel)
+            SessionOutcomeOverlay(workoutViewModel)
         }
     }
 }
