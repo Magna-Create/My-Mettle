@@ -8,9 +8,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import dev.kian.mymettle.data.local.DatabaseProvider
+import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
 import dev.kian.mymettle.data.local.entity.SessionReviewEntity
 import dev.kian.mymettle.data.migration.LegacyImportReport
 import dev.kian.mymettle.data.migration.LegacyV6Importer
+import dev.kian.mymettle.history.HistoryRepository
 import dev.kian.mymettle.timer.RestTimerController
 import dev.kian.mymettle.workout.ActiveWorkout
 import dev.kian.mymettle.workout.ActiveWorkoutExercise
@@ -29,6 +31,9 @@ data class N2WorkoutUiState(
     val selectedMode: TrainingMode = TrainingMode.B,
     val plans: Map<TrainingMode, NativeWorkoutPlan> = emptyMap(),
     val workout: ActiveWorkout? = null,
+    val reflectionTarget: ActiveWorkoutExercise? = null,
+    val reflection: ExerciseReflectionEntity? = null,
+    val savingReflection: Boolean = false,
     val sessionCompleted: Boolean = false,
     val achievement: SessionAchievement? = null,
     val sessionReview: SessionReviewEntity? = null,
@@ -41,6 +46,7 @@ data class N2WorkoutUiState(
 class N2WorkoutViewModel(
     private val repository: RoomWorkoutRepository,
     private val outcomeRepository: SessionOutcomeRepository,
+    private val historyRepository: HistoryRepository,
     private val importer: LegacyV6Importer,
     private val restTimer: RestTimerController,
 ) : ViewModel() {
@@ -73,6 +79,8 @@ class N2WorkoutViewModel(
                         selectedDay = active.session.daySymbol,
                         selectedMode = modeFromCode(active.session.mode),
                         workout = active,
+                        reflectionTarget = null,
+                        reflection = null,
                         sessionCompleted = false,
                         achievement = null,
                         sessionReview = null,
@@ -121,6 +129,8 @@ class N2WorkoutViewModel(
             uiState = uiState.copy(
                 loading = true,
                 error = null,
+                reflectionTarget = null,
+                reflection = null,
                 sessionCompleted = false,
                 achievement = null,
                 sessionReview = null,
@@ -144,6 +154,8 @@ class N2WorkoutViewModel(
         setId: String,
         load: Double?,
         reps: Int?,
+        durationSeconds: Int? = null,
+        distanceMetres: Double? = null,
         logged: Boolean,
         onSaved: (() -> Unit)? = null,
     ) {
@@ -155,6 +167,8 @@ class N2WorkoutViewModel(
                     setId = setId,
                     load = load,
                     reps = reps,
+                    durationSeconds = durationSeconds,
+                    distanceMetres = distanceMetres,
                     logged = logged,
                 )
                 repository.activeWorkout(sessionId)
@@ -183,10 +197,56 @@ class N2WorkoutViewModel(
                     sessionExerciseId = exercise.entity.id,
                     completed = complete,
                 )
-                repository.activeWorkout(workout.session.id)
-            }.onSuccess { refreshed ->
-                uiState = uiState.copy(workout = refreshed, error = null)
+                val refreshed = repository.activeWorkout(workout.session.id)
+                val target = refreshed.exercises.firstOrNull { it.entity.id == exercise.entity.id }
+                val reflection = if (complete && target != null) historyRepository.reflection(target.entity.id) else null
+                Triple(refreshed, target, reflection)
+            }.onSuccess { (refreshed, target, reflection) ->
+                uiState = uiState.copy(
+                    workout = refreshed,
+                    reflectionTarget = if (complete) target else null,
+                    reflection = if (complete) reflection else null,
+                    error = null,
+                )
             }.onFailure(::showError)
+        }
+    }
+
+    fun dismissReflection() {
+        uiState = uiState.copy(reflectionTarget = null, reflection = null, savingReflection = false)
+    }
+
+    fun saveExerciseReflection(
+        targetMuscleEngagement: Int?,
+        execution: String?,
+        enjoyment: Int?,
+        comfort: String?,
+        note: String?,
+    ) {
+        val workout = uiState.workout ?: return
+        val target = uiState.reflectionTarget ?: return
+        viewModelScope.launch {
+            uiState = uiState.copy(savingReflection = true, error = null)
+            runCatching {
+                historyRepository.saveExerciseReflection(
+                    sessionId = workout.session.id,
+                    sessionExerciseId = target.entity.id,
+                    targetMuscleEngagement = targetMuscleEngagement,
+                    execution = execution,
+                    enjoyment = enjoyment,
+                    comfort = comfort,
+                    note = note,
+                )
+            }.onSuccess { reflection ->
+                uiState = uiState.copy(
+                    savingReflection = false,
+                    reflection = reflection,
+                    reflectionTarget = null,
+                )
+            }.onFailure { error ->
+                uiState = uiState.copy(savingReflection = false)
+                showError(error)
+            }
         }
     }
 
@@ -195,7 +255,7 @@ class N2WorkoutViewModel(
         if (workout.session.status != "active") return
         restTimer.stop()
         viewModelScope.launch {
-            uiState = uiState.copy(loading = true, error = null)
+            uiState = uiState.copy(loading = true, error = null, reflectionTarget = null, reflection = null)
             runCatching {
                 val completed = repository.completeSession(workout.session.id)
                 val review = outcomeRepository.review(completed.session.id)
@@ -245,6 +305,8 @@ class N2WorkoutViewModel(
         if (uiState.workout?.session?.status != "completed") return
         uiState = uiState.copy(
             workout = null,
+            reflectionTarget = null,
+            reflection = null,
             sessionCompleted = false,
             achievement = null,
             sessionReview = null,
@@ -289,6 +351,8 @@ class N2WorkoutViewModel(
             selectedMode = selected,
             plans = plans,
             workout = null,
+            reflectionTarget = null,
+            reflection = null,
             sessionCompleted = false,
             achievement = null,
             sessionReview = null,
@@ -300,6 +364,7 @@ class N2WorkoutViewModel(
         uiState = uiState.copy(
             loading = false,
             importing = false,
+            savingReflection = false,
             savingReview = false,
             error = error.message ?: error::class.java.simpleName,
         )
@@ -318,6 +383,7 @@ class N2WorkoutViewModelFactory(context: Context) : ViewModelProvider.Factory {
         return N2WorkoutViewModel(
             repository = RoomWorkoutRepository(database),
             outcomeRepository = SessionOutcomeRepository(database),
+            historyRepository = HistoryRepository(database),
             importer = LegacyV6Importer(appContext, database),
             restTimer = RestTimerController.get(appContext),
         ) as T
