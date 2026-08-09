@@ -7,19 +7,37 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
+import android.os.VibrationAttributes
+import android.os.VibrationEffect
+import android.os.Vibrator
 import dev.kian.mymettle.MainActivity
 import dev.kian.mymettle.R
+import dev.kian.mymettle.data.settings.RestTimerPreferences
+import dev.kian.mymettle.data.settings.SettingsStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlin.math.ceil
 
 class RestTimerService : Service() {
     private val handler = Handler(Looper.getMainLooper())
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var persistence: RestTimerPersistence
     private lateinit var notifications: NotificationManager
+    private lateinit var vibrator: Vibrator
+
+    @Volatile
+    private var alertPreferences = RestTimerPreferences()
 
     private val finishRunnable = Runnable { finishTimer() }
 
@@ -27,7 +45,12 @@ class RestTimerService : Service() {
         super.onCreate()
         persistence = RestTimerPersistence(applicationContext)
         notifications = getSystemService(NotificationManager::class.java)
+        vibrator = getSystemService(Vibrator::class.java)
         createChannels()
+        serviceScope.launch {
+            runCatching { SettingsStore(applicationContext).restTimerPreferences() }
+                .onSuccess { alertPreferences = it }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -50,6 +73,7 @@ class RestTimerService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacks(finishRunnable)
+        serviceScope.cancel()
         super.onDestroy()
     }
 
@@ -160,7 +184,44 @@ class RestTimerService : Service() {
         stopForeground(STOP_FOREGROUND_REMOVE)
         notifications.cancel(ACTIVE_NOTIFICATION_ID)
         notifications.notify(READY_NOTIFICATION_ID, readyNotification(ready))
+        signalRestComplete(alertPreferences)
         stopSelf()
+    }
+
+    private fun signalRestComplete(preferences: RestTimerPreferences) {
+        if (preferences.vibrationEnabled && vibrator.hasVibrator()) {
+            val pattern = when (preferences.vibrationStrength.lowercase()) {
+                "gentle", "light" -> longArrayOf(0L, 100L, 80L, 140L)
+                "medium" -> longArrayOf(0L, 140L, 80L, 180L)
+                else -> longArrayOf(0L, 180L, 80L, 180L, 80L, 260L)
+            }
+            val effect = VibrationEffect.createWaveform(pattern, -1)
+            if (Build.VERSION.SDK_INT >= 33) {
+                vibrator.vibrate(
+                    effect,
+                    VibrationAttributes.Builder()
+                        .setUsage(VibrationAttributes.USAGE_ALARM)
+                        .build(),
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(
+                    effect,
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build(),
+                )
+            }
+        }
+
+        if (preferences.chimeEnabled) {
+            runCatching {
+                val tone = ToneGenerator(AudioManager.STREAM_ALARM, 82)
+                tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420)
+                handler.postDelayed({ tone.release() }, 700L)
+            }
+        }
     }
 
     private fun restoreAfterRestart() {
