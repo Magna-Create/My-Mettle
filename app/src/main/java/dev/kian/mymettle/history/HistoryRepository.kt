@@ -35,6 +35,86 @@ class HistoryRepository(
     suspend fun recent(limit: Int = 100): List<HistorySession> =
         dao.recentCompletedSessions(limit).map { load(it) }
 
+    suspend fun updateSet(
+        sessionId: String,
+        sessionExerciseId: String,
+        setId: String,
+        load: Double?,
+        reps: Int?,
+        durationSeconds: Int?,
+        distanceMetres: Double?,
+    ): HistorySession = database.withTransaction {
+        val session = completedSession(sessionId)
+        val exercise = dao.sessionExercises(sessionId).firstOrNull { it.id == sessionExerciseId }
+            ?: throw NativeWorkoutException("Exercise not found in this session.")
+        val current = dao.sets(exercise.id).firstOrNull { it.id == setId }
+            ?: throw NativeWorkoutException("Set not found in this exercise.")
+        if (current.completedAt == null) {
+            throw NativeWorkoutException("Only logged historical sets can be edited.")
+        }
+        if (reps != null && reps < 0) throw NativeWorkoutException("Reps cannot be negative.")
+        if (durationSeconds != null && durationSeconds < 0) throw NativeWorkoutException("Duration cannot be negative.")
+        if (distanceMetres != null && distanceMetres < 0.0) throw NativeWorkoutException("Distance cannot be negative.")
+
+        dao.upsertSet(
+            current.copy(
+                load = load,
+                reps = reps,
+                durationSeconds = durationSeconds,
+                distanceMetres = distanceMetres,
+            ),
+        )
+        val edited = session.copy(editedAt = Instant.now().toString())
+        dao.upsertSession(edited)
+        load(edited)
+    }
+
+    suspend fun discardSession(sessionId: String) = database.withTransaction {
+        val session = completedSession(sessionId)
+        val now = Instant.now().toString()
+        dao.upsertSession(
+            session.copy(
+                status = "discarded",
+                discardedAt = now,
+                editedAt = now,
+                excludedFromInsights = true,
+            ),
+        )
+    }
+
+    suspend fun saveSessionReview(
+        sessionId: String,
+        exerciseOrder: Int?,
+        organisation: Int?,
+        pacing: Int?,
+        delayImpact: Int?,
+        note: String?,
+    ): HistorySession = database.withTransaction {
+        val session = completedSession(sessionId)
+        listOf(exerciseOrder, organisation, pacing, delayImpact)
+            .filterNotNull()
+            .forEach { value ->
+                if (value !in 1..5) throw NativeWorkoutException("Session ratings must be between 1 and 5.")
+            }
+        val existing = dao.sessionReview(sessionId)
+        val now = Instant.now().toString()
+        dao.upsertSessionReview(
+            SessionReviewEntity(
+                sessionId = sessionId,
+                exerciseOrder = exerciseOrder,
+                organisation = organisation,
+                pacing = pacing,
+                delayImpact = delayImpact,
+                note = note?.trim()?.takeIf { it.isNotEmpty() },
+                recordedAt = existing?.recordedAt ?: now,
+                updatedAt = now,
+            ),
+        )
+        val edited = session.copy(editedAt = now)
+        dao.upsertSession(edited)
+        load(edited)
+    }
+
     suspend fun saveExerciseReflection(
         sessionId: String,
         sessionExerciseId: String,
@@ -74,11 +154,18 @@ class HistoryRepository(
             updatedAt = now,
         )
         dao.upsertReflection(reflection)
+        dao.upsertSession(completedSession(sessionId).copy(editedAt = now))
         reflection
     }
 
     suspend fun reflection(sessionExerciseId: String): ExerciseReflectionEntity? =
         dao.reflection(sessionExerciseId)
+
+    private suspend fun completedSession(sessionId: String): SessionEntity {
+        val session = dao.session(sessionId) ?: throw NativeWorkoutException("Session not found.")
+        if (session.status != "completed") throw NativeWorkoutException("Only completed sessions can be edited here.")
+        return session
+    }
 
     private suspend fun load(session: SessionEntity): HistorySession {
         val exercises = dao.sessionExercises(session.id).map { exercise ->
