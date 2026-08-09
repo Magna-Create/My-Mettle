@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import dev.kian.mymettle.data.settings.RestTimerPreferences
 import dev.kian.mymettle.data.settings.SettingsStore
+import dev.kian.mymettle.timer.RestTimerController
 import kotlinx.coroutines.launch
 
 data class SettingsUiState(
@@ -20,6 +21,7 @@ data class SettingsUiState(
 
 class SettingsViewModel(
     private val store: SettingsStore,
+    private val restTimer: RestTimerController,
 ) : ViewModel() {
     var uiState by mutableStateOf(SettingsUiState())
         private set
@@ -46,6 +48,10 @@ class SettingsViewModel(
         }
     }
 
+    fun testRestAlert() {
+        restTimer.testAlert()
+    }
+
     fun dismissError() {
         uiState = uiState.copy(error = null)
     }
@@ -64,5 +70,8 @@ class SettingsViewModelFactory(context: Context) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        SettingsViewModel(SettingsStore(appContext)) as T
+        SettingsViewModel(
+            store = SettingsStore(appContext),
+            restTimer = RestTimerController.get(appContext),
+        ) as T
 }
