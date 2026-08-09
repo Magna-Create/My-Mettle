@@ -4,24 +4,36 @@
 
 The migration source is `Magna-Create/My-Mettle-Lite-Legacy`.
 
-A frozen reference branch was created at:
+The frozen reference branch is:
 
 `archive/migration-baseline-2026-08-09`
+
+It points at commit `8bfcd6d31211e1d0035b463606e18ea12dca3245` (`Rebase workout usability patches onto Lite app`). This is important: Lite Legacy `main` is older and does **not** contain the current workout-usability/setup-photo/muscle-load work.
 
 The native application must preserve user data and useful behaviour, not the Capacitor implementation itself. Known interaction problems should be corrected as each feature is rebuilt.
 
 ## Legacy persistence baseline
 
-Lite Legacy currently stores the primary application state as one `AppDatabase` object in IndexedDB:
+The frozen Lite Legacy baseline stores the primary application state as one `AppDatabase` object in IndexedDB:
 
 - database: `kian-gym-app`
 - object store: `app-state`
 - key: `primary`
-- application schema version: `4`
+- application schema version: `6`
 
-The legacy backup restore path accepts the same application-state shape and migrates it through the legacy migration functions before validation.
+The current backup format wraps that database in this envelope:
 
-The Kotlin app will not copy this single-object persistence pattern. It will import the legacy representation into a normalized Room database and use DataStore only for lightweight preferences.
+```text
+format: "my-mettle-backup"
+exportVersion: 1
+exportedAt: ISO timestamp
+source: "my-mettle-lite-legacy"
+database: AppDatabase
+```
+
+The Legacy restore path also accepts older bare-database backups, migrates them to the current schema, then validates current routine/cycle/active-session references.
+
+The Kotlin app will not copy the single-object persistence pattern. It imports the Legacy representation into normalized Room tables and uses DataStore only for lightweight preferences.
 
 ## Identity
 
@@ -32,15 +44,15 @@ The old Capacitor Android package is `dev.kian.gymapp` and still contains histor
 
 This allows the native debug app and Lite Legacy to remain installed side-by-side during migration.
 
-## Legacy model families to preserve
-
-The schema-v4 source contains the following persistent model families:
+## Schema-v6 model families to preserve
 
 - user profile
 - app/rest-timer settings
 - body measurements
 - exercises and tracking profiles
 - exercise memory/setup metadata
+- setup photographs
+- per-exercise `muscleLoadModel`
 - versioned routines, days, slots and A/B/C prescriptions
 - training cycles
 - sessions
@@ -63,7 +75,35 @@ Important workout semantics that must survive migration include:
 - exercise and session status values
 - historical snapshots of exercise name, importance, tracking and bodyweight
 
-Setup-photo media and the richer `muscleLoadModel` source-pack object are migration requirements, but their current persistence/import paths need to be pinned separately before the importer is considered complete.
+### Setup photographs
+
+Legacy stores setup photos inside `ExerciseMemory.setupPhotos` as:
+
+- `id`
+- JPEG `dataUrl`
+- `createdAt`
+- `width`
+- `height`
+
+Capture currently scales the longest edge to at most 1600 px, encodes JPEG at quality 0.72, falls back to 0.58 if needed, and rejects data URLs still above 2,500,000 characters. Each exercise currently permits up to 12 setup photos.
+
+Native migration should decode each JPEG data URL once into app-private media storage and keep only its relative file reference plus metadata in Room. The canonical My Mettle backup/archive must include those media files rather than reinflating them into the database.
+
+### Muscle-load model
+
+Schema v6 stores an optional model on each exercise:
+
+```text
+version: 1
+basis: string
+confidence: number
+allocations[]:
+  muscle: string
+  proportion: number
+  role: prime | synergist | stabiliser
+```
+
+The initial Room schema flattens this into per-muscle rows; importer mapping must repeat the model-level confidence/basis across those rows so no Legacy information is lost. We can normalize it further later if the progression engine benefits from a parent model table.
 
 ## Native rollout
 
@@ -71,19 +111,22 @@ Setup-photo media and the richer `muscleLoadModel` source-pack object are migrat
 
 - Native Gradle/Compose project builds.
 - Correct application identity.
-- Lite Legacy baseline frozen.
+- Correct Lite Legacy baseline frozen.
 - Visual language smoke-tested in Compose.
-- Migration contract documented.
+- Normalized Room v1 foundation created.
+- Android CI established.
 
 ### N1 — data foundation
 
-- Define normalized Room entities and relationships.
-- Define stable domain models separately from database entities.
-- Add versioned database migrations from database version 1 onward.
+- Define stable native domain models separately from database entities.
+- Add versioned Room migrations from database version 1 onward.
 - Define the canonical My Mettle interchange archive.
-- Build and test a schema-v4 Lite Legacy importer.
+- Build and test a schema-v6 / backup-envelope-v1 Lite Legacy importer.
+- Decode Legacy setup-photo data URLs into native app-private JPEG files.
+- Import `muscleLoadModel` without losing proportions, roles, confidence or basis.
+- Validate an actual Lite Legacy export by counts, IDs and relationships before cutover.
 
-No native screen should become the daily-driver source of truth until this layer is reliable.
+No native screen becomes the daily-driver source of truth until this layer is reliable.
 
 ### N2 — first workout vertical slice
 
@@ -108,7 +151,7 @@ Implement outstanding interaction changes while rebuilding:
 - Rebuild exercise/routine editing.
 - Replace overlong workout cards with progressive disclosure.
 - Rework setup, hints and notes.
-- Migrate setup photographs and horizontal gallery behaviour.
+- Native setup-photo capture/gallery using the migrated media model.
 - Sticky close/back affordance for detailed setup views.
 - Add embedded external-reference viewing later for supported YouTube/TikTok/Instagram links.
 
