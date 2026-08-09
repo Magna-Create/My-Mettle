@@ -5,7 +5,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
@@ -60,6 +59,7 @@ class RestTimerService : Service() {
         val snapshot = RestTimerSnapshot(
             phase = RestTimerPhase.RUNNING,
             exerciseName = exerciseName,
+            startedElapsedRealtime = now,
             endElapsedRealtime = now + seconds.coerceAtLeast(1) * 1_000L,
             pausedRemainingMillis = 0L,
         )
@@ -273,7 +273,7 @@ class RestTimerService : Service() {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        return Notification.Action.Builder(null, title, pendingIntent).build()
+        return Notification.Action.Builder(0, title, pendingIntent).build()
     }
 
     private fun openAppIntent(): PendingIntent {
