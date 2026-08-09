@@ -6,8 +6,17 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dev.kian.mymettle.data.migration.LegacyRestTimerSettings
+import kotlinx.coroutines.flow.first
 
 private val Context.settingsDataStore by preferencesDataStore(name = "my_mettle_settings")
+
+data class RestTimerPreferences(
+    val autoStart: Boolean = true,
+    val vibrationEnabled: Boolean = true,
+    val vibrationStrength: String = "strong",
+    val chimeEnabled: Boolean = false,
+    val backgroundNotificationEnabled: Boolean = true,
+)
 
 class SettingsStore(context: Context) {
     private val dataStore = context.applicationContext.settingsDataStore
@@ -20,6 +29,17 @@ class SettingsStore(context: Context) {
             preferences[Keys.restChimeEnabled] = settings.chimeEnabled
             preferences[Keys.restBackgroundNotificationEnabled] = settings.backgroundNotificationEnabled
         }
+    }
+
+    suspend fun restTimerPreferences(): RestTimerPreferences {
+        val preferences = dataStore.data.first()
+        return RestTimerPreferences(
+            autoStart = preferences[Keys.restAutoStart] ?: true,
+            vibrationEnabled = preferences[Keys.restVibrationEnabled] ?: true,
+            vibrationStrength = preferences[Keys.restVibrationStrength] ?: "strong",
+            chimeEnabled = preferences[Keys.restChimeEnabled] ?: false,
+            backgroundNotificationEnabled = preferences[Keys.restBackgroundNotificationEnabled] ?: true,
+        )
     }
 
     private object Keys {
