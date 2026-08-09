@@ -53,7 +53,7 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         HealthIntegrationStateEntity::class,
         AppStateEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class MyMettleDatabase : RoomDatabase() {
