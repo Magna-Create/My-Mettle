@@ -18,7 +18,7 @@ The debug build is intentionally installable alongside Lite Legacy during migrat
 ## Current stack
 
 - Kotlin 2.3.21
-- Jetpack Compose
+- Jetpack Compose / Material 3
 - Room
 - DataStore
 - Navigation Compose
@@ -26,6 +26,37 @@ The debug build is intentionally installable alongside Lite Legacy during migrat
 - min SDK 28
 
 AGP 8.13.2 is intentionally used for the migration foundation because it has a known stable path with Kotlin 2.3 and KSP while the Room schema is established. Toolchain modernization can happen independently after the data migration layer is proven.
+
+## Termux build
+
+The repository includes a small POSIX `gradlew` bootstrap pinned to Gradle 8.13. It downloads that distribution into the normal Gradle cache on first use and reuses it afterwards; no globally installed Gradle version is required.
+
+From the repository root:
+
+```sh
+pkg install -y curl unzip
+./gradlew :app:assembleDebug
+cp app/build/outputs/apk/debug/app-debug.apk /sdcard/Download/My-Mettle-Dev.apk
+```
+
+The debug application can be installed alongside My Mettle Lite Legacy. Do not uninstall Lite Legacy during migration.
+
+On first launch, an empty native database presents **Bring over My Mettle Lite**. Choose a Lite JSON backup once; subsequent native records are not overwritten by that import flow.
+
+## Current native workout checkpoint
+
+N2 currently includes:
+
+- Room-backed ψ / φ / π / & programme selection;
+- four runtime modes A / B / C / D through a central policy layer;
+- persisted mid-session mode switching;
+- load calculator and load/repetition/duration/distance set entry;
+- Android-native foreground rest timer and notification controls;
+- exercise completion/reopen and per-exercise reflection;
+- mode-relative session achievement and whole-session review;
+- completed-workout History.
+
+The current visual layer intentionally stays near standard Material 3 / Material You while interaction and data behaviour are validated on-device.
 
 ## Migration rule
 
