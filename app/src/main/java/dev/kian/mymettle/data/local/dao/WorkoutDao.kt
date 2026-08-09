@@ -106,8 +106,41 @@ interface WorkoutDao {
     @Query("SELECT * FROM app_state WHERE id = 'primary' LIMIT 1")
     fun observeAppState(): Flow<AppStateEntity?>
 
+    @Query("SELECT * FROM app_state WHERE id = 'primary' LIMIT 1")
+    suspend fun appState(): AppStateEntity?
+
     @Query("SELECT * FROM exercise WHERE archived = 0 ORDER BY name COLLATE NOCASE")
     fun observeActiveExercises(): Flow<List<ExerciseEntity>>
+
+    @Query("SELECT * FROM exercise WHERE id IN (:exerciseIds)")
+    suspend fun exercises(exerciseIds: List<String>): List<ExerciseEntity>
+
+    @Query(
+        """
+        SELECT * FROM routine_slot
+        WHERE routineVersionId = :routineVersionId AND daySymbol = :daySymbol
+        ORDER BY position
+        """,
+    )
+    suspend fun routineSlots(routineVersionId: String, daySymbol: String): List<RoutineSlotEntity>
+
+    @Query(
+        """
+        SELECT * FROM mode_prescription
+        WHERE routineVersionId = :routineVersionId
+        ORDER BY slotId, mode
+        """,
+    )
+    suspend fun modePrescriptions(routineVersionId: String): List<ModePrescriptionEntity>
+
+    @Query("SELECT * FROM body_measurement WHERE weightKg IS NOT NULL ORDER BY recordedAt DESC LIMIT 1")
+    suspend fun latestBodyMeasurement(): BodyMeasurementEntity?
+
+    @Query("SELECT * FROM training_cycle WHERE id = :cycleId LIMIT 1")
+    suspend fun trainingCycle(cycleId: String): TrainingCycleEntity?
+
+    @Query("SELECT * FROM cycle_completed_day WHERE cycleId = :cycleId")
+    suspend fun completedDays(cycleId: String): List<CycleCompletedDayEntity>
 
     @Query("SELECT * FROM session WHERE id = :sessionId LIMIT 1")
     suspend fun session(sessionId: String): SessionEntity?
