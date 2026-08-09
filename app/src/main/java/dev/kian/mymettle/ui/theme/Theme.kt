@@ -1,28 +1,36 @@
 package dev.kian.mymettle.ui.theme
 
+import android.os.Build
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 
-private val MyMettleLightColors = lightColorScheme(
-    primary = Color(0xFF25231C),
-    onPrimary = Color(0xFFFFFFFF),
-    secondary = Color(0xFFC95E43),
-    onSecondary = Color(0xFFFFFFFF),
-    background = Color(0xFFF4EFE6),
-    onBackground = Color(0xFF25231C),
-    surface = Color(0xFFFAF7F0),
-    onSurface = Color(0xFF25231C),
-    surfaceVariant = Color(0xFFECE5D8),
-    onSurfaceVariant = Color(0xFF676258),
-    outline = Color(0xFFD6D0C5),
-)
-
+/**
+ * N2 intentionally stays close to Google's current Material 3 / Material You treatment.
+ * My Mettle-specific visual language can be layered back in after the native interaction model is proven.
+ */
 @Composable
-fun MyMettleTheme(content: @Composable () -> Unit) {
+fun MyMettleTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    dynamicColor: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    val context = LocalContext.current
+    val colorScheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
+        darkTheme -> darkColorScheme()
+        else -> lightColorScheme()
+    }
+
     MaterialTheme(
-        colorScheme = MyMettleLightColors,
+        colorScheme = colorScheme,
         content = content,
     )
 }
