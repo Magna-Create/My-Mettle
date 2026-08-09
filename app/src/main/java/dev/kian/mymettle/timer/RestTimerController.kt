@@ -1,5 +1,6 @@
 package dev.kian.mymettle.timer
 
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
@@ -37,6 +38,7 @@ data class RestTimerSnapshot(
 class RestTimerController private constructor(context: Context) {
     private val appContext = context.applicationContext
     private val persistence = RestTimerPersistence(appContext)
+    private val notifications = appContext.getSystemService(NotificationManager::class.java)
     private val _state = MutableStateFlow(persistence.read())
 
     val state: StateFlow<RestTimerSnapshot> = _state.asStateFlow()
@@ -69,7 +71,9 @@ class RestTimerController private constructor(context: Context) {
     fun stop() = send(RestTimerService.ACTION_STOP)
 
     fun dismissReady() {
-        send(RestTimerService.ACTION_DISMISS_READY)
+        notifications.cancel(RestTimerService.READY_NOTIFICATION_ID)
+        persistence.clear()
+        _state.value = RestTimerSnapshot()
     }
 
     internal fun publish(snapshot: RestTimerSnapshot) {
