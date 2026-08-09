@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import dev.kian.mymettle.data.local.DatabaseProvider
 import dev.kian.mymettle.library.ExerciseLibraryRepository
 import dev.kian.mymettle.library.LibraryExercise
+import java.io.File
 import kotlinx.coroutines.launch
 
 data class ExerciseLibraryUiState(
@@ -66,6 +67,19 @@ class ExerciseLibraryViewModel(
         viewModelScope.launch {
             uiState = uiState.copy(savingMedia = true, error = null)
             runCatching { repository.addSetupPhotos(exerciseId, uris) }
+                .onSuccess(::replaceSelected)
+                .onFailure(::showError)
+        }
+    }
+
+    fun addCapturedSetupPhoto(exerciseId: String, captureFile: File) {
+        if (uiState.savingMedia) {
+            captureFile.delete()
+            return
+        }
+        viewModelScope.launch {
+            uiState = uiState.copy(savingMedia = true, error = null)
+            runCatching { repository.addCapturedSetupPhoto(exerciseId, captureFile) }
                 .onSuccess(::replaceSelected)
                 .onFailure(::showError)
         }
