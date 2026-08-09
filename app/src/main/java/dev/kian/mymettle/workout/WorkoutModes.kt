@@ -13,7 +13,7 @@ enum class TrainingMode(
     val description: String,
 ) {
     A("A", "Full day", "The complete programmed session."),
-    B("B", "Focused day", "Near-full training with a small set reduction."),
+    B("B", "Focused day", "More than Busy Day, without committing to the full session."),
     C("C", "Busy day", "The old Busy Day prescription: fewer sets, same movement coverage."),
     D("D", "Can't be arsed", "Minimum viable training; lower-priority movements can disappear entirely."),
 }
@@ -62,7 +62,7 @@ data class WorkoutModeDefinition(
  *
  * Current mapping:
  * A = Legacy A
- * B = derived between Legacy A and Legacy B
+ * B = a session-level midpoint between Legacy A and Legacy B
  * C = Legacy B
  * D = Legacy C, then allowed to remove whole exercises
  *
@@ -74,7 +74,7 @@ object WorkoutModePolicy {
 
     val definitions: List<WorkoutModeDefinition> = listOf(
         WorkoutModeDefinition(TrainingMode.A, "Legacy A / full prescription"),
-        WorkoutModeDefinition(TrainingMode.B, "Derived between Legacy A and Legacy B"),
+        WorkoutModeDefinition(TrainingMode.B, "Session-level midpoint between Legacy A and Legacy B"),
         WorkoutModeDefinition(TrainingMode.C, "Legacy B / previous Busy Day"),
         WorkoutModeDefinition(
             mode = TrainingMode.D,
@@ -88,21 +88,27 @@ object WorkoutModePolicy {
         exercises: List<ModeExercise<T>>,
         mode: TrainingMode,
     ): List<PlannedExercise<T>> {
+        val ordered = exercises.sortedBy { it.ordinal }
+        if (mode == TrainingMode.B) return focusedPlan(ordered)
+
         val definition = definitions.first { it.mode == mode }
-        val resolved = exercises
-            .sortedBy { it.ordinal }
-            .mapNotNull { exercise ->
-                val prescription = resolvePrescription(exercise, mode)
-                if (!prescription.included || prescription.sets <= 0) return@mapNotNull null
-                if (exercise.importance !in definition.permittedImportance) return@mapNotNull null
-                PlannedExercise(
-                    id = exercise.id,
-                    ordinal = exercise.ordinal,
-                    importance = exercise.importance,
-                    prescription = prescription,
-                    payload = exercise.payload,
-                )
+        val resolved = ordered.mapNotNull { exercise ->
+            val prescription = when (mode) {
+                TrainingMode.A -> exercise.legacyA
+                TrainingMode.C -> exercise.legacyB
+                TrainingMode.D -> exercise.legacyC
+                TrainingMode.B -> error("Focused mode is resolved at session level.")
             }
+            if (!prescription.included || prescription.sets <= 0) return@mapNotNull null
+            if (exercise.importance !in definition.permittedImportance) return@mapNotNull null
+            PlannedExercise(
+                id = exercise.id,
+                ordinal = exercise.ordinal,
+                importance = exercise.importance,
+                prescription = prescription,
+                payload = exercise.payload,
+            )
+        }
 
         val cap = definition.wholeExerciseCap ?: return resolved
         if (resolved.size <= cap) return resolved
@@ -115,30 +121,63 @@ object WorkoutModePolicy {
         return resolved.filter { it.id in chosenIds }
     }
 
-    private fun <T> resolvePrescription(
-        exercise: ModeExercise<T>,
-        mode: TrainingMode,
-    ): BasePrescription = when (mode) {
-        TrainingMode.A -> exercise.legacyA
-        TrainingMode.C -> exercise.legacyB
-        TrainingMode.D -> exercise.legacyC
-        TrainingMode.B -> focusedPrescription(exercise.legacyA, exercise.legacyB)
-    }
-
-    private fun focusedPrescription(
-        full: BasePrescription,
-        busy: BasePrescription,
-    ): BasePrescription {
-        if (!full.included) return full
-
-        val targetSets = maxOf(
-            if (busy.included) busy.sets else 0,
-            (full.sets - 1).coerceAtLeast(1),
+    /**
+     * There is often no integer per-exercise value between Legacy A=3 sets and B=2 sets. Instead
+     * of quietly making native B identical to C, resolve B across the whole session: start from the
+     * old Busy Day workload and add roughly half of the sets that separate it from Full Day.
+     * Extra sets go to principal/core movements first.
+     */
+    private fun <T> focusedPlan(exercises: List<ModeExercise<T>>): List<PlannedExercise<T>> {
+        data class Working<T>(
+            val source: ModeExercise<T>,
+            var sets: Int,
+            val fullSets: Int,
         )
-        return full.copy(
-            included = true,
-            sets = targetSets.coerceAtMost(full.sets.coerceAtLeast(1)),
+
+        val working = exercises.mapNotNull { exercise ->
+            val full = exercise.legacyA
+            if (!full.included || full.sets <= 0) return@mapNotNull null
+            val busySets = if (exercise.legacyB.included) exercise.legacyB.sets else 0
+            Working(
+                source = exercise,
+                sets = busySets.coerceIn(0, full.sets),
+                fullSets = full.sets,
+            )
+        }
+
+        val busyTotal = working.sumOf { it.sets }
+        val fullTotal = working.sumOf { it.fullSets }
+        val gap = (fullTotal - busyTotal).coerceAtLeast(0)
+        // Round upward so B is genuinely above C whenever there is any room between them.
+        var setsToRestore = (gap + 1) / 2
+
+        val upgradeOrder = working.sortedWith(
+            compareBy<Working<T>>({ importanceRank(it.source.importance) }, { it.source.ordinal }),
         )
+        while (setsToRestore > 0) {
+            var changed = false
+            for (entry in upgradeOrder) {
+                if (setsToRestore <= 0) break
+                if (entry.sets >= entry.fullSets) continue
+                entry.sets += 1
+                setsToRestore -= 1
+                changed = true
+            }
+            if (!changed) break
+        }
+
+        return working
+            .filter { it.sets > 0 }
+            .sortedBy { it.source.ordinal }
+            .map { entry ->
+                PlannedExercise(
+                    id = entry.source.id,
+                    ordinal = entry.source.ordinal,
+                    importance = entry.source.importance,
+                    prescription = entry.source.legacyA.copy(included = true, sets = entry.sets),
+                    payload = entry.source.payload,
+                )
+            }
     }
 
     private fun importanceRank(value: ExerciseImportance): Int = when (value) {
