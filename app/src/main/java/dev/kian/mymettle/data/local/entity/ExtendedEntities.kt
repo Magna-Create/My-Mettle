@@ -38,6 +38,28 @@ data class ExerciseMuscleLoadEntity(
 )
 
 @Entity(
+    tableName = "session_review",
+    foreignKeys = [
+        ForeignKey(
+            entity = SessionEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["sessionId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class SessionReviewEntity(
+    @PrimaryKey val sessionId: String,
+    val exerciseOrder: Int?,
+    val organisation: Int?,
+    val pacing: Int?,
+    val delayImpact: Int?,
+    val note: String?,
+    val recordedAt: String,
+    val updatedAt: String,
+)
+
+@Entity(
     tableName = "experiment",
     indices = [Index("exerciseId"), Index("routineSlotId"), Index("status")],
 )

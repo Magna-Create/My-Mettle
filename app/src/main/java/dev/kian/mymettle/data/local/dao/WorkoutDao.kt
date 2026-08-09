@@ -24,6 +24,7 @@ import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.RoutineVersionEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
+import dev.kian.mymettle.data.local.entity.SessionReviewEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.data.local.entity.TrainingCycleEntity
 import dev.kian.mymettle.data.local.entity.UserProfileEntity
@@ -92,6 +93,9 @@ interface WorkoutDao {
     suspend fun upsertReflections(values: List<ExerciseReflectionEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSessionReview(value: SessionReviewEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertExperiments(values: List<ExperimentEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -153,6 +157,9 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM set_record WHERE sessionExerciseId = :sessionExerciseId ORDER BY setIndex")
     suspend fun sets(sessionExerciseId: String): List<SetRecordEntity>
+
+    @Query("SELECT * FROM session_review WHERE sessionId = :sessionId LIMIT 1")
+    suspend fun sessionReview(sessionId: String): SessionReviewEntity?
 
     @Query(
         """
