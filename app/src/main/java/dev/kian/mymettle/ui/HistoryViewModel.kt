@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 
 data class HistoryUiState(
     val loading: Boolean = true,
+    val saving: Boolean = false,
     val sessions: List<HistorySession> = emptyList(),
     val error: String? = null,
 )
@@ -33,17 +34,117 @@ class HistoryViewModel(
             uiState = uiState.copy(loading = true, error = null)
             runCatching { repository.recent() }
                 .onSuccess { sessions -> uiState = HistoryUiState(loading = false, sessions = sessions) }
-                .onFailure { error ->
+                .onFailure(::showError)
+        }
+    }
+
+    fun updateSet(
+        sessionId: String,
+        sessionExerciseId: String,
+        setId: String,
+        load: Double?,
+        reps: Int?,
+        durationSeconds: Int?,
+        distanceMetres: Double?,
+        onSaved: (HistorySession) -> Unit,
+    ) {
+        mutate {
+            repository.updateSet(
+                sessionId = sessionId,
+                sessionExerciseId = sessionExerciseId,
+                setId = setId,
+                load = load,
+                reps = reps,
+                durationSeconds = durationSeconds,
+                distanceMetres = distanceMetres,
+            )
+        } onSuccess@{ updated ->
+            replace(updated)
+            onSaved(updated)
+        }
+    }
+
+    fun saveSessionReview(
+        sessionId: String,
+        exerciseOrder: Int?,
+        organisation: Int?,
+        pacing: Int?,
+        delayImpact: Int?,
+        note: String?,
+        onSaved: (HistorySession) -> Unit,
+    ) {
+        mutate {
+            repository.saveSessionReview(
+                sessionId = sessionId,
+                exerciseOrder = exerciseOrder,
+                organisation = organisation,
+                pacing = pacing,
+                delayImpact = delayImpact,
+                note = note,
+            )
+        } onSuccess@{ updated ->
+            replace(updated)
+            onSaved(updated)
+        }
+    }
+
+    fun discardSession(sessionId: String, onDiscarded: () -> Unit) {
+        viewModelScope.launch {
+            uiState = uiState.copy(saving = true, error = null)
+            runCatching { repository.discardSession(sessionId) }
+                .onSuccess {
                     uiState = uiState.copy(
-                        loading = false,
-                        error = error.message ?: error::class.java.simpleName,
+                        saving = false,
+                        sessions = uiState.sessions.filterNot { it.session.id == sessionId },
                     )
+                    onDiscarded()
                 }
+                .onFailure(::showError)
         }
     }
 
     fun dismissError() {
         uiState = uiState.copy(error = null)
+    }
+
+    private fun mutate(
+        block: suspend () -> HistorySession,
+    ): MutationHandle {
+        val handle = MutationHandle()
+        viewModelScope.launch {
+            uiState = uiState.copy(saving = true, error = null)
+            runCatching { block() }
+                .onSuccess { updated ->
+                    uiState = uiState.copy(saving = false)
+                    handle.success?.invoke(updated)
+                }
+                .onFailure(::showError)
+        }
+        return handle
+    }
+
+    private infix fun MutationHandle.onSuccess(callback: (HistorySession) -> Unit) {
+        success = callback
+    }
+
+    private fun replace(updated: HistorySession) {
+        uiState = uiState.copy(
+            sessions = uiState.sessions.map { current ->
+                if (current.session.id == updated.session.id) updated else current
+            },
+        )
+    }
+
+    private fun showError(error: Throwable) {
+        uiState = uiState.copy(
+            loading = false,
+            saving = false,
+            error = error.message ?: error::class.java.simpleName,
+        )
+    }
+
+    private class MutationHandle {
+        var success: ((HistorySession) -> Unit)? = null
     }
 }
 
