@@ -2,6 +2,7 @@ package dev.kian.mymettle.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import dev.kian.mymettle.data.local.dao.HistoryDao
 import dev.kian.mymettle.data.local.dao.WorkoutDao
 import dev.kian.mymettle.data.local.entity.AppStateEntity
 import dev.kian.mymettle.data.local.entity.BodyMeasurementEntity
@@ -60,4 +61,5 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
 )
 abstract class MyMettleDatabase : RoomDatabase() {
     abstract fun workoutDao(): WorkoutDao
+    abstract fun historyDao(): HistoryDao
 }
