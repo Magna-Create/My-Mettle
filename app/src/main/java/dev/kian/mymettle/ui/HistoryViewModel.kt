@@ -48,19 +48,23 @@ class HistoryViewModel(
         distanceMetres: Double?,
         onSaved: (HistorySession) -> Unit,
     ) {
-        mutate {
-            repository.updateSet(
-                sessionId = sessionId,
-                sessionExerciseId = sessionExerciseId,
-                setId = setId,
-                load = load,
-                reps = reps,
-                durationSeconds = durationSeconds,
-                distanceMetres = distanceMetres,
-            )
-        } onSuccess@{ updated ->
-            replace(updated)
-            onSaved(updated)
+        viewModelScope.launch {
+            uiState = uiState.copy(saving = true, error = null)
+            runCatching {
+                repository.updateSet(
+                    sessionId = sessionId,
+                    sessionExerciseId = sessionExerciseId,
+                    setId = setId,
+                    load = load,
+                    reps = reps,
+                    durationSeconds = durationSeconds,
+                    distanceMetres = distanceMetres,
+                )
+            }.onSuccess { updated ->
+                replace(updated)
+                uiState = uiState.copy(saving = false)
+                onSaved(updated)
+            }.onFailure(::showError)
         }
     }
 
@@ -73,18 +77,22 @@ class HistoryViewModel(
         note: String?,
         onSaved: (HistorySession) -> Unit,
     ) {
-        mutate {
-            repository.saveSessionReview(
-                sessionId = sessionId,
-                exerciseOrder = exerciseOrder,
-                organisation = organisation,
-                pacing = pacing,
-                delayImpact = delayImpact,
-                note = note,
-            )
-        } onSuccess@{ updated ->
-            replace(updated)
-            onSaved(updated)
+        viewModelScope.launch {
+            uiState = uiState.copy(saving = true, error = null)
+            runCatching {
+                repository.saveSessionReview(
+                    sessionId = sessionId,
+                    exerciseOrder = exerciseOrder,
+                    organisation = organisation,
+                    pacing = pacing,
+                    delayImpact = delayImpact,
+                    note = note,
+                )
+            }.onSuccess { updated ->
+                replace(updated)
+                uiState = uiState.copy(saving = false)
+                onSaved(updated)
+            }.onFailure(::showError)
         }
     }
 
@@ -107,26 +115,6 @@ class HistoryViewModel(
         uiState = uiState.copy(error = null)
     }
 
-    private fun mutate(
-        block: suspend () -> HistorySession,
-    ): MutationHandle {
-        val handle = MutationHandle()
-        viewModelScope.launch {
-            uiState = uiState.copy(saving = true, error = null)
-            runCatching { block() }
-                .onSuccess { updated ->
-                    uiState = uiState.copy(saving = false)
-                    handle.success?.invoke(updated)
-                }
-                .onFailure(::showError)
-        }
-        return handle
-    }
-
-    private infix fun MutationHandle.onSuccess(callback: (HistorySession) -> Unit) {
-        success = callback
-    }
-
     private fun replace(updated: HistorySession) {
         uiState = uiState.copy(
             sessions = uiState.sessions.map { current ->
@@ -141,10 +129,6 @@ class HistoryViewModel(
             saving = false,
             error = error.message ?: error::class.java.simpleName,
         )
-    }
-
-    private class MutationHandle {
-        var success: ((HistorySession) -> Unit)? = null
     }
 }
 
