@@ -31,7 +31,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -40,7 +39,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -100,14 +101,14 @@ fun TrainScreen(viewModel: N2WorkoutViewModel) {
 
     Scaffold(
         topBar = {
-            LargeTopAppBar(
+            TopAppBar(
                 title = {
                     Column {
-                        Text("My Mettle", fontWeight = FontWeight.SemiBold)
+                        Text("My Mettle", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                         Text(
                             state.workout?.let { "${it.session.daySymbol} · ${state.selectedMode.label}" }
                                 ?: if (state.hasProgramme) "Train" else "Native migration",
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -183,6 +184,7 @@ private fun persistDraft(
     draft: TrainSetDraft,
     logged: Boolean,
 ) {
+    if (exercise.entity.status == "completed") return
     viewModel.saveSet(
         exercise = exercise,
         setId = set.id,
@@ -246,7 +248,7 @@ private fun ProgrammeTrainState(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         item { Text("Choose the version of today that fits.", style = MaterialTheme.typography.headlineMedium) }
@@ -350,27 +352,35 @@ private fun ActiveTrainState(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                TrainingMode.entries.forEach { candidate ->
-                    FilterChip(
-                        selected = selectedMode == candidate,
-                        enabled = workout.session.status == "active" && !loading,
-                        onClick = { onModeSelected(candidate) },
-                        label = { Text("${candidate.code} · ${candidate.label}") },
-                    )
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Mode · ${selectedMode.code} — ${selectedMode.label}",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    TrainingMode.entries.forEach { candidate ->
+                        FilterChip(
+                            selected = selectedMode == candidate,
+                            enabled = workout.session.status == "active" && !loading,
+                            onClick = { onModeSelected(candidate) },
+                            label = { Text(candidate.code) },
+                        )
+                    }
                 }
             }
             if (loading) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(6.dp))
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
         }
@@ -413,6 +423,11 @@ private fun TrainExerciseCard(
         .sortedBy { it.setIndex }
     val previous = exercise.previousCompletedSets.firstOrNull()
     val completed = entity.status == "completed"
+    var expanded by remember(entity.id) { mutableStateOf(!completed) }
+
+    LaunchedEffect(completed) {
+        expanded = !completed
+    }
 
     ElevatedCard(
         colors = CardDefaults.elevatedCardColors(
@@ -426,9 +441,17 @@ private fun TrainExerciseCard(
                     Text(entity.exerciseNameSnapshot, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 }
                 AssistChip(
-                    onClick = onToggleComplete,
-                    enabled = sessionActive,
-                    label = { Text(if (completed) "Completed" else if (entity.prescriptionIncluded) "Active" else "Extra") },
+                    onClick = { expanded = !expanded },
+                    label = {
+                        Text(
+                            when {
+                                completed && expanded -> "Completed · Hide"
+                                completed -> "Completed · Show"
+                                expanded -> "Active · Hide"
+                                else -> "Active · Show"
+                            },
+                        )
+                    },
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -441,23 +464,26 @@ private fun TrainExerciseCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Spacer(Modifier.height(14.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(12.dp))
 
-            sets.forEachIndexed { index, set ->
-                val draft = drafts.getOrPut(set.id) { TrainSetDraft(set) }
-                MetricSetRow(
-                    displayIndex = index + 1,
-                    entity = entity,
-                    set = set,
-                    draft = draft,
-                    enabled = sessionActive,
-                    onOpenCalculator = { onOpenCalculator(set) },
-                    onSaveDraft = { onSaveDraft(set, draft) },
-                    onLogSet = { onLogSet(set, draft) },
-                )
-                if (index < sets.lastIndex) Spacer(Modifier.height(10.dp))
+            if (expanded) {
+                Spacer(Modifier.height(14.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(12.dp))
+
+                sets.forEachIndexed { index, set ->
+                    val draft = drafts.getOrPut(set.id) { TrainSetDraft(set) }
+                    MetricSetRow(
+                        displayIndex = index + 1,
+                        entity = entity,
+                        set = set,
+                        draft = draft,
+                        enabled = sessionActive && !completed,
+                        onOpenCalculator = { onOpenCalculator(set) },
+                        onSaveDraft = { onSaveDraft(set, draft) },
+                        onLogSet = { onLogSet(set, draft) },
+                    )
+                    if (index < sets.lastIndex) Spacer(Modifier.height(10.dp))
+                }
             }
 
             Spacer(Modifier.height(14.dp))
@@ -494,7 +520,7 @@ private fun MetricSetRow(
     }
 
     Surface(
-        color = if (set.completedAt != null) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
+        color = if (set.completedAt != null) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerHighest,
         shape = MaterialTheme.shapes.large,
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
