@@ -1,6 +1,7 @@
 package dev.kian.mymettle.ui
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,10 +50,16 @@ fun SessionOutcomeOverlay(viewModel: N2WorkoutViewModel) {
 
     if (!open) return
 
-    ModalBottomSheet(onDismissRequest = { open = false }) {
+    ModalBottomSheet(
+        onDismissRequest = {
+            open = false
+            viewModel.leaveCompletedSession()
+        },
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -102,15 +109,23 @@ fun SessionOutcomeOverlay(viewModel: N2WorkoutViewModel) {
                             delayImpact = delayImpact.takeIf { it > 0 },
                             note = note,
                         )
+                        open = false
+                        viewModel.leaveCompletedSession()
                     },
                     enabled = !state.savingReview,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (state.savingReview) "Saving…" else if (review == null) "Save review" else "Update review")
+                    Text(if (state.savingReview) "Saving…" else if (review == null) "Save review & finish" else "Update review & finish")
                 }
 
-                TextButton(onClick = viewModel::leaveCompletedSession, modifier = Modifier.fillMaxWidth()) {
-                    Text("Back to programme")
+                TextButton(
+                    onClick = {
+                        open = false
+                        viewModel.leaveCompletedSession()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Finish without review")
                 }
             }
         }
