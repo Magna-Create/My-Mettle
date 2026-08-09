@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import dev.kian.mymettle.data.local.DatabaseProvider
 import dev.kian.mymettle.data.migration.LegacyImportReport
 import dev.kian.mymettle.data.migration.LegacyV6Importer
+import dev.kian.mymettle.timer.RestTimerController
 import dev.kian.mymettle.workout.ActiveWorkout
 import dev.kian.mymettle.workout.ActiveWorkoutExercise
 import dev.kian.mymettle.workout.NativeWorkoutPlan
@@ -33,6 +34,7 @@ data class N2WorkoutUiState(
 class N2WorkoutViewModel(
     private val repository: RoomWorkoutRepository,
     private val importer: LegacyV6Importer,
+    private val restTimer: RestTimerController,
 ) : ViewModel() {
     var uiState by mutableStateOf(N2WorkoutUiState())
         private set
@@ -142,7 +144,14 @@ class N2WorkoutViewModel(
                 repository.activeWorkout(sessionId)
             }.onSuccess { workout ->
                 uiState = uiState.copy(workout = workout, error = null)
-                onSaved?.invoke()
+                if (logged) {
+                    restTimer.start(
+                        exerciseName = exercise.entity.exerciseNameSnapshot,
+                        seconds = exercise.entity.restSeconds,
+                    )
+                } else {
+                    onSaved?.invoke()
+                }
             }.onFailure(::showError)
         }
     }
@@ -168,6 +177,7 @@ class N2WorkoutViewModel(
     fun completeSession() {
         val workout = uiState.workout ?: return
         if (workout.session.status != "active") return
+        restTimer.stop()
         viewModelScope.launch {
             uiState = uiState.copy(loading = true, error = null)
             runCatching { repository.completeSession(workout.session.id) }
@@ -250,6 +260,7 @@ class N2WorkoutViewModelFactory(context: Context) : ViewModelProvider.Factory {
         return N2WorkoutViewModel(
             repository = RoomWorkoutRepository(database),
             importer = LegacyV6Importer(appContext, database),
+            restTimer = RestTimerController.get(appContext),
         ) as T
     }
 }
