@@ -14,6 +14,8 @@ import java.io.File
 import java.io.FileOutputStream
 import java.time.Instant
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 data class LibraryExercise(
@@ -49,20 +51,22 @@ class ExerciseLibraryRepository(
         val createdFiles = mutableListOf<File>()
         val createdEntities = mutableListOf<ExerciseSetupMediaEntity>()
         try {
-            uris.take(capacity).forEachIndexed { index, uri ->
-                val media = writeSetupPhoto(
-                    exerciseId = exercise.id,
-                    uri = uri,
-                    sortOrder = existing.size + index,
-                )
-                createdFiles += File(context.filesDir, media.relativePath)
-                createdEntities += media
+            withContext(Dispatchers.IO) {
+                uris.take(capacity).forEachIndexed { index, uri ->
+                    val media = writeSetupPhoto(
+                        exerciseId = exercise.id,
+                        uri = uri,
+                        sortOrder = existing.size + index,
+                    )
+                    createdFiles += File(context.filesDir, media.relativePath)
+                    createdEntities += media
+                }
             }
             database.withTransaction {
                 createdEntities.forEach { dao.upsertSetupMedia(it) }
             }
         } catch (error: Throwable) {
-            createdFiles.forEach(File::delete)
+            withContext(Dispatchers.IO) { createdFiles.forEach(File::delete) }
             throw error
         }
         return exercise(exerciseId)
@@ -71,7 +75,7 @@ class ExerciseLibraryRepository(
     suspend fun deleteSetupPhoto(mediaId: String): LibraryExercise {
         val media = dao.setupMediaById(mediaId) ?: throw NativeWorkoutException("Setup photo not found.")
         database.withTransaction { dao.deleteSetupMedia(mediaId) }
-        File(context.filesDir, media.relativePath).delete()
+        withContext(Dispatchers.IO) { File(context.filesDir, media.relativePath).delete() }
         return exercise(media.exerciseId)
     }
 
