@@ -19,6 +19,7 @@ enum class RestTimerPhase {
 data class RestTimerSnapshot(
     val phase: RestTimerPhase = RestTimerPhase.IDLE,
     val exerciseName: String = "",
+    val startedElapsedRealtime: Long = 0L,
     val endElapsedRealtime: Long = 0L,
     val pausedRemainingMillis: Long = 0L,
 ) {
@@ -108,6 +109,7 @@ internal class RestTimerPersistence(context: Context) {
         return RestTimerSnapshot(
             phase = phase,
             exerciseName = preferences.getString(KEY_EXERCISE, "").orEmpty(),
+            startedElapsedRealtime = preferences.getLong(KEY_STARTED_ELAPSED, 0L),
             endElapsedRealtime = preferences.getLong(KEY_END_ELAPSED, 0L),
             pausedRemainingMillis = preferences.getLong(KEY_PAUSED_REMAINING, 0L),
         )
@@ -117,6 +119,7 @@ internal class RestTimerPersistence(context: Context) {
         preferences.edit()
             .putString(KEY_PHASE, snapshot.phase.name)
             .putString(KEY_EXERCISE, snapshot.exerciseName)
+            .putLong(KEY_STARTED_ELAPSED, snapshot.startedElapsedRealtime)
             .putLong(KEY_END_ELAPSED, snapshot.endElapsedRealtime)
             .putLong(KEY_PAUSED_REMAINING, snapshot.pausedRemainingMillis)
             .apply()
@@ -129,6 +132,7 @@ internal class RestTimerPersistence(context: Context) {
     private companion object {
         const val KEY_PHASE = "phase"
         const val KEY_EXERCISE = "exercise"
+        const val KEY_STARTED_ELAPSED = "started_elapsed"
         const val KEY_END_ELAPSED = "end_elapsed"
         const val KEY_PAUSED_REMAINING = "paused_remaining"
     }
