@@ -61,6 +61,7 @@ fun MyMettleApp() {
                 composable(HISTORY_ROUTE) { HistoryScreen() }
             }
             NativeRestTimerOverlay()
+            ExerciseReflectionOverlay()
             SessionOutcomeOverlay()
         }
     }
