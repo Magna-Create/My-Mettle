@@ -6,10 +6,10 @@ trapezius_transverse_part,trapezius,Transverse part,PART,FORMALLY_NAMED_PART,TRA
 trapezius_ascending_part,trapezius,Ascending part,PART,FORMALLY_NAMED_PART,TRACK,SOURCE_SUPPORTED_V0_1,
 pectoralis_major_clavicular_part,pectoralis_major,Clavicular part,PART,FORMALLY_NAMED_PART,TRACK,SOURCE_SUPPORTED_V0_1,
 pectoralis_major_sternocostal_part,pectoralis_major,Sternocostal part,PART,FORMALLY_NAMED_PART,TRACK,SOURCE_SUPPORTED_V0_1,
-pectoralis_major_abdominal_part,pectoralis_major,Abdominal part,PART,FORMALLY_NAMED_PART,TRACK,SOURCE_SUPPORTED_V0_1,
-diaphragm_sternal_part,diaphragm,Sternal part,PART,FORMALLY_NAMED_PART,SHARED_PARENT,SOURCE_SUPPORTED_V0_1,
-diaphragm_costal_part,diaphragm,Costal part,PART,FORMALLY_NAMED_PART,SHARED_PARENT,SOURCE_SUPPORTED_V0_1,
-diaphragm_lumbar_part,diaphragm,Lumbar part,PART,FORMALLY_NAMED_PART,SHARED_PARENT,SOURCE_SUPPORTED_V0_1,
+pectoralis_major_abdominal_part,pectoralis_major,Abdominal part,PART,TA2_PARENTHESISED_PART,TRACK,TA2_VERIFIED_V0_1,TA2 lists the abdominal part in parentheses; keep the part addressable but preserve weaker terminological status.
+diaphragm_sternal_part,diaphragm,Sternal part,PART,FORMALLY_NAMED_PART,SHARED_PARENT,TA2_SIDE_AGGREGATED_V0_1,TA2 names right/left sternal parts separately; My Mettle canonicalises them into one side-neutral reference part.
+diaphragm_costal_part,diaphragm,Costal part,PART,FORMALLY_NAMED_PART,SHARED_PARENT,TA2_SIDE_AGGREGATED_V0_1,TA2 names right/left costal parts separately; My Mettle canonicalises them into one side-neutral reference part.
+diaphragm_lumbar_part,diaphragm,Lumbar part,PART,FORMALLY_NAMED_PART,SHARED_PARENT,TA2_SIDE_AGGREGATED_V0_1,TA2 names right/left lumbar parts separately; My Mettle canonicalises them into one side-neutral reference part.
 deltoid_clavicular_part,deltoid,Clavicular / anterior part,PART,FORMALLY_NAMED_PART,TRACK,SOURCE_SUPPORTED_V0_1,
 deltoid_acromial_part,deltoid,Acromial / middle part,PART,FORMALLY_NAMED_PART,TRACK,SOURCE_SUPPORTED_V0_1,
 deltoid_spinal_part,deltoid,Spinal / posterior part,PART,FORMALLY_NAMED_PART,TRACK,SOURCE_SUPPORTED_V0_1,
@@ -28,11 +28,11 @@ digastric_anterior_belly,digastric,Anterior belly,BELLY,FORMALLY_NAMED_BELLY,SHA
 digastric_posterior_belly,digastric,Posterior belly,BELLY,FORMALLY_NAMED_BELLY,SHARED_PARENT,SOURCE_SUPPORTED_V0_1,
 omohyoid_superior_belly,omohyoid,Superior belly,BELLY,FORMALLY_NAMED_BELLY,SHARED_PARENT,SOURCE_SUPPORTED_V0_1,
 omohyoid_inferior_belly,omohyoid,Inferior belly,BELLY,FORMALLY_NAMED_BELLY,SHARED_PARENT,SOURCE_SUPPORTED_V0_1,
-gluteus_medius_anterior_region,gluteus_medius,Anterior region,FIBRE_REGION,EXPERIMENTALLY_USEFUL_FIBRE_REGION,PROVISIONAL_TRACK,SOURCE_SUPPORTED_V0_1,
-gluteus_medius_middle_region,gluteus_medius,Middle region,FIBRE_REGION,EXPERIMENTALLY_USEFUL_FIBRE_REGION,PROVISIONAL_TRACK,SOURCE_SUPPORTED_V0_1,
-gluteus_medius_posterior_region,gluteus_medius,Posterior region,FIBRE_REGION,EXPERIMENTALLY_USEFUL_FIBRE_REGION,PROVISIONAL_TRACK,SOURCE_SUPPORTED_V0_1,
-adductor_magnus_adductor_part,adductor_magnus,Adductor / pubofemoral part,PART,FORMALLY_NAMED_PART,TRACK,SOURCE_SUPPORTED_V0_1,
-adductor_magnus_hamstring_part,adductor_magnus,Hamstring / ischiocondylar part,PART,FORMALLY_NAMED_PART,TRACK,SOURCE_SUPPORTED_V0_1,
+gluteus_medius_anterior_region,gluteus_medius,Anterior region,FIBRE_REGION,EXPERIMENTALLY_USEFUL_FIBRE_REGION,PROVISIONAL_TRACK,PRIMARY_REGIONAL_SOURCE_PENDING,TA2 does not define anterior/middle/posterior gluteus-medius parts; retain as research/application fibre regions pending dedicated primary-source verification.
+gluteus_medius_middle_region,gluteus_medius,Middle region,FIBRE_REGION,EXPERIMENTALLY_USEFUL_FIBRE_REGION,PROVISIONAL_TRACK,PRIMARY_REGIONAL_SOURCE_PENDING,TA2 does not define anterior/middle/posterior gluteus-medius parts; retain as research/application fibre regions pending dedicated primary-source verification.
+gluteus_medius_posterior_region,gluteus_medius,Posterior region,FIBRE_REGION,EXPERIMENTALLY_USEFUL_FIBRE_REGION,PROVISIONAL_TRACK,PRIMARY_REGIONAL_SOURCE_PENDING,TA2 does not define anterior/middle/posterior gluteus-medius parts; retain as research/application fibre regions pending dedicated primary-source verification.
+adductor_magnus_adductor_part,adductor_magnus,Adductor / pubofemoral part,PART,FORMALLY_NAMED_PART,TRACK,TA2_VERIFIED_STRONG_V0_1,TA2 endnote explicitly distinguishes adductor and ischiocondylar portions by origins insertions and innervations.
+adductor_magnus_hamstring_part,adductor_magnus,Hamstring / ischiocondylar part,PART,FORMALLY_NAMED_PART,TRACK,TA2_VERIFIED_STRONG_V0_1,TA2 endnote explicitly distinguishes adductor and ischiocondylar portions by origins insertions and innervations.
 biceps_femoris_long_head,biceps_femoris,Long head,HEAD,FORMALLY_NAMED_HEAD,TRACK,SOURCE_SUPPORTED_V0_1,
 biceps_femoris_short_head,biceps_femoris,Short head,HEAD,FORMALLY_NAMED_HEAD,TRACK,SOURCE_SUPPORTED_V0_1,
 gastrocnemius_medial_head,gastrocnemius,Medial head,HEAD,FORMALLY_NAMED_HEAD,TRACK,SOURCE_SUPPORTED_V0_1,
