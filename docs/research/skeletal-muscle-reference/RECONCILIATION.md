@@ -1,184 +1,108 @@
-# Reconciliation of the Two Deep Research Runs
+# Deep Research Reconciliation
 
-This document records what the two surviving research reports agree on, where the rerun improved the evidence, and what remains unresolved. It is intentionally limited to what the reports themselves support.
+## Why this exists
 
-## Strong agreement
+Two Deep Research runs produced overlapping but not identical skeletal-muscle reference models. Their temporary XLSX/CSV/JSON files were lost with the research sandboxes, while the narrative reports survived.
 
-### 1. Biological hierarchy
+This document records where the surviving reports agree, where they differ, and which differences must remain unresolved until checked against the underlying anatomy/source evidence.
 
-Both reports converge on:
+## Strong agreement across the reports
 
-`Region -> Muscle Group -> Muscle -> Segment`
+The reports consistently support the following architecture:
 
-The **individual muscle** is the canonical biological identity. `MuscleGroup` is a classification convenience and may be many-to-many. `Segment` is subordinate to its parent muscle and does not imply that every segment is the same kind of anatomical entity.
+`canonical anatomy → reference morphology → architecture → derived structural capacity → user-specific state → exercise expression`
 
-Both recommend segment types equivalent to:
+They also agree that:
 
-- `HEAD`
-- `PART`
-- `FIBRE_REGION`
-- `WHOLE_MUSCLE`
+- the individual muscle is the canonical biological identity;
+- muscle groups are classification/tagging constructs rather than strict parents;
+- left/right should be instantiated in user state rather than by duplicating reference anatomy;
+- reference volume, fascicle length, pennation and PCSA are population priors rather than immutable user constants;
+- volume measures tissue quantity, while PCSA is the more interpretable structural force-normalisation variable;
+- `V^(2/3)` is only a weak geometric-similarity fallback;
+- exact Newton-valued force and universal specific tension should not become canonical biological truth in v1;
+- evidence observations must retain population, method, provenance and uncertainty;
+- missing values should remain null unless an explicit derivation/imputation rule permits estimation;
+- exercise performance belongs downstream and must not define the muscle ontology.
 
-The original additionally makes `anatomicalStatus` explicit; the rerun conveys the same distinction between formal anatomy and application segmentation. This distinction should survive into production.
+## Ontology-count disagreement
 
-### 2. Bilateral state
+The surviving reports mention several different generated-pack counts:
 
-Both support a side-neutral canonical anatomy with left/right represented in the user's dynamic state rather than duplicated reference objects.
+- original synthesis: **135 canonical muscle objects / 149 segment rows**, including 23 independently addressable subsegments;
+- first Deep Research report: **142 anatomical units / 166 proposed segment rows**;
+- rerun canonical report: **144 canonical muscles / 158 canonical muscle/segment rows**, with 113 physiological evidence records.
 
-### 3. Initial multi-segment muscles
+These numbers must not be treated as targets to reproduce.
 
-Both reports converge on the same initial nine independently addressable multi-segment muscles:
+The first report introduced two useful ideas that help explain why counts can legitimately differ:
 
-- biceps brachii — long/short heads;
-- triceps brachii — long/lateral/medial heads;
-- deltoid — clavicular/acromial/spinal parts;
-- pectoralis major — clavicular/sternocostal/abdominal parts;
-- trapezius — descending/transverse/ascending parts;
-- gluteus medius — anterior/middle/posterior fibre regions;
-- adductor magnus — adductor/hamstring parts;
-- biceps femoris — long/short heads;
-- gastrocnemius — medial/lateral heads.
+1. `unitKind` distinguishes a normal `MUSCLE` from a `SERIAL_MUSCLE_FAMILY` such as intercostals, multifidus or rotatores.
+2. An anatomical subdivision can exist without receiving independent longitudinal user state.
 
-Both reject arbitrary gym subdivisions such as inner/outer chest, upper/lower latissimus, upper/lower rectus abdominis and appearance-derived muscle regions as canonical v1 segments.
+The later rerun simplified its independently addressable segmentation to nine muscles, while the first run recorded additional true subdivisions such as sternocleidomastoid heads, digastric/omohyoid bellies, forearm heads and diaphragm parts but recommended shared parent state.
 
-### 4. Repeated axial structures
+## Current production reconstruction
 
-Both recognise that structures such as intercostals, rotatores, interspinales and related repeated axial muscles should not automatically explode into hundreds of independently trainable records. A muscle-series/instance-level mechanism should remain possible.
+The v0.1 reconstruction therefore separates:
 
-### 5. Morphology versus force
+- **anatomical-unit existence**;
+- **segment existence**;
+- **independent-state policy**.
 
-Both strongly reject treating volume or mass as directly proportional to strength.
+`data/anatomical_units_v0_1.csv` currently contains 142 reconstructed anatomical units, matching the first report's unit count.
 
-Both recommend:
+`data/segment_overrides_v0_1.csv` contains only subdivisions explicitly recoverable from surviving prose. All other units default to one whole-muscle segment.
 
-- volume as the primary tissue-quantity/morphology variable;
-- PCSA/effective PCSA as the more interpretable structural force-area basis where architecture is available;
-- preserving PCSA equation semantics and pennation handling;
-- using a normalised structural force-capacity index rather than claiming exact canonical Newton force;
-- retaining `V^(2/3)` only as a weak geometric-similarity fallback when architecture is unavailable.
+Expanding those rules currently yields 164 segment rows rather than the first report's claimed 166. The remaining two historical rows are intentionally not guessed. Their identities will be resolved during TA2/source verification.
 
-### 6. Specific tension
+## Segmentation agreement
 
-Both reports recommend **no canonical universal or muscle-specific specific-tension table in v1**. Published values remain evidence records because human in-vivo estimates are method-sensitive and materially divergent.
+The later reports strongly agree on the main independent-state candidates:
 
-### 7. Static reference versus dynamic user state
+- trapezius;
+- deltoid;
+- pectoralis major;
+- biceps brachii;
+- triceps brachii;
+- adductor magnus;
+- biceps femoris;
+- gastrocnemius.
 
-Both agree that only anatomical identity/ontology is truly static in this context.
+Gluteus medius anterior/middle/posterior regions are consistently treated as useful but provisional `FIBRE_REGION` objects.
 
-Reference population priors may include:
+The first Deep Research report additionally identified true anatomical subdivisions that should be recorded but not independently progressed yet:
 
-- volume distributions;
-- fascicle/optimal fibre length;
-- pennation;
-- reference PCSA.
+- sternocleidomastoid sternal/clavicular heads;
+- digastric anterior/posterior bellies;
+- omohyoid superior/inferior bellies;
+- pronator-teres humeral/ulnar heads;
+- flexor-carpi-ulnaris humeral/ulnar heads;
+- flexor-digitorum-superficialis humeroulnar/radial heads;
+- diaphragm sternal/costal/lumbar parts.
 
-Dynamic user state may include:
+These are represented with `state_policy = SHARED_PARENT` in v0.1.
 
-- current estimated volume;
-- current estimated PCSA;
-- development state;
-- bilateral asymmetry;
-- later, potentially current fascicle length and pennation.
+## Numerical-evidence improvement in the rerun
 
-Neural drive, technique, fatigue and task/exercise expression belong downstream rather than in canonical muscle anatomy.
+The original synthesis could not access the sex-specific Riem supplement and therefore left adult-male numerical values null.
 
-### 8. Evidence must remain first-class
+The rerun successfully preserved a number of sex-specific male MRI means and SDs from Riem et al. These are now stored in `data/reference_observations_v0_1.csv` as source-level evidence rather than copied directly onto the anatomy objects.
 
-Both reject storing only one unexplained "best number" per muscle. Source population, method, derivation and uncertainty must survive.
+The reports also preserved directly resolved male head volumes for biceps femoris and gastrocnemius. Their parent fractions are the only current segment-volume fractions stored in `data/derived_reference_values_v0_1.csv`, because both siblings were measured within the same compatible source.
 
-Both support the availability states:
+## Composite-source handling
 
-- `KNOWN`
-- `ESTIMABLE`
-- `WEAKLY_ESTIMABLE`
-- `UNKNOWN`
+The reports explicitly warn that source ROIs such as rhomboids, infraspinatus + teres minor, extensor-carpi-radialis longus + brevis and other aggregates must not be split by arithmetic convenience.
 
-Null is preferred over an unsupported imputation.
+Those relationships are now preserved in `data/composite_source_mappings_v0_1.csv` with `DO_NOT_SPLIT` rules.
 
-## Material improvements in the rerun
+## Remaining reconciliation work
 
-### Adult-male Riem values were actually recovered
+- Verify all 142 reconstructed units and naming against TA2 / cited anatomy sources.
+- Identify the two segment rows present in the first lost 166-row pack but not recoverable from prose.
+- Determine why the rerun reported 144 canonical muscles rather than 142 anatomical units.
+- Recover/verify the complete sex-specific Riem volume table from the primary source/supplement.
+- Reconcile architecture observations and population compatibility before selecting a `healthy_adult_male_v1` profile.
 
-The original report explicitly states that it could not retrieve the sex-specific numerical Riem supplementary material and therefore did not populate adult-male means.
-
-The rerun did retrieve sex-specific male values and reports a 49-man subset. It includes directly resolved mean volumes for many muscles.
-
-It also reconstructs transparent parent fractions where Riem directly resolved heads:
-
-- biceps femoris: long head ~66.5%, short head ~33.5% of summed head volume;
-- gastrocnemius: medial head ~62.9%, lateral head ~37.1%.
-
-These are **reconstructed ratios from measured male means**, not source-published canonical fractions.
-
-### Evidence-quality representation is more explicit
-
-The original proposed a useful convenience tier (`A1/A2/B1/B2/C/D/U`).
-
-The rerun improves this by separating independent dimensions:
-
-- measurement tier;
-- population compatibility;
-- entity compatibility;
-- method compatibility;
-- value source;
-- availability status;
-- quantitative/qualitative uncertainty.
-
-Production should use the multidimensional representation. A single tier may later be derived for filtering/UI, but should not be the source of truth.
-
-### PCSA semantics are clearer
-
-The rerun explicitly separates:
-
-- `geometricPcsaCm2` — contractile cross-sectional geometry before fibre-angle projection;
-- `effectivePcsaCm2` — tendon/line-of-action projected structural area.
-
-The original also called for versioned PCSA definitions. The rerun's naming is useful and should be retained provisionally.
-
-## Differences that remain unresolved
-
-### Canonical ontology counts
-
-The original reports:
-
-- 135 canonical muscle objects;
-- 149 canonical muscle/segment rows;
-- 23 independently addressable subsegments.
-
-The rerun reports:
-
-- 144 canonical muscles;
-- 158 canonical muscle/segment rows;
-- 113 physiological evidence records.
-
-The surviving narrative reports do **not** enumerate enough of the vanished machine-readable ontology to determine exactly which nine additional canonical muscles account for the difference.
-
-Therefore:
-
-- do not adopt either row count as a production invariant;
-- do not infer the missing entries;
-- reconstruct the ontology from the agreed scope and canonical anatomical terminology before seeding Native.
-
-### Reference data completeness
-
-The rerun materially improves adult-male MRI volume coverage, but both reports still describe incomplete segment-level architecture. The following remain particularly weak/incomplete as harmonised adult-male segment datasets:
-
-- biceps-brachii heads;
-- triceps heads;
-- deltoid parts;
-- pectoralis-major parts;
-- trapezius parts;
-- gluteus-medius regions;
-- adductor-magnus parts;
-- compatible head-specific architecture for biceps femoris/gastrocnemius;
-- neck, deep axial, respiratory and pelvic-floor architecture.
-
-### Composite MRI regions
-
-The rerun explicitly warns that some Riem ROIs are composites (for example rhomboids together or infraspinatus + teres minor). These are evidence records for a composite ROI and must not be silently divided between canonical muscles.
-
-## Reconciled position
-
-Use the rerun as the preferred source where it contains stronger or more specific evidence, especially adult-male MRI volume values. Use both reports for architectural/methodological decisions. Preserve disagreements and missing values rather than attempting to make the data cosmetically complete.
-
-The production dataset is a **new deliberate reconstruction**, not an attempt to recreate the vanished Deep Research workbook byte-for-byte.
+Until then, the current reconstruction is versioned research data, not immutable production truth.
