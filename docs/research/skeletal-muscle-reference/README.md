@@ -1,53 +1,49 @@
 # Skeletal Muscle Reference Research
 
-This folder is the durable research record for My Mettle's skeletal-muscle ontology and reference-physiology model.
+This folder is the durable research workspace for the My Mettle skeletal-muscle reference model.
 
-It exists so the Native implementation does not depend on conclusions that only live in ChatGPT conversation history or temporary Deep Research sandboxes.
+## Purpose
 
-## Status
+Keep the scientific basis for anatomy, reference morphology, muscle architecture and structural-capacity modelling in the repository rather than relying on chat history or temporary Deep Research sandboxes.
 
-**Research stage:** evidence collected; the two Deep Research reports have been reconciled at the architectural level; the production canonical dataset has not yet been rebuilt.
+## Current files
 
-Two research runs exist:
+- `RESEARCH_BRIEF.md` — original research proposition and requested deliverables.
+- `RECONCILIATION.md` — comparison of the surviving Deep Research runs and unresolved differences.
+- `MODEL_DECISIONS.md` — implementation-facing architectural decisions derived from the research and product discussion.
+- `REFERENCE_SEED.md` — durable numerical and methodological seed values preserved from the reports.
+- `PRODUCTION_DATASET_V0_1.md` — rules, status and limitations of the first reconstructed production dataset.
+- `data/anatomical_units_v0_1.csv` — 142 reconstructed anatomical units with stable IDs and serial-family handling.
+- `data/segment_overrides_v0_1.csv` — explicit anatomical subdivisions plus independent-state policy.
+- `data/reference_observations_v0_1.csv` — source-level adult-male MRI observations preserved from the surviving reports.
+- `data/derived_reference_values_v0_1.csv` — transparent derived values currently limited to defensible segment fractions.
+- `data/composite_source_mappings_v0_1.csv` — source aggregates that must not be silently divided between canonical muscles.
 
-1. **Original research synthesis**
-   - Reported a working ontology of 135 canonical muscle objects / 149 segment rows, including 23 independently addressable subsegments.
-   - Could not retrieve the sex-specific Riem numerical supplement, so adult-male numerical reference fields were deliberately left null.
+## Precedence
 
-2. **Rerun canonical reference report**
-   - Retained because it materially improved the evidence base.
-   - Reported 144 canonical muscles / 158 canonical muscle-or-segment rows and 113 physiological evidence records.
-   - Successfully extracted sex-specific adult-male values from Riem et al. for many resolved muscles and directly resolved heads.
+The rerun/final Canonical Skeletal-Muscle Reference Model report is the newer primary research basis where it contains stronger source resolution, particularly sex-specific Riem adult-male MRI values. The earlier synthesis and first Deep Research report remain important because they contain ontology refinements and methodological remarks omitted from the rerun.
 
-The XLSX/CSV/JSON research-pack files referenced by both reports were hosted in temporary Deep Research sandbox storage and were not recoverable. Their existence must **not** be assumed by the codebase.
+Where the reports disagree, do not silently pick a row count or value. Reconcile the content and preserve the disagreement until it is resolved from the underlying anatomy/source evidence.
 
-## Which report wins?
+## Important status
 
-Neither report is treated as an unquestionable canonical dataset.
+The original generated XLSX/CSV/JSON research packs were temporary sandbox artifacts and are no longer available. The scientific reports survived. The current `data/` files are therefore a deliberate reconstruction, not a claim to have recovered those vanished files byte-for-byte.
 
-The rerun is the preferred numerical evidence source where it contains data absent from the first run, particularly the Riem adult-male MRI values. The two reports strongly agree on the biological architecture and initial segmentation policy. Where they differ in ontology row counts or detail, the difference remains explicit until the production ontology is reconstructed.
+The production reconstruction intentionally prefers nulls or explicit verification flags to invented precision.
 
-See:
+## Current model direction
 
-- [`RECONCILIATION.md`](RECONCILIATION.md) — agreement, differences and unresolved items.
-- [`MODEL_DECISIONS.md`](MODEL_DECISIONS.md) — current My Mettle architectural decisions derived from the research.
-- [`REFERENCE_SEED.md`](REFERENCE_SEED.md) — useful directly reported/reconstructed numerical evidence preserved from the rerun.
-- [`RESEARCH_BRIEF.md`](RESEARCH_BRIEF.md) — the research requirements that generated the reports.
+The biological model is layered:
 
-## Research principles carried forward
+`canonical anatomy → reference morphology → architecture → derived structural capacity → user-specific state → exercise expression`
 
-- The **muscle** is the canonical biological identity.
-- A muscle may expose addressable **segments** of different anatomical status (`HEAD`, `PART`, `FIBRE_REGION`, `WHOLE_MUSCLE`).
-- Muscle groups are classifications, not biological identities, and should support many-to-many membership.
-- Reference anatomy is side-neutral; user state is bilateral where appropriate.
-- Reference morphology and architecture are **population priors**, not immutable properties of a user.
-- Volume measures tissue quantity; PCSA is the preferred structural basis for relative force capacity where architecture is available.
-- `V^(2/3)` is only a low-confidence geometric-similarity fallback.
-- Do not canonicalise a universal specific-tension constant in v1.
-- Preserve source, population, method, equation definition and uncertainty for physiological evidence.
-- Missing values stay missing unless an explicit, versioned estimation method is permitted.
-- Exercise performance is downstream evidence; it is not itself a property of a muscle.
+Exercises do not own muscular progress. Recruitment and prescription belong downstream of the anatomy/user-state model.
 
-## Next production step
+## Next work
 
-Rebuild the canonical ontology and reference-evidence tables deliberately from the surviving research and cited primary evidence, then implement the Native domain model around that evidence model. Do not attempt to reproduce the vanished Deep Research spreadsheets row-for-row merely for continuity.
+1. Verify the reconstructed ontology against TA2 and cited anatomy sources.
+2. Resolve the remaining ontology-row discrepancies by content rather than matching a historic count.
+3. Recover/verify the complete adult-male Riem volume evidence table.
+4. Add architecture evidence with method/population provenance.
+5. Create a selected healthy-adult-male reference profile.
+6. Translate the stabilised model into Native domain/persistence structures.
