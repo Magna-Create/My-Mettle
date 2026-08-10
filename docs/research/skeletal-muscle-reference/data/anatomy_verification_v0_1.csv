@@ -1,0 +1,56 @@
+entity_id,entity_type,parent_unit_id,ta2_latin_term,ta2_english_term,ta2_term_number,term_status,source_id,notes
+sternocleidomastoid,UNIT,sternocleidomastoid,Musculus sternocleidomastoideus,Sternocleidomastoid muscle,2156,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p57
+sternocleidomastoid_sternal_head,SEGMENT,sternocleidomastoid,Caput sternale musculi sternocleidomastoidei,Sternal head of sternocleidomastoid muscle,2157,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p57
+sternocleidomastoid_clavicular_head,SEGMENT,sternocleidomastoid,Caput claviculare musculi sternocleidomastoidei,Clavicular head of sternocleidomastoid muscle,2158,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p57
+digastric,UNIT,digastric,Musculus digastricus,Digastric muscle,2160,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p57
+digastric_anterior_belly,SEGMENT,digastric,Venter anterior musculi digastrici,Anterior belly of digastric muscle,2161,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p57
+digastric_posterior_belly,SEGMENT,digastric,Venter posterior musculi digastrici,Posterior belly of digastric muscle,2163,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p57
+omohyoid,UNIT,omohyoid,Musculus omohyoideus,Omohyoid muscle,2169,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p57-58
+omohyoid_superior_belly,SEGMENT,omohyoid,Venter superior musculi omohyoidei,Superior belly of omohyoid muscle,2170,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p57
+omohyoid_inferior_belly,SEGMENT,omohyoid,Venter inferior musculi omohyoidei,Inferior belly of omohyoid muscle,2172,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p58
+trapezius,UNIT,trapezius,Musculus trapezius,Trapezius muscle,2226,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p60
+trapezius_descending_part,SEGMENT,trapezius,Pars descendens musculi trapezii,Descending part of trapezius muscle,2227,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p60
+trapezius_transverse_part,SEGMENT,trapezius,Pars transversa musculi trapezii,Transverse part of trapezius muscle,2228,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p60
+trapezius_ascending_part,SEGMENT,trapezius,Pars ascendens musculi trapezii,Ascending part of trapezius muscle,2229,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p60
+pectoralis_major,UNIT,pectoralis_major,Musculus pectoralis major,Pectoralis major muscle,2301,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p62
+pectoralis_major_clavicular_part,SEGMENT,pectoralis_major,Pars clavicularis musculi pectoralis majoris,Clavicular head of pectoralis major muscle,2302,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p62
+pectoralis_major_sternocostal_part,SEGMENT,pectoralis_major,Pars sternocostalis musculi pectoralis majoris,Sternocostal head of pectoralis major muscle,2303,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p62
+pectoralis_major_abdominal_part,SEGMENT,pectoralis_major,(Pars abdominalis musculi pectoralis majoris),(Abdominal part of pectoralis major muscle),2304,PARENTHESISED_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p62; preserve weaker terminological status
+diaphragm,UNIT,diaphragm,Diaphragma,Diaphragm,2327,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p63
+diaphragm_lumbar_part,SEGMENT,diaphragm,Pars lumbalis dextra/sinistra diaphragmatis,Right/left lumbar part of diaphragm,2331/2346,CANONICALISED_FROM_SIDE_SPECIFIC_TA2_TERMS,FIPAT_TA2_2019,TA2 is side-specific; My Mettle generic part remains SHARED_PARENT
+diaphragm_costal_part,SEGMENT,diaphragm,Pars costalis dextra/sinistra diaphragmatis,Right/left costal part of diaphragm,2336/2351,CANONICALISED_FROM_SIDE_SPECIFIC_TA2_TERMS,FIPAT_TA2_2019,TA2 is side-specific; My Mettle generic part remains SHARED_PARENT
+diaphragm_sternal_part,SEGMENT,diaphragm,Pars sternalis dextra/sinistra diaphragmatis,Right/left sternal part of diaphragm,2337/2352,CANONICALISED_FROM_SIDE_SPECIFIC_TA2_TERMS,FIPAT_TA2_2019,TA2 is side-specific; My Mettle generic part remains SHARED_PARENT
+deltoid,UNIT,deltoid,Musculus deltoideus,Deltoid muscle,2452,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p68
+deltoid_clavicular_part,SEGMENT,deltoid,Pars clavicularis musculi deltoidei,Clavicular part of deltoid muscle,2453,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p68
+deltoid_acromial_part,SEGMENT,deltoid,Pars acromialis musculi deltoidei,Acromial part of deltoid muscle,2454,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p68
+deltoid_spinal_part,SEGMENT,deltoid,Pars spinalis scapularis musculi deltoidei,Scapular spinal part of deltoid muscle,2455,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p68
+biceps_brachii,UNIT,biceps_brachii,Musculus biceps brachii,Biceps brachii muscle,2464,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p68
+biceps_brachii_long_head,SEGMENT,biceps_brachii,Caput longum musculi bicipitis brachii,Long head of biceps brachii,2465,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p68
+biceps_brachii_short_head,SEGMENT,biceps_brachii,Caput breve musculi bicipitis brachii,Short head of biceps brachii,2466,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p68
+triceps_brachii,UNIT,triceps_brachii,Musculus triceps brachii,Triceps brachii muscle,2471,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p68
+triceps_brachii_long_head,SEGMENT,triceps_brachii,Caput longum musculi tricipitis brachii,Long head of triceps brachii,2472,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p68
+triceps_brachii_lateral_head,SEGMENT,triceps_brachii,Caput laterale musculi tricipitis brachii,Lateral head of triceps brachii,2473,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p68
+triceps_brachii_medial_head,SEGMENT,triceps_brachii,Caput mediale musculi tricipitis brachii,Medial head of triceps brachii,2474,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p68
+pronator_teres_humeral_head,SEGMENT,pronator_teres,Caput superficiale pronatoris teretis,Superficial / humeral head of pronator teres,2479,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p69
+pronator_teres_ulnar_head,SEGMENT,pronator_teres,Caput profundum pronatoris teretis,Deep / ulnar head of pronator teres,2480,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p69
+flexor_carpi_ulnaris_humeral_head,SEGMENT,flexor_carpi_ulnaris,Caput humerale flexoris ulnaris carpi,Humeral head of flexor carpi ulnaris,2484,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p69
+flexor_carpi_ulnaris_ulnar_head,SEGMENT,flexor_carpi_ulnaris,Caput ulnare flexoris ulnaris carpi,Ulnar head of flexor carpi ulnaris,2485,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p69
+flexor_digitorum_superficialis_humeroulnar_head,SEGMENT,flexor_digitorum_superficialis,Caput humeroulnare flexoris superficialis digitorum,Humero-ulnar head of flexor digitorum superficialis,2487,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p69
+flexor_digitorum_superficialis_radial_head,SEGMENT,flexor_digitorum_superficialis,Caput radiale flexoris superficialis digitorum,Radial head of flexor digitorum superficialis,2488,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p69
+gluteus_medius,UNIT,gluteus_medius,Musculus gluteus medius,Gluteus medius muscle,2599,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p73
+gluteus_medius_anterior_region,SEGMENT,gluteus_medius,,Anterior region,,APPLICATION_FIBRE_REGION_NOT_TA2_TERM,,Research-supported application region; needs dedicated primary regional-anatomy source verification
+gluteus_medius_middle_region,SEGMENT,gluteus_medius,,Middle region,,APPLICATION_FIBRE_REGION_NOT_TA2_TERM,,Research-supported application region; needs dedicated primary regional-anatomy source verification
+gluteus_medius_posterior_region,SEGMENT,gluteus_medius,,Posterior region,,APPLICATION_FIBRE_REGION_NOT_TA2_TERM,,Research-supported application region; needs dedicated primary regional-anatomy source verification
+adductor_magnus,UNIT,adductor_magnus,Adductor magnus,Adductor magnus,2630,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p74
+adductor_magnus_adductor_part,SEGMENT,adductor_magnus,Pars adductoria adductoris magni,Adductor part of adductor magnus,2631,FORMAL_TA2_TERM,FIPAT_TA2_2019,"TA2 endnote 384 explicitly notes different origins, insertions and innervations"
+adductor_magnus_hamstring_part,SEGMENT,adductor_magnus,Pars ischiocondylaris adductoris magni,Ischiocondylar / hamstring part of adductor magnus,2633,FORMAL_TA2_TERM,FIPAT_TA2_2019,"TA2 endnote 384 explicitly notes different origins, insertions and innervations"
+biceps_femoris,UNIT,biceps_femoris,Musculus biceps femoris,Biceps femoris muscle,2638,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p74
+biceps_femoris_long_head,SEGMENT,biceps_femoris,Caput longum musculi bicipitis femoris,Long head of biceps femoris,2639,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p74
+biceps_femoris_short_head,SEGMENT,biceps_femoris,Caput breve musculi bicipitis femoris,Short head of biceps femoris,2640,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p74
+gastrocnemius,UNIT,gastrocnemius,Musculus gastrocnemius,Gastrocnemius muscle,2657,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p75
+gastrocnemius_lateral_head,SEGMENT,gastrocnemius,Caput laterale musculi gastrocnemii,Lateral head of gastrocnemius,2658,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p75
+gastrocnemius_medial_head,SEGMENT,gastrocnemius,Caput mediale musculi gastrocnemii,Medial head of gastrocnemius,2659,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p75
+rectus_femoris,UNIT,rectus_femoris,Musculus rectus femoris,Rectus femoris muscle,2614,FORMAL_TA2_TERM,FIPAT_TA2_2019,TA2 Part 2 p73
+rectus_femoris_straight_head,ANATOMICAL_SUBDIVISION_NOT_TRACKED,rectus_femoris,Caput rectum musculi recti femoris,Straight head of rectus femoris,2615,FORMAL_TA2_TERM,FIPAT_TA2_2019,Record anatomy but do not create independent v1 user state
+rectus_femoris_reflected_head,ANATOMICAL_SUBDIVISION_NOT_TRACKED,rectus_femoris,Caput reflexum musculi recti femoris,Reflected head of rectus femoris,2616,FORMAL_TA2_TERM,FIPAT_TA2_2019,Record anatomy but do not create independent v1 user state
+rectus_femoris_third_head,ANATOMICAL_SUBDIVISION_NOT_TRACKED,rectus_femoris,(Caput tertium musculi recti femoris),(Third head of rectus femoris),2617,PARENTHESISED_TA2_TERM,FIPAT_TA2_2019,Optional/variant term; not an independent v1 user state
