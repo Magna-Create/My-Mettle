@@ -54,11 +54,13 @@ RIR-ready; capture UX and interpretation follow separately.
 
 ## Deliberate limits
 
-- Legacy A/B/C anchors still provide temporary dose constraints while N2 remains operational.
+- N-BIO-5 now projects Legacy A/B/C anchors once into whole-session constraints; the per-slot rows
+  are no longer persisted or read by workout planning.
 - Routine slots still act as pinned exercise assignments.
 - N-BIO-3 itself performs no user-state, exercise-translation or progression inference; N-BIO-4
   now provides that downstream scaffold independently.
-- Workout modes do not become target/dose/time budgets until N-BIO-5.
+- Workout modes become target/set/exercise/optional-time budgets in
+  [`N_BIO_PROGRAMME_RESOLVER.md`](N_BIO_PROGRAMME_RESOLVER.md).
 
 N-BIO-4 is implemented in [`N_BIO_USER_STATE_INFERENCE.md`](N_BIO_USER_STATE_INFERENCE.md):
 recomputable user-state/inference records now sit downstream of immutable raw evidence without

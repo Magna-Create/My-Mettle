@@ -37,6 +37,32 @@ data class ProgrammeTargetEntity(
 )
 
 @Entity(
+    tableName = "programme_mode_constraint",
+    primaryKeys = ["routineVersionId", "daySymbol", "mode"],
+    foreignKeys = [
+        ForeignKey(
+            entity = RoutineVersionEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["routineVersionId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("routineVersionId")],
+)
+data class ProgrammeModeConstraintEntity(
+    val routineVersionId: String,
+    val daySymbol: String,
+    val mode: String,
+    val workingSetBudget: Int,
+    val exerciseBudget: Int,
+    val minimumSetsPerExercise: Int,
+    val targetPriorityFloor: Double,
+    val timeBudgetSeconds: Int?,
+    val source: String,
+    val resolverModelVersion: String,
+)
+
+@Entity(
     tableName = "session_target",
     foreignKeys = [
         ForeignKey(
@@ -65,6 +91,33 @@ data class SessionTargetEntity(
     val priority: Double,
     val desiredStimulus: Double?,
     val source: String,
+    val included: Boolean,
+    val resolvedPriority: Double,
+    val resolutionModelVersion: String,
+)
+
+@Entity(
+    tableName = "session_constraint",
+    foreignKeys = [
+        ForeignKey(
+            entity = SessionEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["sessionId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("mode")],
+)
+data class SessionConstraintEntity(
+    @PrimaryKey val sessionId: String,
+    val mode: String,
+    val workingSetBudget: Int,
+    val exerciseBudget: Int,
+    val minimumSetsPerExercise: Int,
+    val targetPriorityFloor: Double,
+    val timeBudgetSeconds: Int?,
+    val source: String,
+    val resolverModelVersion: String,
 )
 
 @Entity(

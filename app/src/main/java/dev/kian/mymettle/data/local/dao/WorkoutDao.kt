@@ -16,12 +16,13 @@ import dev.kian.mymettle.data.local.entity.ExerciseSetupMediaEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSubstitutionEntity
 import dev.kian.mymettle.data.local.entity.HealthIntegrationStateEntity
 import dev.kian.mymettle.data.local.entity.HealthObservationEntity
-import dev.kian.mymettle.data.local.entity.ModePrescriptionEntity
+import dev.kian.mymettle.data.local.entity.ProgrammeModeConstraintEntity
 import dev.kian.mymettle.data.local.entity.ProgrammeTargetEntity
 import dev.kian.mymettle.data.local.entity.RecruitmentAllocationEntity
 import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.RoutineVersionEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
+import dev.kian.mymettle.data.local.entity.SessionConstraintEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseTargetEntity
 import dev.kian.mymettle.data.local.entity.SessionReviewEntity
@@ -73,10 +74,10 @@ interface WorkoutDao {
     suspend fun upsertRoutineSlots(values: List<RoutineSlotEntity>)
 
     @Upsert
-    suspend fun upsertModePrescriptions(values: List<ModePrescriptionEntity>)
+    suspend fun upsertProgrammeTargets(values: List<ProgrammeTargetEntity>)
 
     @Upsert
-    suspend fun upsertProgrammeTargets(values: List<ProgrammeTargetEntity>)
+    suspend fun upsertProgrammeModeConstraints(values: List<ProgrammeModeConstraintEntity>)
 
     @Upsert
     suspend fun upsertTrainingCycles(values: List<TrainingCycleEntity>)
@@ -89,6 +90,9 @@ interface WorkoutDao {
 
     @Upsert
     suspend fun upsertSessionTargets(values: List<SessionTargetEntity>)
+
+    @Upsert
+    suspend fun upsertSessionConstraint(value: SessionConstraintEntity)
 
     @Upsert
     suspend fun upsertSessionExercises(values: List<SessionExerciseEntity>)
@@ -143,21 +147,25 @@ interface WorkoutDao {
 
     @Query(
         """
-        SELECT * FROM mode_prescription
-        WHERE routineVersionId = :routineVersionId
-        ORDER BY slotId, mode
-        """,
-    )
-    suspend fun modePrescriptions(routineVersionId: String): List<ModePrescriptionEntity>
-
-    @Query(
-        """
         SELECT * FROM programme_target
         WHERE routineVersionId = :routineVersionId AND daySymbol = :daySymbol
         ORDER BY priority DESC, id
         """,
     )
     suspend fun programmeTargets(routineVersionId: String, daySymbol: String): List<ProgrammeTargetEntity>
+
+    @Query(
+        """
+        SELECT * FROM programme_mode_constraint
+        WHERE routineVersionId = :routineVersionId AND daySymbol = :daySymbol AND mode = :mode
+        LIMIT 1
+        """,
+    )
+    suspend fun programmeModeConstraint(
+        routineVersionId: String,
+        daySymbol: String,
+        mode: String,
+    ): ProgrammeModeConstraintEntity?
 
     @Query("SELECT * FROM body_measurement WHERE weightKg IS NOT NULL ORDER BY recordedAt DESC LIMIT 1")
     suspend fun latestBodyMeasurement(): BodyMeasurementEntity?
@@ -176,6 +184,9 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM session_target WHERE sessionId = :sessionId ORDER BY priority DESC, id")
     suspend fun sessionTargets(sessionId: String): List<SessionTargetEntity>
+
+    @Query("SELECT * FROM session_constraint WHERE sessionId = :sessionId LIMIT 1")
+    suspend fun sessionConstraint(sessionId: String): SessionConstraintEntity?
 
     @Query("SELECT * FROM session_exercise_target WHERE sessionExerciseId = :sessionExerciseId")
     suspend fun sessionExerciseTargets(sessionExerciseId: String): List<SessionExerciseTargetEntity>
