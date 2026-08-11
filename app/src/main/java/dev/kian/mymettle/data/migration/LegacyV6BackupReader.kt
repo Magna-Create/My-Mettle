@@ -309,7 +309,6 @@ object LegacyV6BackupReader {
                         prescribedSets = prescribedSetCount,
                         repMin = prescription.intRequired("repMin"),
                         repMax = prescription.intRequired("repMax"),
-                        targetRir = null,
                         restSeconds = prescription.intRequired("restSeconds"),
                         generatedByModelVersion = "legacy-v6-session-snapshot-v1",
                         deferToAnd = prescription.optBoolean("deferToAnd", false),
@@ -337,8 +336,6 @@ object LegacyV6BackupReader {
                             unit = set.stringRequired("unit"),
                             completedAt = set.stringOrNull("completedAt"),
                             note = set.stringOrNull("note"),
-                            rir = set.doubleOrNull("rir"),
-                            effortSource = set.stringOrNull("effortSource"),
                             warmUp = warmUp,
                             kind = kind,
                         )

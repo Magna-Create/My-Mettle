@@ -6,8 +6,9 @@ N-BIO-3–5 made programme intent independent, inference recomputable and workou
 target-driven. N-BIO-5.1 makes those systems inspectable through the debug application before their
 outputs are allowed to become opaque product behaviour.
 
-Room is version 9. Native remains under the destructive-development migration policy while Lite is
-the authoritative daily workout source.
+Room is version 10. Native remains under the destructive-development migration policy, so updating
+from the v9 test build resets its disposable Native database; re-import the Lite backup afterwards.
+Lite remains the authoritative daily workout source.
 
 ## Developer surface
 
@@ -31,11 +32,11 @@ does not cancel the replay and ordinary set entry/navigation never starts it sil
 The task remains deliberately replaceable. It still uses the N-BIO-4 v0 engines and does not add a
 recovery, hypertrophy or cross-exercise transfer equation.
 
-## RIR evidence
+## Performed-work evidence
 
-Working-set entry now accepts optional RIR from 0–10. It is persisted as raw evidence with
-`effortSource = user_reported_rir`. RIR raises the confidence of the current stimulus estimator; it
-does not yet drive an invented effort-response curve.
+Working sets retain objective performed work—load, reps, duration/distance, type and completion
+time—without a subjective reserve or effort rating. The v0 estimator therefore has no effort curve
+or confidence bonus based on self-report.
 
 ## Load provenance
 

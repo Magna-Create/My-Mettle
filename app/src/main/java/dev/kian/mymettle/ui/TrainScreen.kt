@@ -74,7 +74,6 @@ private class TrainSetDraft(set: SetRecordEntity) {
     var reps by mutableStateOf(set.reps?.toString().orEmpty())
     var durationSeconds by mutableStateOf(set.durationSeconds?.toString().orEmpty())
     var distanceMetres by mutableStateOf(set.distanceMetres?.let(::formatDecimal).orEmpty())
-    var rir by mutableStateOf(set.rir?.let(::formatDecimal).orEmpty())
 }
 
 private data class LoadCalculatorTarget(
@@ -207,7 +206,6 @@ private fun persistDraft(
         reps = draft.reps.toIntOrNull(),
         durationSeconds = draft.durationSeconds.toIntOrNull(),
         distanceMetres = draft.distanceMetres.toDoubleOrNull(),
-        rir = draft.rir.toDoubleOrNull(),
         logged = logged,
     )
 }
@@ -543,13 +541,11 @@ private fun MetricSetRow(
     val needsReps = metric == "load_reps" || metric == "reps"
     val needsDuration = metric == "duration"
     val needsDistance = metric == "distance"
-    val rirValue = draft.rir.toDoubleOrNull()
     val ready = when {
         needsExternalLoad && draft.load.toDoubleOrNull() == null -> false
         needsReps && draft.reps.toIntOrNull() == null -> false
         needsDuration && draft.durationSeconds.toIntOrNull()?.let { it > 0 } != true -> false
         needsDistance && draft.distanceMetres.toDoubleOrNull()?.let { it > 0.0 } != true -> false
-        draft.rir.isNotBlank() && rirValue?.let { it in 0.0..10.0 } != true -> false
         else -> true
     }
 
@@ -601,25 +597,6 @@ private fun MetricSetRow(
                     )
                 }
             }
-
-            Spacer(Modifier.height(8.dp))
-            MetricNumberField(
-                value = draft.rir,
-                onValueChange = { next ->
-                    val candidate = decimalInput(next, 4)
-                    if (
-                        candidate.isEmpty() || candidate == "." ||
-                        candidate.toDoubleOrNull()?.let { it in 0.0..10.0 } == true
-                    ) {
-                        draft.rir = candidate
-                    }
-                },
-                label = "RIR (optional)",
-                enabled = enabled,
-                decimal = true,
-                modifier = Modifier.fillMaxWidth(),
-                onDone = { focusManager.clearFocus(); onSaveDraft() },
-            )
 
             Spacer(Modifier.height(8.dp))
             FilledTonalButton(
@@ -815,7 +792,6 @@ private fun setSummary(set: SetRecordEntity): String = buildString {
     if (set.reps != null) append("${set.reps} reps")
     if (set.durationSeconds != null) append("${set.durationSeconds}s")
     if (set.distanceMetres != null) append("${formatDecimal(set.distanceMetres)} m")
-    if (set.rir != null) append(" · RIR ${formatDecimal(set.rir)}")
     if (isEmpty()) append("—")
 }
 

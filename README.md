@@ -79,7 +79,7 @@ N-BIO-3 adds the first independent programme/session targets and generated presc
 - exercise prescriptions bound to execution profiles and target IDs;
 - `RoutineSlot` no longer owns a planned load;
 - prescribed load/model provenance remain immutable session snapshots;
-- raw set evidence is ready to store RIR and effort provenance.
+- raw set evidence stores objective performed work and session context.
 
 See [`docs/N_BIO_TARGETS_PRESCRIPTIONS.md`](docs/N_BIO_TARGETS_PRESCRIPTIONS.md).
 
@@ -110,7 +110,7 @@ N-BIO-5.1 makes that stack observable and testable:
 - Settings exposes a debug-only biological developer screen with reference counts, targets,
   constraints, selected/rejected candidates and inference outputs;
 - full-history inference replay is an explicit visible task rather than a navigation side effect;
-- working sets accept optional RIR evidence;
+- working sets record performed work without a subjective effort rating;
 - an unstarted exercise can be replaced by a target-compatible execution profile, receiving a
   suggestion only from that replacement profile's own evidence;
 - resolver/inference state can be exported without exporting the full workout backup.

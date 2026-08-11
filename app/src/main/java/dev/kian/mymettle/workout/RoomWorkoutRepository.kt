@@ -328,7 +328,6 @@ class RoomWorkoutRepository(
                     prescribedSets = effectivePrescription.sets,
                     repMin = effectivePrescription.repRange.first,
                     repMax = effectivePrescription.repRange.last,
-                    targetRir = effectivePrescription.targetRir,
                     restSeconds = effectivePrescription.restSeconds,
                     generatedByModelVersion = effectivePrescription.generatedByModelVersion,
                     deferToAnd = false,
@@ -423,7 +422,6 @@ class RoomWorkoutRepository(
             prescribedSets = prescription.sets,
             repMin = prescription.repRange.first,
             repMax = prescription.repRange.last,
-            targetRir = prescription.targetRir,
             restSeconds = prescription.restSeconds,
             generatedByModelVersion = prescription.generatedByModelVersion,
             status = "planned",
@@ -508,7 +506,6 @@ class RoomWorkoutRepository(
                     targetIds = matchedCoverage.keys.sortedBy { it.value },
                     sets = current.prescribedSets.coerceAtLeast(1),
                     repRange = current.repMin..current.repMax,
-                    targetRir = current.targetRir,
                     loadEvidence = loadEvidence,
                     permitsExternalLoad = exercise.trackingMetric == "load_reps" &&
                         exercise.loadRelationship !in setOf("bodyweight", "none"),
@@ -546,12 +543,7 @@ class RoomWorkoutRepository(
         durationSeconds: Int? = null,
         distanceMetres: Double? = null,
         logged: Boolean,
-        rir: Double? = null,
-        effortSource: String? = null,
     ): SetRecordEntity = database.withTransaction {
-        if (rir != null && rir !in 0.0..10.0) {
-            throw NativeWorkoutException("RIR must be between 0 and 10.")
-        }
         val current = dao.sets(sessionExerciseId).firstOrNull { it.id == setId }
             ?: throw NativeWorkoutException("Set not found.")
         val next = current.copy(
@@ -560,8 +552,6 @@ class RoomWorkoutRepository(
             durationSeconds = durationSeconds,
             distanceMetres = distanceMetres,
             completedAt = if (logged) current.completedAt ?: timestamp() else null,
-            rir = rir,
-            effortSource = effortSource,
         )
         dao.upsertSets(listOf(next))
         next
@@ -689,7 +679,6 @@ class RoomWorkoutRepository(
                 preferencePriority = slot.importance.toTargetPriority(),
                 preferredSetCap = slot.preferredSets,
                 repRange = slot.repMin..slot.repMax,
-                targetRir = null,
                 restSeconds = slot.restSeconds,
                 targetCoverage = targetCoverage,
             )
@@ -748,7 +737,6 @@ class RoomWorkoutRepository(
                     targetIds = selection.targetIds,
                     sets = selection.sets,
                     repRange = candidate.repRange,
-                    targetRir = candidate.targetRir,
                     loadEvidence = loadEvidence,
                     permitsExternalLoad = source.exercise.trackingMetric == "load_reps" &&
                         source.exercise.loadRelationship !in setOf("bodyweight", "none"),
@@ -813,7 +801,6 @@ class RoomWorkoutRepository(
         prescribedSets = prescription.sets,
         repMin = prescription.repRange.first,
         repMax = prescription.repRange.last,
-        targetRir = prescription.targetRir,
         restSeconds = prescription.restSeconds,
         generatedByModelVersion = prescription.generatedByModelVersion,
         deferToAnd = false,
@@ -858,8 +845,6 @@ class RoomWorkoutRepository(
             unit = defaultUnit,
             completedAt = null,
             note = null,
-            rir = null,
-            effortSource = null,
             warmUp = false,
             kind = "prescribed",
         )
@@ -963,7 +948,6 @@ private fun SessionExerciseEntity.toPrescription(
     targetIds = targetIds.distinct(),
     sets = prescribedSets,
     repRange = repMin..repMax,
-    targetRir = targetRir,
     prescribedLoad = prescribedLoad,
     loadEvidence = prescribedLoadEvidenceSource?.let { source ->
         prescribedLoadAnchor?.let { anchor ->

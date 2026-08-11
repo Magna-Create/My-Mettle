@@ -93,7 +93,6 @@ class HistoryBackedPrescriptionEngineTest {
         targetIds = listOf(TrainingTargetId("target_chest")),
         sets = 3,
         repRange = 8..12,
-        targetRir = null,
         loadEvidence = previousLoad?.let {
             PrescriptionLoadEvidence(
                 source = "test",

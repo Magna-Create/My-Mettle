@@ -160,7 +160,6 @@ class N2WorkoutViewModel(
         reps: Int?,
         durationSeconds: Int? = null,
         distanceMetres: Double? = null,
-        rir: Double? = null,
         logged: Boolean,
         onSaved: (() -> Unit)? = null,
     ) {
@@ -175,8 +174,6 @@ class N2WorkoutViewModel(
                     durationSeconds = durationSeconds,
                     distanceMetres = distanceMetres,
                     logged = logged,
-                    rir = rir,
-                    effortSource = rir?.let { "user_reported_rir" },
                 )
                 repository.activeWorkout(sessionId)
             }.onSuccess { workout ->

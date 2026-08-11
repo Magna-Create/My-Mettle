@@ -288,7 +288,6 @@ data class SessionExerciseEntity(
     val prescribedSets: Int,
     val repMin: Int,
     val repMax: Int,
-    val targetRir: Double?,
     val restSeconds: Int,
     val generatedByModelVersion: String,
     val deferToAnd: Boolean,
@@ -326,8 +325,6 @@ data class SetRecordEntity(
     val unit: String,
     val completedAt: String?,
     val note: String?,
-    val rir: Double?,
-    val effortSource: String?,
     val warmUp: Boolean,
     val kind: String,
 )

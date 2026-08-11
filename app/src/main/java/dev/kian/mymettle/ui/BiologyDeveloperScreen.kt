@@ -213,7 +213,6 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                                     buildString {
                                         append(anchor.observedLoadAnchor?.value?.let { "${formatDebug(it)} ${anchor.observedLoadUnit}" } ?: "no load")
                                         append(" · ${anchor.sampleCount} samples")
-                                        anchor.observedRirAnchor?.let { append(" · RIR ${formatDebug(it)}") }
                                         anchor.observedLoadAnchor?.sourceId?.let { append(" · set ${it.takeLast(8)}") }
                                     },
                                     style = MaterialTheme.typography.bodySmall,

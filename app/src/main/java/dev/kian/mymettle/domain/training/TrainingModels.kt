@@ -94,7 +94,6 @@ data class ExercisePrescription(
     val targetIds: List<TrainingTargetId>,
     val sets: Int,
     val repRange: IntRange,
-    val targetRir: Double?,
     val prescribedLoad: Double?,
     val loadEvidence: PrescriptionLoadEvidence?,
     val restSeconds: Int,
@@ -105,7 +104,6 @@ data class ExercisePrescription(
         require(repRange.first > 0 && repRange.last >= repRange.first) {
             "A generated prescription must contain a valid positive rep range."
         }
-        require(targetRir == null || targetRir in 0.0..10.0) { "Target RIR must be between 0 and 10." }
         require(prescribedLoad == null || prescribedLoad >= 0.0) { "Prescribed load cannot be negative." }
         require(prescribedLoad != null || loadEvidence == null) {
             "A prescription cannot retain load evidence when it has no prescribed load."

@@ -129,7 +129,6 @@ class LegacyTargetProjectorTest {
         prescribedSets = 3,
         repMin = 8,
         repMax = 12,
-        targetRir = null,
         restSeconds = 120,
         generatedByModelVersion = "legacy-v6-session-snapshot-v1",
         deferToAnd = false,

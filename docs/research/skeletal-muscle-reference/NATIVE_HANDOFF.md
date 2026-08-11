@@ -359,7 +359,6 @@ data class ExercisePrescription(
     val targetIds: List<TrainingTargetId>,
     val sets: Int,
     val repRange: IntRange,
-    val targetRir: Double?,
     val prescribedLoad: Double?,
     val restSeconds: Int,
     val generatedByModelVersion: String,
@@ -382,13 +381,14 @@ At minimum the next schema should anticipate:
 load
 reps
 duration / distance where applicable
-RIR / effort estimate
 warm-up / working-set type
 completion time
 notes
 ```
 
-RIR is particularly important for translating a performed set into capability evidence. It should not be inferred solely from whether the rep target was met.
+Native v0 intentionally excludes a user-rated RIR/effort estimate. It is too subjective to treat
+as useful capability evidence; later models must not assume its presence or recreate it from the
+rep target.
 
 Raw performance stays immutable historical evidence even when inference models change.
 
@@ -680,7 +680,7 @@ The structures above are designed so all of those can iterate independently.
 - first-class training/session targets;
 - session snapshot of generated prescription;
 - remove `RoutineSlot.plannedLoad` as programme truth;
-- add RIR-ready performance fields.
+- preserve only objective performed-work fields.
 
 ### Patch N-BIO-4 — user-state/inference scaffold
 

@@ -205,7 +205,6 @@ private fun UserInferenceSnapshot.toJson(profileLabels: Map<String, String>): JS
         .put("observedLoadUnit", state.observedLoadUnit ?: JSONObject.NULL)
         .put("observedLoadSourceSetId", state.observedLoadAnchor?.sourceId ?: JSONObject.NULL)
         .put("observedRepAnchor", state.observedRepAnchor?.value ?: JSONObject.NULL)
-        .put("observedRirAnchor", state.observedRirAnchor ?: JSONObject.NULL)
         .put("sampleCount", state.sampleCount)
         .put("modelVersion", state.modelVersion)
     }))
