@@ -93,6 +93,17 @@ N-BIO-4 adds the recomputable user-state and inference scaffold:
 
 See [`docs/N_BIO_USER_STATE_INFERENCE.md`](docs/N_BIO_USER_STATE_INFERENCE.md).
 
+N-BIO-5 makes workout resolution target-driven:
+
+- Room `programme_mode_constraint` and `session_constraint` records replace persisted per-slot mode recipes;
+- modes are whole-session target, working-set, exercise and optional time budgets;
+- pinned routine slots are candidate preferences rather than the programme's only identity;
+- target coverage selects whole movements before dose is distributed, so reduced modes can omit
+  low-priority exercises instead of prescribing one set everywhere;
+- N-BIO-4 same-profile performance anchors now feed the prescription boundary without inventing progression.
+
+See [`docs/N_BIO_PROGRAMME_RESOLVER.md`](docs/N_BIO_PROGRAMME_RESOLVER.md).
+
 ## Migration rule
 
 We are not translating the Capacitor implementation line-for-line. Existing data and useful behaviour are the compatibility contract; known UX problems are corrected as their native equivalents are built.

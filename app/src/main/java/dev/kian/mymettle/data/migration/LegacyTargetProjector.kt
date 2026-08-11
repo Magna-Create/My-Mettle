@@ -92,6 +92,9 @@ object LegacyTargetProjector {
                     priority = target.priority,
                     desiredStimulus = target.desiredStimulus,
                     source = target.source,
+                    included = true,
+                    resolvedPriority = target.priority,
+                    resolutionModelVersion = LEGACY_SESSION_RESOLUTION_MODEL,
                 )
             }
         }
@@ -132,4 +135,6 @@ object LegacyTargetProjector {
 
     private fun sessionTargetId(sessionId: String, programmeTargetId: String): String =
         "session_target:$sessionId:$programmeTargetId"
+
+    private const val LEGACY_SESSION_RESOLUTION_MODEL = "legacy-session-target-projection-v1"
 }

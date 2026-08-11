@@ -189,31 +189,10 @@ data class RoutineSlotEntity(
     val position: Int,
     val importance: String,
     val lockedToDay: Boolean,
-)
-
-@Entity(
-    tableName = "mode_prescription",
-    primaryKeys = ["routineVersionId", "slotId", "mode"],
-    foreignKeys = [
-        ForeignKey(
-            entity = RoutineSlotEntity::class,
-            parentColumns = ["routineVersionId", "id"],
-            childColumns = ["routineVersionId", "slotId"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-    ],
-    indices = [Index(value = ["routineVersionId", "slotId"])],
-)
-data class ModePrescriptionEntity(
-    val slotId: String,
-    val mode: String,
-    val included: Boolean,
-    val sets: Int,
+    val preferredSets: Int,
     val repMin: Int,
     val repMax: Int,
     val restSeconds: Int,
-    val deferToAnd: Boolean,
-    val routineVersionId: String = "",
 )
 
 @Entity(tableName = "training_cycle")

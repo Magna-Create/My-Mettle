@@ -12,7 +12,6 @@ import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSubstitutionEntity
 import dev.kian.mymettle.data.local.entity.HealthIntegrationStateEntity
 import dev.kian.mymettle.data.local.entity.HealthObservationEntity
-import dev.kian.mymettle.data.local.entity.ModePrescriptionEntity
 import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.RoutineVersionEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
@@ -181,7 +180,7 @@ object LegacyV6BackupReader {
 
             val routineVersions = mutableListOf<RoutineVersionEntity>()
             val routineSlots = mutableListOf<RoutineSlotEntity>()
-            val modePrescriptions = mutableListOf<ModePrescriptionEntity>()
+            val modePrescriptions = mutableListOf<LegacyModePrescription>()
 
             database.arrayRequired("routineVersions").objects().forEach { version ->
                 val versionId = version.stringRequired("id")
@@ -198,22 +197,12 @@ object LegacyV6BackupReader {
                     val daySymbol = day.stringRequired("symbol")
                     day.arrayRequired("slots").objects().forEachIndexed { fallbackPosition, slot ->
                         val slotId = slot.stringRequired("id")
-                        // Validate the Legacy value but do not persist it. Programme assignments no
-                        // longer own load; historical session snapshots and performed sets do.
-                        slot.doubleRequired("plannedLoad")
-                        routineSlots += RoutineSlotEntity(
-                            id = slotId,
-                            routineVersionId = versionId,
-                            daySymbol = daySymbol,
-                            exerciseId = slot.stringRequired("exerciseId"),
-                            position = if (slot.has("position")) slot.intRequired("position") else fallbackPosition,
-                            importance = slot.stringRequired("importance"),
-                            lockedToDay = slot.optBoolean("lockedToDay", false),
-                        )
                         val prescriptions = slot.objectRequired("prescriptions")
-                        listOf("A", "B", "C").forEach { mode ->
+                        val slotPrescriptions = listOf("A", "B", "C").map { mode ->
                             val prescription = prescriptions.objectRequired(mode)
-                            modePrescriptions += ModePrescriptionEntity(
+                            LegacyModePrescription(
+                                routineVersionId = versionId,
+                                daySymbol = daySymbol,
                                 slotId = slotId,
                                 mode = mode,
                                 included = prescription.optBoolean("included", true),
@@ -224,6 +213,28 @@ object LegacyV6BackupReader {
                                 deferToAnd = prescription.optBoolean("deferToAnd", false),
                             )
                         }
+                        val full = slotPrescriptions.single { it.mode == "A" }
+                        // Validate the Legacy value but do not persist it. Programme assignments no
+                        // longer own load; historical session snapshots and performed sets do.
+                        slot.doubleRequired("plannedLoad")
+                        val preferredSets = full.sets.takeIf { full.included && it > 0 }
+                            ?: slotPrescriptions.filter { it.included }.maxOfOrNull { it.sets }
+                                ?.takeIf { it > 0 }
+                            ?: 1
+                        routineSlots += RoutineSlotEntity(
+                            id = slotId,
+                            routineVersionId = versionId,
+                            daySymbol = daySymbol,
+                            exerciseId = slot.stringRequired("exerciseId"),
+                            position = if (slot.has("position")) slot.intRequired("position") else fallbackPosition,
+                            importance = slot.stringRequired("importance"),
+                            lockedToDay = slot.optBoolean("lockedToDay", false),
+                            preferredSets = preferredSets,
+                            repMin = full.repMin,
+                            repMax = full.repMax,
+                            restSeconds = full.restSeconds,
+                        )
+                        modePrescriptions += slotPrescriptions
                     }
                 }
             }

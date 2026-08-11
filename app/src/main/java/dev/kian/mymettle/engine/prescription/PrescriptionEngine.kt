@@ -28,13 +28,12 @@ interface PrescriptionEngine {
 }
 
 /**
- * N-BIO-3 boundary implementation.
+ * N-BIO-5 baseline prescription implementation.
  *
- * It intentionally performs no progression or muscle-state inference. N-BIO-4 now supplies the
- * downstream user-state/translation scaffold, but this N-BIO-3 baseline remains in use until the
- * programme resolver consumes it. The latest performed load is therefore carried forward and
- * conformed to the selected execution profile's physical load resolution. With no evidence, load
- * remains null.
+ * The programme resolver supplies N-BIO-4's same-profile observed load anchor when it exists, with
+ * raw latest performance as a compatibility fallback. This engine still performs no invented
+ * progression: it conforms that evidence to the execution profile's physical load resolution and
+ * leaves load null when no defensible anchor exists.
  */
 class HistoryBackedPrescriptionEngine : PrescriptionEngine {
     override val modelVersion: String = MODEL_VERSION
@@ -75,6 +74,6 @@ class HistoryBackedPrescriptionEngine : PrescriptionEngine {
     }
 
     companion object {
-        const val MODEL_VERSION = "n-bio-3-history-prescription-v0"
+        const val MODEL_VERSION = "n-bio-5-observed-profile-prescription-v0"
     }
 }

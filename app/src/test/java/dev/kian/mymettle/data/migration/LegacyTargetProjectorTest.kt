@@ -61,6 +61,10 @@ class LegacyTargetProjectorTest {
         position = position,
         importance = importance,
         lockedToDay = false,
+        preferredSets = 3,
+        repMin = 8,
+        repMax = 12,
+        restSeconds = 120,
     )
 
     private fun defaultProfile() = ExerciseExecutionProfileEntity(

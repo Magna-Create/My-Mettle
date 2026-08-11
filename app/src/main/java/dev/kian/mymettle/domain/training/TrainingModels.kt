@@ -38,6 +38,42 @@ data class TrainingTarget(
     }
 }
 
+/** Whole-session limits. Modes are configurations of these constraints, not exercise recipes. */
+data class SessionConstraints(
+    val mode: String,
+    val workingSetBudget: Int,
+    val exerciseBudget: Int,
+    val minimumSetsPerExercise: Int,
+    val targetPriorityFloor: Double,
+    val timeBudgetSeconds: Int?,
+    val source: String,
+    val resolverModelVersion: String,
+) {
+    init {
+        require(mode.isNotBlank()) { "Constraint mode cannot be blank." }
+        require(workingSetBudget >= 0) { "Working-set budget cannot be negative." }
+        require(exerciseBudget >= 0) { "Exercise budget cannot be negative." }
+        require(minimumSetsPerExercise > 0) { "Minimum sets per selected exercise must be positive." }
+        require(targetPriorityFloor in 0.0..1.0) { "Target-priority floor must be between 0 and 1." }
+        require(timeBudgetSeconds == null || timeBudgetSeconds >= 0) { "Time budget cannot be negative." }
+        require(source.isNotBlank()) { "Constraint source cannot be blank." }
+        require(resolverModelVersion.isNotBlank()) { "Resolver model version cannot be blank." }
+    }
+}
+
+/** Target intent after applying a session's mode/state context. */
+data class ResolvedTrainingTarget(
+    val target: TrainingTarget,
+    val included: Boolean,
+    val resolvedPriority: Double,
+    val resolutionModelVersion: String,
+) {
+    init {
+        require(resolvedPriority in 0.0..1.0) { "Resolved target priority must be between 0 and 1." }
+        require(resolutionModelVersion.isNotBlank()) { "Target-resolution model version cannot be blank." }
+    }
+}
+
 /** A resolved, session-specific intervention generated from targets and current evidence. */
 data class ExercisePrescription(
     val exerciseId: ExerciseId,

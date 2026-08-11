@@ -135,6 +135,12 @@ Room v7 adds derived `inference_run`, `stimulus_estimate`, `muscle_state_snapsho
 `exercise_translation_state` records. They are not imported from Lite Legacy. They are rebuilt from
 the migrated immutable session/set history under an explicit, versioned inference run.
 
+Room v8 treats Lite Legacy A/B/C prescriptions as transient migration input. They are projected
+once into programme-level A/B/C/D set, exercise, target-priority and optional-time constraints.
+Pinned routine slots keep only full-day dose/rep/rest preferences for candidate resolution; the
+per-slot `mode_prescription` table is not part of Native programme truth. Each new session snapshots
+the resolved constraint and target inclusion/model provenance.
+
 The importer must also accept exports where this optional model is absent. `ExerciseMemory.targetMuscles` is not silently promoted into recruitment.
 
 ## Native rollout

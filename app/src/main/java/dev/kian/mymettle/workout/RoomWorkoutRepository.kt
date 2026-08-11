@@ -6,11 +6,12 @@ import dev.kian.mymettle.data.local.entity.AppStateEntity
 import dev.kian.mymettle.data.local.entity.CycleCompletedDayEntity
 import dev.kian.mymettle.data.local.entity.ExerciseEntity
 import dev.kian.mymettle.data.local.entity.ExerciseExecutionProfileEntity
-import dev.kian.mymettle.data.local.entity.ModePrescriptionEntity
+import dev.kian.mymettle.data.local.entity.ProgrammeModeConstraintEntity
 import dev.kian.mymettle.data.local.entity.ProgrammeTargetEntity
 import dev.kian.mymettle.data.local.entity.RecruitmentAllocationEntity
 import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
+import dev.kian.mymettle.data.local.entity.SessionConstraintEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseTargetEntity
 import dev.kian.mymettle.data.local.entity.SessionTargetEntity
@@ -21,12 +22,20 @@ import dev.kian.mymettle.domain.exercise.ExecutionProfileId
 import dev.kian.mymettle.domain.exercise.ExerciseId
 import dev.kian.mymettle.domain.exercise.LoadResolution
 import dev.kian.mymettle.domain.training.ExercisePrescription
+import dev.kian.mymettle.domain.training.ResolvedTrainingTarget
+import dev.kian.mymettle.domain.training.SessionConstraints
 import dev.kian.mymettle.domain.training.TargetSource
 import dev.kian.mymettle.domain.training.TrainingTarget
 import dev.kian.mymettle.domain.training.TrainingTargetId
 import dev.kian.mymettle.engine.prescription.HistoryBackedPrescriptionEngine
 import dev.kian.mymettle.engine.prescription.PrescriptionEngine
 import dev.kian.mymettle.engine.prescription.PrescriptionRequest
+import dev.kian.mymettle.engine.targeting.BudgetedTargetExerciseSelector
+import dev.kian.mymettle.engine.targeting.ConstraintTargetResolver
+import dev.kian.mymettle.engine.targeting.ExerciseSelectionCandidate
+import dev.kian.mymettle.engine.targeting.ExerciseSelector
+import dev.kian.mymettle.engine.targeting.TargetResolver
+import dev.kian.mymettle.inference.RoomInferenceRepository
 import java.time.Instant
 import java.util.UUID
 import org.json.JSONArray
@@ -45,16 +54,21 @@ data class PlannedWorkoutExercise(
     val entryBasis: String,
     val executionProfileName: String,
     val prescription: ExercisePrescription,
+    val movementReason: String,
+    val estimatedDurationSeconds: Int,
 )
 
 data class NativeWorkoutPlan(
     val routineVersionId: String,
     val day: String,
     val mode: TrainingMode,
-    val targets: List<TrainingTarget>,
+    val constraints: SessionConstraints,
+    val targetResolutions: List<ResolvedTrainingTarget>,
     val exercises: List<PlannedWorkoutExercise>,
 ) {
+    val targets: List<TrainingTarget> get() = targetResolutions.filter { it.included }.map { it.target }
     val workingSetCount: Int get() = exercises.sumOf { it.prescription.sets }
+    val estimatedDurationSeconds: Int get() = exercises.sumOf { it.estimatedDurationSeconds }
 }
 
 data class ActiveWorkoutExercise(
@@ -73,13 +87,16 @@ data class ActiveWorkout(
 /**
  * Persistence boundary for the N2 workout loop.
  *
- * The UI receives resolved session prescriptions and does not need to know that the imported
- * programme still stores three Legacy A/B/C anchors. That lets mode semantics evolve without a
- * Room schema migration and keeps completed SessionExerciseEntity snapshots historically stable.
+ * The UI receives resolved session prescriptions. Imported Legacy A/B/C rows have already become
+ * whole-session constraints, while routine slots are merely pinned candidates. Completed session
+ * exercise, target and constraint snapshots remain historically stable when resolver models change.
  */
 class RoomWorkoutRepository(
     private val database: MyMettleDatabase,
     private val prescriptionEngine: PrescriptionEngine = HistoryBackedPrescriptionEngine(),
+    private val targetResolver: TargetResolver = ConstraintTargetResolver(),
+    private val exerciseSelector: ExerciseSelector = BudgetedTargetExerciseSelector(),
+    private val inferenceRepository: RoomInferenceRepository = RoomInferenceRepository(database),
 ) {
     private val dao get() = database.workoutDao()
 
@@ -140,7 +157,9 @@ class RoomWorkoutRepository(
             healthClientRecordId = "my-mettle:$sessionId",
         )
 
-        val sessionTargets = workoutPlan.targets.map { target -> target.toSessionTarget(sessionId) }
+        val sessionTargets = workoutPlan.targetResolutions.map { resolution ->
+            resolution.toSessionTarget(sessionId)
+        }
         val sessionTargetByProgrammeId = sessionTargets.associateBy { it.programmeTargetId }
         val sessionExercises = mutableListOf<SessionExerciseEntity>()
         val sessionExerciseTargets = mutableListOf<SessionExerciseTargetEntity>()
@@ -153,7 +172,7 @@ class RoomWorkoutRepository(
                 position = position,
                 mode = mode,
                 bodyweight = bodyweight,
-                movementReason = "base_routine",
+                movementReason = planned.movementReason,
             )
             sessionExerciseTargets += planned.prescription.targetIds.map { targetId ->
                 val sessionTarget = sessionTargetByProgrammeId[targetId.value]
@@ -168,6 +187,7 @@ class RoomWorkoutRepository(
         }
 
         dao.upsertSessions(listOf(session))
+        dao.upsertSessionConstraint(workoutPlan.constraints.toSessionConstraint(sessionId))
         dao.upsertSessionTargets(sessionTargets)
         dao.upsertSessionExercises(sessionExercises)
         dao.upsertSessionExerciseTargets(sessionExerciseTargets)
@@ -184,7 +204,7 @@ class RoomWorkoutRepository(
 
     suspend fun activeWorkout(sessionId: String): ActiveWorkout {
         val session = dao.session(sessionId) ?: throw NativeWorkoutException("Active workout is missing.")
-        val targets = dao.sessionTargets(sessionId).map(SessionTargetEntity::toDomain)
+        val targets = dao.sessionTargets(sessionId).filter { it.included }.map(SessionTargetEntity::toDomain)
         val exercises = dao.sessionExercises(sessionId).map { exercise ->
             ActiveWorkoutExercise(
                 entity = exercise,
@@ -211,7 +231,12 @@ class RoomWorkoutRepository(
         if (session.mode == mode.code) return@withTransaction activeWorkout(sessionId)
 
         val target = planForRoutine(session.routineVersionId, session.daySymbol, mode)
-        val sessionTargetByProgrammeId = dao.sessionTargets(sessionId).associateBy { it.programmeTargetId }
+        val resolvedSessionTargets = target.targetResolutions.map { resolution ->
+            resolution.toSessionTarget(sessionId)
+        }
+        dao.upsertSessionTargets(resolvedSessionTargets)
+        dao.upsertSessionConstraint(target.constraints.toSessionConstraint(sessionId))
+        val sessionTargetByProgrammeId = resolvedSessionTargets.associateBy { it.programmeTargetId }
         val existing = dao.sessionExercises(sessionId)
         val existingBySlot = existing.associateBy { it.slotId }
         val targetSlots = target.exercises.mapTo(mutableSetOf()) { it.slotId }
@@ -235,7 +260,7 @@ class RoomWorkoutRepository(
                     position = position,
                     mode = mode,
                     bodyweight = bodyweight,
-                    movementReason = "mode_switch_addition",
+                    movementReason = planned.movementReason,
                 )
                 updatedExerciseTargets += planned.toSessionExerciseTargets(
                     sessionExerciseId,
@@ -262,6 +287,7 @@ class RoomWorkoutRepository(
                     restSeconds = planned.prescription.restSeconds,
                     generatedByModelVersion = planned.prescription.generatedByModelVersion,
                     deferToAnd = false,
+                    movementReason = planned.movementReason,
                 )
                 dao.deleteSessionExerciseTargets(current.id)
                 updatedExerciseTargets += planned.toSessionExerciseTargets(
@@ -395,9 +421,17 @@ class RoomWorkoutRepository(
         val slots = dao.routineSlots(routineVersionId, day)
         val targetEntities = dao.programmeTargets(routineVersionId, day)
         val targets = targetEntities.map(ProgrammeTargetEntity::toDomain)
-        if (slots.isEmpty()) {
-            return NativeWorkoutPlan(routineVersionId, day, mode, targets, emptyList())
-        }
+        val constraints = dao.programmeModeConstraint(routineVersionId, day, mode.code)?.toDomain()
+            ?: throw NativeWorkoutException("$day has no ${mode.label} session constraints.")
+        val targetResolutions = targetResolver.resolve(targets, constraints)
+        if (slots.isEmpty()) return NativeWorkoutPlan(
+            routineVersionId = routineVersionId,
+            day = day,
+            mode = mode,
+            constraints = constraints,
+            targetResolutions = targetResolutions,
+            exercises = emptyList(),
+        )
 
         val exerciseById = dao.exercises(slots.map { it.exerciseId }.distinct()).associateBy { it.id }
         val profilesByExercise = dao.executionProfiles(exerciseById.keys.toList()).groupBy { it.exerciseId }
@@ -409,62 +443,83 @@ class RoomWorkoutRepository(
         }
         val recruitmentByProfile = dao.recruitmentAllocations(defaultProfileByExercise.values.map { it.id })
             .groupBy { it.executionProfileId }
-        val prescriptions = dao.modePrescriptions(routineVersionId).groupBy { it.slotId }
-
-        val modeExercises = slots.map { slot ->
+        val targetBySegment = targetEntities.associateBy { it.muscleSegmentId }
+        val sourceByPreferenceId = linkedMapOf<String, SourceExercise>()
+        val candidates = slots.filter { it.preferredSets > 0 }.map { slot ->
             val exercise = exerciseById[slot.exerciseId]
                 ?: throw NativeWorkoutException("Routine slot ${slot.id} references a missing exercise.")
-            val byMode = prescriptions[slot.id].orEmpty().associateBy { it.mode }
-            ModeExercise(
-                id = slot.id,
+            val profile = defaultProfileByExercise.getValue(exercise.id)
+            val source = SourceExercise(
+                slot = slot,
+                exercise = exercise,
+                executionProfile = profile,
+                recruitment = recruitmentByProfile[profile.id].orEmpty(),
+            )
+            sourceByPreferenceId[slot.id] = source
+
+            val targetCoverage = linkedMapOf<TrainingTargetId, Double>()
+            source.recruitment
+                .filter { it.weighting > 0.0 && !it.role.equals("stabiliser", ignoreCase = true) }
+                .forEach { allocation ->
+                    val target = targetBySegment[allocation.muscleSegmentId] ?: return@forEach
+                    val targetId = TrainingTargetId(target.id)
+                    val coverage = allocation.weighting * allocation.confidence
+                    targetCoverage[targetId] = maxOf(targetCoverage[targetId] ?: 0.0, coverage)
+                }
+
+            ExerciseSelectionCandidate(
+                preferenceId = slot.id,
+                exerciseId = ExerciseId(exercise.id),
+                executionProfileId = ExecutionProfileId(profile.id),
                 ordinal = slot.position,
-                importance = slot.importance.toImportance(),
-                legacyA = byMode["A"].toBasePrescription(),
-                legacyB = byMode["B"].toBasePrescription(),
-                legacyC = byMode["C"].toBasePrescription(),
-                payload = SourceExercise(
-                    slot = slot,
-                    exercise = exercise,
-                    executionProfile = defaultProfileByExercise.getValue(exercise.id),
-                    recruitment = recruitmentByProfile[defaultProfileByExercise.getValue(exercise.id).id].orEmpty(),
-                ),
+                preferencePriority = slot.importance.toTargetPriority(),
+                preferredSetCap = slot.preferredSets,
+                repRange = slot.repMin..slot.repMax,
+                targetRir = null,
+                restSeconds = slot.restSeconds,
+                targetCoverage = targetCoverage,
             )
         }
 
-        val planned = WorkoutModePolicy.plan(modeExercises, mode).map { item ->
-            val source = item.payload
-            val recruitedSegments = source.recruitment
-                .filterNot { it.role.equals("stabiliser", ignoreCase = true) }
-                .mapTo(mutableSetOf()) { it.muscleSegmentId }
-            val resolvedTargetIds = targetEntities
-                .filter { it.muscleSegmentId in recruitedSegments }
-                .map { TrainingTargetId(it.id) }
-            val previousLoad = dao.latestCompletedLoadForExecutionProfile(source.executionProfile.id)?.load
+        val selections = exerciseSelector.select(targetResolutions, candidates, constraints)
+        val translationByProfile = inferenceRepository.latestSnapshot()
+            ?.exerciseTranslationStates
+            .orEmpty()
+            .associateBy { it.executionProfileId.value }
+        val planned = selections.map { selection ->
+            val candidate = selection.candidate
+            val source = sourceByPreferenceId.getValue(candidate.preferenceId)
+            val observedLoadAnchor = translationByProfile[source.executionProfile.id]
+                ?.observedLoadAnchor
+                ?.value
+                ?: dao.latestCompletedLoadForExecutionProfile(source.executionProfile.id)?.load
             val generated = prescriptionEngine.generate(
                 PrescriptionRequest(
                     exerciseId = ExerciseId(source.exercise.id),
                     executionProfileId = ExecutionProfileId(source.executionProfile.id),
-                    targetIds = resolvedTargetIds,
-                    sets = item.prescription.sets,
-                    repRange = item.prescription.repMin..item.prescription.repMax,
-                    targetRir = null,
-                    previousPerformedLoad = previousLoad,
+                    targetIds = selection.targetIds,
+                    sets = selection.sets,
+                    repRange = candidate.repRange,
+                    targetRir = candidate.targetRir,
+                    previousPerformedLoad = observedLoadAnchor,
                     permitsExternalLoad = source.exercise.trackingMetric == "load_reps" &&
                         source.exercise.loadRelationship !in setOf("bodyweight", "none"),
                     loadResolution = source.executionProfile.toLoadResolution(),
-                    restSeconds = item.prescription.restSeconds,
+                    restSeconds = candidate.restSeconds,
                 ),
             )
             PlannedWorkoutExercise(
                 slotId = source.slot.id,
                 name = source.exercise.name,
-                importance = item.importance,
+                importance = source.slot.importance.toImportance(),
                 defaultUnit = source.exercise.defaultUnit,
                 trackingMetric = source.exercise.trackingMetric,
                 loadRelationship = source.exercise.loadRelationship,
                 entryBasis = source.exercise.entryBasis,
                 executionProfileName = source.executionProfile.name,
                 prescription = generated,
+                movementReason = selection.reason,
+                estimatedDurationSeconds = selection.estimatedDurationSeconds,
             )
         }
 
@@ -472,7 +527,8 @@ class RoomWorkoutRepository(
             routineVersionId = routineVersionId,
             day = day,
             mode = mode,
-            targets = targets,
+            constraints = constraints,
+            targetResolutions = targetResolutions,
             exercises = planned,
         )
     }
@@ -558,20 +614,47 @@ private fun ProgrammeTargetEntity.toDomain(): TrainingTarget = TrainingTarget(
 private fun SessionTargetEntity.toDomain(): TrainingTarget = TrainingTarget(
     id = TrainingTargetId(id),
     segmentId = MuscleSegmentId(muscleSegmentId),
-    priority = priority,
+    priority = resolvedPriority,
     desiredStimulus = desiredStimulus,
     source = TargetSource(source),
 )
 
-private fun TrainingTarget.toSessionTarget(sessionId: String): SessionTargetEntity = SessionTargetEntity(
-    id = "session_target:$sessionId:${id.value}",
+private fun ResolvedTrainingTarget.toSessionTarget(sessionId: String): SessionTargetEntity = SessionTargetEntity(
+    id = "session_target:$sessionId:${target.id.value}",
     sessionId = sessionId,
-    programmeTargetId = id.value,
-    muscleSegmentId = segmentId.value,
-    priority = priority,
-    desiredStimulus = desiredStimulus,
-    source = source.description,
+    programmeTargetId = target.id.value,
+    muscleSegmentId = target.segmentId.value,
+    priority = target.priority,
+    desiredStimulus = target.desiredStimulus,
+    source = target.source.description,
+    included = included,
+    resolvedPriority = resolvedPriority,
+    resolutionModelVersion = resolutionModelVersion,
 )
+
+private fun ProgrammeModeConstraintEntity.toDomain(): SessionConstraints = SessionConstraints(
+    mode = mode,
+    workingSetBudget = workingSetBudget,
+    exerciseBudget = exerciseBudget,
+    minimumSetsPerExercise = minimumSetsPerExercise,
+    targetPriorityFloor = targetPriorityFloor,
+    timeBudgetSeconds = timeBudgetSeconds,
+    source = source,
+    resolverModelVersion = resolverModelVersion,
+)
+
+private fun SessionConstraints.toSessionConstraint(sessionId: String): SessionConstraintEntity =
+    SessionConstraintEntity(
+        sessionId = sessionId,
+        mode = mode,
+        workingSetBudget = workingSetBudget,
+        exerciseBudget = exerciseBudget,
+        minimumSetsPerExercise = minimumSetsPerExercise,
+        targetPriorityFloor = targetPriorityFloor,
+        timeBudgetSeconds = timeBudgetSeconds,
+        source = source,
+        resolverModelVersion = resolverModelVersion,
+    )
 
 private fun PlannedWorkoutExercise.toSessionExerciseTargets(
     sessionExerciseId: String,
@@ -600,23 +683,18 @@ private fun ExerciseExecutionProfileEntity.toLoadResolution(): LoadResolution? {
     }
 }
 
-private fun ModePrescriptionEntity?.toBasePrescription(): BasePrescription = if (this == null) {
-    BasePrescription(included = false, sets = 0, repMin = 1, repMax = 1, restSeconds = 0)
-} else {
-    BasePrescription(
-        included = included,
-        sets = sets,
-        repMin = repMin,
-        repMax = repMax,
-        restSeconds = restSeconds,
-    )
-}
-
 private fun String.toImportance(): ExerciseImportance = when (lowercase()) {
     "principal" -> ExerciseImportance.PRINCIPAL
     "core" -> ExerciseImportance.CORE
     "accessory" -> ExerciseImportance.ACCESSORY
     else -> ExerciseImportance.CORE
+}
+
+private fun String.toTargetPriority(): Double = when (lowercase()) {
+    "principal" -> 1.0
+    "core" -> 0.7
+    "accessory" -> 0.4
+    else -> 0.7
 }
 
 private fun id(prefix: String): String = "${prefix}_${UUID.randomUUID()}"

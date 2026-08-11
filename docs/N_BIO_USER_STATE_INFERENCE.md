@@ -66,10 +66,11 @@ surface it must run through the visible background-task UI rather than silently 
 - No hypertrophy, development, recovery or fatigue equation is claimed yet.
 - No recency window is selected yet.
 - No cross-exercise transfer coefficient exists yet.
-- The prescription engine does not consume these states until the N-BIO-5 programme/mode resolver.
+- N-BIO-5 consumes the same-profile translation anchor for prescription load evidence. Neutral
+  muscle state and null recovery remain deliberately non-operative.
 - Incremental inference after ordinary set/session completion remains a later engine policy; the
   explicit v0 path is full-history replay only.
 
-N-BIO-5 can now reinterpret programme intent as target/dose/time constraints and resolve exercises
-against persisted user state without coupling raw evidence to whichever inference formula happens
-to be current.
+N-BIO-5 is implemented in [`N_BIO_PROGRAMME_RESOLVER.md`](N_BIO_PROGRAMME_RESOLVER.md): programme
+intent now resolves through whole-session constraints, target coverage and persisted same-profile
+performance state without coupling raw evidence to the current inference formula.
