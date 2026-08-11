@@ -5,6 +5,8 @@ import androidx.room.Room
 import dev.kian.mymettle.data.reference.ReferenceSeedCallback
 
 object DatabaseProvider {
+    private const val DATABASE_NAME = "my-mettle.db"
+
     @Volatile
     private var instance: MyMettleDatabase? = null
 
@@ -12,12 +14,19 @@ object DatabaseProvider {
         instance ?: Room.databaseBuilder(
             context.applicationContext,
             MyMettleDatabase::class.java,
-            "my-mettle.db",
+            DATABASE_NAME,
         )
             .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .fallbackToDestructiveMigration(true)
             .addCallback(ReferenceSeedCallback(context.applicationContext))
             .build()
             .also { instance = it }
+    }
+
+    @Synchronized
+    fun resetDevelopmentDatabase(context: Context) {
+        instance?.close()
+        instance = null
+        context.applicationContext.deleteDatabase(DATABASE_NAME)
     }
 }

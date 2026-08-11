@@ -3,25 +3,32 @@ package dev.kian.mymettle.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import dev.kian.mymettle.developer.BiologyTaskController
+import dev.kian.mymettle.developer.BiologyTaskPhase
 
 private const val TRAIN_ROUTE = "train"
 private const val LIBRARY_ROUTE = "library"
 private const val HISTORY_ROUTE = "history"
 private const val SETTINGS_ROUTE = "settings"
+private const val BIOLOGY_DEVELOPER_ROUTE = "settings/biology-developer"
 
 @Composable
 fun MyMettleApp() {
@@ -32,6 +39,7 @@ fun MyMettleApp() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: TRAIN_ROUTE
+    val biologyTask by BiologyTaskController.state.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -77,7 +85,19 @@ fun MyMettleApp() {
                 composable(TRAIN_ROUTE) { TrainScreen(workoutViewModel) }
                 composable(LIBRARY_ROUTE) { ExerciseLibraryScreen() }
                 composable(HISTORY_ROUTE) { HistoryScreen() }
-                composable(SETTINGS_ROUTE) { SettingsScreen() }
+                composable(SETTINGS_ROUTE) {
+                    SettingsScreen(onOpenDeveloper = { navController.navigate(BIOLOGY_DEVELOPER_ROUTE) })
+                }
+                composable(BIOLOGY_DEVELOPER_ROUTE) {
+                    BiologyDeveloperScreen(onBack = { navController.popBackStack() })
+                }
+            }
+            if (biologyTask.phase != BiologyTaskPhase.IDLE) {
+                AssistChip(
+                    onClick = { navController.navigate(BIOLOGY_DEVELOPER_ROUTE) { launchSingleTop = true } },
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
+                    label = { Text(biologyTask.label ?: "Biological task") },
+                )
             }
             NativeRestTimerOverlay()
             ExerciseReflectionOverlay(workoutViewModel)

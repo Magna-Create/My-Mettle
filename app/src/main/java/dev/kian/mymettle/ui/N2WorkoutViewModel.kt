@@ -16,6 +16,7 @@ import dev.kian.mymettle.history.HistoryRepository
 import dev.kian.mymettle.timer.RestTimerController
 import dev.kian.mymettle.workout.ActiveWorkout
 import dev.kian.mymettle.workout.ActiveWorkoutExercise
+import dev.kian.mymettle.workout.ExerciseSwapOption
 import dev.kian.mymettle.workout.NativeWorkoutPlan
 import dev.kian.mymettle.workout.RoomWorkoutRepository
 import dev.kian.mymettle.workout.SessionAchievement
@@ -31,6 +32,9 @@ data class N2WorkoutUiState(
     val selectedMode: TrainingMode = TrainingMode.B,
     val plans: Map<TrainingMode, NativeWorkoutPlan> = emptyMap(),
     val workout: ActiveWorkout? = null,
+    val swapTarget: ActiveWorkoutExercise? = null,
+    val swapOptions: List<ExerciseSwapOption> = emptyList(),
+    val loadingSwapOptions: Boolean = false,
     val reflectionTarget: ActiveWorkoutExercise? = null,
     val reflection: ExerciseReflectionEntity? = null,
     val savingReflection: Boolean = false,
@@ -156,6 +160,7 @@ class N2WorkoutViewModel(
         reps: Int?,
         durationSeconds: Int? = null,
         distanceMetres: Double? = null,
+        rir: Double? = null,
         logged: Boolean,
         onSaved: (() -> Unit)? = null,
     ) {
@@ -170,6 +175,8 @@ class N2WorkoutViewModel(
                     durationSeconds = durationSeconds,
                     distanceMetres = distanceMetres,
                     logged = logged,
+                    rir = rir,
+                    effortSource = rir?.let { "user_reported_rir" },
                 )
                 repository.activeWorkout(sessionId)
             }.onSuccess { workout ->
@@ -184,6 +191,52 @@ class N2WorkoutViewModel(
                 }
             }.onFailure(::showError)
         }
+    }
+
+    fun requestExerciseSwap(exercise: ActiveWorkoutExercise) {
+        val workout = uiState.workout ?: return
+        if (workout.session.status != "active" || exercise.sets.any { it.completedAt != null }) return
+        uiState = uiState.copy(
+            swapTarget = exercise,
+            swapOptions = emptyList(),
+            loadingSwapOptions = true,
+            error = null,
+        )
+        viewModelScope.launch {
+            runCatching { repository.swapOptions(exercise.entity.id) }
+                .onSuccess { options ->
+                    uiState = uiState.copy(swapOptions = options, loadingSwapOptions = false)
+                }
+                .onFailure { error ->
+                    uiState = uiState.copy(swapTarget = null, loadingSwapOptions = false)
+                    showError(error)
+                }
+        }
+    }
+
+    fun swapExercise(option: ExerciseSwapOption) {
+        val target = uiState.swapTarget ?: return
+        viewModelScope.launch {
+            uiState = uiState.copy(loadingSwapOptions = true, error = null)
+            runCatching { repository.swapExercise(target.entity.id, option.executionProfileId) }
+                .onSuccess { workout ->
+                    uiState = uiState.copy(
+                        workout = workout,
+                        swapTarget = null,
+                        swapOptions = emptyList(),
+                        loadingSwapOptions = false,
+                    )
+                }
+                .onFailure { error ->
+                    uiState = uiState.copy(loadingSwapOptions = false)
+                    showError(error)
+                }
+        }
+    }
+
+    fun dismissExerciseSwap() {
+        if (uiState.loadingSwapOptions) return
+        uiState = uiState.copy(swapTarget = null, swapOptions = emptyList())
     }
 
     fun toggleExercise(exercise: ActiveWorkoutExercise) {
@@ -366,6 +419,7 @@ class N2WorkoutViewModel(
             importing = false,
             savingReflection = false,
             savingReview = false,
+            loadingSwapOptions = false,
             error = error.message ?: error::class.java.simpleName,
         )
     }

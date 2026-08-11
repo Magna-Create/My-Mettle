@@ -120,6 +120,10 @@ class LegacyTargetProjectorTest {
         executionProfileId = "execution_press_default",
         executionProfileNameSnapshot = "Default",
         prescribedLoad = 20.0,
+        prescribedLoadEvidenceSource = "legacy_session_snapshot",
+        prescribedLoadEvidenceSetId = null,
+        prescribedLoadInferenceRunId = null,
+        prescribedLoadAnchor = 20.0,
         prescriptionMode = "A",
         prescriptionIncluded = included,
         prescribedSets = 3,
@@ -134,5 +138,6 @@ class LegacyTargetProjectorTest {
         startedAt = "2026-08-10T10:00:00Z",
         completedAt = "2026-08-10T10:15:00Z",
         movementReason = "base_routine",
+        substitutedFromExerciseId = null,
     )
 }

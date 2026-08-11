@@ -81,7 +81,7 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         StimulusEstimateEntity::class,
         ExerciseTranslationStateEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
 abstract class MyMettleDatabase : RoomDatabase() {

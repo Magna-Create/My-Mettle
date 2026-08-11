@@ -300,6 +300,10 @@ object LegacyV6BackupReader {
                         executionProfileId = "execution_${exerciseId}_default",
                         executionProfileNameSnapshot = "Default",
                         prescribedLoad = sessionExercise.doubleRequired("plannedLoad"),
+                        prescribedLoadEvidenceSource = "legacy_session_snapshot",
+                        prescribedLoadEvidenceSetId = null,
+                        prescribedLoadInferenceRunId = null,
+                        prescribedLoadAnchor = sessionExercise.doubleRequired("plannedLoad"),
                         prescriptionMode = prescription.stringRequired("mode"),
                         prescriptionIncluded = prescription.optBoolean("included", true),
                         prescribedSets = prescribedSetCount,
@@ -314,6 +318,7 @@ object LegacyV6BackupReader {
                         startedAt = sessionExercise.stringOrNull("startedAt"),
                         completedAt = sessionExercise.stringOrNull("completedAt"),
                         movementReason = sessionExercise.optString("movementReason", "base_routine"),
+                        substitutedFromExerciseId = null,
                     )
 
                     sessionExercise.arrayRequired("sets").objects().forEachIndexed { fallbackSetIndex, set ->

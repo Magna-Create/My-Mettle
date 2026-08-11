@@ -279,6 +279,10 @@ data class SessionExerciseEntity(
     val executionProfileId: String,
     val executionProfileNameSnapshot: String,
     val prescribedLoad: Double?,
+    val prescribedLoadEvidenceSource: String?,
+    val prescribedLoadEvidenceSetId: String?,
+    val prescribedLoadInferenceRunId: String?,
+    val prescribedLoadAnchor: Double?,
     val prescriptionMode: String,
     val prescriptionIncluded: Boolean,
     val prescribedSets: Int,
@@ -293,6 +297,7 @@ data class SessionExerciseEntity(
     val startedAt: String?,
     val completedAt: String?,
     val movementReason: String,
+    val substitutedFromExerciseId: String?,
 )
 
 @Entity(

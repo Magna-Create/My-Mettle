@@ -104,6 +104,19 @@ N-BIO-5 makes workout resolution target-driven:
 
 See [`docs/N_BIO_PROGRAMME_RESOLVER.md`](docs/N_BIO_PROGRAMME_RESOLVER.md).
 
+N-BIO-5.1 makes that stack observable and testable:
+
+- Room v9 snapshots the same-profile evidence behind every generated load suggestion;
+- Settings exposes a debug-only biological developer screen with reference counts, targets,
+  constraints, selected/rejected candidates and inference outputs;
+- full-history inference replay is an explicit visible task rather than a navigation side effect;
+- working sets accept optional RIR evidence;
+- an unstarted exercise can be replaced by a target-compatible execution profile, receiving a
+  suggestion only from that replacement profile's own evidence;
+- resolver/inference state can be exported without exporting the full workout backup.
+
+See [`docs/N_BIO_OBSERVABILITY.md`](docs/N_BIO_OBSERVABILITY.md).
+
 ## Migration rule
 
 We are not translating the Capacitor implementation line-for-line. Existing data and useful behaviour are the compatibility contract; known UX problems are corrected as their native equivalents are built.

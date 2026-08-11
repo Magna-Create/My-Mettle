@@ -141,6 +141,12 @@ Pinned routine slots keep only full-day dose/rep/rest preferences for candidate 
 per-slot `mode_prescription` table is not part of Native programme truth. Each new session snapshots
 the resolved constraint and target inclusion/model provenance.
 
+Room v9 extends the immutable session-exercise snapshot with prescribed-load evidence provenance:
+source kind, source set, inference run and pre-equipment-resolution anchor. A Legacy planned load is
+marked as a Legacy session snapshot; Native-generated loads identify either an inference anchor or
+the explicit same-profile raw-history fallback. Exercise substitution changes only an unstarted
+session intervention and never rewrites completed set evidence.
+
 The importer must also accept exports where this optional model is absent. `ExerciseMemory.targetMuscles` is not silently promoted into recruitment.
 
 ## Native rollout

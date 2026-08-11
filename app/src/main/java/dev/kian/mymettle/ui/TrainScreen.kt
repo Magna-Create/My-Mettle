@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,6 +34,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -59,6 +61,7 @@ import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.workout.ActiveWorkout
 import dev.kian.mymettle.workout.ActiveWorkoutExercise
+import dev.kian.mymettle.workout.ExerciseSwapOption
 import dev.kian.mymettle.workout.NativeWorkoutPlan
 import dev.kian.mymettle.workout.TrainingMode
 import dev.kian.mymettle.workout.evaluateLoadExpression
@@ -71,6 +74,7 @@ private class TrainSetDraft(set: SetRecordEntity) {
     var reps by mutableStateOf(set.reps?.toString().orEmpty())
     var durationSeconds by mutableStateOf(set.durationSeconds?.toString().orEmpty())
     var distanceMetres by mutableStateOf(set.distanceMetres?.let(::formatDecimal).orEmpty())
+    var rir by mutableStateOf(set.rir?.let(::formatDecimal).orEmpty())
 }
 
 private data class LoadCalculatorTarget(
@@ -148,6 +152,7 @@ fun TrainScreen(viewModel: N2WorkoutViewModel) {
                 onLogSet = { exercise, set, draft ->
                     persistDraft(viewModel, exercise, set, draft, logged = true)
                 },
+                onSwapExercise = viewModel::requestExerciseSwap,
                 onToggleExercise = viewModel::toggleExercise,
                 onCompleteSession = viewModel::completeSession,
             )
@@ -175,6 +180,16 @@ fun TrainScreen(viewModel: N2WorkoutViewModel) {
             },
         )
     }
+
+    state.swapTarget?.let { target ->
+        ExerciseSwapSheet(
+            current = target,
+            options = state.swapOptions,
+            loading = state.loadingSwapOptions,
+            onDismiss = viewModel::dismissExerciseSwap,
+            onSelect = viewModel::swapExercise,
+        )
+    }
 }
 
 private fun persistDraft(
@@ -192,6 +207,7 @@ private fun persistDraft(
         reps = draft.reps.toIntOrNull(),
         durationSeconds = draft.durationSeconds.toIntOrNull(),
         distanceMetres = draft.distanceMetres.toDoubleOrNull(),
+        rir = draft.rir.toDoubleOrNull(),
         logged = logged,
     )
 }
@@ -338,6 +354,7 @@ private fun ActiveTrainState(
     onOpenCalculator: (ActiveWorkoutExercise, SetRecordEntity) -> Unit,
     onSaveDraft: (ActiveWorkoutExercise, SetRecordEntity, TrainSetDraft) -> Unit,
     onLogSet: (ActiveWorkoutExercise, SetRecordEntity, TrainSetDraft) -> Unit,
+    onSwapExercise: (ActiveWorkoutExercise) -> Unit,
     onToggleExercise: (ActiveWorkoutExercise) -> Unit,
     onCompleteSession: () -> Unit,
 ) {
@@ -393,6 +410,7 @@ private fun ActiveTrainState(
                 onOpenCalculator = { set -> onOpenCalculator(exercise, set) },
                 onSaveDraft = { set, draft -> onSaveDraft(exercise, set, draft) },
                 onLogSet = { set, draft -> onLogSet(exercise, set, draft) },
+                onSwap = { onSwapExercise(exercise) },
                 onToggleComplete = { onToggleExercise(exercise) },
             )
         }
@@ -415,6 +433,7 @@ private fun TrainExerciseCard(
     onOpenCalculator: (SetRecordEntity) -> Unit,
     onSaveDraft: (SetRecordEntity, TrainSetDraft) -> Unit,
     onLogSet: (SetRecordEntity, TrainSetDraft) -> Unit,
+    onSwap: () -> Unit,
     onToggleComplete: () -> Unit,
 ) {
     val entity = exercise.entity
@@ -456,6 +475,11 @@ private fun TrainExerciseCard(
             }
             Spacer(Modifier.height(8.dp))
             Text(prescriptionSummary(entity), style = MaterialTheme.typography.titleSmall)
+            Text(
+                loadEvidenceSummary(entity),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             previous?.let {
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -487,6 +511,14 @@ private fun TrainExerciseCard(
             }
 
             Spacer(Modifier.height(14.dp))
+            OutlinedButton(
+                onClick = onSwap,
+                enabled = sessionActive && !completed && sets.none { it.completedAt != null },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Swap exercise")
+            }
+            Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = onToggleComplete, enabled = sessionActive, modifier = Modifier.fillMaxWidth()) {
                 Text(if (completed) "Reopen exercise" else "Complete exercise")
             }
@@ -511,11 +543,13 @@ private fun MetricSetRow(
     val needsReps = metric == "load_reps" || metric == "reps"
     val needsDuration = metric == "duration"
     val needsDistance = metric == "distance"
+    val rirValue = draft.rir.toDoubleOrNull()
     val ready = when {
         needsExternalLoad && draft.load.toDoubleOrNull() == null -> false
         needsReps && draft.reps.toIntOrNull() == null -> false
         needsDuration && draft.durationSeconds.toIntOrNull()?.let { it > 0 } != true -> false
         needsDistance && draft.distanceMetres.toDoubleOrNull()?.let { it > 0.0 } != true -> false
+        draft.rir.isNotBlank() && rirValue?.let { it in 0.0..10.0 } != true -> false
         else -> true
     }
 
@@ -569,6 +603,25 @@ private fun MetricSetRow(
             }
 
             Spacer(Modifier.height(8.dp))
+            MetricNumberField(
+                value = draft.rir,
+                onValueChange = { next ->
+                    val candidate = decimalInput(next, 4)
+                    if (
+                        candidate.isEmpty() || candidate == "." ||
+                        candidate.toDoubleOrNull()?.let { it in 0.0..10.0 } == true
+                    ) {
+                        draft.rir = candidate
+                    }
+                },
+                label = "RIR (optional)",
+                enabled = enabled,
+                decimal = true,
+                modifier = Modifier.fillMaxWidth(),
+                onDone = { focusManager.clearFocus(); onSaveDraft() },
+            )
+
+            Spacer(Modifier.height(8.dp))
             FilledTonalButton(
                 onClick = {
                     focusManager.clearFocus(force = true)
@@ -603,6 +656,65 @@ private fun MetricNumberField(
         keyboardOptions = KeyboardOptions(keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number),
         keyboardActions = KeyboardActions(onDone = { onDone() }),
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExerciseSwapSheet(
+    current: ActiveWorkoutExercise,
+    options: List<ExerciseSwapOption>,
+    loading: Boolean,
+    onDismiss: () -> Unit,
+    onSelect: (ExerciseSwapOption) -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("Swap ${current.entity.exerciseNameSnapshot}", style = MaterialTheme.typography.headlineSmall)
+            Text(
+                "Only exercises recruiting this movement's session targets are shown. The outgoing exercise's load is never copied.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            when {
+                loading -> Box(
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
+                    contentAlignment = Alignment.Center,
+                ) { CircularProgressIndicator() }
+                options.isEmpty() -> Text(
+                    "No compatible replacement has a resolvable execution profile.",
+                    modifier = Modifier.padding(vertical = 24.dp),
+                )
+                else -> LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(options, key = { it.executionProfileId }) { option ->
+                        ElevatedCard {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Text(option.exerciseName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "${option.executionProfileName} · ${option.matchedTargetIds.size} matched target(s)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(swapLoadSuggestion(option), style = MaterialTheme.typography.bodyMedium)
+                                Button(
+                                    onClick = { onSelect(option) },
+                                    enabled = !loading,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) { Text("Use this exercise") }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -670,12 +782,40 @@ private fun prescriptionSummary(entity: SessionExerciseEntity): String = when (e
     else -> "${entity.prescribedSets} set${if (entity.prescribedSets == 1) "" else "s"} · ${entity.restSeconds}s rest"
 }
 
+private fun loadEvidenceSummary(entity: SessionExerciseEntity): String = when {
+    entity.loadRelationshipSnapshot in setOf("bodyweight", "none") -> "Load suggestion: not applicable"
+    entity.prescribedLoad == null && entity.trackingMetricSnapshot == "load_reps" ->
+        "Load suggestion: none — no same-profile evidence"
+    entity.prescribedLoad == null -> "Load suggestion: not applicable"
+    entity.prescribedLoadEvidenceSource == "inference_same_profile_anchor" ->
+        "Load evidence: inference ${entity.prescribedLoadInferenceRunId?.takeLast(8) ?: "run"} · set ${entity.prescribedLoadEvidenceSetId?.takeLast(8) ?: "unknown"}"
+    entity.prescribedLoadEvidenceSource == "raw_same_profile_history" ->
+        "Load evidence: latest same-profile set ${entity.prescribedLoadEvidenceSetId?.takeLast(8) ?: "unknown"}"
+    else -> "Load evidence: ${entity.prescribedLoadEvidenceSource ?: "not recorded"}"
+}
+
+private fun swapLoadSuggestion(option: ExerciseSwapOption): String {
+    val load = option.prescription.prescribedLoad ?: return if (option.trackingMetric == "load_reps") {
+        "No defensible load suggestion for this execution profile yet."
+    } else {
+        "This execution profile does not use an external-load suggestion."
+    }
+    val evidence = option.prescription.loadEvidence
+    val source = when (evidence?.source) {
+        "inference_same_profile_anchor" -> "inference anchor"
+        "raw_same_profile_history" -> "latest same-profile set"
+        else -> evidence?.source ?: "recorded evidence"
+    }
+    return "Suggested ${formatDecimal(load)} ${option.defaultUnit} · $source ${evidence?.sourceSetRecordId?.takeLast(8).orEmpty()}".trim()
+}
+
 private fun setSummary(set: SetRecordEntity): String = buildString {
     if (set.load != null) append("${formatDecimal(set.load)} ${set.unit}")
     if (set.load != null && set.reps != null) append(" × ")
     if (set.reps != null) append("${set.reps} reps")
     if (set.durationSeconds != null) append("${set.durationSeconds}s")
     if (set.distanceMetres != null) append("${formatDecimal(set.distanceMetres)} m")
+    if (set.rir != null) append(" · RIR ${formatDecimal(set.rir)}")
     if (isEmpty()) append("—")
 }
 
