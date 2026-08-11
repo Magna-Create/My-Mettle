@@ -83,6 +83,16 @@ N-BIO-3 adds the first independent programme/session targets and generated presc
 
 See [`docs/N_BIO_TARGETS_PRESCRIPTIONS.md`](docs/N_BIO_TARGETS_PRESCRIPTIONS.md).
 
+N-BIO-4 adds the recomputable user-state and inference scaffold:
+
+- immutable, versioned inference runs tied to reference/recruitment/component model versions;
+- per-set, per-segment stimulus estimates kept separate from raw workout evidence;
+- user muscle-state snapshots with development, morphology, stimulus and recovery fields kept distinct;
+- per-execution-profile observed performance anchors behind a replaceable translation boundary;
+- an explicit full-history replay path that is never triggered by ordinary navigation.
+
+See [`docs/N_BIO_USER_STATE_INFERENCE.md`](docs/N_BIO_USER_STATE_INFERENCE.md).
+
 ## Migration rule
 
 We are not translating the Capacitor implementation line-for-line. Existing data and useful behaviour are the compatibility contract; known UX problems are corrected as their native equivalents are built.

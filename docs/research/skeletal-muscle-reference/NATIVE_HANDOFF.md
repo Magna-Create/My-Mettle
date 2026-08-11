@@ -4,7 +4,7 @@
 
 **Research is sufficiently defined to begin the Native data/domain rewrite.**
 
-**Implementation update:** N-BIO-1 and N-BIO-2 are combined in the Room v5 biological foundation. N-BIO-3 adds the Room v6 independent target/prescription split; N-BIO-4 is the next structural patch.
+**Implementation update:** N-BIO-1 and N-BIO-2 are combined in the Room v5 biological foundation. N-BIO-3 adds the Room v6 independent target/prescription split. N-BIO-4 adds the Room v7 user-state/inference scaffold; N-BIO-5 is the next structural patch.
 
 This does not mean every human muscle has a precise adult-male PCSA. It means the model now knows:
 

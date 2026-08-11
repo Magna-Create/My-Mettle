@@ -62,7 +62,7 @@ The active Lite Legacy Android application is `dev.kian.mymettle.litelegacy` / `
 
 This allows the native debug app and Lite Legacy to remain installed side-by-side during migration.
 
-## Schema-v6 model families to preserve
+## Lite schema-v6 model families to preserve
 
 - user profile
 - app/rest-timer settings
@@ -130,6 +130,10 @@ imported as `SessionExercise.prescribedLoad`; future prescriptions carry forward
 through the selected execution profile. Because Legacy had no separate target-intent model, PRIME
 recruitment on pinned routine assignments is projected once into independent programme/session
 targets with explicit `legacy-prime-recruitment-projection-v1` provenance.
+
+Room v7 adds derived `inference_run`, `stimulus_estimate`, `muscle_state_snapshot` and
+`exercise_translation_state` records. They are not imported from Lite Legacy. They are rebuilt from
+the migrated immutable session/set history under an explicit, versioned inference run.
 
 The importer must also accept exports where this optional model is absent. `ExerciseMemory.targetMuscles` is not silently promoted into recruitment.
 

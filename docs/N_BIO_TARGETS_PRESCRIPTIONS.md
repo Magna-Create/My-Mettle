@@ -56,8 +56,10 @@ RIR-ready; capture UX and interpretation follow separately.
 
 - Legacy A/B/C anchors still provide temporary dose constraints while N2 remains operational.
 - Routine slots still act as pinned exercise assignments.
-- No user muscle state, exercise-translation state or progression equation exists yet.
+- N-BIO-3 itself performs no user-state, exercise-translation or progression inference; N-BIO-4
+  now provides that downstream scaffold independently.
 - Workout modes do not become target/dose/time budgets until N-BIO-5.
 
-N-BIO-4 can now add recomputable user-state/inference storage without changing programme intent or
-historical prescription identity.
+N-BIO-4 is implemented in [`N_BIO_USER_STATE_INFERENCE.md`](N_BIO_USER_STATE_INFERENCE.md):
+recomputable user-state/inference records now sit downstream of immutable raw evidence without
+changing programme intent or historical prescription identity.
