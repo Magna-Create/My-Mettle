@@ -8,7 +8,7 @@ Keep the scientific basis for anatomy, reference morphology, muscle architecture
 
 ## Status
 
-**Biological foundation: implementation-ready for Native N-BIO-1.**
+**Biological foundation: implemented in the combined Native N-BIO-1 / N-BIO-2 checkpoint.**
 
 This does not mean the physiology dataset is complete. It means the remaining gaps now have explicit fallback/latent rules and no longer require a change to the foundational ontology or persistence shape before implementation can begin.
 
@@ -81,19 +81,20 @@ The workspace now has:
 - an explicit parent-latent strategy where segment physiology is incomplete;
 - a Native handoff defining the replacement domain/persistence architecture.
 
-No Native runtime/Room changes have been made on this research branch.
+The selected subset is now generated into runtime assets and seeded into Room. The evidence corpus remains research-only.
 
 ## Native boundary
 
-The next implementation action is **N-BIO-1** from `NATIVE_HANDOFF.md`:
+The combined **N-BIO-1 / N-BIO-2** implementation now:
 
-1. introduce anatomy/reference domain models and typed IDs;
-2. generate deliberately selected runtime reference assets;
-3. replace the relevant Room foundation with `muscle`, `muscle_segment`, `reference_profile` and `reference_physiology_prior`;
-4. seed and validate those records;
-5. permit destructive development migration while Native is not yet the authoritative workout store.
+1. introduces anatomy/reference/exercise domain models and typed IDs;
+2. generates deliberately selected runtime reference assets;
+3. adds `muscle`, `muscle_segment`, `reference_profile` and `reference_physiology_prior`;
+4. seeds and validates those records;
+5. replaces exercise-owned progression/free-text muscles with execution-profile load resolution and stable-segment recruitment;
+6. permits destructive development migration while Native is not yet the authoritative workout store.
 
-Exercise/recruitment, target/prescription and user-inference patches follow afterwards.
+Target/prescription and user-inference patches follow afterwards.
 
 ## Research continuing in parallel
 

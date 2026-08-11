@@ -34,6 +34,7 @@ class LegacyV6Importer(
         // emits slots and their A/B/C prescriptions in the same nested order, so attach the
         // containing routine-version id before Room writes the immutable history.
         val versionedPrescriptions = versionModePrescriptions(snapshot)
+        val recruitment = LegacyRecruitmentResolver(database).resolve(snapshot.legacyRecruitment)
         val decodedPhotos = photoImporter.import(snapshot.setupPhotos)
         try {
             settingsStore.importLegacyRestTimer(snapshot.restTimerSettings)
@@ -42,11 +43,11 @@ class LegacyV6Importer(
                 dao.upsertBodyMeasurements(snapshot.bodyMeasurements)
                 dao.upsertExercises(snapshot.exercises)
                 dao.upsertExerciseMemory(snapshot.exerciseMemory)
-                dao.upsertTargetMuscles(snapshot.targetMuscles)
+                dao.upsertExecutionProfiles(snapshot.executionProfiles)
                 dao.upsertCues(snapshot.cues)
                 dao.upsertCommonMistakes(snapshot.commonMistakes)
                 dao.upsertSubstitutions(snapshot.substitutions)
-                dao.upsertMuscleLoads(snapshot.muscleLoads)
+                dao.upsertRecruitmentAllocations(recruitment)
                 dao.upsertSetupMedia(decodedPhotos.media)
                 dao.upsertRoutineVersions(snapshot.routineVersions)
                 dao.upsertRoutineSlots(snapshot.routineSlots)
@@ -57,7 +58,6 @@ class LegacyV6Importer(
                 dao.upsertSessionExercises(snapshot.sessionExercises)
                 dao.upsertSets(snapshot.sets)
                 dao.upsertReflections(snapshot.reflections)
-                dao.upsertExperiments(snapshot.experiments)
                 dao.upsertHealthObservations(snapshot.healthObservations)
                 dao.upsertHealthIntegrationState(snapshot.healthIntegration)
                 dao.upsertAppState(snapshot.appState)
@@ -73,7 +73,7 @@ class LegacyV6Importer(
             sessions = snapshot.sessions.size,
             sets = snapshot.sets.size,
             setupPhotos = decodedPhotos.media.size,
-            muscleAllocations = snapshot.muscleLoads.size,
+            muscleAllocations = recruitment.size,
         )
     }
 

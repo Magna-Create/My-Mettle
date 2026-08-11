@@ -4,6 +4,8 @@
 
 **Research is sufficiently defined to begin the Native data/domain rewrite.**
 
+**Implementation update:** N-BIO-1 and N-BIO-2 are now combined in the Room v5 biological foundation. N-BIO-3 is the next structural patch.
+
 This does not mean every human muscle has a precise adult-male PCSA. It means the model now knows:
 
 - what the canonical anatomical entities are;

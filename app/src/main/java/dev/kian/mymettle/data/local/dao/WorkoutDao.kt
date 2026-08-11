@@ -9,16 +9,15 @@ import dev.kian.mymettle.data.local.entity.CycleCompletedDayEntity
 import dev.kian.mymettle.data.local.entity.ExerciseCommonMistakeEntity
 import dev.kian.mymettle.data.local.entity.ExerciseCueEntity
 import dev.kian.mymettle.data.local.entity.ExerciseEntity
+import dev.kian.mymettle.data.local.entity.ExerciseExecutionProfileEntity
 import dev.kian.mymettle.data.local.entity.ExerciseMemoryEntity
-import dev.kian.mymettle.data.local.entity.ExerciseMuscleLoadEntity
 import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSetupMediaEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSubstitutionEntity
-import dev.kian.mymettle.data.local.entity.ExerciseTargetMuscleEntity
-import dev.kian.mymettle.data.local.entity.ExperimentEntity
 import dev.kian.mymettle.data.local.entity.HealthIntegrationStateEntity
 import dev.kian.mymettle.data.local.entity.HealthObservationEntity
 import dev.kian.mymettle.data.local.entity.ModePrescriptionEntity
+import dev.kian.mymettle.data.local.entity.RecruitmentAllocationEntity
 import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.RoutineVersionEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
@@ -47,7 +46,7 @@ interface WorkoutDao {
     suspend fun upsertExerciseMemory(values: List<ExerciseMemoryEntity>)
 
     @Upsert
-    suspend fun upsertTargetMuscles(values: List<ExerciseTargetMuscleEntity>)
+    suspend fun upsertExecutionProfiles(values: List<ExerciseExecutionProfileEntity>)
 
     @Upsert
     suspend fun upsertCues(values: List<ExerciseCueEntity>)
@@ -62,7 +61,7 @@ interface WorkoutDao {
     suspend fun upsertSetupMedia(values: List<ExerciseSetupMediaEntity>)
 
     @Upsert
-    suspend fun upsertMuscleLoads(values: List<ExerciseMuscleLoadEntity>)
+    suspend fun upsertRecruitmentAllocations(values: List<RecruitmentAllocationEntity>)
 
     @Upsert
     suspend fun upsertRoutineVersions(values: List<RoutineVersionEntity>)
@@ -93,9 +92,6 @@ interface WorkoutDao {
 
     @Upsert
     suspend fun upsertSessionReview(value: SessionReviewEntity)
-
-    @Upsert
-    suspend fun upsertExperiments(values: List<ExperimentEntity>)
 
     @Upsert
     suspend fun upsertHealthObservations(values: List<HealthObservationEntity>)

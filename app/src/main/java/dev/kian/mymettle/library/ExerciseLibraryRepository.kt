@@ -7,8 +7,24 @@ import android.net.Uri
 import androidx.room.withTransaction
 import dev.kian.mymettle.data.local.MyMettleDatabase
 import dev.kian.mymettle.data.local.entity.ExerciseEntity
-import dev.kian.mymettle.data.local.entity.ExerciseMemoryEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSetupMediaEntity
+import dev.kian.mymettle.domain.anatomy.MuscleSegmentId
+import dev.kian.mymettle.domain.exercise.EntryBasis
+import dev.kian.mymettle.domain.exercise.EquipmentProfile
+import dev.kian.mymettle.domain.exercise.Exercise
+import dev.kian.mymettle.domain.exercise.ExerciseId
+import dev.kian.mymettle.domain.exercise.ExerciseMemory
+import dev.kian.mymettle.domain.exercise.ExerciseSetupMedia
+import dev.kian.mymettle.domain.exercise.ExerciseTracking
+import dev.kian.mymettle.domain.exercise.ExecutionProfile
+import dev.kian.mymettle.domain.exercise.ExecutionProfileId
+import dev.kian.mymettle.domain.exercise.LoadRelationship
+import dev.kian.mymettle.domain.exercise.LoadResolution
+import dev.kian.mymettle.domain.exercise.RecruitmentAllocation
+import dev.kian.mymettle.domain.exercise.RecruitmentProfile
+import dev.kian.mymettle.domain.exercise.RecruitmentRole
+import dev.kian.mymettle.domain.exercise.RecruitmentSource
+import dev.kian.mymettle.domain.exercise.TrackingMetric
 import dev.kian.mymettle.workout.NativeWorkoutException
 import java.io.File
 import java.io.FileOutputStream
@@ -17,31 +33,23 @@ import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
-
-data class LibraryExercise(
-    val exercise: ExerciseEntity,
-    val memory: ExerciseMemoryEntity?,
-    val targetMuscles: List<String>,
-    val cues: List<String>,
-    val commonMistakes: List<String>,
-    val substitutions: List<String>,
-    val setupMedia: List<ExerciseSetupMediaEntity>,
-)
+import org.json.JSONArray
 
 class ExerciseLibraryRepository(
     private val context: Context,
     private val database: MyMettleDatabase,
 ) {
     private val dao get() = database.libraryDao()
+    @Volatile private var muscleNameCache: Map<String, String>? = null
 
-    suspend fun all(): List<LibraryExercise> = dao.activeExercises().map { load(it) }
+    suspend fun all(): List<Exercise> = dao.activeExercises().map { load(it) }
 
-    suspend fun exercise(exerciseId: String): LibraryExercise {
+    suspend fun exercise(exerciseId: String): Exercise {
         val exercise = dao.exercise(exerciseId) ?: throw NativeWorkoutException("Exercise not found.")
         return load(exercise)
     }
 
-    suspend fun addSetupPhotos(exerciseId: String, uris: List<Uri>): LibraryExercise {
+    suspend fun addSetupPhotos(exerciseId: String, uris: List<Uri>): Exercise {
         if (uris.isEmpty()) return exercise(exerciseId)
         val exercise = dao.exercise(exerciseId) ?: throw NativeWorkoutException("Exercise not found.")
         val existing = dao.setupMedia(exerciseId)
@@ -72,7 +80,7 @@ class ExerciseLibraryRepository(
         return exercise(exerciseId)
     }
 
-    suspend fun addCapturedSetupPhoto(exerciseId: String, captureFile: File): LibraryExercise {
+    suspend fun addCapturedSetupPhoto(exerciseId: String, captureFile: File): Exercise {
         val exercise = dao.exercise(exerciseId) ?: throw NativeWorkoutException("Exercise not found.")
         val existing = dao.setupMedia(exerciseId)
         if (existing.size >= MAX_SETUP_PHOTOS) {
@@ -99,22 +107,118 @@ class ExerciseLibraryRepository(
         return exercise(exerciseId)
     }
 
-    suspend fun deleteSetupPhoto(mediaId: String): LibraryExercise {
+    suspend fun deleteSetupPhoto(mediaId: String): Exercise {
         val media = dao.setupMediaById(mediaId) ?: throw NativeWorkoutException("Setup photo not found.")
         database.withTransaction { dao.deleteSetupMedia(mediaId) }
         withContext(Dispatchers.IO) { File(context.filesDir, media.relativePath).delete() }
         return exercise(media.exerciseId)
     }
 
-    private suspend fun load(exercise: ExerciseEntity): LibraryExercise = LibraryExercise(
-        exercise = exercise,
-        memory = dao.memory(exercise.id),
-        targetMuscles = dao.targetMuscles(exercise.id).map { it.muscle },
-        cues = dao.cues(exercise.id).map { it.cue },
-        commonMistakes = dao.commonMistakes(exercise.id).map { it.mistake },
-        substitutions = dao.substitutions(exercise.id).map { it.substitution },
-        setupMedia = dao.setupMedia(exercise.id),
-    )
+    private suspend fun load(entity: ExerciseEntity): Exercise {
+        val memoryEntity = dao.memory(entity.id)
+        val executionEntities = dao.executionProfiles(entity.id)
+        val allocationEntities = if (executionEntities.isEmpty()) {
+            emptyList()
+        } else {
+            dao.recruitmentAllocations(executionEntities.map { it.id })
+        }
+        val segmentIds = allocationEntities.map { it.muscleSegmentId }.distinct()
+        val segments = if (segmentIds.isEmpty()) emptyList() else database.referenceDao().segments(segmentIds)
+        val segmentById = segments.associateBy { it.id }
+        val muscleNameById = if (segments.isEmpty()) emptyMap() else muscleNames()
+        val allocationsByProfile = allocationEntities.groupBy { it.executionProfileId }
+
+        return Exercise(
+            id = ExerciseId(entity.id),
+            name = entity.name,
+            archived = entity.archived,
+            tracking = ExerciseTracking(
+                defaultUnit = entity.defaultUnit,
+                metric = TrackingMetric.fromStorage(entity.trackingMetric),
+                loadRelationship = LoadRelationship.fromStorage(entity.loadRelationship),
+                entryBasis = EntryBasis.fromStorage(entity.entryBasis),
+            ),
+            essentialCue = entity.essentialCue,
+            createdAt = entity.createdAt,
+            updatedAt = entity.updatedAt,
+            memory = memoryEntity?.let { memory ->
+                ExerciseMemory(
+                    category = memory.category,
+                    equipment = memory.equipment,
+                    fatigueCost = memory.fatigueCost,
+                    skillDifficulty = memory.skillDifficulty,
+                    setupNotes = memory.setupNotes,
+                    videoReferenceUrl = memory.videoReferenceUrl,
+                    machineSettings = memory.machineSettings,
+                    cues = dao.cues(entity.id).map { it.cue },
+                    commonMistakes = dao.commonMistakes(entity.id).map { it.mistake },
+                    substitutions = dao.substitutions(entity.id).map { it.substitution },
+                )
+            },
+            setupMedia = dao.setupMedia(entity.id).map { media ->
+                ExerciseSetupMedia(
+                    id = media.id,
+                    exerciseId = ExerciseId(media.exerciseId),
+                    relativePath = media.relativePath,
+                    mimeType = media.mimeType,
+                    sortOrder = media.sortOrder,
+                    createdAt = media.createdAt,
+                    width = media.width,
+                    height = media.height,
+                )
+            },
+            executionProfiles = executionEntities.map { execution ->
+                val allowedValues = execution.allowedLoadsJson?.let { encoded ->
+                    JSONArray(encoded).let { array -> List(array.length()) { array.getDouble(it) } }
+                }.orEmpty()
+                ExecutionProfile(
+                    id = ExecutionProfileId(execution.id),
+                    exerciseId = ExerciseId(execution.exerciseId),
+                    name = execution.name,
+                    equipment = EquipmentProfile(execution.equipment),
+                    loadResolution = if (
+                        execution.minimumLoad != null || execution.maximumLoad != null ||
+                        execution.loadIncrement != null || allowedValues.isNotEmpty()
+                    ) {
+                        LoadResolution(
+                            minimumLoad = execution.minimumLoad,
+                            maximumLoad = execution.maximumLoad,
+                            increment = execution.loadIncrement,
+                            allowedValues = allowedValues,
+                        )
+                    } else {
+                        null
+                    },
+                    recruitment = RecruitmentProfile(
+                        allocations = allocationsByProfile[execution.id].orEmpty().map { allocation ->
+                            val segment = requireNotNull(segmentById[allocation.muscleSegmentId]) {
+                                "Recruitment references missing segment ${allocation.muscleSegmentId}."
+                            }
+                            val muscleName = muscleNameById[segment.muscleId].orEmpty()
+                            RecruitmentAllocation(
+                                segmentId = MuscleSegmentId(segment.id),
+                                segmentName = if (segment.segmentType == "WHOLE_MUSCLE") {
+                                    muscleName
+                                } else {
+                                    "$muscleName — ${segment.name}"
+                                },
+                                role = RecruitmentRole.fromStorage(allocation.role),
+                                weighting = allocation.weighting,
+                                confidence = allocation.confidence,
+                                source = allocation.source?.let(::RecruitmentSource),
+                            )
+                        },
+                    ),
+                    isDefault = execution.isDefault,
+                )
+            },
+        )
+    }
+
+    private suspend fun muscleNames(): Map<String, String> = muscleNameCache ?: database.referenceDao()
+        .muscles()
+        .associate { it.id to it.name }
+        .also { muscleNameCache = it }
 
     private fun writeSetupPhoto(
         exerciseId: String,

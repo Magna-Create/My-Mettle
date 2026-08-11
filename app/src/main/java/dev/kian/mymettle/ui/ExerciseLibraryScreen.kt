@@ -53,8 +53,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import dev.kian.mymettle.data.local.entity.ExerciseSetupMediaEntity
-import dev.kian.mymettle.library.LibraryExercise
+import dev.kian.mymettle.domain.exercise.Exercise
+import dev.kian.mymettle.domain.exercise.ExerciseSetupMedia
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -71,7 +71,7 @@ fun ExerciseLibraryScreen() {
     var cameraPermissionDenied by remember { mutableStateOf(false) }
 
     val addPhotosLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        state.selected?.exercise?.id?.let { exerciseId ->
+        state.selected?.id?.value?.let { exerciseId ->
             viewModel.addSetupPhotos(exerciseId, uris)
         }
     }
@@ -132,7 +132,7 @@ fun ExerciseLibraryScreen() {
                         )
                     }
                 } else {
-                    items(state.visibleExercises, key = { it.exercise.id }) { item ->
+                    items(state.visibleExercises, key = { it.id.value }) { item ->
                         LibraryExerciseCard(item = item, onClick = { viewModel.select(item) })
                     }
                 }
@@ -152,10 +152,10 @@ fun ExerciseLibraryScreen() {
 
         if (showCamera) {
             SetupCameraOverlay(
-                exerciseName = selected.exercise.name,
+                exerciseName = selected.name,
                 onCaptured = { captureFile ->
                     showCamera = false
-                    viewModel.addCapturedSetupPhoto(selected.exercise.id, captureFile)
+                    viewModel.addCapturedSetupPhoto(selected.id.value, captureFile)
                 },
                 onDismiss = { showCamera = false },
             )
@@ -182,13 +182,13 @@ fun ExerciseLibraryScreen() {
 }
 
 @Composable
-private fun LibraryExerciseCard(item: LibraryExercise, onClick: () -> Unit) {
+private fun LibraryExerciseCard(item: Exercise, onClick: () -> Unit) {
     ElevatedCard(
         onClick = onClick,
         colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(item.exercise.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(item.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             val meta = listOfNotNull(
                 item.memory?.category?.takeIf { it.isNotBlank() },
                 item.memory?.equipment?.takeIf { it.isNotBlank() },
@@ -196,8 +196,9 @@ private fun LibraryExerciseCard(item: LibraryExercise, onClick: () -> Unit) {
             if (meta.isNotBlank()) {
                 Text(meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (item.targetMuscles.isNotEmpty()) {
-                Text(item.targetMuscles.joinToString(" · "), style = MaterialTheme.typography.labelLarge)
+            val recruitedSegments = item.recruitmentSegmentNames()
+            if (recruitedSegments.isNotEmpty()) {
+                Text(recruitedSegments.joinToString(" · "), style = MaterialTheme.typography.labelLarge)
             }
             if (item.setupMedia.isNotEmpty()) {
                 Text(
@@ -213,15 +214,15 @@ private fun LibraryExerciseCard(item: LibraryExercise, onClick: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExerciseDetailSheet(
-    item: LibraryExercise,
+    item: Exercise,
     savingMedia: Boolean,
     onDismiss: () -> Unit,
     onTakePhoto: () -> Unit,
     onAddPhotos: () -> Unit,
     onDeletePhoto: (String) -> Unit,
 ) {
-    var section by remember(item.exercise.id) { mutableStateOf("setup") }
-    var pendingDelete by remember(item.exercise.id) { mutableStateOf<ExerciseSetupMediaEntity?>(null) }
+    var section by remember(item.id) { mutableStateOf("setup") }
+    var pendingDelete by remember(item.id) { mutableStateOf<ExerciseSetupMedia?>(null) }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         LazyColumn(
@@ -230,7 +231,7 @@ private fun ExerciseDetailSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
-                Text(item.exercise.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+                Text(item.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                 val meta = listOfNotNull(
                     item.memory?.category?.takeIf { it.isNotBlank() },
                     item.memory?.equipment?.takeIf { it.isNotBlank() },
@@ -292,27 +293,45 @@ private fun ExerciseDetailSheet(
                 }
             } else {
                 item {
-                    item.exercise.essentialCue?.takeIf { it.isNotBlank() }?.let {
+                    item.essentialCue?.takeIf { it.isNotBlank() }?.let {
                         DetailTextBlock("Essential cue", it)
                         Spacer(Modifier.height(12.dp))
                     }
-                    DetailTextBlock(
-                        "Tracking",
-                        "${item.exercise.trackingMetric.replace('_', ' ')} · ${item.exercise.defaultUnit} · progression ${formatLibraryNumber(item.exercise.progressionStep)}",
-                    )
+                    val increment = item.executionProfiles.firstOrNull { it.isDefault }?.loadResolution?.increment
+                    DetailTextBlock("Tracking", buildString {
+                        append(item.tracking.metric.storageValue.replace('_', ' '))
+                        append(" · ")
+                        append(item.tracking.defaultUnit)
+                        increment?.let {
+                            append(" · ")
+                            append(formatLibraryNumber(it))
+                            append(' ')
+                            append(item.tracking.defaultUnit)
+                            append(" load increment")
+                        }
+                    })
                 }
 
-                if (item.targetMuscles.isNotEmpty()) {
-                    item { TextListBlock("Target muscles", item.targetMuscles) }
+                val recruitment = item.executionProfiles.firstOrNull { it.isDefault }
+                    ?.recruitment?.allocations.orEmpty()
+                if (recruitment.isNotEmpty()) {
+                    item {
+                        TextListBlock(
+                            "Execution recruitment",
+                            recruitment.map {
+                                "${it.segmentName} · ${formatLibraryNumber(it.weighting * 100)}% · ${it.role.storageValue}"
+                            },
+                        )
+                    }
                 }
-                if (item.cues.isNotEmpty()) {
-                    item { TextListBlock("Cues", item.cues) }
+                if (item.memory?.cues.orEmpty().isNotEmpty()) {
+                    item { TextListBlock("Cues", item.memory?.cues.orEmpty()) }
                 }
-                if (item.commonMistakes.isNotEmpty()) {
-                    item { TextListBlock("Common mistakes", item.commonMistakes) }
+                if (item.memory?.commonMistakes.orEmpty().isNotEmpty()) {
+                    item { TextListBlock("Common mistakes", item.memory?.commonMistakes.orEmpty()) }
                 }
-                if (item.substitutions.isNotEmpty()) {
-                    item { TextListBlock("Substitutions", item.substitutions) }
+                if (item.memory?.substitutions.orEmpty().isNotEmpty()) {
+                    item { TextListBlock("Substitutions", item.memory?.substitutions.orEmpty()) }
                 }
                 item {
                     item.memory?.videoReferenceUrl?.takeIf { it.isNotBlank() }?.let { url ->
@@ -354,9 +373,9 @@ private fun ExerciseDetailSheet(
 
 @Composable
 private fun SetupPhotoGallery(
-    media: List<ExerciseSetupMediaEntity>,
+    media: List<ExerciseSetupMedia>,
     savingMedia: Boolean,
-    onDelete: (ExerciseSetupMediaEntity) -> Unit,
+    onDelete: (ExerciseSetupMedia) -> Unit,
 ) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         items(media, key = { it.id }) { photo ->
@@ -375,7 +394,7 @@ private fun SetupPhotoGallery(
 }
 
 @Composable
-private fun SetupPhotoImage(media: ExerciseSetupMediaEntity) {
+private fun SetupPhotoImage(media: ExerciseSetupMedia) {
     val context = LocalContext.current
     val bitmap by produceState<ImageBitmap?>(initialValue = null, media.relativePath) {
         value = withContext(Dispatchers.IO) {
@@ -428,3 +447,11 @@ private fun TextListBlock(title: String, values: List<String>) {
 
 private fun formatLibraryNumber(value: Double): String =
     if (value % 1.0 == 0.0) value.toInt().toString() else value.toString().trimEnd('0').trimEnd('.')
+
+private fun Exercise.recruitmentSegmentNames(): List<String> = executionProfiles
+    .firstOrNull { it.isDefault }
+    ?.recruitment
+    ?.allocations
+    .orEmpty()
+    .map { it.segmentName }
+    .distinct()

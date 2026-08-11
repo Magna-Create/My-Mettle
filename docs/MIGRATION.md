@@ -77,7 +77,7 @@ This allows the native debug app and Lite Legacy to remain installed side-by-sid
 - session exercises
 - set records
 - exercise reflections
-- experiments
+- historical load experiments (readable in Legacy, but intentionally not copied into the new exercise-owned model)
 - health observations
 - health integration state
 
@@ -107,7 +107,7 @@ Capture currently scales the longest edge to at most 1600 px, encodes JPEG at qu
 
 Native migration should decode each JPEG data URL once into app-private media storage and keep only its relative file reference plus metadata in Room. The canonical My Mettle backup/archive must include those media files rather than reinflating them into the database.
 
-### Muscle-load model
+### Legacy muscle-load model
 
 Schema v6 supports an optional model on each exercise:
 
@@ -121,9 +121,11 @@ allocations[]:
   role: prime | synergist | stabiliser
 ```
 
-The initial Room schema flattens this into per-muscle rows; importer mapping must repeat the model-level confidence/basis across those rows so no Legacy information is lost. We can normalize it further later if the progression engine benefits from a parent model table.
+Room v5 translates this through an exercise execution profile into `recruitment_allocation` rows addressed by stable `muscleSegmentId` values. The free-text label exists only inside the transient import snapshot. An explicit versioned alias translator handles known broad Legacy labels; an unknown label fails import rather than becoming new canonical anatomy.
 
-The importer must also accept exports where this optional model is absent. `ExerciseMemory.targetMuscles` remains a separate descriptive field and must not be silently promoted into a structured muscle-load model during migration.
+Legacy `progressionStep` is translated only into the default execution profile's physical load increment. It no longer represents progression.
+
+The importer must also accept exports where this optional model is absent. `ExerciseMemory.targetMuscles` is not silently promoted into recruitment.
 
 ## Native rollout
 
@@ -143,7 +145,7 @@ The importer must also accept exports where this optional model is absent. `Exer
 - Define the canonical My Mettle interchange archive.
 - Build and test a schema-v6 / backup-envelope-v1 Lite Legacy importer.
 - Decode Legacy setup-photo data URLs into native app-private JPEG files.
-- Import `muscleLoadModel` without losing proportions, roles, confidence or basis when present.
+- Translate `muscleLoadModel` into execution-profile recruitment without persisting free-text anatomy.
 - Preserve stable logical routine-slot identities without collapsing immutable routine-version history.
 - Validate an actual Lite Legacy export by counts, IDs and relationships before cutover.
 

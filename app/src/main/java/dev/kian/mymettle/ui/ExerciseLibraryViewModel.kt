@@ -9,28 +9,30 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import dev.kian.mymettle.data.local.DatabaseProvider
+import dev.kian.mymettle.domain.exercise.Exercise
 import dev.kian.mymettle.library.ExerciseLibraryRepository
-import dev.kian.mymettle.library.LibraryExercise
 import java.io.File
 import kotlinx.coroutines.launch
 
 data class ExerciseLibraryUiState(
     val loading: Boolean = true,
     val savingMedia: Boolean = false,
-    val exercises: List<LibraryExercise> = emptyList(),
+    val exercises: List<Exercise> = emptyList(),
     val query: String = "",
-    val selected: LibraryExercise? = null,
+    val selected: Exercise? = null,
     val error: String? = null,
 ) {
-    val visibleExercises: List<LibraryExercise>
+    val visibleExercises: List<Exercise>
         get() {
             val needle = query.trim().lowercase()
             if (needle.isEmpty()) return exercises
             return exercises.filter { item ->
-                item.exercise.name.lowercase().contains(needle) ||
+                item.name.lowercase().contains(needle) ||
                     item.memory?.category?.lowercase()?.contains(needle) == true ||
                     item.memory?.equipment?.lowercase()?.contains(needle) == true ||
-                    item.targetMuscles.any { it.lowercase().contains(needle) }
+                    item.executionProfiles.any { profile ->
+                        profile.recruitment.allocations.any { it.segmentName.lowercase().contains(needle) }
+                    }
             }
         }
 }
@@ -58,7 +60,7 @@ class ExerciseLibraryViewModel(
         uiState = uiState.copy(query = value.take(80))
     }
 
-    fun select(item: LibraryExercise?) {
+    fun select(item: Exercise?) {
         uiState = uiState.copy(selected = item)
     }
 
@@ -99,10 +101,10 @@ class ExerciseLibraryViewModel(
         uiState = uiState.copy(error = null)
     }
 
-    private fun replaceSelected(updated: LibraryExercise) {
+    private fun replaceSelected(updated: Exercise) {
         uiState = uiState.copy(
             savingMedia = false,
-            exercises = uiState.exercises.map { if (it.exercise.id == updated.exercise.id) updated else it },
+            exercises = uiState.exercises.map { if (it.id == updated.id) updated else it },
             selected = updated,
         )
     }

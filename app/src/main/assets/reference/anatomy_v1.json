@@ -1,0 +1,3044 @@
+{
+  "schemaVersion": 1,
+  "datasetVersion": "anatomy_v0_1",
+  "muscles": [
+    {
+      "id": "sternocleidomastoid",
+      "name": "Sternocleidomastoid",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "sternocleidomastoid_sternal_head",
+          "muscleId": "sternocleidomastoid",
+          "name": "Sternal head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "sternocleidomastoid_clavicular_head",
+          "muscleId": "sternocleidomastoid",
+          "name": "Clavicular head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "scalenus_anterior",
+      "name": "Scalenus Anterior",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "scalenus_anterior_whole",
+          "muscleId": "scalenus_anterior",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "scalenus_medius",
+      "name": "Scalenus Medius",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "scalenus_medius_whole",
+          "muscleId": "scalenus_medius",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "scalenus_posterior",
+      "name": "Scalenus Posterior",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "scalenus_posterior_whole",
+          "muscleId": "scalenus_posterior",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "digastric",
+      "name": "Digastric",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "digastric_anterior_belly",
+          "muscleId": "digastric",
+          "name": "Anterior belly",
+          "segmentType": "BELLY",
+          "anatomicalStatus": "FORMALLY_NAMED_BELLY",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "digastric_posterior_belly",
+          "muscleId": "digastric",
+          "name": "Posterior belly",
+          "segmentType": "BELLY",
+          "anatomicalStatus": "FORMALLY_NAMED_BELLY",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "stylohyoid",
+      "name": "Stylohyoid",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "stylohyoid_whole",
+          "muscleId": "stylohyoid",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "mylohyoid",
+      "name": "Mylohyoid",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "mylohyoid_whole",
+          "muscleId": "mylohyoid",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "geniohyoid",
+      "name": "Geniohyoid",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "geniohyoid_whole",
+          "muscleId": "geniohyoid",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "sternohyoid",
+      "name": "Sternohyoid",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "sternohyoid_whole",
+          "muscleId": "sternohyoid",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "omohyoid",
+      "name": "Omohyoid",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "omohyoid_superior_belly",
+          "muscleId": "omohyoid",
+          "name": "Superior belly",
+          "segmentType": "BELLY",
+          "anatomicalStatus": "FORMALLY_NAMED_BELLY",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "omohyoid_inferior_belly",
+          "muscleId": "omohyoid",
+          "name": "Inferior belly",
+          "segmentType": "BELLY",
+          "anatomicalStatus": "FORMALLY_NAMED_BELLY",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "sternothyroid",
+      "name": "Sternothyroid",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "sternothyroid_whole",
+          "muscleId": "sternothyroid",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "thyrohyoid",
+      "name": "Thyrohyoid",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "thyrohyoid_whole",
+          "muscleId": "thyrohyoid",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "longus_colli",
+      "name": "Longus Colli",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "longus_colli_whole",
+          "muscleId": "longus_colli",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "longus_capitis",
+      "name": "Longus Capitis",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "longus_capitis_whole",
+          "muscleId": "longus_capitis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "rectus_capitis_anterior",
+      "name": "Rectus Capitis Anterior",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "rectus_capitis_anterior_whole",
+          "muscleId": "rectus_capitis_anterior",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "rectus_capitis_lateralis",
+      "name": "Rectus Capitis Lateralis",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "rectus_capitis_lateralis_whole",
+          "muscleId": "rectus_capitis_lateralis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "rectus_capitis_posterior_major",
+      "name": "Rectus Capitis Posterior Major",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "rectus_capitis_posterior_major_whole",
+          "muscleId": "rectus_capitis_posterior_major",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "rectus_capitis_posterior_minor",
+      "name": "Rectus Capitis Posterior Minor",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "rectus_capitis_posterior_minor_whole",
+          "muscleId": "rectus_capitis_posterior_minor",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "obliquus_capitis_superior",
+      "name": "Obliquus Capitis Superior",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "obliquus_capitis_superior_whole",
+          "muscleId": "obliquus_capitis_superior",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "obliquus_capitis_inferior",
+      "name": "Obliquus Capitis Inferior",
+      "region": "NECK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "obliquus_capitis_inferior_whole",
+          "muscleId": "obliquus_capitis_inferior",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "trapezius",
+      "name": "Trapezius",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "trapezius_descending_part",
+          "muscleId": "trapezius",
+          "name": "Descending part",
+          "segmentType": "PART",
+          "anatomicalStatus": "FORMALLY_NAMED_PART",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "trapezius_transverse_part",
+          "muscleId": "trapezius",
+          "name": "Transverse part",
+          "segmentType": "PART",
+          "anatomicalStatus": "FORMALLY_NAMED_PART",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "trapezius_ascending_part",
+          "muscleId": "trapezius",
+          "name": "Ascending part",
+          "segmentType": "PART",
+          "anatomicalStatus": "FORMALLY_NAMED_PART",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "latissimus_dorsi",
+      "name": "Latissimus Dorsi",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "latissimus_dorsi_whole",
+          "muscleId": "latissimus_dorsi",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "levator_scapulae",
+      "name": "Levator Scapulae",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "levator_scapulae_whole",
+          "muscleId": "levator_scapulae",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "rhomboid_major",
+      "name": "Rhomboid Major",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "rhomboid_major_whole",
+          "muscleId": "rhomboid_major",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "rhomboid_minor",
+      "name": "Rhomboid Minor",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "rhomboid_minor_whole",
+          "muscleId": "rhomboid_minor",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "serratus_posterior_superior",
+      "name": "Serratus Posterior Superior",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "serratus_posterior_superior_whole",
+          "muscleId": "serratus_posterior_superior",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "serratus_posterior_inferior",
+      "name": "Serratus Posterior Inferior",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "serratus_posterior_inferior_whole",
+          "muscleId": "serratus_posterior_inferior",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "splenius_capitis",
+      "name": "Splenius Capitis",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "splenius_capitis_whole",
+          "muscleId": "splenius_capitis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "splenius_cervicis",
+      "name": "Splenius Cervicis",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "splenius_cervicis_whole",
+          "muscleId": "splenius_cervicis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "iliocostalis_lumborum",
+      "name": "Iliocostalis Lumborum",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "iliocostalis_lumborum_whole",
+          "muscleId": "iliocostalis_lumborum",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "iliocostalis_thoracis",
+      "name": "Iliocostalis Thoracis",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "iliocostalis_thoracis_whole",
+          "muscleId": "iliocostalis_thoracis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "iliocostalis_cervicis",
+      "name": "Iliocostalis Cervicis",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "iliocostalis_cervicis_whole",
+          "muscleId": "iliocostalis_cervicis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "longissimus_thoracis",
+      "name": "Longissimus Thoracis",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "longissimus_thoracis_whole",
+          "muscleId": "longissimus_thoracis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "longissimus_cervicis",
+      "name": "Longissimus Cervicis",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "longissimus_cervicis_whole",
+          "muscleId": "longissimus_cervicis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "longissimus_capitis",
+      "name": "Longissimus Capitis",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "longissimus_capitis_whole",
+          "muscleId": "longissimus_capitis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "spinalis_thoracis",
+      "name": "Spinalis Thoracis",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "spinalis_thoracis_whole",
+          "muscleId": "spinalis_thoracis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "spinalis_cervicis",
+      "name": "Spinalis Cervicis",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "spinalis_cervicis_whole",
+          "muscleId": "spinalis_cervicis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "spinalis_capitis",
+      "name": "Spinalis Capitis",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "spinalis_capitis_whole",
+          "muscleId": "spinalis_capitis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "semispinalis_thoracis",
+      "name": "Semispinalis Thoracis",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "semispinalis_thoracis_whole",
+          "muscleId": "semispinalis_thoracis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "semispinalis_cervicis",
+      "name": "Semispinalis Cervicis",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "semispinalis_cervicis_whole",
+          "muscleId": "semispinalis_cervicis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "semispinalis_capitis",
+      "name": "Semispinalis Capitis",
+      "region": "BACK",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "semispinalis_capitis_whole",
+          "muscleId": "semispinalis_capitis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "multifidus",
+      "name": "Multifidus",
+      "region": "BACK",
+      "unitKind": "SERIAL_MUSCLE_FAMILY",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": "vertebral_levels",
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "multifidus_whole",
+          "muscleId": "multifidus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "rotatores",
+      "name": "Rotatores",
+      "region": "BACK",
+      "unitKind": "SERIAL_MUSCLE_FAMILY",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": "vertebral_levels",
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "rotatores_whole",
+          "muscleId": "rotatores",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "interspinales",
+      "name": "Interspinales",
+      "region": "BACK",
+      "unitKind": "SERIAL_MUSCLE_FAMILY",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": "vertebral_levels",
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "interspinales_whole",
+          "muscleId": "interspinales",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "intertransversarii",
+      "name": "Intertransversarii",
+      "region": "BACK",
+      "unitKind": "SERIAL_MUSCLE_FAMILY",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": "vertebral_levels",
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "intertransversarii_whole",
+          "muscleId": "intertransversarii",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "levatores_costarum",
+      "name": "Levatores costarum",
+      "region": "BACK",
+      "unitKind": "SERIAL_MUSCLE_FAMILY",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": "thoracic_levels",
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "levatores_costarum_whole",
+          "muscleId": "levatores_costarum",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "pectoralis_major",
+      "name": "Pectoralis Major",
+      "region": "THORAX",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "pectoralis_major_clavicular_part",
+          "muscleId": "pectoralis_major",
+          "name": "Clavicular part",
+          "segmentType": "PART",
+          "anatomicalStatus": "FORMALLY_NAMED_PART",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "pectoralis_major_sternocostal_part",
+          "muscleId": "pectoralis_major",
+          "name": "Sternocostal part",
+          "segmentType": "PART",
+          "anatomicalStatus": "FORMALLY_NAMED_PART",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "pectoralis_major_abdominal_part",
+          "muscleId": "pectoralis_major",
+          "name": "Abdominal part",
+          "segmentType": "PART",
+          "anatomicalStatus": "TA2_PARENTHESISED_PART",
+          "statePolicy": "TRACK",
+          "verificationStatus": "TA2_VERIFIED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "pectoralis_minor",
+      "name": "Pectoralis Minor",
+      "region": "THORAX",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "pectoralis_minor_whole",
+          "muscleId": "pectoralis_minor",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "subclavius",
+      "name": "Subclavius",
+      "region": "THORAX",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "subclavius_whole",
+          "muscleId": "subclavius",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "serratus_anterior",
+      "name": "Serratus Anterior",
+      "region": "THORAX",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "serratus_anterior_whole",
+          "muscleId": "serratus_anterior",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "external_intercostals",
+      "name": "External intercostals",
+      "region": "THORAX",
+      "unitKind": "SERIAL_MUSCLE_FAMILY",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": "intercostal_spaces",
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "external_intercostals_whole",
+          "muscleId": "external_intercostals",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "internal_intercostals",
+      "name": "Internal intercostals",
+      "region": "THORAX",
+      "unitKind": "SERIAL_MUSCLE_FAMILY",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": "intercostal_spaces",
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "internal_intercostals_whole",
+          "muscleId": "internal_intercostals",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "innermost_intercostals",
+      "name": "Innermost intercostals",
+      "region": "THORAX",
+      "unitKind": "SERIAL_MUSCLE_FAMILY",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": "intercostal_spaces",
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "innermost_intercostals_whole",
+          "muscleId": "innermost_intercostals",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "subcostales",
+      "name": "Subcostales",
+      "region": "THORAX",
+      "unitKind": "SERIAL_MUSCLE_FAMILY",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": "thoracic_levels",
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "subcostales_whole",
+          "muscleId": "subcostales",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "transversus_thoracis",
+      "name": "Transversus Thoracis",
+      "region": "THORAX",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "transversus_thoracis_whole",
+          "muscleId": "transversus_thoracis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "diaphragm",
+      "name": "Diaphragm",
+      "region": "THORAX",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "MIDLINE_SINGLE_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "diaphragm_sternal_part",
+          "muscleId": "diaphragm",
+          "name": "Sternal part",
+          "segmentType": "PART",
+          "anatomicalStatus": "FORMALLY_NAMED_PART",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "TA2_SIDE_AGGREGATED_V0_1"
+        },
+        {
+          "id": "diaphragm_costal_part",
+          "muscleId": "diaphragm",
+          "name": "Costal part",
+          "segmentType": "PART",
+          "anatomicalStatus": "FORMALLY_NAMED_PART",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "TA2_SIDE_AGGREGATED_V0_1"
+        },
+        {
+          "id": "diaphragm_lumbar_part",
+          "muscleId": "diaphragm",
+          "name": "Lumbar part",
+          "segmentType": "PART",
+          "anatomicalStatus": "FORMALLY_NAMED_PART",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "TA2_SIDE_AGGREGATED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "rectus_abdominis",
+      "name": "Rectus Abdominis",
+      "region": "ABDOMEN",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "rectus_abdominis_whole",
+          "muscleId": "rectus_abdominis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "external_oblique",
+      "name": "External abdominal oblique",
+      "region": "ABDOMEN",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "external_oblique_whole",
+          "muscleId": "external_oblique",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "internal_oblique",
+      "name": "Internal abdominal oblique",
+      "region": "ABDOMEN",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "internal_oblique_whole",
+          "muscleId": "internal_oblique",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "transversus_abdominis",
+      "name": "Transversus abdominis",
+      "region": "ABDOMEN",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "transversus_abdominis_whole",
+          "muscleId": "transversus_abdominis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "pyramidalis",
+      "name": "Pyramidalis",
+      "region": "ABDOMEN",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "pyramidalis_whole",
+          "muscleId": "pyramidalis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "quadratus_lumborum",
+      "name": "Quadratus Lumborum",
+      "region": "ABDOMEN",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "quadratus_lumborum_whole",
+          "muscleId": "quadratus_lumborum",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "psoas_major",
+      "name": "Psoas Major",
+      "region": "ABDOMEN",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "psoas_major_whole",
+          "muscleId": "psoas_major",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "psoas_minor",
+      "name": "Psoas Minor",
+      "region": "ABDOMEN",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "psoas_minor_whole",
+          "muscleId": "psoas_minor",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "iliacus",
+      "name": "Iliacus",
+      "region": "ABDOMEN",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "iliacus_whole",
+          "muscleId": "iliacus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "deltoid",
+      "name": "Deltoid",
+      "region": "SHOULDER",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "deltoid_clavicular_part",
+          "muscleId": "deltoid",
+          "name": "Clavicular / anterior part",
+          "segmentType": "PART",
+          "anatomicalStatus": "FORMALLY_NAMED_PART",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "deltoid_acromial_part",
+          "muscleId": "deltoid",
+          "name": "Acromial / middle part",
+          "segmentType": "PART",
+          "anatomicalStatus": "FORMALLY_NAMED_PART",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "deltoid_spinal_part",
+          "muscleId": "deltoid",
+          "name": "Spinal / posterior part",
+          "segmentType": "PART",
+          "anatomicalStatus": "FORMALLY_NAMED_PART",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "supraspinatus",
+      "name": "Supraspinatus",
+      "region": "SHOULDER",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "supraspinatus_whole",
+          "muscleId": "supraspinatus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "infraspinatus",
+      "name": "Infraspinatus",
+      "region": "SHOULDER",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "infraspinatus_whole",
+          "muscleId": "infraspinatus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "teres_minor",
+      "name": "Teres Minor",
+      "region": "SHOULDER",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "teres_minor_whole",
+          "muscleId": "teres_minor",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "subscapularis",
+      "name": "Subscapularis",
+      "region": "SHOULDER",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "subscapularis_whole",
+          "muscleId": "subscapularis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "teres_major",
+      "name": "Teres Major",
+      "region": "SHOULDER",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "teres_major_whole",
+          "muscleId": "teres_major",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "biceps_brachii",
+      "name": "Biceps Brachii",
+      "region": "UPPER_ARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "biceps_brachii_long_head",
+          "muscleId": "biceps_brachii",
+          "name": "Long head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "biceps_brachii_short_head",
+          "muscleId": "biceps_brachii",
+          "name": "Short head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "brachialis",
+      "name": "Brachialis",
+      "region": "UPPER_ARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "brachialis_whole",
+          "muscleId": "brachialis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "coracobrachialis",
+      "name": "Coracobrachialis",
+      "region": "UPPER_ARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "coracobrachialis_whole",
+          "muscleId": "coracobrachialis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "triceps_brachii",
+      "name": "Triceps Brachii",
+      "region": "UPPER_ARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "triceps_brachii_long_head",
+          "muscleId": "triceps_brachii",
+          "name": "Long head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "triceps_brachii_lateral_head",
+          "muscleId": "triceps_brachii",
+          "name": "Lateral head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "triceps_brachii_medial_head",
+          "muscleId": "triceps_brachii",
+          "name": "Medial head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "anconeus",
+      "name": "Anconeus",
+      "region": "UPPER_ARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "anconeus_whole",
+          "muscleId": "anconeus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "pronator_teres",
+      "name": "Pronator Teres",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "pronator_teres_humeral_head",
+          "muscleId": "pronator_teres",
+          "name": "Humeral head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "pronator_teres_ulnar_head",
+          "muscleId": "pronator_teres",
+          "name": "Ulnar head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "flexor_carpi_radialis",
+      "name": "Flexor Carpi Radialis",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "flexor_carpi_radialis_whole",
+          "muscleId": "flexor_carpi_radialis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "palmaris_longus",
+      "name": "Palmaris Longus",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "palmaris_longus_whole",
+          "muscleId": "palmaris_longus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "flexor_carpi_ulnaris",
+      "name": "Flexor Carpi Ulnaris",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "flexor_carpi_ulnaris_humeral_head",
+          "muscleId": "flexor_carpi_ulnaris",
+          "name": "Humeral head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "flexor_carpi_ulnaris_ulnar_head",
+          "muscleId": "flexor_carpi_ulnaris",
+          "name": "Ulnar head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "flexor_digitorum_superficialis",
+      "name": "Flexor Digitorum Superficialis",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "flexor_digitorum_superficialis_humeroulnar_head",
+          "muscleId": "flexor_digitorum_superficialis",
+          "name": "Humeroulnar head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "flexor_digitorum_superficialis_radial_head",
+          "muscleId": "flexor_digitorum_superficialis",
+          "name": "Radial head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "SHARED_PARENT",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "flexor_digitorum_profundus",
+      "name": "Flexor Digitorum Profundus",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "flexor_digitorum_profundus_whole",
+          "muscleId": "flexor_digitorum_profundus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "flexor_pollicis_longus",
+      "name": "Flexor Pollicis Longus",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "flexor_pollicis_longus_whole",
+          "muscleId": "flexor_pollicis_longus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "pronator_quadratus",
+      "name": "Pronator Quadratus",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "pronator_quadratus_whole",
+          "muscleId": "pronator_quadratus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "brachioradialis",
+      "name": "Brachioradialis",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "brachioradialis_whole",
+          "muscleId": "brachioradialis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "extensor_carpi_radialis_longus",
+      "name": "Extensor Carpi Radialis Longus",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "extensor_carpi_radialis_longus_whole",
+          "muscleId": "extensor_carpi_radialis_longus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "extensor_carpi_radialis_brevis",
+      "name": "Extensor Carpi Radialis Brevis",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "extensor_carpi_radialis_brevis_whole",
+          "muscleId": "extensor_carpi_radialis_brevis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "extensor_digitorum",
+      "name": "Extensor Digitorum",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "extensor_digitorum_whole",
+          "muscleId": "extensor_digitorum",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "extensor_digiti_minimi",
+      "name": "Extensor Digiti Minimi",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "extensor_digiti_minimi_whole",
+          "muscleId": "extensor_digiti_minimi",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "extensor_carpi_ulnaris",
+      "name": "Extensor Carpi Ulnaris",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "extensor_carpi_ulnaris_whole",
+          "muscleId": "extensor_carpi_ulnaris",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "supinator",
+      "name": "Supinator",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "supinator_whole",
+          "muscleId": "supinator",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "abductor_pollicis_longus",
+      "name": "Abductor Pollicis Longus",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "abductor_pollicis_longus_whole",
+          "muscleId": "abductor_pollicis_longus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "extensor_pollicis_brevis",
+      "name": "Extensor Pollicis Brevis",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "extensor_pollicis_brevis_whole",
+          "muscleId": "extensor_pollicis_brevis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "extensor_pollicis_longus",
+      "name": "Extensor Pollicis Longus",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "extensor_pollicis_longus_whole",
+          "muscleId": "extensor_pollicis_longus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "extensor_indicis",
+      "name": "Extensor Indicis",
+      "region": "FOREARM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "extensor_indicis_whole",
+          "muscleId": "extensor_indicis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "puborectalis",
+      "name": "Puborectalis",
+      "region": "PELVIC_FLOOR_PERINEUM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "puborectalis_whole",
+          "muscleId": "puborectalis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "pubococcygeus",
+      "name": "Pubococcygeus",
+      "region": "PELVIC_FLOOR_PERINEUM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "pubococcygeus_whole",
+          "muscleId": "pubococcygeus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "iliococcygeus",
+      "name": "Iliococcygeus",
+      "region": "PELVIC_FLOOR_PERINEUM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "iliococcygeus_whole",
+          "muscleId": "iliococcygeus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "coccygeus",
+      "name": "Coccygeus",
+      "region": "PELVIC_FLOOR_PERINEUM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "coccygeus_whole",
+          "muscleId": "coccygeus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "external_anal_sphincter",
+      "name": "External Anal Sphincter",
+      "region": "PELVIC_FLOOR_PERINEUM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "MIDLINE_SINGLE_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "external_anal_sphincter_whole",
+          "muscleId": "external_anal_sphincter",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "external_urethral_sphincter",
+      "name": "External Urethral Sphincter",
+      "region": "PELVIC_FLOOR_PERINEUM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "MIDLINE_SINGLE_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "external_urethral_sphincter_whole",
+          "muscleId": "external_urethral_sphincter",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "bulbospongiosus",
+      "name": "Bulbospongiosus",
+      "region": "PELVIC_FLOOR_PERINEUM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "bulbospongiosus_whole",
+          "muscleId": "bulbospongiosus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "ischiocavernosus",
+      "name": "Ischiocavernosus",
+      "region": "PELVIC_FLOOR_PERINEUM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "ischiocavernosus_whole",
+          "muscleId": "ischiocavernosus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "superficial_transverse_perineal",
+      "name": "Superficial transverse perineal",
+      "region": "PELVIC_FLOOR_PERINEUM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "superficial_transverse_perineal_whole",
+          "muscleId": "superficial_transverse_perineal",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "deep_transverse_perineal",
+      "name": "Deep transverse perineal",
+      "region": "PELVIC_FLOOR_PERINEUM",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "deep_transverse_perineal_whole",
+          "muscleId": "deep_transverse_perineal",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "gluteus_maximus",
+      "name": "Gluteus Maximus",
+      "region": "HIP_GLUTEAL",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "gluteus_maximus_whole",
+          "muscleId": "gluteus_maximus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "gluteus_medius",
+      "name": "Gluteus Medius",
+      "region": "HIP_GLUTEAL",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "gluteus_medius_anterior_region",
+          "muscleId": "gluteus_medius",
+          "name": "Anterior region",
+          "segmentType": "FIBRE_REGION",
+          "anatomicalStatus": "EXPERIMENTALLY_USEFUL_FIBRE_REGION",
+          "statePolicy": "PROVISIONAL_TRACK",
+          "verificationStatus": "PRIMARY_REGIONAL_SOURCE_PENDING"
+        },
+        {
+          "id": "gluteus_medius_middle_region",
+          "muscleId": "gluteus_medius",
+          "name": "Middle region",
+          "segmentType": "FIBRE_REGION",
+          "anatomicalStatus": "EXPERIMENTALLY_USEFUL_FIBRE_REGION",
+          "statePolicy": "PROVISIONAL_TRACK",
+          "verificationStatus": "PRIMARY_REGIONAL_SOURCE_PENDING"
+        },
+        {
+          "id": "gluteus_medius_posterior_region",
+          "muscleId": "gluteus_medius",
+          "name": "Posterior region",
+          "segmentType": "FIBRE_REGION",
+          "anatomicalStatus": "EXPERIMENTALLY_USEFUL_FIBRE_REGION",
+          "statePolicy": "PROVISIONAL_TRACK",
+          "verificationStatus": "PRIMARY_REGIONAL_SOURCE_PENDING"
+        }
+      ]
+    },
+    {
+      "id": "gluteus_minimus",
+      "name": "Gluteus Minimus",
+      "region": "HIP_GLUTEAL",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "gluteus_minimus_whole",
+          "muscleId": "gluteus_minimus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "tensor_fasciae_latae",
+      "name": "Tensor fasciae latae",
+      "region": "HIP_GLUTEAL",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "tensor_fasciae_latae_whole",
+          "muscleId": "tensor_fasciae_latae",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "piriformis",
+      "name": "Piriformis",
+      "region": "HIP_GLUTEAL",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "piriformis_whole",
+          "muscleId": "piriformis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "obturator_internus",
+      "name": "Obturator Internus",
+      "region": "HIP_GLUTEAL",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "obturator_internus_whole",
+          "muscleId": "obturator_internus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "obturator_externus",
+      "name": "Obturator Externus",
+      "region": "HIP_GLUTEAL",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "obturator_externus_whole",
+          "muscleId": "obturator_externus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "superior_gemellus",
+      "name": "Superior Gemellus",
+      "region": "HIP_GLUTEAL",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "superior_gemellus_whole",
+          "muscleId": "superior_gemellus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "inferior_gemellus",
+      "name": "Inferior Gemellus",
+      "region": "HIP_GLUTEAL",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "inferior_gemellus_whole",
+          "muscleId": "inferior_gemellus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "quadratus_femoris",
+      "name": "Quadratus Femoris",
+      "region": "HIP_GLUTEAL",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "quadratus_femoris_whole",
+          "muscleId": "quadratus_femoris",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "rectus_femoris",
+      "name": "Rectus Femoris",
+      "region": "THIGH",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "rectus_femoris_whole",
+          "muscleId": "rectus_femoris",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "vastus_lateralis",
+      "name": "Vastus Lateralis",
+      "region": "THIGH",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "vastus_lateralis_whole",
+          "muscleId": "vastus_lateralis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "vastus_medialis",
+      "name": "Vastus Medialis",
+      "region": "THIGH",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "vastus_medialis_whole",
+          "muscleId": "vastus_medialis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "vastus_intermedius",
+      "name": "Vastus Intermedius",
+      "region": "THIGH",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "vastus_intermedius_whole",
+          "muscleId": "vastus_intermedius",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "tensor_vastus_intermedius",
+      "name": "Tensor vastus intermedius",
+      "region": "THIGH",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "tensor_vastus_intermedius_whole",
+          "muscleId": "tensor_vastus_intermedius",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "sartorius",
+      "name": "Sartorius",
+      "region": "THIGH",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "sartorius_whole",
+          "muscleId": "sartorius",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "pectineus",
+      "name": "Pectineus",
+      "region": "THIGH",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "pectineus_whole",
+          "muscleId": "pectineus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "adductor_longus",
+      "name": "Adductor Longus",
+      "region": "THIGH",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "adductor_longus_whole",
+          "muscleId": "adductor_longus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "adductor_brevis",
+      "name": "Adductor Brevis",
+      "region": "THIGH",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "adductor_brevis_whole",
+          "muscleId": "adductor_brevis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "adductor_magnus",
+      "name": "Adductor Magnus",
+      "region": "THIGH",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "adductor_magnus_adductor_part",
+          "muscleId": "adductor_magnus",
+          "name": "Adductor / pubofemoral part",
+          "segmentType": "PART",
+          "anatomicalStatus": "FORMALLY_NAMED_PART",
+          "statePolicy": "TRACK",
+          "verificationStatus": "TA2_VERIFIED_STRONG_V0_1"
+        },
+        {
+          "id": "adductor_magnus_hamstring_part",
+          "muscleId": "adductor_magnus",
+          "name": "Hamstring / ischiocondylar part",
+          "segmentType": "PART",
+          "anatomicalStatus": "FORMALLY_NAMED_PART",
+          "statePolicy": "TRACK",
+          "verificationStatus": "TA2_VERIFIED_STRONG_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "gracilis",
+      "name": "Gracilis",
+      "region": "THIGH",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "gracilis_whole",
+          "muscleId": "gracilis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "biceps_femoris",
+      "name": "Biceps Femoris",
+      "region": "THIGH",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "biceps_femoris_long_head",
+          "muscleId": "biceps_femoris",
+          "name": "Long head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "biceps_femoris_short_head",
+          "muscleId": "biceps_femoris",
+          "name": "Short head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "semitendinosus",
+      "name": "Semitendinosus",
+      "region": "THIGH",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "semitendinosus_whole",
+          "muscleId": "semitendinosus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "semimembranosus",
+      "name": "Semimembranosus",
+      "region": "THIGH",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "semimembranosus_whole",
+          "muscleId": "semimembranosus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "tibialis_anterior",
+      "name": "Tibialis Anterior",
+      "region": "LOWER_LEG",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "tibialis_anterior_whole",
+          "muscleId": "tibialis_anterior",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "extensor_hallucis_longus",
+      "name": "Extensor Hallucis Longus",
+      "region": "LOWER_LEG",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "extensor_hallucis_longus_whole",
+          "muscleId": "extensor_hallucis_longus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "extensor_digitorum_longus",
+      "name": "Extensor Digitorum Longus",
+      "region": "LOWER_LEG",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "extensor_digitorum_longus_whole",
+          "muscleId": "extensor_digitorum_longus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "fibularis_tertius",
+      "name": "Fibularis tertius",
+      "region": "LOWER_LEG",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "fibularis_tertius_whole",
+          "muscleId": "fibularis_tertius",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "fibularis_longus",
+      "name": "Fibularis longus",
+      "region": "LOWER_LEG",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "fibularis_longus_whole",
+          "muscleId": "fibularis_longus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "fibularis_brevis",
+      "name": "Fibularis brevis",
+      "region": "LOWER_LEG",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "fibularis_brevis_whole",
+          "muscleId": "fibularis_brevis",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "gastrocnemius",
+      "name": "Gastrocnemius",
+      "region": "LOWER_LEG",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "gastrocnemius_medial_head",
+          "muscleId": "gastrocnemius",
+          "name": "Medial head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        },
+        {
+          "id": "gastrocnemius_lateral_head",
+          "muscleId": "gastrocnemius",
+          "name": "Lateral head",
+          "segmentType": "HEAD",
+          "anatomicalStatus": "FORMALLY_NAMED_HEAD",
+          "statePolicy": "TRACK",
+          "verificationStatus": "SOURCE_SUPPORTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "soleus",
+      "name": "Soleus",
+      "region": "LOWER_LEG",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "soleus_whole",
+          "muscleId": "soleus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "plantaris",
+      "name": "Plantaris",
+      "region": "LOWER_LEG",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "plantaris_whole",
+          "muscleId": "plantaris",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "popliteus",
+      "name": "Popliteus",
+      "region": "LOWER_LEG",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "popliteus_whole",
+          "muscleId": "popliteus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "tibialis_posterior",
+      "name": "Tibialis Posterior",
+      "region": "LOWER_LEG",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "tibialis_posterior_whole",
+          "muscleId": "tibialis_posterior",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "flexor_hallucis_longus",
+      "name": "Flexor Hallucis Longus",
+      "region": "LOWER_LEG",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "flexor_hallucis_longus_whole",
+          "muscleId": "flexor_hallucis_longus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    },
+    {
+      "id": "flexor_digitorum_longus",
+      "name": "Flexor Digitorum Longus",
+      "region": "LOWER_LEG",
+      "unitKind": "MUSCLE",
+      "lateralityModel": "BILATERAL_SHARED_REFERENCE",
+      "instancePattern": null,
+      "verificationStatus": "RECONSTRUCTED_V0_1",
+      "segments": [
+        {
+          "id": "flexor_digitorum_longus_whole",
+          "muscleId": "flexor_digitorum_longus",
+          "name": "Whole muscle",
+          "segmentType": "WHOLE_MUSCLE",
+          "anatomicalStatus": "WHOLE_FORMAL_MUSCLE",
+          "statePolicy": "TRACK",
+          "verificationStatus": "RECONSTRUCTED_V0_1"
+        }
+      ]
+    }
+  ]
+}

@@ -6,12 +6,10 @@ import dev.kian.mymettle.data.local.entity.CycleCompletedDayEntity
 import dev.kian.mymettle.data.local.entity.ExerciseCommonMistakeEntity
 import dev.kian.mymettle.data.local.entity.ExerciseCueEntity
 import dev.kian.mymettle.data.local.entity.ExerciseEntity
+import dev.kian.mymettle.data.local.entity.ExerciseExecutionProfileEntity
 import dev.kian.mymettle.data.local.entity.ExerciseMemoryEntity
-import dev.kian.mymettle.data.local.entity.ExerciseMuscleLoadEntity
 import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSubstitutionEntity
-import dev.kian.mymettle.data.local.entity.ExerciseTargetMuscleEntity
-import dev.kian.mymettle.data.local.entity.ExperimentEntity
 import dev.kian.mymettle.data.local.entity.HealthIntegrationStateEntity
 import dev.kian.mymettle.data.local.entity.HealthObservationEntity
 import dev.kian.mymettle.data.local.entity.ModePrescriptionEntity
@@ -41,6 +39,16 @@ data class LegacySetupPhotoPayload(
     val sortOrder: Int,
 )
 
+/** Free text exists only inside the transient Legacy translator; it is never persisted. */
+data class LegacyRecruitmentAllocation(
+    val executionProfileId: String,
+    val muscleLabel: String,
+    val weighting: Double,
+    val role: String,
+    val confidence: Double,
+    val source: String?,
+)
+
 data class LegacyImportSnapshot(
     val exportedAt: String?,
     val profile: UserProfileEntity,
@@ -48,12 +56,12 @@ data class LegacyImportSnapshot(
     val bodyMeasurements: List<BodyMeasurementEntity>,
     val exercises: List<ExerciseEntity>,
     val exerciseMemory: List<ExerciseMemoryEntity>,
-    val targetMuscles: List<ExerciseTargetMuscleEntity>,
+    val executionProfiles: List<ExerciseExecutionProfileEntity>,
+    val legacyRecruitment: List<LegacyRecruitmentAllocation>,
     val cues: List<ExerciseCueEntity>,
     val commonMistakes: List<ExerciseCommonMistakeEntity>,
     val substitutions: List<ExerciseSubstitutionEntity>,
     val setupPhotos: List<LegacySetupPhotoPayload>,
-    val muscleLoads: List<ExerciseMuscleLoadEntity>,
     val routineVersions: List<RoutineVersionEntity>,
     val routineSlots: List<RoutineSlotEntity>,
     val modePrescriptions: List<ModePrescriptionEntity>,
@@ -63,7 +71,6 @@ data class LegacyImportSnapshot(
     val sessionExercises: List<SessionExerciseEntity>,
     val sets: List<SetRecordEntity>,
     val reflections: List<ExerciseReflectionEntity>,
-    val experiments: List<ExperimentEntity>,
     val healthObservations: List<HealthObservationEntity>,
     val healthIntegration: HealthIntegrationStateEntity,
     val appState: AppStateEntity,
