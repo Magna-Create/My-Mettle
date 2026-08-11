@@ -3,6 +3,7 @@ package dev.kian.mymettle.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import dev.kian.mymettle.data.local.dao.HistoryDao
+import dev.kian.mymettle.data.local.dao.InferenceDao
 import dev.kian.mymettle.data.local.dao.LibraryDao
 import dev.kian.mymettle.data.local.dao.ReferenceDao
 import dev.kian.mymettle.data.local.dao.WorkoutDao
@@ -17,11 +18,14 @@ import dev.kian.mymettle.data.local.entity.ExerciseMemoryEntity
 import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSetupMediaEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSubstitutionEntity
+import dev.kian.mymettle.data.local.entity.ExerciseTranslationStateEntity
 import dev.kian.mymettle.data.local.entity.HealthIntegrationStateEntity
 import dev.kian.mymettle.data.local.entity.HealthObservationEntity
+import dev.kian.mymettle.data.local.entity.InferenceRunEntity
 import dev.kian.mymettle.data.local.entity.ModePrescriptionEntity
 import dev.kian.mymettle.data.local.entity.MuscleEntity
 import dev.kian.mymettle.data.local.entity.MuscleSegmentEntity
+import dev.kian.mymettle.data.local.entity.MuscleStateSnapshotEntity
 import dev.kian.mymettle.data.local.entity.ProgrammeTargetEntity
 import dev.kian.mymettle.data.local.entity.RecruitmentAllocationEntity
 import dev.kian.mymettle.data.local.entity.ReferencePhysiologyPriorEntity
@@ -34,6 +38,7 @@ import dev.kian.mymettle.data.local.entity.SessionExerciseTargetEntity
 import dev.kian.mymettle.data.local.entity.SessionReviewEntity
 import dev.kian.mymettle.data.local.entity.SessionTargetEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
+import dev.kian.mymettle.data.local.entity.StimulusEstimateEntity
 import dev.kian.mymettle.data.local.entity.TrainingCycleEntity
 import dev.kian.mymettle.data.local.entity.UserProfileEntity
 
@@ -69,8 +74,12 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         HealthObservationEntity::class,
         HealthIntegrationStateEntity::class,
         AppStateEntity::class,
+        InferenceRunEntity::class,
+        MuscleStateSnapshotEntity::class,
+        StimulusEstimateEntity::class,
+        ExerciseTranslationStateEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class MyMettleDatabase : RoomDatabase() {
@@ -78,4 +87,5 @@ abstract class MyMettleDatabase : RoomDatabase() {
     abstract fun historyDao(): HistoryDao
     abstract fun libraryDao(): LibraryDao
     abstract fun referenceDao(): ReferenceDao
+    abstract fun inferenceDao(): InferenceDao
 }

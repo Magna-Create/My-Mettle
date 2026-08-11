@@ -30,9 +30,11 @@ interface PrescriptionEngine {
 /**
  * N-BIO-3 boundary implementation.
  *
- * It intentionally performs no progression or muscle-state inference. Until N-BIO-4 supplies the
- * user-state/translation model, the latest performed load is carried forward and conformed to the
- * selected execution profile's physical load resolution. With no evidence, load remains null.
+ * It intentionally performs no progression or muscle-state inference. N-BIO-4 now supplies the
+ * downstream user-state/translation scaffold, but this N-BIO-3 baseline remains in use until the
+ * programme resolver consumes it. The latest performed load is therefore carried forward and
+ * conformed to the selected execution profile's physical load resolution. With no evidence, load
+ * remains null.
  */
 class HistoryBackedPrescriptionEngine : PrescriptionEngine {
     override val modelVersion: String = MODEL_VERSION
