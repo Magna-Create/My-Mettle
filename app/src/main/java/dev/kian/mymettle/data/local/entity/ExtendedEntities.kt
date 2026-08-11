@@ -16,28 +16,6 @@ data class AppStateEntity(
 )
 
 @Entity(
-    tableName = "exercise_muscle_load",
-    primaryKeys = ["exerciseId", "muscle"],
-    foreignKeys = [
-        ForeignKey(
-            entity = ExerciseEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["exerciseId"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-    ],
-    indices = [Index("exerciseId")],
-)
-data class ExerciseMuscleLoadEntity(
-    val exerciseId: String,
-    val muscle: String,
-    val proportion: Double,
-    val role: String,
-    val confidence: Double,
-    val source: String?,
-)
-
-@Entity(
     tableName = "session_review",
     foreignKeys = [
         ForeignKey(
@@ -57,27 +35,6 @@ data class SessionReviewEntity(
     val note: String?,
     val recordedAt: String,
     val updatedAt: String,
-)
-
-@Entity(
-    tableName = "experiment",
-    indices = [Index("exerciseId"), Index("routineSlotId"), Index("status")],
-)
-data class ExperimentEntity(
-    @PrimaryKey val id: String,
-    val exerciseId: String,
-    val routineSlotId: String,
-    val exerciseName: String,
-    val hypothesis: String,
-    val baselineLoad: Double,
-    val proposedLoad: Double,
-    val targetRepMin: Int,
-    val status: String,
-    val createdAt: String,
-    val activatedAt: String?,
-    val testedSessionId: String?,
-    val evidenceSummary: String?,
-    val adoptedRoutineVersionId: String?,
 )
 
 @Entity(

@@ -6,12 +6,10 @@ import dev.kian.mymettle.data.local.entity.CycleCompletedDayEntity
 import dev.kian.mymettle.data.local.entity.ExerciseCommonMistakeEntity
 import dev.kian.mymettle.data.local.entity.ExerciseCueEntity
 import dev.kian.mymettle.data.local.entity.ExerciseEntity
+import dev.kian.mymettle.data.local.entity.ExerciseExecutionProfileEntity
 import dev.kian.mymettle.data.local.entity.ExerciseMemoryEntity
-import dev.kian.mymettle.data.local.entity.ExerciseMuscleLoadEntity
 import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSubstitutionEntity
-import dev.kian.mymettle.data.local.entity.ExerciseTargetMuscleEntity
-import dev.kian.mymettle.data.local.entity.ExperimentEntity
 import dev.kian.mymettle.data.local.entity.HealthIntegrationStateEntity
 import dev.kian.mymettle.data.local.entity.HealthObservationEntity
 import dev.kian.mymettle.data.local.entity.ModePrescriptionEntity
@@ -92,16 +90,19 @@ object LegacyV6BackupReader {
 
             val exercises = mutableListOf<ExerciseEntity>()
             val exerciseMemory = mutableListOf<ExerciseMemoryEntity>()
-            val targetMuscles = mutableListOf<ExerciseTargetMuscleEntity>()
+            val executionProfiles = mutableListOf<ExerciseExecutionProfileEntity>()
+            val legacyRecruitment = mutableListOf<LegacyRecruitmentAllocation>()
             val cues = mutableListOf<ExerciseCueEntity>()
             val commonMistakes = mutableListOf<ExerciseCommonMistakeEntity>()
             val substitutions = mutableListOf<ExerciseSubstitutionEntity>()
             val setupPhotos = mutableListOf<LegacySetupPhotoPayload>()
-            val muscleLoads = mutableListOf<ExerciseMuscleLoadEntity>()
 
             database.arrayRequired("exercises").objects().forEach { exercise ->
                 val exerciseId = exercise.stringRequired("id")
+                val executionProfileId = "execution_${exerciseId}_default"
                 val tracking = exercise.objectRequired("tracking")
+                val memory = exercise.objectOrNull("memory")
+                val legacyIncrement = exercise.optDouble("progressionStep", 0.0).takeIf { it > 0.0 }
                 exercises += ExerciseEntity(
                     id = exerciseId,
                     name = exercise.stringRequired("name"),
@@ -110,36 +111,43 @@ object LegacyV6BackupReader {
                     trackingMetric = tracking.stringRequired("metric"),
                     loadRelationship = tracking.stringRequired("loadRelationship"),
                     entryBasis = tracking.stringRequired("entryBasis"),
-                    progressionStep = exercise.optDouble("progressionStep", 0.0),
                     essentialCue = exercise.stringOrNull("essentialCue"),
                     createdAt = exercise.stringRequired("createdAt"),
                     updatedAt = exercise.stringRequired("updatedAt"),
                 )
+                executionProfiles += ExerciseExecutionProfileEntity(
+                    id = executionProfileId,
+                    exerciseId = exerciseId,
+                    name = "Default",
+                    equipment = memory?.optString("equipment", "").orEmpty(),
+                    minimumLoad = legacyIncrement?.let { 0.0 },
+                    maximumLoad = null,
+                    loadIncrement = legacyIncrement,
+                    allowedLoadsJson = null,
+                    isDefault = true,
+                )
 
-                exercise.objectOrNull("memory")?.let { memory ->
+                memory?.let {
                     exerciseMemory += ExerciseMemoryEntity(
                         exerciseId = exerciseId,
-                        category = memory.optString("category", ""),
-                        equipment = memory.optString("equipment", ""),
-                        fatigueCost = memory.optInt("fatigueCost", 3),
-                        skillDifficulty = memory.optInt("skillDifficulty", 3),
-                        setupNotes = memory.optString("setupNotes", ""),
-                        videoReferenceUrl = memory.optString("videoReferenceUrl", ""),
-                        machineSettings = memory.optString("machineSettings", ""),
+                        category = it.optString("category", ""),
+                        equipment = it.optString("equipment", ""),
+                        fatigueCost = it.optInt("fatigueCost", 3),
+                        skillDifficulty = it.optInt("skillDifficulty", 3),
+                        setupNotes = it.optString("setupNotes", ""),
+                        videoReferenceUrl = it.optString("videoReferenceUrl", ""),
+                        machineSettings = it.optString("machineSettings", ""),
                     )
-                    memory.stringArray("targetMuscles").forEachIndexed { index, muscle ->
-                        targetMuscles += ExerciseTargetMuscleEntity(exerciseId, index, muscle)
-                    }
-                    memory.stringArray("cues").forEachIndexed { index, cue ->
+                    it.stringArray("cues").forEachIndexed { index, cue ->
                         cues += ExerciseCueEntity(exerciseId, index, cue)
                     }
-                    memory.stringArray("commonMistakes").forEachIndexed { index, mistake ->
+                    it.stringArray("commonMistakes").forEachIndexed { index, mistake ->
                         commonMistakes += ExerciseCommonMistakeEntity(exerciseId, index, mistake)
                     }
-                    memory.stringArray("substitutions").forEachIndexed { index, substitution ->
+                    it.stringArray("substitutions").forEachIndexed { index, substitution ->
                         substitutions += ExerciseSubstitutionEntity(exerciseId, index, substitution)
                     }
-                    memory.arrayOrEmpty("setupPhotos").objects().forEachIndexed { index, photo ->
+                    it.arrayOrEmpty("setupPhotos").objects().forEachIndexed { index, photo ->
                         setupPhotos += LegacySetupPhotoPayload(
                             id = photo.stringRequired("id"),
                             exerciseId = exerciseId,
@@ -159,10 +167,10 @@ object LegacyV6BackupReader {
                     val confidence = model.doubleRequired("confidence")
                     val basis = model.stringRequired("basis")
                     model.arrayRequired("allocations").objects().forEach { allocation ->
-                        muscleLoads += ExerciseMuscleLoadEntity(
-                            exerciseId = exerciseId,
-                            muscle = allocation.stringRequired("muscle"),
-                            proportion = allocation.doubleRequired("proportion"),
+                        legacyRecruitment += LegacyRecruitmentAllocation(
+                            executionProfileId = executionProfileId,
+                            muscleLabel = allocation.stringRequired("muscle"),
+                            weighting = allocation.doubleRequired("proportion"),
                             role = allocation.stringRequired("role"),
                             confidence = confidence,
                             source = basis,
@@ -326,25 +334,6 @@ object LegacyV6BackupReader {
                 }
             }
 
-            val experiments = database.arrayOrEmpty("experiments").objects().map { experiment ->
-                ExperimentEntity(
-                    id = experiment.stringRequired("id"),
-                    exerciseId = experiment.stringRequired("exerciseId"),
-                    routineSlotId = experiment.stringRequired("routineSlotId"),
-                    exerciseName = experiment.stringRequired("exerciseName"),
-                    hypothesis = experiment.stringRequired("hypothesis"),
-                    baselineLoad = experiment.doubleRequired("baselineLoad"),
-                    proposedLoad = experiment.doubleRequired("proposedLoad"),
-                    targetRepMin = experiment.intRequired("targetRepMin"),
-                    status = experiment.stringRequired("status"),
-                    createdAt = experiment.stringRequired("createdAt"),
-                    activatedAt = experiment.stringOrNull("activatedAt"),
-                    testedSessionId = experiment.stringOrNull("testedSessionId"),
-                    evidenceSummary = experiment.stringOrNull("evidenceSummary"),
-                    adoptedRoutineVersionId = experiment.stringOrNull("adoptedRoutineVersionId"),
-                )
-            }
-
             val healthObservations = database.arrayOrEmpty("healthObservations").objects().map { observation ->
                 HealthObservationEntity(
                     id = observation.stringRequired("id"),
@@ -384,12 +373,12 @@ object LegacyV6BackupReader {
                 bodyMeasurements = bodyMeasurements,
                 exercises = exercises,
                 exerciseMemory = exerciseMemory,
-                targetMuscles = targetMuscles,
+                executionProfiles = executionProfiles,
+                legacyRecruitment = legacyRecruitment,
                 cues = cues,
                 commonMistakes = commonMistakes,
                 substitutions = substitutions,
                 setupPhotos = setupPhotos,
-                muscleLoads = muscleLoads,
                 routineVersions = routineVersions,
                 routineSlots = routineSlots,
                 modePrescriptions = modePrescriptions,
@@ -399,7 +388,6 @@ object LegacyV6BackupReader {
                 sessionExercises = sessionExercises,
                 sets = sets,
                 reflections = reflections,
-                experiments = experiments,
                 healthObservations = healthObservations,
                 healthIntegration = healthIntegration,
                 appState = appState,
@@ -437,11 +425,14 @@ object LegacyV6BackupReader {
         requireImport(snapshot.setupPhotos.all { it.width > 0 && it.height > 0 }) {
             "A setup photo has invalid dimensions."
         }
-        requireImport(snapshot.muscleLoads.all { it.proportion >= 0.0 && it.proportion <= 1.0 }) {
-            "A muscle-load allocation has an invalid proportion."
+        requireImport(snapshot.legacyRecruitment.all { it.weighting >= 0.0 && it.weighting <= 1.0 }) {
+            "A recruitment allocation has an invalid weighting."
         }
-        requireImport(snapshot.muscleLoads.all { it.confidence >= 0.0 && it.confidence <= 1.0 }) {
-            "A muscle-load model has an invalid confidence value."
+        requireImport(snapshot.legacyRecruitment.all { it.confidence >= 0.0 && it.confidence <= 1.0 }) {
+            "A recruitment model has an invalid confidence value."
+        }
+        requireImport(snapshot.legacyRecruitment.all { it.role in setOf("prime", "synergist", "stabiliser") }) {
+            "A recruitment allocation has an invalid role."
         }
     }
 }

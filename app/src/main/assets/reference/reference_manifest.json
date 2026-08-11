@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "datasetVersion": "skeletal_muscle_reference_v0_1",
+  "anatomyAsset": "anatomy_v1.json",
+  "referenceProfileAsset": "reference_profile_healthy_adult_male_v1.json",
+  "counts": {
+    "muscles": 142,
+    "segments": 164,
+    "referencePriors": 66
+  },
+  "sourceSha256": {
+    "docs/research/skeletal-muscle-reference/data/anatomical_units_v0_1.csv": "1d2a791ab9ed436d8b1848ab75401b9134e85fe0b269310acf0d4fbe25bf9b33",
+    "docs/research/skeletal-muscle-reference/data/segment_overrides_v0_1.csv": "32f63a454894223e60c35c3f133bc765bf1af89c8f77a9868280a2b2d106fd38",
+    "docs/research/skeletal-muscle-reference/data/reference_profile_healthy_adult_male_v0_1.csv": "26dabe1d38c4102434c7a749594bd4b89942aadd866456f667f2f680d1decc11",
+    "docs/research/skeletal-muscle-reference/data/segment_reference_policy_v0_1.csv": "7f2ddc31bbb90daa161b35647994da12bb5f41a52108fba7b121908046f5f029",
+    "docs/research/skeletal-muscle-reference/data/derived_reference_values_v0_1.csv": "652d714cfe922921851df4e28058f57d43eaac9302bf0c608d4370b2ea8a9aee",
+    "docs/research/skeletal-muscle-reference/data/segment_architecture_observations_v0_1.csv": "a789b90ce1209c5285fe7655a030d8aaeef08f6488334e780a853c98b6ad29a2"
+  }
+}

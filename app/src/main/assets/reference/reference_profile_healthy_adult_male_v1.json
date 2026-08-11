@@ -1,0 +1,1603 @@
+{
+  "schemaVersion": 1,
+  "id": "healthy_adult_male_v0_1",
+  "version": 1,
+  "population": {
+    "sex": "MALE",
+    "ageSummary": "18-50 years; selected morphology source male mean 32 +/- 10 years",
+    "description": "Healthy/general adult male reference prior; not user anatomy"
+  },
+  "datasetVersion": "skeletal_muscle_reference_v0_1",
+  "modelVersion": "biological_prior_policy_v0_1",
+  "priors": [
+    {
+      "id": "healthy_adult_male_v0_1:segment:levator_scapulae_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "levator_scapulae_whole",
+      "muscleId": "levator_scapulae",
+      "segmentId": "levator_scapulae_whole",
+      "volumeCm3": {
+        "value": 53.76,
+        "uncertainty": 9.02,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:pectoralis_minor_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "pectoralis_minor_whole",
+      "muscleId": "pectoralis_minor",
+      "segmentId": "pectoralis_minor_whole",
+      "volumeCm3": {
+        "value": 55.84,
+        "uncertainty": 11.14,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:muscle:pectoralis_major",
+      "targetKind": "MUSCLE",
+      "targetId": "pectoralis_major",
+      "muscleId": "pectoralis_major",
+      "segmentId": null,
+      "volumeCm3": {
+        "value": 424.28,
+        "uncertainty": 102.17,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:muscle:deltoid",
+      "targetKind": "MUSCLE",
+      "targetId": "deltoid",
+      "muscleId": "deltoid",
+      "segmentId": null,
+      "volumeCm3": {
+        "value": 493.77,
+        "uncertainty": 96.83,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:muscle:triceps_brachii",
+      "targetKind": "MUSCLE",
+      "targetId": "triceps_brachii",
+      "muscleId": "triceps_brachii",
+      "segmentId": null,
+      "volumeCm3": {
+        "value": 496.46,
+        "uncertainty": 111.7,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:coracobrachialis_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "coracobrachialis_whole",
+      "muscleId": "coracobrachialis",
+      "segmentId": "coracobrachialis_whole",
+      "volumeCm3": {
+        "value": 35.84,
+        "uncertainty": 7.39,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:muscle:biceps_brachii",
+      "targetKind": "MUSCLE",
+      "targetId": "biceps_brachii",
+      "muscleId": "biceps_brachii",
+      "segmentId": null,
+      "volumeCm3": {
+        "value": 203.63,
+        "uncertainty": 48.26,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:brachialis_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "brachialis_whole",
+      "muscleId": "brachialis",
+      "segmentId": "brachialis_whole",
+      "volumeCm3": {
+        "value": 158.67,
+        "uncertainty": 33.26,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:brachioradialis_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "brachioradialis_whole",
+      "muscleId": "brachioradialis",
+      "segmentId": "brachioradialis_whole",
+      "volumeCm3": {
+        "value": 82.24,
+        "uncertainty": 17.78,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:anconeus_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "anconeus_whole",
+      "muscleId": "anconeus",
+      "segmentId": "anconeus_whole",
+      "volumeCm3": {
+        "value": 11.02,
+        "uncertainty": 2.53,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:extensor_carpi_ulnaris_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "extensor_carpi_ulnaris_whole",
+      "muscleId": "extensor_carpi_ulnaris",
+      "segmentId": "extensor_carpi_ulnaris_whole",
+      "volumeCm3": {
+        "value": 23.1,
+        "uncertainty": 6.08,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:supinator_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "supinator_whole",
+      "muscleId": "supinator",
+      "segmentId": "supinator_whole",
+      "volumeCm3": {
+        "value": 19.55,
+        "uncertainty": 5.04,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:muscle:pronator_teres",
+      "targetKind": "MUSCLE",
+      "targetId": "pronator_teres",
+      "muscleId": "pronator_teres",
+      "segmentId": null,
+      "volumeCm3": {
+        "value": 43.53,
+        "uncertainty": 9.73,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:muscle:flexor_digitorum_superficialis",
+      "targetKind": "MUSCLE",
+      "targetId": "flexor_digitorum_superficialis",
+      "muscleId": "flexor_digitorum_superficialis",
+      "segmentId": null,
+      "volumeCm3": {
+        "value": 78.78,
+        "uncertainty": 14.5,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:muscle:flexor_carpi_ulnaris",
+      "targetKind": "MUSCLE",
+      "targetId": "flexor_carpi_ulnaris",
+      "muscleId": "flexor_carpi_ulnaris",
+      "segmentId": null,
+      "volumeCm3": {
+        "value": 46.06,
+        "uncertainty": 9.97,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:flexor_digitorum_profundus_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "flexor_digitorum_profundus_whole",
+      "muscleId": "flexor_digitorum_profundus",
+      "segmentId": "flexor_digitorum_profundus_whole",
+      "volumeCm3": {
+        "value": 102.67,
+        "uncertainty": 21.81,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:flexor_pollicis_longus_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "flexor_pollicis_longus_whole",
+      "muscleId": "flexor_pollicis_longus",
+      "segmentId": "flexor_pollicis_longus_whole",
+      "volumeCm3": {
+        "value": 19.4,
+        "uncertainty": 4.24,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:pronator_quadratus_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "pronator_quadratus_whole",
+      "muscleId": "pronator_quadratus",
+      "segmentId": "pronator_quadratus_whole",
+      "volumeCm3": {
+        "value": 9.59,
+        "uncertainty": 2.13,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:latissimus_dorsi_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "latissimus_dorsi_whole",
+      "muscleId": "latissimus_dorsi",
+      "segmentId": "latissimus_dorsi_whole",
+      "volumeCm3": {
+        "value": 496.93,
+        "uncertainty": 115.26,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:multifidus_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "multifidus_whole",
+      "muscleId": "multifidus",
+      "segmentId": "multifidus_whole",
+      "volumeCm3": {
+        "value": 222.84,
+        "uncertainty": 32.9,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:rectus_abdominis_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "rectus_abdominis_whole",
+      "muscleId": "rectus_abdominis",
+      "segmentId": "rectus_abdominis_whole",
+      "volumeCm3": {
+        "value": 278.53,
+        "uncertainty": 68.74,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:external_oblique_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "external_oblique_whole",
+      "muscleId": "external_oblique",
+      "segmentId": "external_oblique_whole",
+      "volumeCm3": {
+        "value": 202.79,
+        "uncertainty": 34.12,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:quadratus_lumborum_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "quadratus_lumborum_whole",
+      "muscleId": "quadratus_lumborum",
+      "segmentId": "quadratus_lumborum_whole",
+      "volumeCm3": {
+        "value": 66.97,
+        "uncertainty": 11.26,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:psoas_major_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "psoas_major_whole",
+      "muscleId": "psoas_major",
+      "segmentId": "psoas_major_whole",
+      "volumeCm3": {
+        "value": 302.45,
+        "uncertainty": 52.07,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:iliacus_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "iliacus_whole",
+      "muscleId": "iliacus",
+      "segmentId": "iliacus_whole",
+      "volumeCm3": {
+        "value": 201.4,
+        "uncertainty": 31.6,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:muscle:gluteus_medius",
+      "targetKind": "MUSCLE",
+      "targetId": "gluteus_medius",
+      "muscleId": "gluteus_medius",
+      "segmentId": null,
+      "volumeCm3": {
+        "value": 377.48,
+        "uncertainty": 64.39,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:gluteus_maximus_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "gluteus_maximus_whole",
+      "muscleId": "gluteus_maximus",
+      "segmentId": "gluteus_maximus_whole",
+      "volumeCm3": {
+        "value": 1017.08,
+        "uncertainty": 212.65,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:gluteus_minimus_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "gluteus_minimus_whole",
+      "muscleId": "gluteus_minimus",
+      "segmentId": "gluteus_minimus_whole",
+      "volumeCm3": {
+        "value": 110.24,
+        "uncertainty": 19.65,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:piriformis_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "piriformis_whole",
+      "muscleId": "piriformis",
+      "segmentId": "piriformis_whole",
+      "volumeCm3": {
+        "value": 42.89,
+        "uncertainty": 9.2,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:quadratus_femoris_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "quadratus_femoris_whole",
+      "muscleId": "quadratus_femoris",
+      "segmentId": "quadratus_femoris_whole",
+      "volumeCm3": {
+        "value": 31.34,
+        "uncertainty": 7.63,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:rectus_femoris_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "rectus_femoris_whole",
+      "muscleId": "rectus_femoris",
+      "segmentId": "rectus_femoris_whole",
+      "volumeCm3": {
+        "value": 300.16,
+        "uncertainty": 69.32,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:vastus_lateralis_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "vastus_lateralis_whole",
+      "muscleId": "vastus_lateralis",
+      "segmentId": "vastus_lateralis_whole",
+      "volumeCm3": {
+        "value": 1070.58,
+        "uncertainty": 202.07,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:vastus_medialis_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "vastus_medialis_whole",
+      "muscleId": "vastus_medialis",
+      "segmentId": "vastus_medialis_whole",
+      "volumeCm3": {
+        "value": 549.26,
+        "uncertainty": 117.07,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:vastus_intermedius_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "vastus_intermedius_whole",
+      "muscleId": "vastus_intermedius",
+      "segmentId": "vastus_intermedius_whole",
+      "volumeCm3": {
+        "value": 293.76,
+        "uncertainty": 71.82,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:sartorius_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "sartorius_whole",
+      "muscleId": "sartorius",
+      "segmentId": "sartorius_whole",
+      "volumeCm3": {
+        "value": 180.24,
+        "uncertainty": 35.87,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:adductor_brevis_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "adductor_brevis_whole",
+      "muscleId": "adductor_brevis",
+      "segmentId": "adductor_brevis_whole",
+      "volumeCm3": {
+        "value": 110.43,
+        "uncertainty": 22.75,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:muscle:adductor_magnus",
+      "targetKind": "MUSCLE",
+      "targetId": "adductor_magnus",
+      "muscleId": "adductor_magnus",
+      "segmentId": null,
+      "volumeCm3": {
+        "value": 663.34,
+        "uncertainty": 161.95,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:adductor_longus_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "adductor_longus_whole",
+      "muscleId": "adductor_longus",
+      "segmentId": "adductor_longus_whole",
+      "volumeCm3": {
+        "value": 191.86,
+        "uncertainty": 37.43,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:gracilis_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "gracilis_whole",
+      "muscleId": "gracilis",
+      "segmentId": "gracilis_whole",
+      "volumeCm3": {
+        "value": 117.85,
+        "uncertainty": 31.22,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:semitendinosus_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "semitendinosus_whole",
+      "muscleId": "semitendinosus",
+      "segmentId": "semitendinosus_whole",
+      "volumeCm3": {
+        "value": 213.84,
+        "uncertainty": 50.02,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:semimembranosus_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "semimembranosus_whole",
+      "muscleId": "semimembranosus",
+      "segmentId": "semimembranosus_whole",
+      "volumeCm3": {
+        "value": 266.87,
+        "uncertainty": 55.72,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:biceps_femoris_long_head",
+      "targetKind": "SEGMENT",
+      "targetId": "biceps_femoris_long_head",
+      "muscleId": "biceps_femoris",
+      "segmentId": "biceps_femoris_long_head",
+      "volumeCm3": {
+        "value": 225.45,
+        "uncertainty": 42.86,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 0.664765
+      },
+      "availability": "ESTIMABLE",
+      "uncertaintyClass": "MODERATE_HIGH",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:biceps_femoris_short_head",
+      "targetKind": "SEGMENT",
+      "targetId": "biceps_femoris_short_head",
+      "muscleId": "biceps_femoris",
+      "segmentId": "biceps_femoris_short_head",
+      "volumeCm3": {
+        "value": 113.77,
+        "uncertainty": 28.11,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 0.335235
+      },
+      "availability": "ESTIMABLE",
+      "uncertaintyClass": "MODERATE_HIGH",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:popliteus_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "popliteus_whole",
+      "muscleId": "popliteus",
+      "segmentId": "popliteus_whole",
+      "volumeCm3": {
+        "value": 21.01,
+        "uncertainty": 3.6,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:gastrocnemius_medial_head",
+      "targetKind": "SEGMENT",
+      "targetId": "gastrocnemius_medial_head",
+      "muscleId": "gastrocnemius",
+      "segmentId": "gastrocnemius_medial_head",
+      "volumeCm3": {
+        "value": 266.93,
+        "uncertainty": 56.44,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 0.629489
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "LOW_MODERATE",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:gastrocnemius_lateral_head",
+      "targetKind": "SEGMENT",
+      "targetId": "gastrocnemius_lateral_head",
+      "muscleId": "gastrocnemius",
+      "segmentId": "gastrocnemius_lateral_head",
+      "volumeCm3": {
+        "value": 157.11,
+        "uncertainty": 28.14,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 0.370511
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "LOW_MODERATE",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:soleus_whole",
+      "targetKind": "SEGMENT",
+      "targetId": "soleus_whole",
+      "muscleId": "soleus",
+      "segmentId": "soleus_whole",
+      "volumeCm3": {
+        "value": 463.35,
+        "uncertainty": 82.97,
+        "sourceKind": "DIRECT_MEASUREMENT",
+        "sourceId": "RIEM_2026",
+        "modelVersion": null
+      },
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "KNOWN",
+        "fraction": 1.0
+      },
+      "availability": "KNOWN",
+      "uncertaintyClass": "UNKNOWN",
+      "selectionRule": "ADULT_MALE_EXACT_IN_VIVO_MRI"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:trapezius_descending_part",
+      "targetKind": "SEGMENT",
+      "targetId": "trapezius_descending_part",
+      "muscleId": "trapezius",
+      "segmentId": "trapezius_descending_part",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "STRUCTURAL_PRIOR",
+        "fraction": 0.1128,
+        "uncertainty": "HIGH"
+      },
+      "availability": "WEAKLY_ESTIMABLE",
+      "uncertaintyClass": "HIGH",
+      "selectionRule": "ALLOW_PROVISIONAL_STRUCTURAL_SHARE"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:trapezius_transverse_part",
+      "targetKind": "SEGMENT",
+      "targetId": "trapezius_transverse_part",
+      "muscleId": "trapezius",
+      "segmentId": "trapezius_transverse_part",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "STRUCTURAL_PRIOR",
+        "fraction": 0.5268,
+        "uncertainty": "HIGH"
+      },
+      "availability": "WEAKLY_ESTIMABLE",
+      "uncertaintyClass": "HIGH",
+      "selectionRule": "ALLOW_PROVISIONAL_STRUCTURAL_SHARE"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:trapezius_ascending_part",
+      "targetKind": "SEGMENT",
+      "targetId": "trapezius_ascending_part",
+      "muscleId": "trapezius",
+      "segmentId": "trapezius_ascending_part",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "STRUCTURAL_PRIOR",
+        "fraction": 0.3605,
+        "uncertainty": "HIGH"
+      },
+      "availability": "WEAKLY_ESTIMABLE",
+      "uncertaintyClass": "HIGH",
+      "selectionRule": "ALLOW_PROVISIONAL_STRUCTURAL_SHARE"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:pectoralis_major_clavicular_part",
+      "targetKind": "SEGMENT",
+      "targetId": "pectoralis_major_clavicular_part",
+      "muscleId": "pectoralis_major",
+      "segmentId": "pectoralis_major_clavicular_part",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "UNKNOWN",
+      "uncertaintyClass": "HIGH",
+      "selectionRule": "DO_NOT_NUMERICALLY_SPLIT_PARENT"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:pectoralis_major_sternocostal_part",
+      "targetKind": "SEGMENT",
+      "targetId": "pectoralis_major_sternocostal_part",
+      "muscleId": "pectoralis_major",
+      "segmentId": "pectoralis_major_sternocostal_part",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "UNKNOWN",
+      "uncertaintyClass": "HIGH",
+      "selectionRule": "DO_NOT_NUMERICALLY_SPLIT_PARENT"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:pectoralis_major_abdominal_part",
+      "targetKind": "SEGMENT",
+      "targetId": "pectoralis_major_abdominal_part",
+      "muscleId": "pectoralis_major",
+      "segmentId": "pectoralis_major_abdominal_part",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "UNKNOWN",
+      "uncertaintyClass": "VERY_HIGH",
+      "selectionRule": "DO_NOT_NUMERICALLY_SPLIT_PARENT"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:deltoid_clavicular_part",
+      "targetKind": "SEGMENT",
+      "targetId": "deltoid_clavicular_part",
+      "muscleId": "deltoid",
+      "segmentId": "deltoid_clavicular_part",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "WEAKLY_ESTIMABLE",
+      "uncertaintyClass": "HIGH",
+      "selectionRule": "KEEP_SHARE_LATENT_UNTIL_PRIMARY_VALUES_IMPORTED"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:deltoid_acromial_part",
+      "targetKind": "SEGMENT",
+      "targetId": "deltoid_acromial_part",
+      "muscleId": "deltoid",
+      "segmentId": "deltoid_acromial_part",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "WEAKLY_ESTIMABLE",
+      "uncertaintyClass": "HIGH",
+      "selectionRule": "KEEP_SHARE_LATENT_UNTIL_PRIMARY_VALUES_IMPORTED"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:deltoid_spinal_part",
+      "targetKind": "SEGMENT",
+      "targetId": "deltoid_spinal_part",
+      "muscleId": "deltoid",
+      "segmentId": "deltoid_spinal_part",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "WEAKLY_ESTIMABLE",
+      "uncertaintyClass": "HIGH",
+      "selectionRule": "KEEP_SHARE_LATENT_UNTIL_PRIMARY_VALUES_IMPORTED"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:biceps_brachii_long_head",
+      "targetKind": "SEGMENT",
+      "targetId": "biceps_brachii_long_head",
+      "muscleId": "biceps_brachii",
+      "segmentId": "biceps_brachii_long_head",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "WEAKLY_ESTIMABLE",
+      "uncertaintyClass": "HIGH",
+      "selectionRule": "KEEP_SHARE_LATENT_UNTIL_PRIMARY_VALUES_IMPORTED"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:biceps_brachii_short_head",
+      "targetKind": "SEGMENT",
+      "targetId": "biceps_brachii_short_head",
+      "muscleId": "biceps_brachii",
+      "segmentId": "biceps_brachii_short_head",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "WEAKLY_ESTIMABLE",
+      "uncertaintyClass": "HIGH",
+      "selectionRule": "KEEP_SHARE_LATENT_UNTIL_PRIMARY_VALUES_IMPORTED"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:triceps_brachii_long_head",
+      "targetKind": "SEGMENT",
+      "targetId": "triceps_brachii_long_head",
+      "muscleId": "triceps_brachii",
+      "segmentId": "triceps_brachii_long_head",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "UNKNOWN",
+      "uncertaintyClass": "HIGH",
+      "selectionRule": "DO_NOT_NUMERICALLY_SPLIT_PARENT"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:triceps_brachii_lateral_head",
+      "targetKind": "SEGMENT",
+      "targetId": "triceps_brachii_lateral_head",
+      "muscleId": "triceps_brachii",
+      "segmentId": "triceps_brachii_lateral_head",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "UNKNOWN",
+      "uncertaintyClass": "HIGH",
+      "selectionRule": "DO_NOT_NUMERICALLY_SPLIT_PARENT"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:triceps_brachii_medial_head",
+      "targetKind": "SEGMENT",
+      "targetId": "triceps_brachii_medial_head",
+      "muscleId": "triceps_brachii",
+      "segmentId": "triceps_brachii_medial_head",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "UNKNOWN",
+      "uncertaintyClass": "VERY_HIGH",
+      "selectionRule": "DO_NOT_NUMERICALLY_SPLIT_PARENT"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:gluteus_medius_anterior_region",
+      "targetKind": "SEGMENT",
+      "targetId": "gluteus_medius_anterior_region",
+      "muscleId": "gluteus_medius",
+      "segmentId": "gluteus_medius_anterior_region",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "UNKNOWN",
+      "uncertaintyClass": "VERY_HIGH",
+      "selectionRule": "PROVISIONAL_STATE_NO_ABSOLUTE_SHARE"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:gluteus_medius_middle_region",
+      "targetKind": "SEGMENT",
+      "targetId": "gluteus_medius_middle_region",
+      "muscleId": "gluteus_medius",
+      "segmentId": "gluteus_medius_middle_region",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "UNKNOWN",
+      "uncertaintyClass": "VERY_HIGH",
+      "selectionRule": "PROVISIONAL_STATE_NO_ABSOLUTE_SHARE"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:gluteus_medius_posterior_region",
+      "targetKind": "SEGMENT",
+      "targetId": "gluteus_medius_posterior_region",
+      "muscleId": "gluteus_medius",
+      "segmentId": "gluteus_medius_posterior_region",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "UNKNOWN",
+      "uncertaintyClass": "VERY_HIGH",
+      "selectionRule": "PROVISIONAL_STATE_NO_ABSOLUTE_SHARE"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:adductor_magnus_adductor_part",
+      "targetKind": "SEGMENT",
+      "targetId": "adductor_magnus_adductor_part",
+      "muscleId": "adductor_magnus",
+      "segmentId": "adductor_magnus_adductor_part",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "UNKNOWN",
+      "uncertaintyClass": "HIGH",
+      "selectionRule": "INDEPENDENT_STATE_NO_ABSOLUTE_SHARE"
+    },
+    {
+      "id": "healthy_adult_male_v0_1:segment:adductor_magnus_hamstring_part",
+      "targetKind": "SEGMENT",
+      "targetId": "adductor_magnus_hamstring_part",
+      "muscleId": "adductor_magnus",
+      "segmentId": "adductor_magnus_hamstring_part",
+      "volumeCm3": null,
+      "optimalFibreLengthMm": null,
+      "pennationDeg": null,
+      "geometricPcsaCm2": null,
+      "effectivePcsaCm2": null,
+      "structuralCapacityIndex": null,
+      "absoluteSharePolicy": {
+        "kind": "LATENT"
+      },
+      "availability": "UNKNOWN",
+      "uncertaintyClass": "HIGH",
+      "selectionRule": "INDEPENDENT_STATE_NO_ABSOLUTE_SHARE"
+    }
+  ]
+}

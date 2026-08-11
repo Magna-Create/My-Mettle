@@ -87,5 +87,8 @@ dependencies {
 
     ksp(libs.androidx.room.compiler)
 
+    testImplementation(kotlin("test"))
+    testImplementation("org.json:json:20250517")
+
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

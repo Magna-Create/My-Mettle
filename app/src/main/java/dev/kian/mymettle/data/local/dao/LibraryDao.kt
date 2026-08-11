@@ -6,10 +6,11 @@ import androidx.room.Upsert
 import dev.kian.mymettle.data.local.entity.ExerciseCommonMistakeEntity
 import dev.kian.mymettle.data.local.entity.ExerciseCueEntity
 import dev.kian.mymettle.data.local.entity.ExerciseEntity
+import dev.kian.mymettle.data.local.entity.ExerciseExecutionProfileEntity
 import dev.kian.mymettle.data.local.entity.ExerciseMemoryEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSetupMediaEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSubstitutionEntity
-import dev.kian.mymettle.data.local.entity.ExerciseTargetMuscleEntity
+import dev.kian.mymettle.data.local.entity.RecruitmentAllocationEntity
 
 @Dao
 interface LibraryDao {
@@ -22,8 +23,11 @@ interface LibraryDao {
     @Query("SELECT * FROM exercise_memory WHERE exerciseId = :exerciseId LIMIT 1")
     suspend fun memory(exerciseId: String): ExerciseMemoryEntity?
 
-    @Query("SELECT * FROM exercise_target_muscle WHERE exerciseId = :exerciseId ORDER BY ordinal")
-    suspend fun targetMuscles(exerciseId: String): List<ExerciseTargetMuscleEntity>
+    @Query("SELECT * FROM exercise_execution_profile WHERE exerciseId = :exerciseId ORDER BY isDefault DESC, name COLLATE NOCASE")
+    suspend fun executionProfiles(exerciseId: String): List<ExerciseExecutionProfileEntity>
+
+    @Query("SELECT * FROM recruitment_allocation WHERE executionProfileId IN (:profileIds) ORDER BY executionProfileId, weighting DESC")
+    suspend fun recruitmentAllocations(profileIds: List<String>): List<RecruitmentAllocationEntity>
 
     @Query("SELECT * FROM exercise_cue WHERE exerciseId = :exerciseId ORDER BY ordinal")
     suspend fun cues(exerciseId: String): List<ExerciseCueEntity>

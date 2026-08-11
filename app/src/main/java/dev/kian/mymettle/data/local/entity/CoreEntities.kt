@@ -41,7 +41,6 @@ data class ExerciseEntity(
     val trackingMetric: String,
     val loadRelationship: String,
     val entryBasis: String,
-    val progressionStep: Double,
     val essentialCue: String?,
     val createdAt: String,
     val updatedAt: String,
@@ -67,25 +66,6 @@ data class ExerciseMemoryEntity(
     val setupNotes: String,
     val videoReferenceUrl: String,
     val machineSettings: String,
-)
-
-@Entity(
-    tableName = "exercise_target_muscle",
-    primaryKeys = ["exerciseId", "ordinal"],
-    foreignKeys = [
-        ForeignKey(
-            entity = ExerciseEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["exerciseId"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-    ],
-    indices = [Index("exerciseId")],
-)
-data class ExerciseTargetMuscleEntity(
-    val exerciseId: String,
-    val ordinal: Int,
-    val muscle: String,
 )
 
 @Entity(

@@ -60,6 +60,19 @@ N2 currently includes:
 
 The current visual layer intentionally stays near standard Material 3 / Material You while interaction and data behaviour are validated on-device.
 
+## Biological foundation checkpoint
+
+N-BIO-1 and N-BIO-2 now share one foundation:
+
+- typed anatomy, reference-physiology and exercise domain models;
+- generated runtime assets for 142 canonical muscles, 164 segment records and the selected healthy-adult-male v0.1 profile;
+- Room `muscle`, `muscle_segment`, `reference_profile` and `reference_physiology_prior` tables seeded from those assets;
+- exercise execution profiles with equipment/load-resolution constraints;
+- recruitment allocations addressed only by stable muscle-segment IDs;
+- no exercise-owned progression field or free-text target-muscle persistence.
+
+See [`docs/N_BIO_FOUNDATION.md`](docs/N_BIO_FOUNDATION.md).
+
 ## Migration rule
 
 We are not translating the Capacitor implementation line-for-line. Existing data and useful behaviour are the compatibility contract; known UX problems are corrected as their native equivalents are built.
