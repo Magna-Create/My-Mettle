@@ -1,0 +1,10 @@
+source_entity_id,source_label,maps_to_unit_ids,rule,notes
+riem_rhomboids_aggregate,Rhomboid major + minor,rhomboid_major;rhomboid_minor,DO_NOT_SPLIT,Keep aggregate observation source-level only until another source resolves the components.
+riem_infraspinatus_teres_minor_aggregate,Infraspinatus + teres minor,infraspinatus;teres_minor,DO_NOT_SPLIT,Do not divide aggregate by count or visual intuition.
+riem_ecrl_ecrb_aggregate,Extensor carpi radialis longus + brevis,extensor_carpi_radialis_longus;extensor_carpi_radialis_brevis,DO_NOT_SPLIT,
+riem_fcr_palmaris_aggregate,Flexor carpi radialis + palmaris longus,flexor_carpi_radialis;palmaris_longus,DO_NOT_SPLIT,
+riem_gemelli_aggregate,Superior + inferior gemellus,superior_gemellus;inferior_gemellus,DO_NOT_SPLIT,
+riem_fibular_aggregate,Fibular muscles aggregate,fibularis_longus;fibularis_brevis;fibularis_tertius,DO_NOT_SPLIT,Exact source composition must be rechecked before use.
+riem_erector_spinae_aggregate,Erector spinae source aggregate,iliocostalis_lumborum;iliocostalis_thoracis;iliocostalis_cervicis;longissimus_thoracis;longissimus_cervicis;longissimus_capitis;spinalis_thoracis;spinalis_cervicis;spinalis_capitis,DO_NOT_SPLIT,Aggregate mapping is conceptual; verify exact source ROI coverage before production use.
+riem_digit_extensors_aggregate,Digit extensors aggregate,,DO_NOT_MAP_UNTIL_COMPONENTS_VERIFIED,Primary Riem Table 3 reports a digit-extensor aggregate; exact source component membership must be verified before mapping to canonical units.
+riem_deep_forearm_extensors_aggregate,Deep forearm extensors aggregate,,DO_NOT_MAP_UNTIL_COMPONENTS_VERIFIED,Primary Riem Table 3 reports a deep-forearm-extensor aggregate; exact source component membership must be verified before mapping to canonical units.
