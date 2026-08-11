@@ -125,6 +125,12 @@ Room v5 translates this through an exercise execution profile into `recruitment_
 
 Legacy `progressionStep` is translated only into the default execution profile's physical load increment. It no longer represents progression.
 
+Room v6 does not persist `RoutineSlot.plannedLoad`. Historical Legacy session recommendations are
+imported as `SessionExercise.prescribedLoad`; future prescriptions carry forward performed evidence
+through the selected execution profile. Because Legacy had no separate target-intent model, PRIME
+recruitment on pinned routine assignments is projected once into independent programme/session
+targets with explicit `legacy-prime-recruitment-projection-v1` provenance.
+
 The importer must also accept exports where this optional model is absent. `ExerciseMemory.targetMuscles` is not silently promoted into recruitment.
 
 ## Native rollout

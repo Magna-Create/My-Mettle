@@ -13,6 +13,7 @@ data class LegacyImportReport(
     val sets: Int,
     val setupPhotos: Int,
     val muscleAllocations: Int,
+    val programmeTargets: Int,
 )
 
 class LegacyV6Importer(
@@ -35,6 +36,7 @@ class LegacyV6Importer(
         // containing routine-version id before Room writes the immutable history.
         val versionedPrescriptions = versionModePrescriptions(snapshot)
         val recruitment = LegacyRecruitmentResolver(database).resolve(snapshot.legacyRecruitment)
+        val targets = LegacyTargetProjector.project(snapshot, recruitment)
         val decodedPhotos = photoImporter.import(snapshot.setupPhotos)
         try {
             settingsStore.importLegacyRestTimer(snapshot.restTimerSettings)
@@ -52,10 +54,13 @@ class LegacyV6Importer(
                 dao.upsertRoutineVersions(snapshot.routineVersions)
                 dao.upsertRoutineSlots(snapshot.routineSlots)
                 dao.upsertModePrescriptions(versionedPrescriptions)
+                dao.upsertProgrammeTargets(targets.programmeTargets)
                 dao.upsertTrainingCycles(snapshot.trainingCycles)
                 dao.upsertCompletedDays(snapshot.completedDays)
                 dao.upsertSessions(snapshot.sessions)
+                dao.upsertSessionTargets(targets.sessionTargets)
                 dao.upsertSessionExercises(snapshot.sessionExercises)
+                dao.upsertSessionExerciseTargets(targets.sessionExerciseTargets)
                 dao.upsertSets(snapshot.sets)
                 dao.upsertReflections(snapshot.reflections)
                 dao.upsertHealthObservations(snapshot.healthObservations)
@@ -74,6 +79,7 @@ class LegacyV6Importer(
             sets = snapshot.sets.size,
             setupPhotos = decodedPhotos.media.size,
             muscleAllocations = recruitment.size,
+            programmeTargets = targets.programmeTargets.size,
         )
     }
 

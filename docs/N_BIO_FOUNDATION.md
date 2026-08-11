@@ -55,6 +55,6 @@ Runtime anatomy and physiology are represented under `domain/anatomy` and `domai
 
 Historical session entities remain unchanged in this checkpoint. Target/prescription separation and richer raw performance evidence belong to N-BIO-3.
 
-## Next structural patch
+## Follow-on structural patch
 
-N-BIO-3 introduces independent programme/session targets and generated prescriptions, then removes `RoutineSlot.plannedLoad` from programme truth while preserving prescribed-load history on resolved sessions.
+N-BIO-3 is implemented in [`N_BIO_TARGETS_PRESCRIPTIONS.md`](N_BIO_TARGETS_PRESCRIPTIONS.md): independent programme/session targets now resolve into model-versioned session prescriptions, while prescribed-load history remains on the session snapshot rather than the routine assignment.

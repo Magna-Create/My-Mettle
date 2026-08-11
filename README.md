@@ -73,6 +73,16 @@ N-BIO-1 and N-BIO-2 now share one foundation:
 
 See [`docs/N_BIO_FOUNDATION.md`](docs/N_BIO_FOUNDATION.md).
 
+N-BIO-3 adds the first independent programme/session targets and generated prescription boundary:
+
+- Room `programme_target`, `session_target` and `session_exercise_target` tables;
+- exercise prescriptions bound to execution profiles and target IDs;
+- `RoutineSlot` no longer owns a planned load;
+- prescribed load/model provenance remain immutable session snapshots;
+- raw set evidence is ready to store RIR and effort provenance.
+
+See [`docs/N_BIO_TARGETS_PRESCRIPTIONS.md`](docs/N_BIO_TARGETS_PRESCRIPTIONS.md).
+
 ## Migration rule
 
 We are not translating the Capacitor implementation line-for-line. Existing data and useful behaviour are the compatibility contract; known UX problems are corrected as their native equivalents are built.

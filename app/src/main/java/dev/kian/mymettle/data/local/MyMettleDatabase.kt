@@ -22,6 +22,7 @@ import dev.kian.mymettle.data.local.entity.HealthObservationEntity
 import dev.kian.mymettle.data.local.entity.ModePrescriptionEntity
 import dev.kian.mymettle.data.local.entity.MuscleEntity
 import dev.kian.mymettle.data.local.entity.MuscleSegmentEntity
+import dev.kian.mymettle.data.local.entity.ProgrammeTargetEntity
 import dev.kian.mymettle.data.local.entity.RecruitmentAllocationEntity
 import dev.kian.mymettle.data.local.entity.ReferencePhysiologyPriorEntity
 import dev.kian.mymettle.data.local.entity.ReferenceProfileEntity
@@ -29,7 +30,9 @@ import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.RoutineVersionEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
+import dev.kian.mymettle.data.local.entity.SessionExerciseTargetEntity
 import dev.kian.mymettle.data.local.entity.SessionReviewEntity
+import dev.kian.mymettle.data.local.entity.SessionTargetEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.data.local.entity.TrainingCycleEntity
 import dev.kian.mymettle.data.local.entity.UserProfileEntity
@@ -53,10 +56,13 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         RoutineVersionEntity::class,
         RoutineSlotEntity::class,
         ModePrescriptionEntity::class,
+        ProgrammeTargetEntity::class,
         TrainingCycleEntity::class,
         CycleCompletedDayEntity::class,
         SessionEntity::class,
+        SessionTargetEntity::class,
         SessionExerciseEntity::class,
+        SessionExerciseTargetEntity::class,
         SetRecordEntity::class,
         ExerciseReflectionEntity::class,
         SessionReviewEntity::class,
@@ -64,7 +70,7 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         HealthIntegrationStateEntity::class,
         AppStateEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class MyMettleDatabase : RoomDatabase() {

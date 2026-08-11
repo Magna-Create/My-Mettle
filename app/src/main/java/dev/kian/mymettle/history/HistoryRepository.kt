@@ -177,9 +177,11 @@ class HistoryRepository(
         }
         val activeShape = ActiveWorkout(
             session = session,
+            targets = emptyList(),
             exercises = exercises.map { item ->
                 ActiveWorkoutExercise(
                     entity = item.exercise,
+                    targetIds = emptyList(),
                     sets = item.sets,
                     previousCompletedSets = emptyList(),
                 )
