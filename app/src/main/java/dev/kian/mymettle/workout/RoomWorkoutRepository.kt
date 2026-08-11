@@ -5,14 +5,31 @@ import dev.kian.mymettle.data.local.MyMettleDatabase
 import dev.kian.mymettle.data.local.entity.AppStateEntity
 import dev.kian.mymettle.data.local.entity.CycleCompletedDayEntity
 import dev.kian.mymettle.data.local.entity.ExerciseEntity
+import dev.kian.mymettle.data.local.entity.ExerciseExecutionProfileEntity
 import dev.kian.mymettle.data.local.entity.ModePrescriptionEntity
+import dev.kian.mymettle.data.local.entity.ProgrammeTargetEntity
+import dev.kian.mymettle.data.local.entity.RecruitmentAllocationEntity
 import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
+import dev.kian.mymettle.data.local.entity.SessionExerciseTargetEntity
+import dev.kian.mymettle.data.local.entity.SessionTargetEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.data.local.entity.TrainingCycleEntity
+import dev.kian.mymettle.domain.anatomy.MuscleSegmentId
+import dev.kian.mymettle.domain.exercise.ExecutionProfileId
+import dev.kian.mymettle.domain.exercise.ExerciseId
+import dev.kian.mymettle.domain.exercise.LoadResolution
+import dev.kian.mymettle.domain.training.ExercisePrescription
+import dev.kian.mymettle.domain.training.TargetSource
+import dev.kian.mymettle.domain.training.TrainingTarget
+import dev.kian.mymettle.domain.training.TrainingTargetId
+import dev.kian.mymettle.engine.prescription.HistoryBackedPrescriptionEngine
+import dev.kian.mymettle.engine.prescription.PrescriptionEngine
+import dev.kian.mymettle.engine.prescription.PrescriptionRequest
 import java.time.Instant
 import java.util.UUID
+import org.json.JSONArray
 
 private val CORE_DAYS = setOf("ψ", "φ", "π")
 
@@ -20,21 +37,21 @@ class NativeWorkoutException(message: String) : IllegalStateException(message)
 
 data class PlannedWorkoutExercise(
     val slotId: String,
-    val exerciseId: String,
     val name: String,
     val importance: ExerciseImportance,
-    val plannedLoad: Double,
     val defaultUnit: String,
     val trackingMetric: String,
     val loadRelationship: String,
     val entryBasis: String,
-    val prescription: BasePrescription,
+    val executionProfileName: String,
+    val prescription: ExercisePrescription,
 )
 
 data class NativeWorkoutPlan(
     val routineVersionId: String,
     val day: String,
     val mode: TrainingMode,
+    val targets: List<TrainingTarget>,
     val exercises: List<PlannedWorkoutExercise>,
 ) {
     val workingSetCount: Int get() = exercises.sumOf { it.prescription.sets }
@@ -42,12 +59,14 @@ data class NativeWorkoutPlan(
 
 data class ActiveWorkoutExercise(
     val entity: SessionExerciseEntity,
+    val targetIds: List<TrainingTargetId>,
     val sets: List<SetRecordEntity>,
     val previousCompletedSets: List<SetRecordEntity>,
 )
 
 data class ActiveWorkout(
     val session: SessionEntity,
+    val targets: List<TrainingTarget>,
     val exercises: List<ActiveWorkoutExercise>,
 )
 
@@ -60,6 +79,7 @@ data class ActiveWorkout(
  */
 class RoomWorkoutRepository(
     private val database: MyMettleDatabase,
+    private val prescriptionEngine: PrescriptionEngine = HistoryBackedPrescriptionEngine(),
 ) {
     private val dao get() = database.workoutDao()
 
@@ -120,7 +140,10 @@ class RoomWorkoutRepository(
             healthClientRecordId = "my-mettle:$sessionId",
         )
 
+        val sessionTargets = workoutPlan.targets.map { target -> target.toSessionTarget(sessionId) }
+        val sessionTargetByProgrammeId = sessionTargets.associateBy { it.programmeTargetId }
         val sessionExercises = mutableListOf<SessionExerciseEntity>()
+        val sessionExerciseTargets = mutableListOf<SessionExerciseTargetEntity>()
         val sets = mutableListOf<SetRecordEntity>()
         workoutPlan.exercises.forEachIndexed { position, planned ->
             val sessionExerciseId = id("session_exercise")
@@ -132,6 +155,11 @@ class RoomWorkoutRepository(
                 bodyweight = bodyweight,
                 movementReason = "base_routine",
             )
+            sessionExerciseTargets += planned.prescription.targetIds.map { targetId ->
+                val sessionTarget = sessionTargetByProgrammeId[targetId.value]
+                    ?: throw NativeWorkoutException("Prescription references missing target ${targetId.value}.")
+                SessionExerciseTargetEntity(sessionExerciseId, sessionTarget.id)
+            }
             sets += prescribedSets(
                 sessionExerciseId = sessionExerciseId,
                 planned = planned,
@@ -140,7 +168,9 @@ class RoomWorkoutRepository(
         }
 
         dao.upsertSessions(listOf(session))
+        dao.upsertSessionTargets(sessionTargets)
         dao.upsertSessionExercises(sessionExercises)
+        dao.upsertSessionExerciseTargets(sessionExerciseTargets)
         dao.upsertSets(sets)
         dao.upsertAppState(state.copy(activeSessionId = sessionId, updatedAt = now))
 
@@ -154,9 +184,11 @@ class RoomWorkoutRepository(
 
     suspend fun activeWorkout(sessionId: String): ActiveWorkout {
         val session = dao.session(sessionId) ?: throw NativeWorkoutException("Active workout is missing.")
+        val targets = dao.sessionTargets(sessionId).map(SessionTargetEntity::toDomain)
         val exercises = dao.sessionExercises(sessionId).map { exercise ->
             ActiveWorkoutExercise(
                 entity = exercise,
+                targetIds = dao.sessionExerciseTargets(exercise.id).map { TrainingTargetId(it.sessionTargetId) },
                 sets = dao.sets(exercise.id),
                 previousCompletedSets = dao.latestCompletedSetsForExercise(
                     exerciseId = exercise.exerciseId,
@@ -165,7 +197,7 @@ class RoomWorkoutRepository(
                 ),
             )
         }
-        return ActiveWorkout(session, exercises)
+        return ActiveWorkout(session, targets, exercises)
     }
 
     /**
@@ -179,6 +211,7 @@ class RoomWorkoutRepository(
         if (session.mode == mode.code) return@withTransaction activeWorkout(sessionId)
 
         val target = planForRoutine(session.routineVersionId, session.daySymbol, mode)
+        val sessionTargetByProgrammeId = dao.sessionTargets(sessionId).associateBy { it.programmeTargetId }
         val existing = dao.sessionExercises(sessionId)
         val existingBySlot = existing.associateBy { it.slotId }
         val targetSlots = target.exercises.mapTo(mutableSetOf()) { it.slotId }
@@ -189,6 +222,7 @@ class RoomWorkoutRepository(
         dao.offsetSessionExercisePositions(sessionId)
 
         val updatedExercises = mutableListOf<SessionExerciseEntity>()
+        val updatedExerciseTargets = mutableListOf<SessionExerciseTargetEntity>()
         val updatedSets = mutableListOf<SetRecordEntity>()
 
         target.exercises.forEachIndexed { position, planned ->
@@ -203,6 +237,10 @@ class RoomWorkoutRepository(
                     bodyweight = bodyweight,
                     movementReason = "mode_switch_addition",
                 )
+                updatedExerciseTargets += planned.toSessionExerciseTargets(
+                    sessionExerciseId,
+                    sessionTargetByProgrammeId,
+                )
                 updatedSets += prescribedSets(
                     sessionExerciseId = sessionExerciseId,
                     planned = planned,
@@ -211,15 +249,24 @@ class RoomWorkoutRepository(
             } else {
                 updatedExercises += current.copy(
                     position = position,
-                    plannedLoad = planned.plannedLoad,
                     importanceSnapshot = planned.importance.name.lowercase(),
+                    executionProfileId = planned.prescription.executionProfileId.value,
+                    executionProfileNameSnapshot = planned.executionProfileName,
+                    prescribedLoad = planned.prescription.prescribedLoad,
                     prescriptionMode = mode.code,
                     prescriptionIncluded = true,
                     prescribedSets = planned.prescription.sets,
-                    repMin = planned.prescription.repMin,
-                    repMax = planned.prescription.repMax,
+                    repMin = planned.prescription.repRange.first,
+                    repMax = planned.prescription.repRange.last,
+                    targetRir = planned.prescription.targetRir,
                     restSeconds = planned.prescription.restSeconds,
+                    generatedByModelVersion = planned.prescription.generatedByModelVersion,
                     deferToAnd = false,
+                )
+                dao.deleteSessionExerciseTargets(current.id)
+                updatedExerciseTargets += planned.toSessionExerciseTargets(
+                    current.id,
+                    sessionTargetByProgrammeId,
                 )
 
                 val currentSets = dao.sets(current.id)
@@ -246,6 +293,7 @@ class RoomWorkoutRepository(
             }
 
         dao.upsertSessionExercises(updatedExercises)
+        if (updatedExerciseTargets.isNotEmpty()) dao.upsertSessionExerciseTargets(updatedExerciseTargets)
         if (updatedSets.isNotEmpty()) dao.upsertSets(updatedSets)
         dao.upsertSessions(listOf(session.copy(mode = mode.code, editedAt = timestamp())))
         activeWorkout(sessionId)
@@ -259,7 +307,12 @@ class RoomWorkoutRepository(
         durationSeconds: Int? = null,
         distanceMetres: Double? = null,
         logged: Boolean,
+        rir: Double? = null,
+        effortSource: String? = null,
     ): SetRecordEntity = database.withTransaction {
+        if (rir != null && rir !in 0.0..10.0) {
+            throw NativeWorkoutException("RIR must be between 0 and 10.")
+        }
         val current = dao.sets(sessionExerciseId).firstOrNull { it.id == setId }
             ?: throw NativeWorkoutException("Set not found.")
         val next = current.copy(
@@ -268,6 +321,8 @@ class RoomWorkoutRepository(
             durationSeconds = durationSeconds,
             distanceMetres = distanceMetres,
             completedAt = if (logged) current.completedAt ?: timestamp() else null,
+            rir = rir,
+            effortSource = effortSource,
         )
         dao.upsertSets(listOf(next))
         next
@@ -338,7 +393,22 @@ class RoomWorkoutRepository(
         mode: TrainingMode,
     ): NativeWorkoutPlan {
         val slots = dao.routineSlots(routineVersionId, day)
+        val targetEntities = dao.programmeTargets(routineVersionId, day)
+        val targets = targetEntities.map(ProgrammeTargetEntity::toDomain)
+        if (slots.isEmpty()) {
+            return NativeWorkoutPlan(routineVersionId, day, mode, targets, emptyList())
+        }
+
         val exerciseById = dao.exercises(slots.map { it.exerciseId }.distinct()).associateBy { it.id }
+        val profilesByExercise = dao.executionProfiles(exerciseById.keys.toList()).groupBy { it.exerciseId }
+        val defaultProfileByExercise = exerciseById.keys.associateWith { exerciseId ->
+            profilesByExercise[exerciseId]
+                .orEmpty()
+                .singleOrNull { it.isDefault }
+                ?: throw NativeWorkoutException("Exercise $exerciseId must have exactly one default execution profile.")
+        }
+        val recruitmentByProfile = dao.recruitmentAllocations(defaultProfileByExercise.values.map { it.id })
+            .groupBy { it.executionProfileId }
         val prescriptions = dao.modePrescriptions(routineVersionId).groupBy { it.slotId }
 
         val modeExercises = slots.map { slot ->
@@ -352,22 +422,49 @@ class RoomWorkoutRepository(
                 legacyA = byMode["A"].toBasePrescription(),
                 legacyB = byMode["B"].toBasePrescription(),
                 legacyC = byMode["C"].toBasePrescription(),
-                payload = SourceExercise(slot, exercise),
+                payload = SourceExercise(
+                    slot = slot,
+                    exercise = exercise,
+                    executionProfile = defaultProfileByExercise.getValue(exercise.id),
+                    recruitment = recruitmentByProfile[defaultProfileByExercise.getValue(exercise.id).id].orEmpty(),
+                ),
             )
         }
 
         val planned = WorkoutModePolicy.plan(modeExercises, mode).map { item ->
+            val source = item.payload
+            val recruitedSegments = source.recruitment
+                .filterNot { it.role.equals("stabiliser", ignoreCase = true) }
+                .mapTo(mutableSetOf()) { it.muscleSegmentId }
+            val resolvedTargetIds = targetEntities
+                .filter { it.muscleSegmentId in recruitedSegments }
+                .map { TrainingTargetId(it.id) }
+            val previousLoad = dao.latestCompletedLoadForExecutionProfile(source.executionProfile.id)?.load
+            val generated = prescriptionEngine.generate(
+                PrescriptionRequest(
+                    exerciseId = ExerciseId(source.exercise.id),
+                    executionProfileId = ExecutionProfileId(source.executionProfile.id),
+                    targetIds = resolvedTargetIds,
+                    sets = item.prescription.sets,
+                    repRange = item.prescription.repMin..item.prescription.repMax,
+                    targetRir = null,
+                    previousPerformedLoad = previousLoad,
+                    permitsExternalLoad = source.exercise.trackingMetric == "load_reps" &&
+                        source.exercise.loadRelationship !in setOf("bodyweight", "none"),
+                    loadResolution = source.executionProfile.toLoadResolution(),
+                    restSeconds = item.prescription.restSeconds,
+                ),
+            )
             PlannedWorkoutExercise(
-                slotId = item.payload.slot.id,
-                exerciseId = item.payload.exercise.id,
-                name = item.payload.exercise.name,
+                slotId = source.slot.id,
+                name = source.exercise.name,
                 importance = item.importance,
-                plannedLoad = item.payload.slot.plannedLoad,
-                defaultUnit = item.payload.exercise.defaultUnit,
-                trackingMetric = item.payload.exercise.trackingMetric,
-                loadRelationship = item.payload.exercise.loadRelationship,
-                entryBasis = item.payload.exercise.entryBasis,
-                prescription = item.prescription,
+                defaultUnit = source.exercise.defaultUnit,
+                trackingMetric = source.exercise.trackingMetric,
+                loadRelationship = source.exercise.loadRelationship,
+                entryBasis = source.exercise.entryBasis,
+                executionProfileName = source.executionProfile.name,
+                prescription = generated,
             )
         }
 
@@ -375,6 +472,7 @@ class RoomWorkoutRepository(
             routineVersionId = routineVersionId,
             day = day,
             mode = mode,
+            targets = targets,
             exercises = planned,
         )
     }
@@ -390,7 +488,7 @@ class RoomWorkoutRepository(
         id = sessionExerciseId,
         sessionId = sessionId,
         position = position,
-        exerciseId = exerciseId,
+        exerciseId = prescription.exerciseId.value,
         slotId = slotId,
         exerciseNameSnapshot = name,
         importanceSnapshot = importance.name.lowercase(),
@@ -398,13 +496,17 @@ class RoomWorkoutRepository(
         loadRelationshipSnapshot = loadRelationship,
         entryBasisSnapshot = entryBasis,
         bodyweightSnapshotKg = bodyweight,
-        plannedLoad = plannedLoad,
+        executionProfileId = prescription.executionProfileId.value,
+        executionProfileNameSnapshot = executionProfileName,
+        prescribedLoad = prescription.prescribedLoad,
         prescriptionMode = mode.code,
         prescriptionIncluded = true,
         prescribedSets = prescription.sets,
-        repMin = prescription.repMin,
-        repMax = prescription.repMax,
+        repMin = prescription.repRange.first,
+        repMax = prescription.repRange.last,
+        targetRir = prescription.targetRir,
         restSeconds = prescription.restSeconds,
+        generatedByModelVersion = prescription.generatedByModelVersion,
         deferToAnd = false,
         status = "planned",
         note = null,
@@ -423,13 +525,15 @@ class RoomWorkoutRepository(
             id = id("set"),
             sessionExerciseId = sessionExerciseId,
             setIndex = setIndex,
-            load = if (startsWithLoad) planned.plannedLoad else null,
+            load = if (startsWithLoad) planned.prescription.prescribedLoad else null,
             reps = null,
             durationSeconds = null,
             distanceMetres = null,
             unit = planned.defaultUnit,
             completedAt = null,
             note = null,
+            rir = null,
+            effortSource = null,
             warmUp = false,
             kind = "prescribed",
         )
@@ -439,7 +543,62 @@ class RoomWorkoutRepository(
 private data class SourceExercise(
     val slot: RoutineSlotEntity,
     val exercise: ExerciseEntity,
+    val executionProfile: ExerciseExecutionProfileEntity,
+    val recruitment: List<RecruitmentAllocationEntity>,
 )
+
+private fun ProgrammeTargetEntity.toDomain(): TrainingTarget = TrainingTarget(
+    id = TrainingTargetId(id),
+    segmentId = MuscleSegmentId(muscleSegmentId),
+    priority = priority,
+    desiredStimulus = desiredStimulus,
+    source = TargetSource(source),
+)
+
+private fun SessionTargetEntity.toDomain(): TrainingTarget = TrainingTarget(
+    id = TrainingTargetId(id),
+    segmentId = MuscleSegmentId(muscleSegmentId),
+    priority = priority,
+    desiredStimulus = desiredStimulus,
+    source = TargetSource(source),
+)
+
+private fun TrainingTarget.toSessionTarget(sessionId: String): SessionTargetEntity = SessionTargetEntity(
+    id = "session_target:$sessionId:${id.value}",
+    sessionId = sessionId,
+    programmeTargetId = id.value,
+    muscleSegmentId = segmentId.value,
+    priority = priority,
+    desiredStimulus = desiredStimulus,
+    source = source.description,
+)
+
+private fun PlannedWorkoutExercise.toSessionExerciseTargets(
+    sessionExerciseId: String,
+    sessionTargetByProgrammeId: Map<String?, SessionTargetEntity>,
+): List<SessionExerciseTargetEntity> = prescription.targetIds.map { targetId ->
+    val sessionTarget = sessionTargetByProgrammeId[targetId.value]
+        ?: throw NativeWorkoutException("Prescription references missing target ${targetId.value}.")
+    SessionExerciseTargetEntity(sessionExerciseId, sessionTarget.id)
+}
+
+private fun ExerciseExecutionProfileEntity.toLoadResolution(): LoadResolution? {
+    val allowedValues = allowedLoadsJson?.let { encoded ->
+        JSONArray(encoded).let { array -> List(array.length()) { array.getDouble(it) } }
+    }.orEmpty()
+    return if (
+        minimumLoad != null || maximumLoad != null || loadIncrement != null || allowedValues.isNotEmpty()
+    ) {
+        LoadResolution(
+            minimumLoad = minimumLoad,
+            maximumLoad = maximumLoad,
+            increment = loadIncrement,
+            allowedValues = allowedValues,
+        )
+    } else {
+        null
+    }
+}
 
 private fun ModePrescriptionEntity?.toBasePrescription(): BasePrescription = if (this == null) {
     BasePrescription(included = false, sets = 0, repMin = 1, repMax = 1, restSeconds = 0)

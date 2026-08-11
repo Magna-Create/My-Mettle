@@ -198,6 +198,9 @@ object LegacyV6BackupReader {
                     val daySymbol = day.stringRequired("symbol")
                     day.arrayRequired("slots").objects().forEachIndexed { fallbackPosition, slot ->
                         val slotId = slot.stringRequired("id")
+                        // Validate the Legacy value but do not persist it. Programme assignments no
+                        // longer own load; historical session snapshots and performed sets do.
+                        slot.doubleRequired("plannedLoad")
                         routineSlots += RoutineSlotEntity(
                             id = slotId,
                             routineVersionId = versionId,
@@ -205,7 +208,6 @@ object LegacyV6BackupReader {
                             exerciseId = slot.stringRequired("exerciseId"),
                             position = if (slot.has("position")) slot.intRequired("position") else fallbackPosition,
                             importance = slot.stringRequired("importance"),
-                            plannedLoad = slot.doubleRequired("plannedLoad"),
                             lockedToDay = slot.optBoolean("lockedToDay", false),
                         )
                         val prescriptions = slot.objectRequired("prescriptions")
@@ -268,6 +270,7 @@ object LegacyV6BackupReader {
 
                 session.arrayRequired("exercises").objects().forEachIndexed { exercisePosition, sessionExercise ->
                     val sessionExerciseId = sessionExercise.stringRequired("id")
+                    val exerciseId = sessionExercise.stringRequired("exerciseId")
                     val tracking = sessionExercise.objectRequired("trackingSnapshot")
                     val prescription = sessionExercise.objectRequired("prescription")
                     val prescribedSetCount = prescription.intRequired("sets")
@@ -275,7 +278,7 @@ object LegacyV6BackupReader {
                         id = sessionExerciseId,
                         sessionId = sessionId,
                         position = exercisePosition,
-                        exerciseId = sessionExercise.stringRequired("exerciseId"),
+                        exerciseId = exerciseId,
                         slotId = sessionExercise.stringRequired("slotId"),
                         exerciseNameSnapshot = sessionExercise.stringRequired("exerciseNameSnapshot"),
                         importanceSnapshot = sessionExercise.stringRequired("importanceSnapshot"),
@@ -283,13 +286,17 @@ object LegacyV6BackupReader {
                         loadRelationshipSnapshot = tracking.stringRequired("loadRelationship"),
                         entryBasisSnapshot = tracking.stringRequired("entryBasis"),
                         bodyweightSnapshotKg = sessionExercise.doubleOrNull("bodyweightSnapshotKg"),
-                        plannedLoad = sessionExercise.doubleRequired("plannedLoad"),
+                        executionProfileId = "execution_${exerciseId}_default",
+                        executionProfileNameSnapshot = "Default",
+                        prescribedLoad = sessionExercise.doubleRequired("plannedLoad"),
                         prescriptionMode = prescription.stringRequired("mode"),
                         prescriptionIncluded = prescription.optBoolean("included", true),
                         prescribedSets = prescribedSetCount,
                         repMin = prescription.intRequired("repMin"),
                         repMax = prescription.intRequired("repMax"),
+                        targetRir = null,
                         restSeconds = prescription.intRequired("restSeconds"),
+                        generatedByModelVersion = "legacy-v6-session-snapshot-v1",
                         deferToAnd = prescription.optBoolean("deferToAnd", false),
                         status = sessionExercise.stringRequired("status"),
                         note = sessionExercise.stringOrNull("note"),
@@ -314,6 +321,8 @@ object LegacyV6BackupReader {
                             unit = set.stringRequired("unit"),
                             completedAt = set.stringOrNull("completedAt"),
                             note = set.stringOrNull("note"),
+                            rir = set.doubleOrNull("rir"),
+                            effortSource = set.stringOrNull("effortSource"),
                             warmUp = warmUp,
                             kind = kind,
                         )

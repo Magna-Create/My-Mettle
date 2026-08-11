@@ -17,12 +17,15 @@ import dev.kian.mymettle.data.local.entity.ExerciseSubstitutionEntity
 import dev.kian.mymettle.data.local.entity.HealthIntegrationStateEntity
 import dev.kian.mymettle.data.local.entity.HealthObservationEntity
 import dev.kian.mymettle.data.local.entity.ModePrescriptionEntity
+import dev.kian.mymettle.data.local.entity.ProgrammeTargetEntity
 import dev.kian.mymettle.data.local.entity.RecruitmentAllocationEntity
 import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.RoutineVersionEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
+import dev.kian.mymettle.data.local.entity.SessionExerciseTargetEntity
 import dev.kian.mymettle.data.local.entity.SessionReviewEntity
+import dev.kian.mymettle.data.local.entity.SessionTargetEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.data.local.entity.TrainingCycleEntity
 import dev.kian.mymettle.data.local.entity.UserProfileEntity
@@ -73,6 +76,9 @@ interface WorkoutDao {
     suspend fun upsertModePrescriptions(values: List<ModePrescriptionEntity>)
 
     @Upsert
+    suspend fun upsertProgrammeTargets(values: List<ProgrammeTargetEntity>)
+
+    @Upsert
     suspend fun upsertTrainingCycles(values: List<TrainingCycleEntity>)
 
     @Upsert
@@ -82,7 +88,13 @@ interface WorkoutDao {
     suspend fun upsertSessions(values: List<SessionEntity>)
 
     @Upsert
+    suspend fun upsertSessionTargets(values: List<SessionTargetEntity>)
+
+    @Upsert
     suspend fun upsertSessionExercises(values: List<SessionExerciseEntity>)
+
+    @Upsert
+    suspend fun upsertSessionExerciseTargets(values: List<SessionExerciseTargetEntity>)
 
     @Upsert
     suspend fun upsertSets(values: List<SetRecordEntity>)
@@ -114,6 +126,12 @@ interface WorkoutDao {
     @Query("SELECT * FROM exercise WHERE id IN (:exerciseIds)")
     suspend fun exercises(exerciseIds: List<String>): List<ExerciseEntity>
 
+    @Query("SELECT * FROM exercise_execution_profile WHERE exerciseId IN (:exerciseIds) ORDER BY exerciseId, isDefault DESC, id")
+    suspend fun executionProfiles(exerciseIds: List<String>): List<ExerciseExecutionProfileEntity>
+
+    @Query("SELECT * FROM recruitment_allocation WHERE executionProfileId IN (:executionProfileIds)")
+    suspend fun recruitmentAllocations(executionProfileIds: List<String>): List<RecruitmentAllocationEntity>
+
     @Query(
         """
         SELECT * FROM routine_slot
@@ -132,6 +150,15 @@ interface WorkoutDao {
     )
     suspend fun modePrescriptions(routineVersionId: String): List<ModePrescriptionEntity>
 
+    @Query(
+        """
+        SELECT * FROM programme_target
+        WHERE routineVersionId = :routineVersionId AND daySymbol = :daySymbol
+        ORDER BY priority DESC, id
+        """,
+    )
+    suspend fun programmeTargets(routineVersionId: String, daySymbol: String): List<ProgrammeTargetEntity>
+
     @Query("SELECT * FROM body_measurement WHERE weightKg IS NOT NULL ORDER BY recordedAt DESC LIMIT 1")
     suspend fun latestBodyMeasurement(): BodyMeasurementEntity?
 
@@ -146,6 +173,15 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM session_exercise WHERE sessionId = :sessionId ORDER BY position")
     suspend fun sessionExercises(sessionId: String): List<SessionExerciseEntity>
+
+    @Query("SELECT * FROM session_target WHERE sessionId = :sessionId ORDER BY priority DESC, id")
+    suspend fun sessionTargets(sessionId: String): List<SessionTargetEntity>
+
+    @Query("SELECT * FROM session_exercise_target WHERE sessionExerciseId = :sessionExerciseId")
+    suspend fun sessionExerciseTargets(sessionExerciseId: String): List<SessionExerciseTargetEntity>
+
+    @Query("DELETE FROM session_exercise_target WHERE sessionExerciseId = :sessionExerciseId")
+    suspend fun deleteSessionExerciseTargets(sessionExerciseId: String)
 
     @Query("UPDATE session_exercise SET position = position + 10000 WHERE sessionId = :sessionId")
     suspend fun offsetSessionExercisePositions(sessionId: String)
@@ -175,4 +211,25 @@ interface WorkoutDao {
         excludeSessionId: String? = null,
         limit: Int = 12,
     ): List<SetRecordEntity>
+
+    @Query(
+        """
+        SELECT sr.*
+        FROM set_record AS sr
+        INNER JOIN session_exercise AS se ON se.id = sr.sessionExerciseId
+        INNER JOIN session AS s ON s.id = se.sessionId
+        WHERE se.executionProfileId = :executionProfileId
+          AND s.status = 'completed'
+          AND (:excludeSessionId IS NULL OR s.id != :excludeSessionId)
+          AND sr.completedAt IS NOT NULL
+          AND sr.load IS NOT NULL
+          AND sr.warmUp = 0
+        ORDER BY sr.completedAt DESC, s.startedAt DESC, sr.setIndex DESC
+        LIMIT 1
+        """,
+    )
+    suspend fun latestCompletedLoadForExecutionProfile(
+        executionProfileId: String,
+        excludeSessionId: String? = null,
+    ): SetRecordEntity?
 }
