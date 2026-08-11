@@ -228,3 +228,8 @@ Depth, multi-camera, ARCore and Samsung-specific capture experiments follow only
 ## Cutover rule
 
 Lite Legacy remains usable during migration. It is archived only after the native app has been used for real workouts and has demonstrated complete data transfer, reliable backup/restore and parity for the daily-driver flows.
+
+
+## AI-assisted Lite backup translation
+
+When a Lite schema-v6 export needs structured recruitment metadata before Native import, follow [the backup translation workflow](agent-workflows/translate-lite-legacy-backup.md). It preserves the export and its immutable workout history; it only adds reviewed missing `muscleLoadModel` objects keyed by exact exercise ID.
