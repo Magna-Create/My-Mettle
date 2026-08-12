@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 data class N2WorkoutUiState(
     val loading: Boolean = true,
     val hasProgramme: Boolean = false,
-    val selectedDay: String = "φ",
+    val selectedDay: String = "π",
     val selectedMode: TrainingMode = TrainingMode.B,
     val plans: Map<TrainingMode, NativeWorkoutPlan> = emptyMap(),
     val workout: ActiveWorkout? = null,

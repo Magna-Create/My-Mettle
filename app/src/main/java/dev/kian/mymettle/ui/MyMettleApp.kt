@@ -1,16 +1,16 @@
 package dev.kian.mymettle.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -18,6 +18,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 
+private const val HOME_ROUTE = "home"
 private const val TRAIN_ROUTE = "train"
 private const val LIBRARY_ROUTE = "library"
 private const val HISTORY_ROUTE = "history"
@@ -31,57 +32,60 @@ fun MyMettleApp() {
     )
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route ?: TRAIN_ROUTE
+    val currentRoute = backStackEntry?.destination?.route ?: HOME_ROUTE
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = currentRoute == TRAIN_ROUTE,
-                    onClick = {
-                        navController.navigate(TRAIN_ROUTE) {
-                            popUpTo(TRAIN_ROUTE) { inclusive = false }
-                            launchSingleTop = true
-                        }
+    fun openMainDestination(route: String) {
+        navController.navigate(route) {
+            popUpTo(HOME_ROUTE) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
+    MettleGradientBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            bottomBar = {
+                MettleBottomToolbar(
+                    selectedIndex = when (currentRoute) {
+                        HOME_ROUTE -> 0
+                        TRAIN_ROUTE -> 1
+                        HISTORY_ROUTE -> 2
+                        LIBRARY_ROUTE -> 3
+                        else -> -1
                     },
-                    icon = { Text("●") },
-                    label = { Text("Train") },
+                    onOpenHome = { openMainDestination(HOME_ROUTE) },
+                    onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
+                    onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
+                    onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
                 )
-                NavigationBarItem(
-                    selected = currentRoute == LIBRARY_ROUTE,
-                    onClick = { navController.navigate(LIBRARY_ROUTE) { launchSingleTop = true } },
-                    icon = { Text("≡") },
-                    label = { Text("Library") },
-                )
-                NavigationBarItem(
-                    selected = currentRoute == HISTORY_ROUTE,
-                    onClick = { navController.navigate(HISTORY_ROUTE) { launchSingleTop = true } },
-                    icon = { Text("◷") },
-                    label = { Text("History") },
-                )
-                NavigationBarItem(
-                    selected = currentRoute == SETTINGS_ROUTE,
-                    onClick = { navController.navigate(SETTINGS_ROUTE) { launchSingleTop = true } },
-                    icon = { Text("⚙") },
-                    label = { Text("Settings") },
-                )
+            },
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                NavHost(navController = navController, startDestination = HOME_ROUTE) {
+                    composable(HOME_ROUTE) {
+                        HomeScreen(
+                            viewModel = workoutViewModel,
+                            onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
+                            onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
+                            onOpenAccount = { openMainDestination(HISTORY_ROUTE) },
+                        )
+                    }
+                    composable(TRAIN_ROUTE) { TrainScreen(workoutViewModel) }
+                    composable(LIBRARY_ROUTE) { ExerciseLibraryScreen() }
+                    composable(HISTORY_ROUTE) { HistoryScreen() }
+                    composable(SETTINGS_ROUTE) { SettingsScreen() }
+                }
+                NativeRestTimerOverlay()
+                ExerciseReflectionOverlay(workoutViewModel)
+                SessionOutcomeOverlay(workoutViewModel)
             }
-        },
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-        ) {
-            NavHost(navController = navController, startDestination = TRAIN_ROUTE) {
-                composable(TRAIN_ROUTE) { TrainScreen(workoutViewModel) }
-                composable(LIBRARY_ROUTE) { ExerciseLibraryScreen() }
-                composable(HISTORY_ROUTE) { HistoryScreen() }
-                composable(SETTINGS_ROUTE) { SettingsScreen() }
-            }
-            NativeRestTimerOverlay()
-            ExerciseReflectionOverlay(workoutViewModel)
-            SessionOutcomeOverlay(workoutViewModel)
         }
     }
 }
