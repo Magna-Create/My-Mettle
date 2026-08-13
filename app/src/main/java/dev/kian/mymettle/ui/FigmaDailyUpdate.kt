@@ -149,7 +149,7 @@ internal fun FigmaDailyUpdateScreen(
             )
 
             FigmaNutritionHeading(
-                modifier = Modifier.offset(x = metrics.dp(24), y = metrics.dp(298)),
+                modifier = Modifier.offset(x = metrics.dp(21), y = metrics.dp(298)),
                 metrics = metrics,
             )
 
@@ -166,7 +166,7 @@ internal fun FigmaDailyUpdateScreen(
 
             HorizontalDivider(
                 modifier = Modifier
-                    .offset(x = metrics.dp(21), y = metrics.dp(671.5))
+                    .offset(x = metrics.dp(21), y = metrics.dp(671))
                     .width(metrics.dp(414)),
                 thickness = metrics.dp(1),
                 color = MettleOutlineVariant,
@@ -243,16 +243,19 @@ private fun FigmaDailyAppBar(
 
         FigmaTintedSurface(
             modifier = Modifier
+                .offset(y = metrics.dp(-0.685))
                 .width(metrics.dp(81))
                 .height(metrics.dp(49.388)),
             shape = CircleShape,
             fill = MettleOnPrimaryContainer.copy(alpha = 0.30f),
             shadowElevation = metrics.dp(3.087),
+            shadowAlpha = 0.16f,
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(metrics.dp(6)),
+                    .padding(horizontal = metrics.dp(6.1735)),
+                horizontalArrangement = Arrangement.spacedBy(metrics.dp(3.08675)),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 FigmaHeaderIconButton(
@@ -281,7 +284,7 @@ private fun FigmaHeaderIconButton(
 ) {
     Box(
         modifier = Modifier
-            .size(metrics.dp(34.5))
+            .size(metrics.dp(32.7831))
             .clip(CircleShape)
             .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -290,7 +293,7 @@ private fun FigmaHeaderIconButton(
             imageVector = imageVector,
             contentDescription = contentDescription,
             tint = Color.White.copy(alpha = 0.8f),
-            modifier = Modifier.size(metrics.dp(16.4)),
+            modifier = Modifier.size(metrics.dp(16.3916)),
         )
     }
 }
@@ -373,8 +376,9 @@ private fun FigmaInsightChips(
                         .width(metrics.dp(width))
                         .height(metrics.dp(32)),
                     shape = RoundedCornerShape(metrics.dp(8)),
-                    fill = Color.Black.copy(alpha = 0.01f),
-                    shadowElevation = metrics.dp(4),
+                    fill = Color.Black.copy(alpha = 0.004f),
+                    shadowElevation = metrics.dp(2),
+                    shadowAlpha = 0.06f,
                     borderWidth = metrics.dp(1),
                     borderColor = MettleOutlineVariant,
                 ) {
@@ -398,7 +402,7 @@ private fun FigmaInsightChips(
 private fun FigmaNutritionHeading(modifier: Modifier, metrics: FigmaMetrics) {
     Column(
         modifier = modifier
-            .width(metrics.dp(395))
+            .width(metrics.dp(414))
             .height(metrics.dp(33)),
     ) {
         HorizontalDivider(
@@ -407,8 +411,9 @@ private fun FigmaNutritionHeading(modifier: Modifier, metrics: FigmaMetrics) {
         )
         Spacer(Modifier.height(metrics.dp(7)))
         Text(
+            modifier = Modifier.padding(start = metrics.dp(3)),
             text = "Pre and Post Workout Dietary Recommendations:",
-            color = MettleOnSurfaceVariant,
+            color = MettleOnSurface.copy(alpha = 0.80f),
             fontSize = metrics.sp(14),
             lineHeight = metrics.sp(20),
             fontWeight = FontWeight.Medium,
@@ -646,8 +651,7 @@ private fun FigmaBeginSessionButton(
         shape = CircleShape,
         fill = MettleOnPrimaryContainer.copy(alpha = if (enabled) 0.45f else 0.18f),
         shadowElevation = if (enabled) metrics.dp(4) else 0.dp,
-        borderWidth = metrics.dp(0.116),
-        borderColor = MettleOutlineVariant,
+        shadowAlpha = 0.16f,
         enabled = enabled,
         onClick = onClick,
     ) {
@@ -678,6 +682,7 @@ private fun FigmaDayButton(
         shape = CircleShape,
         fill = MettleOnPrimaryContainer.copy(alpha = if (selected) 0.45f else 0.10f),
         shadowElevation = if (selected) metrics.dp(4) else 0.dp,
+        shadowAlpha = 0.16f,
         borderWidth = metrics.dp(0.116),
         borderColor = MettleOutlineVariant,
         enabled = enabled,
@@ -733,8 +738,7 @@ fun MettleBottomToolbar(
                 shape = CircleShape,
                 fill = MettleOnPrimaryContainer.copy(alpha = 0.30f),
                 shadowElevation = metrics.dp(4),
-                borderWidth = metrics.dp(0.116),
-                borderColor = MettleOutlineVariant,
+                shadowAlpha = 0.16f,
             ) {
                 Row(
                     modifier = Modifier
@@ -785,6 +789,7 @@ private fun FigmaTintedSurface(
     shape: Shape,
     fill: Color,
     shadowElevation: Dp,
+    shadowAlpha: Float = 0.30f,
     borderWidth: Dp = 0.dp,
     borderColor: Color = Color.Transparent,
     enabled: Boolean = true,
@@ -796,8 +801,8 @@ private fun FigmaTintedSurface(
             elevation = shadowElevation,
             shape = shape,
             clip = false,
-            ambientColor = Color.Black.copy(alpha = 0.30f),
-            spotColor = Color.Black.copy(alpha = 0.30f),
+            ambientColor = Color.Black.copy(alpha = shadowAlpha),
+            spotColor = Color.Black.copy(alpha = shadowAlpha),
         )
         .clip(shape)
         .background(fill)
