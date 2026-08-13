@@ -78,7 +78,7 @@ fun MyMettleApp() {
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 bottomBar = {
-                    FigmaBottomToolbar(
+                    MettleBottomToolbar(
                         selectedIndex = when (currentRoute) {
                             HOME_ROUTE -> 0
                             TRAIN_ROUTE -> 1
@@ -100,7 +100,7 @@ fun MyMettleApp() {
                 ) {
                     NavHost(navController = navController, startDestination = HOME_ROUTE) {
                         composable(HOME_ROUTE) {
-                            FigmaHomeScreen(
+                            HomeScreen(
                                 viewModel = workoutViewModel,
                                 onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
                                 onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },

@@ -113,60 +113,6 @@ private val FigmaNutritionItems = listOf(
 )
 
 @Composable
-internal fun FigmaHomeScreen(
-    viewModel: N2WorkoutViewModel,
-    onOpenWorkout: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenAccount: () -> Unit,
-) {
-    val state = viewModel.uiState
-
-    if ((state.loading && state.workout == null) || !state.hasProgramme) {
-        HomeScreen(
-            viewModel = viewModel,
-            onOpenWorkout = onOpenWorkout,
-            onOpenSettings = onOpenSettings,
-            onOpenAccount = onOpenAccount,
-        )
-        return
-    }
-
-    val day = FigmaProgrammeDays.firstOrNull { it.storageSymbol == state.selectedDay }
-        ?: FigmaProgrammeDays[2]
-    val spokenName = when (day.storageSymbol) {
-        "ψ" -> "Psi"
-        "φ" -> "Phi"
-        "π" -> "Pi"
-        else -> "&"
-    }
-    val plan = state.plans[state.selectedMode]
-    val exerciseCount = state.workout
-        ?.exercises
-        ?.count { it.entity.prescriptionIncluded }
-        ?: plan?.exercises?.size
-        ?: 0
-    val canBegin = state.workout != null ||
-        (!state.loading && plan?.exercises?.isNotEmpty() == true)
-
-    FigmaDailyUpdateScreen(
-        selectedDay = state.selectedDay,
-        dayDisplaySymbol = day.displaySymbol,
-        daySpokenName = spokenName,
-        exerciseCount = exerciseCount,
-        daySelectionEnabled = state.workout == null && !state.loading,
-        beginEnabled = canBegin,
-        beginLabel = if (state.workout == null) "Begin Session" else "Resume Session",
-        onDaySelected = viewModel::selectDay,
-        onBeginSession = {
-            if (state.workout == null) viewModel.startSession()
-            onOpenWorkout()
-        },
-        onOpenSettings = onOpenSettings,
-        onOpenAccount = onOpenAccount,
-    )
-}
-
-@Composable
 internal fun FigmaDailyUpdateScreen(
     selectedDay: String,
     dayDisplaySymbol: String,
@@ -274,15 +220,12 @@ private fun FigmaDailyAppBar(
 ) {
     Row(
         modifier = modifier
-            .width(metrics.dp(453))
-            .height(metrics.dp(50)),
+            .fillMaxWidth()
+            .height(metrics.dp(70.369))
+            .padding(start = metrics.dp(21), end = metrics.dp(18)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
-            modifier = Modifier
-                .padding(start = metrics.dp(21))
-                .width(metrics.dp(320)),
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "My Mettle",
                 color = MettleOnPrimaryContainer,
@@ -305,8 +248,6 @@ private fun FigmaDailyAppBar(
             shape = CircleShape,
             fill = MettleOnPrimaryContainer.copy(alpha = 0.30f),
             shadowElevation = metrics.dp(3.087),
-            borderWidth = metrics.dp(0.116),
-            borderColor = MettleOutlineVariant,
         ) {
             Row(
                 modifier = Modifier
@@ -369,7 +310,7 @@ private fun FigmaHeroGreeting(
     ) {
         Column(modifier = Modifier.padding(top = metrics.dp(14))) {
             Text(
-                text = "Hey Kian, ",
+                text = "Hey Kian,",
                 color = MettleOnSurface,
                 fontSize = metrics.sp(45),
                 lineHeight = metrics.sp(52),
@@ -407,42 +348,46 @@ private fun FigmaInsightChips(
     exerciseCount: Int,
     metrics: FigmaMetrics,
 ) {
-    Row(
+    val chips = listOf(
+        "$exerciseCount Exercises" to 97f,
+        "5-min warm-up" to 121f,
+        "2/3 Core Days" to 114f,
+        "No.1 Improvement from π last week was: [EXERCISE NAME]" to 404f,
+    )
+
+    Box(
         modifier = modifier
-            .width(metrics.dp(432))
+            .width(metrics.dp(414))
             .height(metrics.dp(32))
-            .clipToBounds()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(metrics.dp(8)),
+            .clipToBounds(),
     ) {
-        listOf(
-            "$exerciseCount Exercises",
-            "5-min warm-up",
-            "2/3 Core Days",
-            "No.1 Improvement from π last week was: [EXERCISE NAME]",
-        ).forEach { label ->
-            FigmaTintedSurface(
-                modifier = Modifier.height(metrics.dp(32)),
-                shape = RoundedCornerShape(metrics.dp(8)),
-                fill = Color.Black.copy(alpha = 0.01f),
-                shadowElevation = metrics.dp(2),
-                borderWidth = metrics.dp(1),
-                borderColor = MettleOutlineVariant,
-            ) {
-                Box(
+        Row(
+            modifier = Modifier
+                .offset(x = metrics.dp(3))
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(metrics.dp(8)),
+        ) {
+            chips.forEach { (label, width) ->
+                FigmaTintedSurface(
                     modifier = Modifier
-                        .height(metrics.dp(32))
-                        .padding(horizontal = metrics.dp(12)),
-                    contentAlignment = Alignment.Center,
+                        .width(metrics.dp(width))
+                        .height(metrics.dp(32)),
+                    shape = RoundedCornerShape(metrics.dp(8)),
+                    fill = Color.Black.copy(alpha = 0.01f),
+                    shadowElevation = metrics.dp(4),
+                    borderWidth = metrics.dp(1),
+                    borderColor = MettleOutlineVariant,
                 ) {
-                    Text(
-                        text = label,
-                        color = MettleOnSurfaceVariant,
-                        fontSize = metrics.sp(14),
-                        lineHeight = metrics.sp(20),
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                    )
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = label,
+                            color = MettleOnSurfaceVariant,
+                            fontSize = metrics.sp(14),
+                            lineHeight = metrics.sp(20),
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
         }
@@ -453,10 +398,13 @@ private fun FigmaInsightChips(
 private fun FigmaNutritionHeading(modifier: Modifier, metrics: FigmaMetrics) {
     Column(
         modifier = modifier
-            .width(metrics.dp(414))
+            .width(metrics.dp(395))
             .height(metrics.dp(33)),
     ) {
-        HorizontalDivider(color = MettleOutlineVariant)
+        HorizontalDivider(
+            thickness = metrics.dp(1),
+            color = MettleOutlineVariant,
+        )
         Spacer(Modifier.height(metrics.dp(7)))
         Text(
             text = "Pre and Post Workout Dietary Recommendations:",
@@ -475,7 +423,7 @@ private fun FigmaNutritionCard(
     guidance: FigmaNutritionGuidance,
     metrics: FigmaMetrics,
 ) {
-    val shape = RoundedCornerShape(metrics.dp(14))
+    val shape = RoundedCornerShape(metrics.dp(13.8))
     Row(
         modifier = modifier
             .width(metrics.dp(414))
@@ -497,107 +445,117 @@ private fun FigmaNutritionCard(
     ) {
         Column(
             modifier = Modifier
-                .width(metrics.dp(225))
+                .weight(1f)
                 .fillMaxHeight()
-                .padding(start = metrics.dp(16), top = metrics.dp(12)),
+                .padding(start = metrics.dp(18.4), top = metrics.dp(22.5)),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = guidance.emoji,
-                    color = MettleOnSurface,
-                    fontFamily = FigmaNotoEmoji,
-                    fontSize = metrics.sp(20),
-                    lineHeight = metrics.sp(24),
-                )
-                Spacer(Modifier.width(metrics.dp(8)))
+            Row(
+                modifier = Modifier.height(metrics.dp(28)),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier.width(metrics.dp(22)),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Text(
+                        text = guidance.emoji,
+                        color = MettleOnSurface,
+                        fontFamily = FigmaNotoEmoji,
+                        fontSize = metrics.sp(18.4),
+                        lineHeight = metrics.sp(28),
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                    )
+                }
+                Spacer(Modifier.width(metrics.dp(7.6)))
                 Text(
                     text = guidance.title,
                     color = MettleOnSurface,
-                    fontSize = metrics.sp(21),
+                    fontSize = metrics.sp(18.4),
                     lineHeight = metrics.sp(28),
                     fontWeight = FontWeight.Medium,
+                    maxLines = 1,
                 )
             }
-            Spacer(Modifier.height(metrics.dp(4)))
             Text(
                 text = guidance.timing,
-                color = MettleOnSurfaceVariant,
-                fontSize = metrics.sp(12.6),
-                lineHeight = metrics.sp(18),
-                fontWeight = FontWeight.Medium,
+                color = MettleOnSurface.copy(alpha = 0.30f),
+                fontSize = metrics.sp(13.8),
+                lineHeight = metrics.sp(19),
                 maxLines = 1,
             )
         }
 
-        Row(
-            modifier = Modifier
-                .fillMaxHeight()
-                .padding(end = metrics.dp(14)),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            guidance.combined?.let { combined ->
-                FigmaNutritionAmount(
-                    amount = combined,
-                    unit = guidance.unit,
-                    label = "",
-                    metrics = metrics,
-                )
-            } ?: run {
-                FigmaNutritionAmount(
-                    amount = guidance.before.orEmpty(),
-                    unit = guidance.unit,
-                    label = "Before",
-                    metrics = metrics,
-                )
-                Spacer(Modifier.width(metrics.dp(13)))
-                Text(
-                    text = "+",
-                    color = MettleOnSurface.copy(alpha = 0.30f),
-                    fontSize = metrics.sp(18),
-                    lineHeight = metrics.sp(24),
-                )
-                Spacer(Modifier.width(metrics.dp(13)))
-                FigmaNutritionAmount(
-                    amount = guidance.after.orEmpty(),
-                    unit = guidance.unit,
-                    label = "After",
-                    metrics = metrics,
-                )
-            }
+        if (guidance.combined != null) {
+            FigmaNutritionAmount(
+                modifier = Modifier.width(metrics.dp(184)),
+                amount = guidance.combined,
+                unit = guidance.unit,
+                label = null,
+                background = Color(0xFF153809),
+                metrics = metrics,
+            )
+        } else {
+            FigmaNutritionAmount(
+                modifier = Modifier.width(metrics.dp(92)),
+                amount = guidance.before.orEmpty(),
+                unit = guidance.unit,
+                label = "Pre-workout",
+                background = Color(0xFF153809),
+                metrics = metrics,
+            )
+            FigmaNutritionAmount(
+                modifier = Modifier.width(metrics.dp(92)),
+                amount = guidance.after.orEmpty(),
+                unit = guidance.unit,
+                label = "Post-workout",
+                background = MettlePrimaryContainer,
+                metrics = metrics,
+            )
         }
     }
 }
 
 @Composable
 private fun FigmaNutritionAmount(
+    modifier: Modifier,
     amount: String,
     unit: String,
-    label: String,
+    label: String?,
+    background: Color,
     metrics: FigmaMetrics,
 ) {
     Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .background(background),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Bottom,
     ) {
-        Row(verticalAlignment = Alignment.Bottom) {
+        Row(
+            modifier = Modifier.height(metrics.dp(42)),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
                 text = amount,
                 color = MettlePrimary,
-                fontSize = metrics.sp(27),
-                lineHeight = metrics.sp(32),
+                fontSize = metrics.sp(32.2),
+                lineHeight = metrics.sp(42),
                 fontWeight = FontWeight.Medium,
+                maxLines = 1,
             )
-            Spacer(Modifier.width(metrics.dp(2)))
             Text(
                 text = unit,
                 color = MettlePrimary,
-                fontSize = metrics.sp(11),
-                lineHeight = metrics.sp(16),
-                fontWeight = FontWeight.Medium,
+                fontSize = metrics.sp(if (unit == "mL") 14 else 16.1),
+                lineHeight = metrics.sp(23),
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
             )
         }
-        if (label.isNotBlank()) {
+        if (label == null) {
+            Spacer(Modifier.height(metrics.dp(25)))
+        } else {
             Box(
                 modifier = Modifier.height(metrics.dp(25)),
                 contentAlignment = Alignment.Center,
@@ -738,7 +696,7 @@ private fun FigmaDayButton(
 }
 
 @Composable
-fun FigmaBottomToolbar(
+fun MettleBottomToolbar(
     selectedIndex: Int,
     onOpenHome: () -> Unit,
     onOpenWorkout: () -> Unit,
