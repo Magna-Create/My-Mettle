@@ -32,14 +32,16 @@ import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.draw.innerShadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -250,6 +252,9 @@ private fun FigmaDailyAppBar(
             fill = MettleOnPrimaryContainer.copy(alpha = 0.30f),
             shadowElevation = metrics.dp(3.087),
             shadowAlpha = 0.16f,
+            glassBlurRadius = metrics.dp(3.087),
+            glassRefractionDisplacement = metrics.dp(2.4),
+            glassRefractionStrength = 0.20f,
         ) {
             Row(
                 modifier = Modifier
@@ -379,6 +384,11 @@ private fun FigmaInsightChips(
                     fill = Color.Black.copy(alpha = 0.004f),
                     shadowElevation = metrics.dp(2),
                     shadowAlpha = 0.06f,
+                    shadowBlurRadius = metrics.dp(8),
+                    shadowOffsetY = metrics.dp(2),
+                    glassBlurRadius = metrics.dp(24),
+                    glassRefractionDisplacement = metrics.dp(2.5),
+                    glassRefractionStrength = 0.10f,
                     borderWidth = metrics.dp(1),
                     borderColor = MettleOutlineVariant,
                 ) {
@@ -433,17 +443,23 @@ private fun FigmaNutritionCard(
         modifier = modifier
             .width(metrics.dp(414))
             .height(metrics.dp(92))
-            .shadow(
-                elevation = metrics.dp(3.45),
+            .dropShadow(
                 shape = shape,
-                ambientColor = Color.Black.copy(alpha = 0.15f),
-                spotColor = Color.Black.copy(alpha = 0.15f),
+                shadow = Shadow(
+                    radius = metrics.dp(3.45),
+                    spread = metrics.dp(1.15),
+                    color = Color.Black.copy(alpha = 0.15f),
+                    offset = DpOffset(0.dp, metrics.dp(1.15)),
+                ),
             )
-            .shadow(
-                elevation = metrics.dp(2.3),
+            .dropShadow(
                 shape = shape,
-                ambientColor = Color.Black.copy(alpha = 0.30f),
-                spotColor = Color.Black.copy(alpha = 0.30f),
+                shadow = Shadow(
+                    radius = metrics.dp(2.3),
+                    spread = 0.dp,
+                    color = Color.Black.copy(alpha = 0.30f),
+                    offset = DpOffset(0.dp, metrics.dp(1.15)),
+                ),
             )
             .clip(shape)
             .background(MettleSurfaceContainerLow),
@@ -595,17 +611,18 @@ private fun FigmaSessionActions(
             .height(metrics.dp(72)),
     ) {
         if (beginEnabled) {
-            // Figma filter12: ellipse (353, 724.607), 66 x 10.5, blur σ=11.85.
+            // Figma ellipse is 132 x 21 with a 23.7 blur. Compose renders the same blur
+            // more intensely, so retain the measured geometry while lowering source alpha.
             Box(
                 modifier = Modifier
                     .offset(x = metrics.dp(287), y = metrics.dp(26.481))
                     .width(metrics.dp(132))
                     .height(metrics.dp(21))
                     .blur(
-                        radius = metrics.dp(11.85),
+                        radius = metrics.dp(23.7),
                         edgeTreatment = BlurredEdgeTreatment.Unbounded,
                     )
-                    .background(MettleOnPrimaryContainer, CircleShape),
+                    .background(MettleOnPrimaryContainer.copy(alpha = 0.58f), CircleShape),
             )
         }
 
@@ -650,8 +667,14 @@ private fun FigmaBeginSessionButton(
         modifier = modifier,
         shape = CircleShape,
         fill = MettleOnPrimaryContainer.copy(alpha = if (enabled) 0.45f else 0.18f),
-        shadowElevation = if (enabled) metrics.dp(4) else 0.dp,
+        shadowElevation = if (enabled) metrics.dp(2) else 0.dp,
         shadowAlpha = 0.16f,
+        shadowBlurRadius = metrics.dp(4),
+        shadowOffsetY = metrics.dp(2),
+        shadowBehindTranslucent = false,
+        glassBlurRadius = metrics.dp(4),
+        glassRefractionDisplacement = metrics.dp(3),
+        glassRefractionStrength = 0.24f,
         enabled = enabled,
         onClick = onClick,
     ) {
@@ -681,8 +704,13 @@ private fun FigmaDayButton(
         modifier = modifier,
         shape = CircleShape,
         fill = MettleOnPrimaryContainer.copy(alpha = if (selected) 0.45f else 0.10f),
-        shadowElevation = if (selected) metrics.dp(4) else 0.dp,
-        shadowAlpha = 0.16f,
+        shadowElevation = 0.dp,
+        innerShadowRadius = if (selected) metrics.dp(4) else 0.dp,
+        innerShadowOffsetY = if (selected) metrics.dp(2) else 0.dp,
+        innerShadowAlpha = if (selected) 0.16f else 0f,
+        glassBlurRadius = metrics.dp(4),
+        glassRefractionDisplacement = metrics.dp(2.6),
+        glassRefractionStrength = if (selected) 0.22f else 0.14f,
         borderWidth = metrics.dp(0.116),
         borderColor = MettleOutlineVariant,
         enabled = enabled,
@@ -739,6 +767,9 @@ fun MettleBottomToolbar(
                 fill = MettleOnPrimaryContainer.copy(alpha = 0.30f),
                 shadowElevation = metrics.dp(4),
                 shadowAlpha = 0.16f,
+                glassBlurRadius = metrics.dp(4),
+                glassRefractionDisplacement = metrics.dp(3.2),
+                glassRefractionStrength = 0.22f,
             ) {
                 Row(
                     modifier = Modifier
@@ -786,46 +817,76 @@ private data class FigmaToolbarDestination(
 @Composable
 private fun FigmaTintedSurface(
     modifier: Modifier,
-    shape: Shape,
+    shape: RoundedCornerShape,
     fill: Color,
     shadowElevation: Dp,
     shadowAlpha: Float = 0.30f,
+    shadowBlurRadius: Dp = shadowElevation,
+    shadowOffsetY: Dp = shadowElevation,
+    shadowSpread: Dp = 0.dp,
+    shadowBehindTranslucent: Boolean = true,
+    innerShadowRadius: Dp = 0.dp,
+    innerShadowOffsetY: Dp = 0.dp,
+    innerShadowAlpha: Float = 0f,
+    glassBlurRadius: Dp = 4.dp,
+    glassRefractionDisplacement: Dp = 3.dp,
+    glassRefractionStrength: Float = 0.20f,
     borderWidth: Dp = 0.dp,
     borderColor: Color = Color.Transparent,
     enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
-    val surface = modifier
-        .shadow(
-            elevation = shadowElevation,
+    val outerShadowModifier = if (shadowElevation > 0.dp && shadowBehindTranslucent) {
+        Modifier.dropShadow(
             shape = shape,
-            clip = false,
-            ambientColor = Color.Black.copy(alpha = shadowAlpha),
-            spotColor = Color.Black.copy(alpha = shadowAlpha),
+            shadow = Shadow(
+                radius = shadowBlurRadius,
+                spread = shadowSpread,
+                color = Color.Black.copy(alpha = shadowAlpha),
+                offset = DpOffset(0.dp, shadowOffsetY),
+            ),
         )
-        .clip(shape)
-        .background(fill)
-        .then(
-            if (borderWidth > 0.dp) {
-                Modifier.border(borderWidth, borderColor, shape)
-            } else {
-                Modifier
-            },
-        )
-        .then(
-            if (onClick != null) {
-                Modifier.clickable(
-                    enabled = enabled,
-                    role = Role.Button,
-                    onClick = onClick,
-                )
-            } else {
-                Modifier
-            },
-        )
+    } else {
+        Modifier
+    }
 
-    Box(modifier = surface) {
-        content()
+    val innerShadowModifier = if (innerShadowRadius > 0.dp && innerShadowAlpha > 0f) {
+        Modifier.innerShadow(
+            shape = shape,
+            shadow = Shadow(
+                radius = innerShadowRadius,
+                spread = 0.dp,
+                color = Color.Black.copy(alpha = innerShadowAlpha),
+                offset = DpOffset(0.dp, innerShadowOffsetY),
+            ),
+        )
+    } else {
+        Modifier
+    }
+
+    Box(
+        modifier = modifier
+            .then(outerShadowModifier)
+            .then(innerShadowModifier),
+    ) {
+        MettleGlassSurface(
+            modifier = Modifier.fillMaxSize(),
+            shape = shape,
+            tint = fill,
+            blurRadius = glassBlurRadius,
+            refractionDisplacement = glassRefractionDisplacement,
+            refractionStrength = glassRefractionStrength,
+            // For Figma shadows with "show behind translucent areas" enabled, the
+            // precise drop shadow is drawn on the outer layer above. Where Figma disables
+            // that option (Begin Session), retain a small platform shadow instead.
+            shadowElevation = if (shadowBehindTranslucent) 0.dp else shadowElevation,
+            borderWidth = borderWidth,
+            borderColor = borderColor,
+            enabled = enabled,
+            onClick = onClick,
+        ) {
+            content()
+        }
     }
 }
