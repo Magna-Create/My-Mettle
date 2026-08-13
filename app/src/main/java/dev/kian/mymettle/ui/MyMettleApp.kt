@@ -6,7 +6,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -17,6 +20,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.window.core.layout.WindowSizeClass
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 
 private const val HOME_ROUTE = "home"
 private const val TRAIN_ROUTE = "train"
@@ -24,6 +30,7 @@ private const val LIBRARY_ROUTE = "library"
 private const val HISTORY_ROUTE = "history"
 private const val SETTINGS_ROUTE = "settings"
 
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun MyMettleApp() {
     val context = LocalContext.current
@@ -33,6 +40,17 @@ fun MyMettleApp() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: HOME_ROUTE
+    val hazeState = rememberHazeState()
+    val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
+    val windowWidthClass = when {
+        windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> {
+            MettleWindowWidthClass.Expanded
+        }
+        windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) -> {
+            MettleWindowWidthClass.Medium
+        }
+        else -> MettleWindowWidthClass.Compact
+    }
 
     fun openMainDestination(route: String) {
         navController.navigate(route) {
@@ -42,49 +60,62 @@ fun MyMettleApp() {
         }
     }
 
-    MettleGradientBackground {
-        Scaffold(
-            containerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            contentWindowInsets = WindowInsets(0, 0, 0, 0),
-            bottomBar = {
-                MettleBottomToolbar(
-                    selectedIndex = when (currentRoute) {
-                        HOME_ROUTE -> 0
-                        TRAIN_ROUTE -> 1
-                        HISTORY_ROUTE -> 2
-                        LIBRARY_ROUTE -> 3
-                        else -> -1
-                    },
-                    onOpenHome = { openMainDestination(HOME_ROUTE) },
-                    onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
-                    onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
-                    onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
-                )
-            },
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-            ) {
-                NavHost(navController = navController, startDestination = HOME_ROUTE) {
-                    composable(HOME_ROUTE) {
-                        HomeScreen(
-                            viewModel = workoutViewModel,
-                            onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
-                            onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
-                            onOpenAccount = { openMainDestination(HISTORY_ROUTE) },
-                        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Capture only the artwork behind the interface. Glass surfaces are siblings,
+        // preventing them from recursively sampling their own output.
+        MettleGradientBackground(
+            modifier = Modifier.hazeSource(hazeState),
+            content = {},
+        )
+
+        CompositionLocalProvider(
+            LocalMettleHazeState provides hazeState,
+            LocalMettleWindowWidthClass provides windowWidthClass,
+        ) {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                bottomBar = {
+                    MettleBottomToolbar(
+                        selectedIndex = when (currentRoute) {
+                            HOME_ROUTE -> 0
+                            TRAIN_ROUTE -> 1
+                            HISTORY_ROUTE -> 2
+                            LIBRARY_ROUTE -> 3
+                            else -> -1
+                        },
+                        onOpenHome = { openMainDestination(HOME_ROUTE) },
+                        onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
+                        onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
+                        onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
+                    )
+                },
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                ) {
+                    NavHost(navController = navController, startDestination = HOME_ROUTE) {
+                        composable(HOME_ROUTE) {
+                            HomeScreen(
+                                viewModel = workoutViewModel,
+                                onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
+                                onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
+                                onOpenAccount = { openMainDestination(HISTORY_ROUTE) },
+                            )
+                        }
+                        composable(TRAIN_ROUTE) { TrainScreen(workoutViewModel) }
+                        composable(LIBRARY_ROUTE) { ExerciseLibraryScreen() }
+                        composable(HISTORY_ROUTE) { HistoryScreen() }
+                        composable(SETTINGS_ROUTE) { SettingsScreen() }
                     }
-                    composable(TRAIN_ROUTE) { TrainScreen(workoutViewModel) }
-                    composable(LIBRARY_ROUTE) { ExerciseLibraryScreen() }
-                    composable(HISTORY_ROUTE) { HistoryScreen() }
-                    composable(SETTINGS_ROUTE) { SettingsScreen() }
+                    NativeRestTimerOverlay()
+                    ExerciseReflectionOverlay(workoutViewModel)
+                    SessionOutcomeOverlay(workoutViewModel)
                 }
-                NativeRestTimerOverlay()
-                ExerciseReflectionOverlay(workoutViewModel)
-                SessionOutcomeOverlay(workoutViewModel)
             }
         }
     }

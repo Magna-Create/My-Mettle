@@ -112,7 +112,6 @@ class ReferenceSeedCallback(context: Context) : RoomDatabase.Callback() {
 }
 
 private fun SupportSQLiteDatabase.contains(dataset: RuntimeReferenceDataset): Boolean {
-    val expectedSegments = dataset.muscles.sumOf { it.segments.size }
     val profile = dataset.referenceProfile
     val profileIsCurrent = query(
         "SELECT version, datasetVersion, modelVersion FROM reference_profile WHERE id = ? LIMIT 1",
@@ -123,17 +122,34 @@ private fun SupportSQLiteDatabase.contains(dataset: RuntimeReferenceDataset): Bo
             cursor.getString(1) == profile.datasetVersion &&
             cursor.getString(2) == profile.modelVersion
     }
+    val expectedMuscleIds = dataset.muscles.map { it.id.value }
+    val expectedSegmentIds = dataset.muscles.flatMap { muscle ->
+        muscle.segments.map { it.id.value }
+    }
+    val expectedPriorIds = profile.priors.map { prior ->
+        val targetKind = if (prior.segmentId == null) "muscle" else "segment"
+        val targetId = prior.segmentId?.value ?: prior.muscleId.value
+        "${profile.id.value}:$targetKind:$targetId"
+    }
+
     return profileIsCurrent &&
-        rowCount("muscle") == dataset.muscles.size &&
-        rowCount("muscle_segment") == expectedSegments &&
-        rowCount("reference_physiology_prior") == profile.priors.size
+        containsEveryId("muscle", expectedMuscleIds) &&
+        containsEveryId("muscle_segment", expectedSegmentIds) &&
+        containsEveryId("reference_physiology_prior", expectedPriorIds)
 }
 
-private fun SupportSQLiteDatabase.rowCount(table: String): Int =
-    query("SELECT COUNT(*) FROM $table").use { cursor ->
-        check(cursor.moveToFirst()) { "Could not count runtime reference table $table." }
-        cursor.getInt(0)
+private fun SupportSQLiteDatabase.containsEveryId(table: String, ids: List<String>): Boolean {
+    if (ids.isEmpty()) return true
+    val uniqueIds = ids.distinct()
+    val placeholders = uniqueIds.joinToString(separator = ",") { "?" }
+    return query(
+        "SELECT COUNT(*) FROM $table WHERE id IN ($placeholders)",
+        uniqueIds.toTypedArray(),
+    ).use { cursor ->
+        check(cursor.moveToFirst()) { "Could not inspect runtime reference table $table." }
+        cursor.getInt(0) == uniqueIds.size
     }
+}
 
 private fun SupportSQLiteDatabase.upsertOrThrow(table: String, values: ContentValues) {
     val id = checkNotNull(values.getAsString("id")) { "Runtime reference row in $table has no id." }

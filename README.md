@@ -17,26 +17,37 @@ The debug build is intentionally installable alongside Lite Legacy during migrat
 
 ## Current stack
 
-- Kotlin 2.3.21
+- Kotlin 2.4.10
 - Jetpack Compose / Material 3
 - Room
 - DataStore
 - Navigation Compose
-- compile/target SDK 36
+- compile SDK 37 / target SDK 36
 - min SDK 28
 
-AGP 8.13.2 is intentionally used for the migration foundation because it has a known stable path with Kotlin 2.3 and KSP while the Room schema is established. Toolchain modernization can happen independently after the data migration layer is proven.
+AGP 9.1.1 provides the API 37 compile toolchain required by the adaptive-layout and Haze 2 glass libraries. The app continues to target SDK 36, so adopting the newer compiler does not opt existing installs into Android 17 runtime behaviour.
 
 ## Termux build
 
-The repository includes a small POSIX `gradlew` bootstrap pinned to Gradle 8.13. It downloads that distribution into the normal Gradle cache on first use and reuses it afterwards; no globally installed Gradle version is required.
+The repository includes a small POSIX `gradlew` bootstrap pinned to Gradle 9.3.1. It downloads that distribution into the normal Gradle cache on first use and reuses it afterwards; no globally installed Gradle version is required.
 
-The Android build targets JVM 17. In Termux, the bootstrap automatically uses `$PREFIX/lib/jvm/java-17-openjdk` when `openjdk-17` is installed, avoiding Gradle desktop-Linux toolchain discovery on Android.
+The Android build targets JVM 17. In Termux, the bootstrap automatically uses `$PREFIX/lib/jvm/java-17-openjdk` when `openjdk-17` is installed, avoiding Gradle desktop-Linux toolchain discovery on Android. It also selects Termux's Android-native `aapt2`; Google's Maven binary targets desktop Linux and cannot run directly on the phone.
+
+Haze 2 requires the Android 17 compile platform. Install the platform once with the SDK manager already used by your Termux Android toolchain (use `$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager` if `sdkmanager` is not on `PATH`):
+
+```sh
+pkg update
+pkg install -y openjdk-17 curl unzip aapt2
+
+SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+"$SDKMANAGER" --update
+yes | "$SDKMANAGER" --licenses
+"$SDKMANAGER" "platforms;android-37.0" "build-tools;36.0.0"
+```
 
 From the repository root:
 
 ```sh
-pkg install -y openjdk-17 curl unzip
 ./gradlew :app:assembleDebug
 cp app/build/outputs/apk/debug/app-debug.apk /sdcard/Download/My-Mettle-Dev.apk
 ```
@@ -58,7 +69,7 @@ N2 currently includes:
 - mode-relative session achievement and whole-session review;
 - completed-workout History.
 
-The current visual layer intentionally stays near standard Material 3 / Material You while interaction and data behaviour are validated on-device.
+The Daily Update screen now follows the 453-unit Figma reference through adaptive window sizing and a shared Haze 2 refractive-glass layer. Wider layout families remain deliberately centred on that validated frame until their own prototypes are tested. See [`docs/HOME_GLASS_RENDERER.md`](docs/HOME_GLASS_RENDERER.md).
 
 ## Biological foundation checkpoint
 

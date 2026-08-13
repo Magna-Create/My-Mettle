@@ -2,21 +2,20 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "dev.kian.mymettle"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "dev.kian.mymettle"
         minSdk = 28
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.1.0-alpha03"
+        versionCode = 4
+        versionName = "0.1.0-alpha04"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -45,7 +44,7 @@ android {
 
     buildFeatures {
         compose = true
-        buildConfig = true
+        resValues = true
     }
 
     packaging {
@@ -71,6 +70,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation("androidx.compose.material3.adaptive:adaptive:1.3.0")
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -80,6 +80,11 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.datastore.preferences)
 
+    // Haze 2 keeps source capture and the experimental refractive glass renderer
+    // behind a single modifier boundary, so the screen can change renderer later.
+    implementation("dev.chrisbanes.haze:haze:2.0.0-alpha05")
+    implementation("dev.chrisbanes.haze:haze-glass:2.0.0-alpha05")
+
     implementation("androidx.camera:camera-core:$cameraXVersion")
     implementation("androidx.camera:camera-camera2:$cameraXVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraXVersion")
@@ -87,7 +92,7 @@ dependencies {
 
     ksp(libs.androidx.room.compiler)
 
-    testImplementation(kotlin("test"))
+    testImplementation(kotlin("test-junit"))
     testImplementation("org.json:json:20250517")
 
     debugImplementation(libs.androidx.compose.ui.tooling)
