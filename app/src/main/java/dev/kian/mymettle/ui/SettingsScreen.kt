@@ -1,5 +1,9 @@
 package dev.kian.mymettle.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,6 +11,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -21,13 +28,24 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.util.Locale
+
+private const val FigmaDiagnosticReferenceWidth = 453f
+private const val FigmaDiagnosticReferenceHeight = 983f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +55,7 @@ fun SettingsScreen() {
         factory = remember(context) { SettingsViewModelFactory(context) },
     )
     val state = viewModel.uiState
+    var showScreenDiagnostics by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -64,6 +83,7 @@ fun SettingsScreen() {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -132,8 +152,33 @@ fun SettingsScreen() {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+
+                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(
+                            "Developer options",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            "Tools for checking native rendering and layout behaviour.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        TextButton(onClick = { showScreenDiagnostics = true }) {
+                            Text("Screen diagnostics")
+                        }
+                    }
+                }
             }
         }
+    }
+
+    if (showScreenDiagnostics) {
+        ScreenDiagnosticsDialog(onDismiss = { showScreenDiagnostics = false })
     }
 
     state.error?.let { message ->
@@ -144,6 +189,104 @@ fun SettingsScreen() {
             confirmButton = { TextButton(onClick = viewModel::dismissError) { Text("OK") } },
         )
     }
+}
+
+@Composable
+private fun ScreenDiagnosticsDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val view = LocalView.current
+    val displayMetrics = context.resources.displayMetrics
+
+    val packageInfo = remember(context) {
+        context.packageManager.getPackageInfo(context.packageName, 0)
+    }
+    val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        packageInfo.longVersionCode
+    } else {
+        @Suppress("DEPRECATION")
+        packageInfo.versionCode.toLong()
+    }
+
+    val viewWidthDp = if (density.density > 0f) view.width / density.density else 0f
+    val viewHeightDp = if (density.density > 0f) view.height / density.density else 0f
+    val figmaScaleFromConfiguration = (
+        minOf(configuration.screenWidthDp.toFloat(), FigmaDiagnosticReferenceWidth) /
+            FigmaDiagnosticReferenceWidth
+        ).coerceAtMost(1f)
+    val figmaScaleFromView = (
+        minOf(viewWidthDp, FigmaDiagnosticReferenceWidth) /
+            FigmaDiagnosticReferenceWidth
+        ).coerceAtMost(1f)
+
+    fun Float.fmt(decimals: Int = 3): String = String.format(Locale.US, "%.${decimals}f", this)
+
+    val expectedToolbarDp = 220f * figmaScaleFromView
+    val expectedToolbarPx = expectedToolbarDp * density.density
+    val expectedCardDp = 414f * figmaScaleFromView
+    val expectedMarginDp = 21f * figmaScaleFromView
+
+    val diagnostics = buildString {
+        appendLine("SCREEN DIAGNOSTICS")
+        appendLine()
+        appendLine("App")
+        appendLine("  version: ${packageInfo.versionName} ($versionCode)")
+        appendLine("  package: ${context.packageName}")
+        appendLine()
+        appendLine("Device")
+        appendLine("  model: ${Build.MANUFACTURER} ${Build.MODEL}")
+        appendLine("  Android SDK: ${Build.VERSION.SDK_INT}")
+        appendLine()
+        appendLine("Root view")
+        appendLine("  pixels: ${view.width} × ${view.height}")
+        appendLine("  derived dp: ${viewWidthDp.fmt(1)} × ${viewHeightDp.fmt(1)}")
+        appendLine()
+        appendLine("Android configuration")
+        appendLine("  screen dp: ${configuration.screenWidthDp} × ${configuration.screenHeightDp}")
+        appendLine("  smallest width: ${configuration.smallestScreenWidthDp} dp")
+        appendLine("  resource pixels: ${displayMetrics.widthPixels} × ${displayMetrics.heightPixels}")
+        appendLine()
+        appendLine("Density")
+        appendLine("  Compose density: ${density.density.fmt()}")
+        appendLine("  density DPI: ${displayMetrics.densityDpi}")
+        appendLine("  font scale: ${density.fontScale.fmt()}")
+        appendLine()
+        appendLine("Figma mapping")
+        appendLine("  reference: ${FigmaDiagnosticReferenceWidth.toInt()} × ${FigmaDiagnosticReferenceHeight.toInt()} units")
+        appendLine("  scale from config: ${figmaScaleFromConfiguration.fmt(4)}")
+        appendLine("  scale from root view: ${figmaScaleFromView.fmt(4)}")
+        appendLine("  21-unit margin → ${expectedMarginDp.fmt(2)} dp")
+        appendLine("  414-unit card → ${expectedCardDp.fmt(2)} dp")
+        appendLine("  220-unit toolbar → ${expectedToolbarDp.fmt(2)} dp / ${expectedToolbarPx.fmt(1)} px")
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Screen diagnostics") },
+        text = {
+            SelectionContainer {
+                Text(
+                    text = diagnostics,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("My Mettle screen diagnostics", diagnostics))
+                },
+            ) {
+                Text("Copy")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        },
+    )
 }
 
 @Composable
