@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.alignByBaseline
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -558,6 +559,7 @@ private fun FigmaNutritionAmount(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
+                modifier = Modifier.alignByBaseline(),
                 text = amount,
                 color = MettlePrimary,
                 fontSize = metrics.sp(32.2),
@@ -566,6 +568,7 @@ private fun FigmaNutritionAmount(
                 maxLines = 1,
             )
             Text(
+                modifier = Modifier.alignByBaseline(),
                 text = unit,
                 color = MettlePrimary,
                 fontSize = metrics.sp(if (unit == "mL") 14 else 16.1),
@@ -611,12 +614,12 @@ private fun FigmaSessionActions(
             .height(metrics.dp(72)),
     ) {
         if (beginEnabled) {
-            // Figma ellipse is 132 x 21 with a 23.7 blur. Compose renders the same blur
-            // more intensely, so retain the measured geometry while lowering source alpha.
+            // Keep the Figma glow treatment but tighten its source so the bloom remains
+            // concentrated beneath the centre of the primary action.
             Box(
                 modifier = Modifier
-                    .offset(x = metrics.dp(287), y = metrics.dp(26.481))
-                    .width(metrics.dp(132))
+                    .offset(x = metrics.dp(295.1), y = metrics.dp(26.481))
+                    .width(metrics.dp(116))
                     .height(metrics.dp(21))
                     .blur(
                         radius = metrics.dp(23.7),
