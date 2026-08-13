@@ -46,14 +46,14 @@ fun MettleGradientBackground(
                 drawRect(
                     brush = Brush.radialGradient(
                         colorStops = arrayOf(
-                            0f to Color(0xFF687A5B),
-                            0.25f to Color(0xFF526148),
-                            0.5f to Color(0xFF3C4735),
-                            0.75f to Color(0xFF272E22),
+                            0f to Color(0xFF607054),
+                            0.25f to Color(0xFF4C5A43),
+                            0.5f to Color(0xFF37412F),
+                            0.75f to Color(0xFF242B20),
                             1f to MettleBackground,
                         ),
-                        center = Offset(size.width / 2f, size.height),
-                        radius = size.height,
+                        center = Offset(size.width / 2f, size.height * 1.06f),
+                        radius = size.height * 0.98f,
                     ),
                 )
             },
