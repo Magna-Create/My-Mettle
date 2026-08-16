@@ -9,6 +9,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -454,16 +455,15 @@ private fun IntensityV3AppBar(
             )
         }
 
-        MettleGlassSurface(
+        MettleControlGlassSurface(
             modifier = Modifier
                 .offset(y = metrics.dp(-0.685))
                 .width(metrics.dp(81))
                 .height(metrics.dp(49.388)),
             shape = CircleShape,
-            tint = IntensityV3OnTertiaryContainer.copy(alpha = 0.28f),
-            blurRadius = metrics.dp(6),
-            refractionDisplacement = metrics.dp(4),
-            refractionStrength = 0.28f,
+            // Same hotbar-derived optic as the rest of the interactive glass family. Keep only
+            // the page's cyan semantic bias and the capsule's own compact lift.
+            tint = IntensityV3OnTertiaryContainer.copy(alpha = 0.07f),
             shadowElevation = metrics.dp(3),
         ) {
             Row(
@@ -497,24 +497,18 @@ private fun IntensityV3HeaderIcon(
     onClick: () -> Unit,
     metrics: IntensityV3Metrics,
 ) {
-    MettleGlassSurface(
-        modifier = Modifier.size(metrics.dp(32.78)),
-        shape = CircleShape,
-        tint = Color.Transparent,
-        blurRadius = 0.dp,
-        refractionDisplacement = 0.dp,
-        refractionStrength = 0f,
-        shadowElevation = 0.dp,
-        onClick = onClick,
+    Box(
+        modifier = Modifier
+            .size(metrics.dp(32.78))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = imageVector,
-                contentDescription = contentDescription,
-                tint = Color.White.copy(alpha = 0.82f),
-                modifier = Modifier.size(metrics.dp(16.39)),
-            )
-        }
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = Color.White.copy(alpha = 0.82f),
+            modifier = Modifier.size(metrics.dp(16.39)),
+        )
     }
 }
 
