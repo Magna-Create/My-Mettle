@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,22 +18,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 
 private const val ToolbarReferenceWidth = 453f
 
-private data class ToolbarMetrics(val scale: Float) {
-    fun dp(value: Number): Dp = (value.toFloat() * scale).dp
-}
-
-private data class ToolbarDestination(
+private data class ToolbarItem(
     val contentDescription: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val width: Float,
@@ -45,8 +36,9 @@ private data class ToolbarDestination(
 /**
  * Global floating hotbar.
  *
- * The glass body and icon layer are intentionally siblings rather than parent/child. This lets the
- * optical body sit a touch higher while preserving the established icon/hit-target position.
+ * Geometry intentionally mirrors IntensityBottomToolbarV2 exactly. The only visual difference is
+ * a slightly frostier material for information-dense destinations where cards and text can travel
+ * directly underneath the floating glass.
  */
 @Composable
 internal fun MettleBottomToolbarV2(
@@ -57,10 +49,10 @@ internal fun MettleBottomToolbarV2(
     onOpenLibrary: () -> Unit,
 ) {
     val destinations = listOf(
-        ToolbarDestination("Daily Update", MettleIcons.Cycle, 23f, 23f, onOpenHome),
-        ToolbarDestination("Workout", MettleIcons.SportsMartialArts, 20f, 23f, onOpenWorkout),
-        ToolbarDestination("Progress", MettleIcons.AddChart, 20f, 20f, onOpenHistory),
-        ToolbarDestination("Exercise library", MettleIcons.CardsStack, 23f, 20f, onOpenLibrary),
+        ToolbarItem("Daily Update", MettleIcons.Cycle, 23f, 23f, onOpenHome),
+        ToolbarItem("Workout", MettleIcons.SportsMartialArts, 20f, 23f, onOpenWorkout),
+        ToolbarItem("Progress", MettleIcons.AddChart, 20f, 20f, onOpenHistory),
+        ToolbarItem("Exercise library", MettleIcons.CardsStack, 23f, 20f, onOpenLibrary),
     )
 
     BoxWithConstraints(
@@ -68,64 +60,44 @@ internal fun MettleBottomToolbarV2(
             .fillMaxWidth()
             .navigationBarsPadding(),
     ) {
-        val viewportWidth = minOf(maxWidth, ToolbarReferenceWidth.dp)
-        val metrics = ToolbarMetrics(
-            scale = (viewportWidth.value / ToolbarReferenceWidth).coerceAtMost(1f),
-        )
+        val scale = (minOf(maxWidth, ToolbarReferenceWidth.dp).value /
+            ToolbarReferenceWidth).coerceAtMost(1f)
+        fun scaled(value: Number) = (value.toFloat() * scale).dp
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = metrics.dp(6)),
+                .padding(bottom = scaled(6)),
             contentAlignment = Alignment.Center,
         ) {
-            Box(
+            MettleGlassSurface(
                 modifier = Modifier
-                    .width(metrics.dp(220))
-                    .height(metrics.dp(64)),
-                contentAlignment = Alignment.Center,
+                    .width(scaled(220))
+                    .height(scaled(64)),
+                shape = CircleShape,
+                // Same clear Haze material family as Intensity, with extra frost for pages where
+                // dense cards/text pass directly behind the bar.
+                tint = Color.White.copy(alpha = 0.028f),
+                baseColor = Color.Transparent,
+                blurRadius = scaled(8.5),
+                refractionDisplacement = scaled(9),
+                refractionStrength = 0.70f,
+                shadowElevation = scaled(4.5),
+                borderWidth = scaled(0.7),
+                borderColor = Color.White.copy(alpha = 0.22f),
             ) {
-                // Shift the material, not the controls. The device capture showed the icons in the
-                // right physical place but the optical body sitting a few pixels too low around them.
-                MettleGlassSurface(
-                    modifier = Modifier
-                        .offset(y = metrics.dp(-3))
-                        .fillMaxSize()
-                        .dropShadow(
-                            shape = CircleShape,
-                            shadow = Shadow(
-                                radius = metrics.dp(14),
-                                spread = metrics.dp(0.5),
-                                color = Color.Black.copy(alpha = 0.24f),
-                                offset = DpOffset(0.dp, metrics.dp(3)),
-                            ),
-                        ),
-                    shape = CircleShape,
-                    tint = Color.White.copy(alpha = 0.035f),
-                    blurRadius = metrics.dp(5.5),
-                    refractionDisplacement = metrics.dp(4.8),
-                    refractionStrength = 0.38f,
-                    shadowElevation = 0.dp,
-                    // A slightly brighter but thinner edge reads as a sharp glass catch-light
-                    // without turning the perimeter into a painted outline.
-                    borderWidth = metrics.dp(0.55),
-                    borderColor = Color.White.copy(alpha = 0.24f),
-                ) {
-                    // Material-only layer. Controls are deliberately rendered as a sibling below.
-                }
-
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = metrics.dp(8)),
-                    horizontalArrangement = Arrangement.spacedBy(metrics.dp(4)),
+                        .padding(horizontal = scaled(8)),
+                    horizontalArrangement = Arrangement.spacedBy(scaled(4)),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     destinations.forEachIndexed { index, destination ->
                         val isSelected = selectedIndex == index
                         Box(
                             modifier = Modifier
-                                .width(metrics.dp(48))
+                                .width(scaled(48))
                                 .fillMaxHeight()
                                 .clickable(role = Role.Button, onClick = destination.onClick),
                             contentAlignment = Alignment.Center,
@@ -133,11 +105,11 @@ internal fun MettleBottomToolbarV2(
                             Icon(
                                 imageVector = destination.icon,
                                 contentDescription = destination.contentDescription,
-                                tint = Color.White.copy(alpha = if (isSelected) 1f else 0.8f),
+                                tint = Color.White.copy(alpha = if (isSelected) 1f else 0.84f),
                                 modifier = Modifier.size(
                                     DpSize(
-                                        metrics.dp(destination.width),
-                                        metrics.dp(destination.height),
+                                        scaled(destination.width),
+                                        scaled(destination.height),
                                     ),
                                 ),
                             )
