@@ -36,9 +36,8 @@ private data class ToolbarItem(
 /**
  * Global floating hotbar.
  *
- * Geometry intentionally mirrors IntensityBottomToolbarV2 exactly. The only visual difference is
- * a slightly frostier material for information-dense destinations where cards and text can travel
- * directly underneath the floating glass.
+ * Geometry intentionally mirrors IntensityBottomToolbarV2 exactly. The shared control-glass
+ * primitive owns the material now so every other glass interactable can reuse this exact optic.
  */
 @Composable
 internal fun MettleBottomToolbarV2(
@@ -70,18 +69,12 @@ internal fun MettleBottomToolbarV2(
                 .padding(bottom = scaled(6)),
             contentAlignment = Alignment.Center,
         ) {
-            MettleGlassSurface(
+            MettleControlGlassSurface(
                 modifier = Modifier
                     .width(scaled(220))
                     .height(scaled(64)),
                 shape = CircleShape,
-                // Same clear Haze material family as Intensity, with extra frost for pages where
-                // dense cards/text pass directly behind the bar.
                 tint = Color.White.copy(alpha = 0.028f),
-                baseColor = Color.Transparent,
-                blurRadius = scaled(8.5),
-                refractionDisplacement = scaled(9),
-                refractionStrength = 0.70f,
                 shadowElevation = scaled(4.5),
                 borderWidth = scaled(0.7),
                 borderColor = Color.White.copy(alpha = 0.22f),
