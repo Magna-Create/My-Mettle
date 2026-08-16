@@ -40,7 +40,14 @@ fun MyMettleApp() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: HOME_ROUTE
+
+    // General glass (headers, selector lens, etc.) samples destination-owned backdrop sources.
     val hazeState = rememberHazeState()
+    // The global hotbar needs the *composited destination* as its source so opaque screens, cards
+    // and scrolling content are sampled exactly as rendered rather than exposing the app gradient
+    // that happens to sit underneath them.
+    val bottomBarHazeState = rememberHazeState()
+
     val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
     val windowWidthClass = when {
         windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> {
@@ -111,34 +118,43 @@ fun MyMettleApp() {
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 bottomBar = {
-                    if (currentRoute == INTENSITY_ROUTE) {
-                        IntensityBottomToolbarV2(
-                            onOpenHome = ::openHomeDestination,
-                            onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
-                            onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
-                            onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
-                        )
-                    } else {
-                        MettleBottomToolbar(
-                            selectedIndex = when (currentRoute) {
-                                HOME_ROUTE -> 0
-                                TRAIN_ROUTE -> 1
-                                HISTORY_ROUTE -> 2
-                                LIBRARY_ROUTE -> 3
-                                else -> -1
-                            },
-                            onOpenHome = ::openHomeDestination,
-                            onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
-                            onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
-                            onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
-                        )
+                    // Override only the hotbar's Haze input. Its source is the complete rendered
+                    // destination below, while glass inside that destination continues using the
+                    // normal destination-owned hazeState and therefore cannot self-sample.
+                    CompositionLocalProvider(LocalMettleHazeState provides bottomBarHazeState) {
+                        if (currentRoute == INTENSITY_ROUTE) {
+                            IntensityBottomToolbarV2(
+                                onOpenHome = ::openHomeDestination,
+                                onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
+                                onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
+                                onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
+                            )
+                        } else {
+                            MettleBottomToolbar(
+                                selectedIndex = when (currentRoute) {
+                                    HOME_ROUTE -> 0
+                                    TRAIN_ROUTE -> 1
+                                    HISTORY_ROUTE -> 2
+                                    LIBRARY_ROUTE -> 3
+                                    else -> -1
+                                },
+                                onOpenHome = ::openHomeDestination,
+                                onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
+                                onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
+                                onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
+                            )
+                        }
                     }
                 },
             ) { _ ->
                 // The hotbar is a floating glass surface on every destination. Let each screen
                 // continue underneath it so there is never a Scaffold-reserved colour strip behind
-                // the bar; the same live artwork the user sees is also what Haze can sample.
-                Box(modifier = Modifier.fillMaxSize()) {
+                // the bar. This exact composited content is also the dedicated hotbar Haze source.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .hazeSource(bottomBarHazeState),
+                ) {
                     NavHost(navController = navController, startDestination = HOME_ROUTE) {
                         composable(HOME_ROUTE) {
                             HomeScreen(
