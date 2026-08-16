@@ -12,10 +12,10 @@ enum class TrainingMode(
     val label: String,
     val description: String,
 ) {
-    A("A", "Full day", "The complete programmed session."),
-    B("B", "Focused day", "More than Busy Day, without committing to the full session."),
-    C("C", "Busy day", "The old Busy Day prescription: fewer sets, same movement coverage."),
-    D("D", "Can't be arsed", "Minimum viable training; lower-priority movements can disappear entirely."),
+    A("A", "All In", "The complete programmed session."),
+    B("B", "Busy Day", "More than Nice & Chill, without committing to the full session."),
+    C("C", "Nice & Chill", "Fewer sets, with the same movement coverage."),
+    D("D", "Can’t be Arsed", "Minimum viable training; lower-priority movements can disappear entirely."),
 }
 
 enum class ExerciseImportance {
@@ -61,10 +61,10 @@ data class WorkoutModeDefinition(
  * The only place that currently defines what the four workout modes do.
  *
  * Current mapping:
- * A = Legacy A
- * B = a session-level midpoint between Legacy A and Legacy B
- * C = Legacy B
- * D = Legacy C, then allowed to remove whole exercises
+ * A = All In / Legacy A
+ * B = Busy Day / a session-level midpoint between Legacy A and Legacy B
+ * C = Nice & Chill / Legacy B
+ * D = Can’t be Arsed / Legacy C, then allowed to remove whole exercises
  *
  * When we add a user-facing mode editor, it should edit an equivalent configuration rather than
  * teaching the rest of the app about individual mode letters.
@@ -73,12 +73,12 @@ object WorkoutModePolicy {
     private const val MINIMUM_MODE_EXERCISE_CAP = 4
 
     val definitions: List<WorkoutModeDefinition> = listOf(
-        WorkoutModeDefinition(TrainingMode.A, "Legacy A / full prescription"),
-        WorkoutModeDefinition(TrainingMode.B, "Session-level midpoint between Legacy A and Legacy B"),
-        WorkoutModeDefinition(TrainingMode.C, "Legacy B / previous Busy Day"),
+        WorkoutModeDefinition(TrainingMode.A, "All In / Legacy A / full prescription"),
+        WorkoutModeDefinition(TrainingMode.B, "Busy Day / session-level midpoint between Legacy A and Legacy B"),
+        WorkoutModeDefinition(TrainingMode.C, "Nice & Chill / Legacy B / reduced-set prescription"),
         WorkoutModeDefinition(
             mode = TrainingMode.D,
-            legacyMeaning = "Legacy C / previous minimum prescription, with whole-exercise reduction",
+            legacyMeaning = "Can’t be Arsed / Legacy C / minimum prescription, with whole-exercise reduction",
             wholeExerciseCap = MINIMUM_MODE_EXERCISE_CAP,
             permittedImportance = setOf(ExerciseImportance.PRINCIPAL, ExerciseImportance.CORE),
         ),
@@ -89,7 +89,7 @@ object WorkoutModePolicy {
         mode: TrainingMode,
     ): List<PlannedExercise<T>> {
         val ordered = exercises.sortedBy { it.ordinal }
-        if (mode == TrainingMode.B) return focusedPlan(ordered)
+        if (mode == TrainingMode.B) return busyDayPlan(ordered)
 
         val definition = definitions.first { it.mode == mode }
         val resolved = ordered.mapNotNull { exercise ->
@@ -97,7 +97,7 @@ object WorkoutModePolicy {
                 TrainingMode.A -> exercise.legacyA
                 TrainingMode.C -> exercise.legacyB
                 TrainingMode.D -> exercise.legacyC
-                TrainingMode.B -> error("Focused mode is resolved at session level.")
+                TrainingMode.B -> error("Busy Day is resolved at session level.")
             }
             if (!prescription.included || prescription.sets <= 0) return@mapNotNull null
             if (exercise.importance !in definition.permittedImportance) return@mapNotNull null
@@ -123,11 +123,11 @@ object WorkoutModePolicy {
 
     /**
      * There is often no integer per-exercise value between Legacy A=3 sets and B=2 sets. Instead
-     * of quietly making native B identical to C, resolve B across the whole session: start from the
-     * old Busy Day workload and add roughly half of the sets that separate it from Full Day.
-     * Extra sets go to principal/core movements first.
+     * of quietly making native Busy Day identical to Nice & Chill, resolve Busy Day across the
+     * whole session: start from the Nice & Chill workload and add roughly half of the sets that
+     * separate it from All In. Extra sets go to principal/core movements first.
      */
-    private fun <T> focusedPlan(exercises: List<ModeExercise<T>>): List<PlannedExercise<T>> {
+    private fun <T> busyDayPlan(exercises: List<ModeExercise<T>>): List<PlannedExercise<T>> {
         data class Working<T>(
             val source: ModeExercise<T>,
             var sets: Int,
@@ -137,18 +137,18 @@ object WorkoutModePolicy {
         val working = exercises.mapNotNull { exercise ->
             val full = exercise.legacyA
             if (!full.included || full.sets <= 0) return@mapNotNull null
-            val busySets = if (exercise.legacyB.included) exercise.legacyB.sets else 0
+            val niceAndChillSets = if (exercise.legacyB.included) exercise.legacyB.sets else 0
             Working(
                 source = exercise,
-                sets = busySets.coerceIn(0, full.sets),
+                sets = niceAndChillSets.coerceIn(0, full.sets),
                 fullSets = full.sets,
             )
         }
 
-        val busyTotal = working.sumOf { it.sets }
+        val niceAndChillTotal = working.sumOf { it.sets }
         val fullTotal = working.sumOf { it.fullSets }
-        val gap = (fullTotal - busyTotal).coerceAtLeast(0)
-        // Round upward so B is genuinely above C whenever there is any room between them.
+        val gap = (fullTotal - niceAndChillTotal).coerceAtLeast(0)
+        // Round upward so Busy Day is genuinely above Nice & Chill whenever there is room between them.
         var setsToRestore = (gap + 1) / 2
 
         val upgradeOrder = working.sortedWith(
