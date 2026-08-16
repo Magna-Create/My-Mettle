@@ -13,16 +13,18 @@ This keeps spacing, type, cards, controls and glass geometry in the same proport
 
 ## Renderer decision
 
-The selected renderer is Haze `2.0.0-alpha05`, using the matching `haze` and `haze-glass` artifacts. A single app-level `HazeState` is shared by the app, while each destination registers the live Compose artwork that should be sampled into that state. `MettleGlassSurface` owns tint, depth blur, refraction, Fresnel/specular lighting, chromatic aberration, press response, shape and fallback styling.
+The selected renderer is Haze `2.0.0-alpha05`, using the matching `haze` and `haze-glass` artifacts. General glass surfaces share an app-owned `HazeState`, while each destination registers the live Compose artwork that should be sampled into that state. `MettleGlassSurface` owns tint, depth blur, refraction, Fresnel/specular lighting, chromatic aberration, press response, shape and fallback styling.
 
-Daily Update registers its normal app gradient at app level. The Intensity destination keeps a full-window `MettleBackground` source for wide-layout gutters and additionally registers the exact animated selector Canvas as a Haze source. That Canvas uses the same live `ambientColour`, `warmPulse` and `activeMode` values that are visible on screen, so stationary glass continues to update while the backdrop animation changes. Do not introduce a separate static reconstruction of a live backdrop for Haze sampling.
+The global hotbar deliberately uses a second app-owned `HazeState`. Its source is the complete rendered destination content beneath the bar, and only the hotbar receives that state through a nested `LocalMettleHazeState` provider. This lets the hotbar continuously sample opaque Train/Library/History surfaces, scrolling cards, Daily Update and the animated Intensity field exactly as rendered, without causing destination glass such as header controls or the selector lens to sample themselves.
+
+Daily Update registers its normal app gradient for general glass. The Intensity destination keeps a full-window `MettleBackground` source for wide-layout gutters and additionally registers the exact animated selector Canvas as a general-glass Haze source. That Canvas uses the same live `ambientColour`, `warmPulse` and `activeMode` values that are visible on screen, so stationary glass continues to update while the backdrop animation changes. Do not introduce a separate static reconstruction of a live backdrop for Haze sampling.
 
 ### Haze 2 UI API contract
 
 All Compose UI glass must use the typed Haze 2 Glass path exposed through `MettleGlassSurface`:
 
 - register sampled artwork with `Modifier.hazeSource(HazeState)`;
-- keep the shared state as `rememberHazeState()` without the removed `blurEnabled` constructor argument;
+- keep shared states as `rememberHazeState()` without the removed `blurEnabled` constructor argument;
 - define glass as an immutable/replayable `GlassStyle`;
 - render it with `Modifier.hazeGlass(input = HazeInput.Sources(state), style = style, ...)`;
 - replace a style through recomposition when its parameters change rather than mutating an effect object;
