@@ -9,6 +9,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -42,6 +43,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalDensity
@@ -55,6 +57,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.chrisbanes.haze.hazeSource
 import dev.kian.mymettle.ui.theme.MettleBackground
 import dev.kian.mymettle.ui.theme.MettleOnSurface
 import dev.kian.mymettle.ui.theme.MettleOnSurfaceVariant
@@ -123,32 +126,17 @@ private val IntensityV3ModeVisuals = listOf(
 )
 
 /**
- * Static selector artwork sampled by Haze. The foreground selector draws the same family of
- * lighting dynamically as modes change; this source keeps refractive glass colour-correct.
+ * Full-window base source for the intensity destination. The animated selector artwork registers
+ * itself separately so Haze samples the exact live Canvas while retaining a source in wide gutters.
  */
 @Composable
-internal fun IntensityHazeBackdrop(
+internal fun IntensityHazeBase(
     modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .drawBehind {
-                drawRect(MettleBackground)
-                drawRect(
-                    brush = Brush.radialGradient(
-                        colorStops = arrayOf(
-                            0f to IntensityV3IdleAmbient,
-                            0.30f to lerp(IntensityV3IdleAmbient, MettleBackground, 0.20f),
-                            0.58f to lerp(IntensityV3IdleAmbient, MettleBackground, 0.48f),
-                            0.82f to lerp(IntensityV3IdleAmbient, MettleBackground, 0.76f),
-                            1f to MettleBackground,
-                        ),
-                        center = Offset(size.width / 2f, size.height * 1.05f),
-                        radius = size.height * 0.70f,
-                    ),
-                )
-            },
+            .background(MettleBackground),
     )
 }
 
@@ -204,6 +192,7 @@ private fun IntensitySelectorPageV3(
         )
         val density = LocalDensity.current
         val view = LocalView.current
+        val hazeState = LocalMettleHazeState.current
 
         var dragging by remember { mutableStateOf(false) }
         var settling by remember { mutableStateOf(false) }
@@ -266,16 +255,24 @@ private fun IntensitySelectorPageV3(
             modifier = Modifier
                 .width(viewportWidth)
                 .fillMaxHeight()
-                .align(Alignment.TopCenter)
-                .drawBehind {
-                    drawIntensityV3Background(
-                        ambientColour = ambientColour,
-                        warmPulse = warmPulse.value,
-                        activeMode = activeMode,
-                        metrics = metrics,
-                    )
-                },
+                .align(Alignment.TopCenter),
         ) {
+            IntensityV3Backdrop(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (hazeState != null) {
+                            Modifier.hazeSource(hazeState)
+                        } else {
+                            Modifier
+                        },
+                    ),
+                ambientColour = ambientColour,
+                warmPulse = warmPulse.value,
+                activeMode = activeMode,
+                metrics = metrics,
+            )
+
             IntensityV3AppBar(
                 modifier = Modifier.offset(y = metrics.dp(40)),
                 metrics = metrics,
@@ -406,6 +403,24 @@ private fun IntensitySelectorPageV3(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun IntensityV3Backdrop(
+    modifier: Modifier = Modifier,
+    ambientColour: Color,
+    warmPulse: Float,
+    activeMode: TrainingMode?,
+    metrics: IntensityV3Metrics,
+) {
+    Canvas(modifier = modifier) {
+        drawIntensityV3Background(
+            ambientColour = ambientColour,
+            warmPulse = warmPulse,
+            activeMode = activeMode,
+            metrics = metrics,
+        )
     }
 }
 
