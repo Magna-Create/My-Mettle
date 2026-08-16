@@ -65,6 +65,7 @@ fun MettleGradientBackground(
 @Composable
 fun HomeScreen(
     viewModel: N2WorkoutViewModel,
+    onChooseIntensity: () -> Unit,
     onOpenWorkout: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccount: () -> Unit,
@@ -123,8 +124,7 @@ fun HomeScreen(
                 beginLabel = if (state.workout == null) "Begin Session" else "Resume Session",
                 onDaySelected = viewModel::selectDay,
                 onBeginSession = {
-                    if (state.workout == null) viewModel.startSession()
-                    onOpenWorkout()
+                    if (state.workout == null) onChooseIntensity() else onOpenWorkout()
                 },
                 onOpenSettings = onOpenSettings,
                 onOpenAccount = onOpenAccount,
