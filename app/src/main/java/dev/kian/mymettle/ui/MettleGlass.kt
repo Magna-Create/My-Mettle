@@ -11,12 +11,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.ExperimentalHazeApi
 import dev.chrisbanes.haze.HazeInput
@@ -28,7 +30,6 @@ import dev.chrisbanes.haze.glass.GlassTransformPivot
 import dev.chrisbanes.haze.glass.GlassTransformTarget
 import dev.chrisbanes.haze.glass.SurfaceProfile
 import dev.chrisbanes.haze.glass.hazeGlass
-import dev.kian.mymettle.ui.theme.MettleBackground
 
 /**
  * HazeState is owned at app level. Individual destinations register the live artwork that should
@@ -46,7 +47,7 @@ internal fun MettleGlassSurface(
     refractionDisplacement: Dp,
     refractionStrength: Float,
     shadowElevation: Dp,
-    baseColor: Color = MettleBackground.copy(alpha = 0.08f),
+    baseColor: Color = Color.Transparent,
     borderWidth: Dp = 0.dp,
     borderColor: Color = Color.Transparent,
     enabled: Boolean = true,
@@ -111,15 +112,26 @@ internal fun MettleGlassSurface(
         Modifier.background(tint, shape)
     }
 
+    // Compose's elevation shadow reads weakly through a highly transparent Haze material. Draw a
+    // soft physical shadow behind the material instead: enough separation to establish lift while
+    // leaving the sampled backdrop visible through the glass itself.
+    val liftShadowModifier = if (shadowElevation > 0.dp) {
+        Modifier.dropShadow(
+            shape = shape,
+            shadow = Shadow(
+                radius = (shadowElevation.value * 2.2f).dp,
+                spread = 0.dp,
+                color = Color.Black.copy(alpha = 0.24f),
+                offset = DpOffset(0.dp, (shadowElevation.value * 0.8f).dp),
+            ),
+        )
+    } else {
+        Modifier
+    }
+
     Box(
         modifier = modifier
-            .shadow(
-                elevation = shadowElevation,
-                shape = shape,
-                clip = false,
-                ambientColor = Color.Black.copy(alpha = 0.16f),
-                spotColor = Color.Black.copy(alpha = 0.16f),
-            )
+            .then(liftShadowModifier)
             .then(materialModifier)
             .then(
                 if (borderWidth > 0.dp) {
