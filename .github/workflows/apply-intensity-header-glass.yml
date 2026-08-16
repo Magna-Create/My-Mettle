@@ -1,0 +1,36 @@
+name: Apply intensity header glass
+
+on:
+  push:
+    branches:
+      - agent/figma-home-daily-update
+    paths:
+      - .github/workflows/apply-intensity-header-glass.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out UI branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/figma-home-daily-update
+          fetch-depth: 0
+
+      - name: Apply shared header glass
+        run: python tools/patch_intensity_header_glass.py
+
+      - name: Commit migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/dev/kian/mymettle/ui/FigmaIntensitySelectorV3.kt
+          if git diff --cached --quiet; then
+            echo "Migration produced no changes" >&2
+            exit 1
+          fi
+          git commit -m "Match intensity header to shared glass controls"
+          git push origin HEAD:agent/figma-home-daily-update
