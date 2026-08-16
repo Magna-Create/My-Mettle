@@ -46,6 +46,7 @@ internal fun MettleGlassSurface(
     refractionDisplacement: Dp,
     refractionStrength: Float,
     shadowElevation: Dp,
+    baseColor: Color = MettleBackground.copy(alpha = 0.08f),
     borderWidth: Dp = 0.dp,
     borderColor: Color = Color.Transparent,
     enabled: Boolean = true,
@@ -58,12 +59,13 @@ internal fun MettleGlassSurface(
     val glassStyle = remember(
         shape,
         tint,
+        baseColor,
         blurRadius,
         refractionDisplacement,
         refractionStrength,
     ) {
         GlassStyle {
-            backgroundColor(MettleBackground.copy(alpha = 0.08f))
+            backgroundColor(baseColor)
             tint(tint)
             shape(shape)
             optics(
