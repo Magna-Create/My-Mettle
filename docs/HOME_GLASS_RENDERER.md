@@ -13,7 +13,9 @@ This keeps spacing, type, cards, controls and glass geometry in the same proport
 
 ## Renderer decision
 
-The selected renderer is Haze `2.0.0-alpha05`, using the matching `haze` and `haze-glass` artifacts. A single app-level `HazeState` captures the Compose backdrop, while `MettleGlassSurface` owns tint, depth blur, refraction, Fresnel/specular lighting, chromatic aberration, press response, shape and fallback styling.
+The selected renderer is Haze `2.0.0-alpha05`, using the matching `haze` and `haze-glass` artifacts. A single app-level `HazeState` is shared by the app, while each destination registers the live Compose artwork that should be sampled into that state. `MettleGlassSurface` owns tint, depth blur, refraction, Fresnel/specular lighting, chromatic aberration, press response, shape and fallback styling.
+
+Daily Update registers its normal app gradient at app level. The Intensity destination keeps a full-window `MettleBackground` source for wide-layout gutters and additionally registers the exact animated selector Canvas as a Haze source. That Canvas uses the same live `ambientColour`, `warmPulse` and `activeMode` values that are visible on screen, so stationary glass continues to update while the backdrop animation changes. Do not introduce a separate static reconstruction of a live backdrop for Haze sampling.
 
 | Candidate | Useful capability | Decision |
 | --- | --- | --- |
@@ -33,4 +35,4 @@ Haze alpha05's published Android metadata requires compile SDK 37. The app there
 - JDK 17;
 - Android platform `37.0` and SDK Build Tools `36.0.0`.
 
-The renderer is experimental upstream by definition. Keeping all use in `MettleGlassSurface` limits future Haze API migrations to one component boundary.
+The renderer is experimental upstream by definition. Keeping glass material use in `MettleGlassSurface` limits future Haze API migrations to one component boundary, while destination-owned source registration keeps each glass surface tied to the artwork the user actually sees.
