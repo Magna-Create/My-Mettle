@@ -89,10 +89,10 @@ fun MyMettleApp() {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Haze samples the app-level artwork. The selector gets its own cool backdrop so its glass
-        // surfaces do not inherit the green Daily Update source.
+        // Keep one app-owned HazeState while letting each destination register the artwork that is
+        // actually visible. Intensity uses this full-window base plus its own live animated Canvas.
         if (currentRoute == INTENSITY_ROUTE) {
-            IntensityHazeBackdrop(
+            IntensityHazeBase(
                 modifier = Modifier.hazeSource(hazeState),
             )
         } else {
@@ -137,7 +137,7 @@ fun MyMettleApp() {
                 },
             ) { innerPadding ->
                 // The intensity artwork is deliberately full-height and the hotbar floats over it.
-                // Applying Scaffold's bottom-bar padding here exposed the static Haze source as a
+                // Applying Scaffold's bottom-bar padding here exposed the Haze source as a
                 // full-width strip behind the toolbar, producing the rectangular backdrop seen on
                 // device. Other destinations keep their existing inset behaviour.
                 val contentModifier = if (currentRoute == INTENSITY_ROUTE) {
