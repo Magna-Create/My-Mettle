@@ -113,7 +113,7 @@ fun MyMettleApp() {
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 bottomBar = {
                     if (currentRoute == INTENSITY_ROUTE) {
-                        IntensityBottomToolbar(
+                        IntensityBottomToolbarV2(
                             onOpenHome = ::openHomeDestination,
                             onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
                             onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
