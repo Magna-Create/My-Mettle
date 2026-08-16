@@ -35,8 +35,9 @@ private data class IntensityToolbarItem(
 )
 
 /**
- * Device-polish variant only: geometry and four-destination behaviour stay identical to the
- * current hotbar. The material tint follows the cool Intensity page instead of Daily Update green.
+ * Intensity keeps the current four-destination hotbar geometry, but its material is deliberately
+ * clear Haze glass rather than a coloured translucent pill. The selector artwork should remain
+ * plainly visible through the bar; colour comes from the refracted backdrop, not from paint.
  */
 @Composable
 internal fun IntensityBottomToolbarV2(
@@ -72,11 +73,16 @@ internal fun IntensityBottomToolbarV2(
                     .width(scaled(220))
                     .height(scaled(64)),
                 shape = CircleShape,
-                tint = IntensityToolbarTint.copy(alpha = 0.30f),
-                blurRadius = scaled(6),
-                refractionDisplacement = scaled(4),
-                refractionStrength = 0.28f,
-                shadowElevation = scaled(4),
+                // Haze tint is not equivalent to a normal alpha fill. 30% here was effectively
+                // painting an opaque mint slab over the refraction. Keep tint almost neutral and
+                // let the selector lighting itself colour the glass.
+                tint = IntensityToolbarTint.copy(alpha = 0.045f),
+                blurRadius = scaled(14),
+                refractionDisplacement = scaled(7),
+                refractionStrength = 0.56f,
+                shadowElevation = scaled(3),
+                borderWidth = scaled(0.7),
+                borderColor = Color.White.copy(alpha = 0.18f),
             ) {
                 Row(
                     modifier = Modifier
@@ -96,7 +102,7 @@ internal fun IntensityBottomToolbarV2(
                             Icon(
                                 imageVector = destination.icon,
                                 contentDescription = destination.contentDescription,
-                                tint = Color.White.copy(alpha = 0.82f),
+                                tint = Color.White.copy(alpha = 0.86f),
                                 modifier = Modifier.size(
                                     DpSize(
                                         scaled(destination.width),
