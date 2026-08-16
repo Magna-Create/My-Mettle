@@ -165,7 +165,7 @@ fun MyMettleApp() {
                             )
                         }
                         composable(INTENSITY_ROUTE) {
-                            IntensitySelectorScreenV2(
+                            IntensitySelectorScreenV3(
                                 viewModel = workoutViewModel,
                                 onOpenWorkout = ::openWorkoutFromIntensity,
                                 onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
