@@ -246,8 +246,8 @@ private fun FigmaDailyAppBar(
         FigmaTintedSurface(
             modifier = Modifier
                 .offset(y = metrics.dp(-0.685))
-                .width(metrics.dp(81))
-                .height(metrics.dp(49.388)),
+                .width(metrics.dp(96))
+                .height(metrics.dp(52)),
             shape = CircleShape,
             fill = MettleOnPrimaryContainer.copy(alpha = 0.30f),
             shadowElevation = metrics.dp(3.087),
@@ -258,10 +258,8 @@ private fun FigmaDailyAppBar(
             useSharedControlGlass = true,
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = metrics.dp(6.1735)),
-                horizontalArrangement = Arrangement.spacedBy(metrics.dp(3.08675)),
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 FigmaHeaderIconButton(
@@ -288,20 +286,17 @@ private fun FigmaHeaderIconButton(
     onClick: () -> Unit,
     metrics: FigmaMetrics,
 ) {
-    Box(
+    MettleGlassIconTouchTarget(
         modifier = Modifier
-            .size(metrics.dp(32.7831))
-            .clip(CircleShape)
-            .clickable(role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = Color.White.copy(alpha = 0.8f),
-            modifier = Modifier.size(metrics.dp(16.3916)),
-        )
-    }
+            .width(metrics.dp(48))
+            .fillMaxHeight(),
+        imageVector = imageVector,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        iconSize = DpSize(metrics.dp(16.3916), metrics.dp(16.3916)),
+        contentAlpha = 0.80f,
+        pressedHaloSize = metrics.dp(36),
+    )
 }
 
 @Composable

@@ -54,6 +54,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -458,8 +459,8 @@ private fun IntensityV3AppBar(
         MettleControlGlassSurface(
             modifier = Modifier
                 .offset(y = metrics.dp(-0.685))
-                .width(metrics.dp(81))
-                .height(metrics.dp(49.388)),
+                .width(metrics.dp(96))
+                .height(metrics.dp(52)),
             shape = CircleShape,
             // Same hotbar-derived optic as the rest of the interactive glass family. Keep only
             // the page's cyan semantic bias and the capsule's own compact lift.
@@ -467,10 +468,8 @@ private fun IntensityV3AppBar(
             shadowElevation = metrics.dp(3),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = metrics.dp(6.17)),
-                horizontalArrangement = Arrangement.spacedBy(metrics.dp(3.09)),
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IntensityV3HeaderIcon(
@@ -497,19 +496,17 @@ private fun IntensityV3HeaderIcon(
     onClick: () -> Unit,
     metrics: IntensityV3Metrics,
 ) {
-    Box(
+    MettleGlassIconTouchTarget(
         modifier = Modifier
-            .size(metrics.dp(32.78))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = Color.White.copy(alpha = 0.82f),
-            modifier = Modifier.size(metrics.dp(16.39)),
-        )
-    }
+            .width(metrics.dp(48))
+            .fillMaxHeight(),
+        imageVector = imageVector,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        iconSize = DpSize(metrics.dp(16.39), metrics.dp(16.39)),
+        contentAlpha = 0.82f,
+        pressedHaloSize = metrics.dp(36),
+    )
 }
 
 @Composable
