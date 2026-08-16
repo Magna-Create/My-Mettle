@@ -2,6 +2,7 @@ package dev.kian.mymettle.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
@@ -155,6 +156,7 @@ internal fun MettleGlassActionButton(
     enabled: Boolean = true,
     accent: Boolean = true,
     shadowElevation: Dp = 4.dp,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 18.dp, vertical = 11.dp),
     content: @Composable RowScope.() -> Unit,
 ) {
     val tint = if (accent) {
@@ -176,7 +178,7 @@ internal fun MettleGlassActionButton(
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             ProvideTextStyle(MaterialTheme.typography.labelLarge) {
                 Row(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 11.dp),
+                    modifier = Modifier.fillMaxSize().padding(contentPadding),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                     content = content,
