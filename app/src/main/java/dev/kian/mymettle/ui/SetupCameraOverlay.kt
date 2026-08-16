@@ -111,7 +111,7 @@ fun SetupCameraOverlay(
                     error?.let {
                         Text(it, color = MaterialTheme.colorScheme.errorContainer, style = MaterialTheme.typography.bodySmall)
                     }
-                    Button(
+                    MettleGlassActionButton(
                         onClick = {
                             capturing = true
                             error = null

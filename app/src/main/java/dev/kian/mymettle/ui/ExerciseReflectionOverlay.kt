@@ -108,7 +108,7 @@ fun ExerciseReflectionOverlay(viewModel: N2WorkoutViewModel) {
                 maxLines = 4,
             )
 
-            Button(
+            MettleGlassActionButton(
                 onClick = {
                     viewModel.saveExerciseReflection(
                         targetMuscleEngagement = engagement.takeIf { it > 0 },
@@ -159,7 +159,7 @@ private fun SevenPointRating(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             (1..7).forEach { rating ->
-                FilterChip(
+                MettleGlassChoiceChip(
                     selected = value == rating,
                     onClick = { onValueChange(if (value == rating) 0 else rating) },
                     label = { Text(rating.toString()) },
@@ -184,7 +184,7 @@ private fun ChoiceRating(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             choices.forEach { (value, label) ->
-                FilterChip(
+                MettleGlassChoiceChip(
                     selected = selected == value,
                     onClick = { onSelected(value) },
                     label = { Text(label) },

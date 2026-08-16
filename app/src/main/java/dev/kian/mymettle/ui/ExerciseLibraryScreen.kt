@@ -239,8 +239,8 @@ private fun ExerciseDetailSheet(
                 if (meta.isNotBlank()) Text(meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = section == "setup", onClick = { section = "setup" }, label = { Text("Setup") })
-                    FilterChip(selected = section == "info", onClick = { section = "info" }, label = { Text("Info") })
+                    MettleGlassChoiceChip(selected = section == "setup", onClick = { section = "setup" }, label = { Text("Setup") })
+                    MettleGlassChoiceChip(selected = section == "info", onClick = { section = "info" }, label = { Text("Info") })
                 }
             }
 
@@ -269,14 +269,14 @@ private fun ExerciseDetailSheet(
                     }
                     Spacer(Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
+                        MettleGlassActionButton(
                             onClick = onTakePhoto,
                             enabled = !savingMedia && item.setupMedia.size < 12,
                             modifier = Modifier.weight(1f),
                         ) {
                             Text(if (savingMedia) "Processing…" else "Take photo")
                         }
-                        OutlinedButton(
+                        MettleGlassActionButton(accent = false, 
                             onClick = onAddPhotos,
                             enabled = !savingMedia && item.setupMedia.size < 12,
                             modifier = Modifier.weight(1f),
@@ -336,7 +336,7 @@ private fun ExerciseDetailSheet(
                 item {
                     item.memory?.videoReferenceUrl?.takeIf { it.isNotBlank() }?.let { url ->
                         val context = LocalContext.current
-                        Button(
+                        MettleGlassActionButton(
                             onClick = {
                                 runCatching {
                                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
@@ -358,7 +358,7 @@ private fun ExerciseDetailSheet(
             title = { Text("Remove setup photo?") },
             text = { Text("This removes the app-private copy from this exercise.") },
             confirmButton = {
-                Button(
+                MettleGlassActionButton(
                     onClick = {
                         pendingDelete = null
                         onDeletePhoto(media.id)

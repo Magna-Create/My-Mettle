@@ -100,7 +100,7 @@ fun SessionOutcomeOverlay(viewModel: N2WorkoutViewModel) {
                     maxLines = 5,
                 )
 
-                Button(
+                MettleGlassActionButton(
                     onClick = {
                         viewModel.saveSessionReview(
                             exerciseOrder = exerciseOrder.takeIf { it > 0 },
@@ -180,7 +180,7 @@ private fun RatingRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             (1..5).forEach { rating ->
-                FilterChip(
+                MettleGlassChoiceChip(
                     selected = value == rating,
                     onClick = { onValueChange(if (value == rating) 0 else rating) },
                     label = { Text(rating.toString()) },

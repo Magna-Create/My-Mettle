@@ -101,7 +101,7 @@ fun NativeRestTimerOverlay() {
                 .padding(top = 68.dp, end = 12.dp),
             contentAlignment = Alignment.TopEnd,
         ) {
-            AssistChip(
+            MettleGlassAssistChip(
                 onClick = { expanded = true },
                 label = {
                     Text(
@@ -147,11 +147,11 @@ fun NativeRestTimerOverlay() {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            FilledTonalButton(
+                            MettleGlassActionButton(
                                 onClick = { controller.adjust(-15) },
                                 modifier = Modifier.weight(1f),
                             ) { Text("−15") }
-                            Button(
+                            MettleGlassActionButton(
                                 onClick = {
                                     if (snapshot.phase == RestTimerPhase.RUNNING) controller.pause()
                                     else controller.resume()
@@ -160,13 +160,13 @@ fun NativeRestTimerOverlay() {
                             ) {
                                 Text(if (snapshot.phase == RestTimerPhase.RUNNING) "Pause" else "Resume")
                             }
-                            FilledTonalButton(
+                            MettleGlassActionButton(
                                 onClick = { controller.adjust(15) },
                                 modifier = Modifier.weight(1f),
                             ) { Text("+15") }
                         }
                         Spacer(Modifier.height(10.dp))
-                        Button(
+                        MettleGlassActionButton(
                             onClick = { expanded = false },
                             modifier = Modifier.fillMaxWidth(),
                         ) { Text("Minimise") }
@@ -175,7 +175,7 @@ fun NativeRestTimerOverlay() {
                     }
 
                     RestTimerPhase.READY -> {
-                        Button(
+                        MettleGlassActionButton(
                             onClick = { controller.dismissReady() },
                             modifier = Modifier.fillMaxWidth(),
                         ) { Text("Done") }
@@ -193,7 +193,7 @@ fun NativeRestTimerOverlay() {
             title = { Text("End rest timer?") },
             text = { Text("The set you logged is already saved. This only ends the countdown.") },
             confirmButton = {
-                Button(onClick = {
+                MettleGlassActionButton(onClick = {
                     controller.stop()
                     confirmEnd = false
                 }) { Text("End timer") }

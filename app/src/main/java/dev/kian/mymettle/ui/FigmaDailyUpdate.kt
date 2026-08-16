@@ -255,6 +255,7 @@ private fun FigmaDailyAppBar(
             glassBlurRadius = metrics.dp(3.087),
             glassRefractionDisplacement = metrics.dp(2.4),
             glassRefractionStrength = 0.20f,
+            useSharedControlGlass = true,
         ) {
             Row(
                 modifier = Modifier
@@ -677,6 +678,7 @@ private fun FigmaBeginSessionButton(
         glassBlurRadius = metrics.dp(4),
         glassRefractionDisplacement = metrics.dp(3),
         glassRefractionStrength = 0.24f,
+        useSharedControlGlass = true,
         enabled = enabled,
         onClick = onClick,
     ) {
@@ -715,6 +717,7 @@ private fun FigmaDayButton(
         glassRefractionStrength = if (selected) 0.22f else 0.14f,
         borderWidth = metrics.dp(0.116),
         borderColor = MettleOutlineVariant,
+        useSharedControlGlass = true,
         enabled = enabled,
         onClick = onClick,
     ) {
@@ -842,6 +845,7 @@ private fun FigmaTintedSurface(
     glassRefractionStrength: Float = 0.20f,
     borderWidth: Dp = 0.dp,
     borderColor: Color = Color.Transparent,
+    useSharedControlGlass: Boolean = false,
     enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
@@ -879,23 +883,39 @@ private fun FigmaTintedSurface(
             .then(outerShadowModifier)
             .then(innerShadowModifier),
     ) {
-        MettleGlassSurface(
-            modifier = Modifier.fillMaxSize(),
-            shape = shape,
-            tint = fill,
-            blurRadius = glassBlurRadius,
-            refractionDisplacement = glassRefractionDisplacement,
-            refractionStrength = glassRefractionStrength,
-            // For Figma shadows with "show behind translucent areas" enabled, the
-            // precise drop shadow is drawn on the outer layer above. Where Figma disables
-            // that option (Begin Session), retain a small platform shadow instead.
-            shadowElevation = if (shadowBehindTranslucent) 0.dp else shadowElevation,
-            borderWidth = borderWidth,
-            borderColor = borderColor,
-            enabled = enabled,
-            onClick = onClick,
-        ) {
-            content()
+        if (useSharedControlGlass) {
+            // Interactive surfaces use the same optical material as the global hotbar. Keep the
+            // component's existing outer/inset shadow treatment above, and only translate its old
+            // paint-heavy tint into a much lighter semantic hue.
+            MettleControlGlassSurface(
+                modifier = Modifier.fillMaxSize(),
+                shape = shape,
+                tint = fill.asMettleControlGlassTint(),
+                enabled = enabled,
+                shadowElevation = if (shadowBehindTranslucent) 0.dp else shadowElevation,
+                onClick = onClick,
+            ) {
+                content()
+            }
+        } else {
+            MettleGlassSurface(
+                modifier = Modifier.fillMaxSize(),
+                shape = shape,
+                tint = fill,
+                blurRadius = glassBlurRadius,
+                refractionDisplacement = glassRefractionDisplacement,
+                refractionStrength = glassRefractionStrength,
+                // For Figma shadows with "show behind translucent areas" enabled, the
+                // precise drop shadow is drawn on the outer layer above. Where Figma disables
+                // that option (Begin Session), retain a small platform shadow instead.
+                shadowElevation = if (shadowBehindTranslucent) 0.dp else shadowElevation,
+                borderWidth = borderWidth,
+                borderColor = borderColor,
+                enabled = enabled,
+                onClick = onClick,
+            ) {
+                content()
+            }
         }
     }
 }

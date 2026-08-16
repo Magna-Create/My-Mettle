@@ -166,7 +166,7 @@ private fun HistorySessionCard(session: HistorySession, onClick: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                AssistChip(onClick = onClick, label = { Text(session.achievement.score.toString()) })
+                MettleGlassAssistChip(onClick = onClick, label = { Text(session.achievement.score.toString()) })
             }
             val loggedSets = session.exercises.sumOf { exercise -> exercise.sets.count { it.completedAt != null } }
             Text(
@@ -263,7 +263,7 @@ private fun HistoryDetailSheet(
             title = { Text("Discard this session?") },
             text = { Text("It will disappear from History and be excluded from insights. The stored record is kept as discarded rather than being physically deleted.") },
             confirmButton = {
-                Button(
+                MettleGlassActionButton(
                     onClick = {
                         confirmDiscard = false
                         onDiscard()
@@ -389,7 +389,7 @@ private fun HistorySetEditor(
                 )
             }
         }
-        Button(
+        MettleGlassActionButton(
             onClick = {
                 onSave(
                     set,
@@ -446,7 +446,7 @@ private fun HistoryReviewEditor(
                 minLines = 2,
                 maxLines = 5,
             )
-            Button(
+            MettleGlassActionButton(
                 onClick = {
                     onSave(
                         order.takeIf { it > 0 },
@@ -475,7 +475,7 @@ private fun HistoryRatingRow(title: String, value: Int, onChange: (Int) -> Unit)
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             (1..5).forEach { rating ->
-                FilterChip(
+                MettleGlassChoiceChip(
                     selected = value == rating,
                     onClick = { onChange(if (value == rating) 0 else rating) },
                     label = { Text(rating.toString()) },

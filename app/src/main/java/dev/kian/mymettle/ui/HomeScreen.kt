@@ -187,13 +187,10 @@ private fun ProgrammeBootstrapHome(
                 .padding(24.dp),
             contentAlignment = Alignment.Center,
         ) {
-            MettleGlassSurface(
+            MettleControlGlassSurface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(28.dp),
-                tint = MettleOnPrimaryContainer.copy(alpha = 0.18f),
-                blurRadius = 16.dp,
-                refractionDisplacement = 5.dp,
-                refractionStrength = 0.18f,
+                tint = MettleOnPrimaryContainer.copy(alpha = 0.055f),
                 shadowElevation = 4.dp,
                 onClick = onOpenWorkout,
             ) {

@@ -113,7 +113,7 @@ fun SettingsScreen() {
                             Text("Vibration strength", style = MaterialTheme.typography.titleSmall)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 listOf("gentle" to "Gentle", "medium" to "Medium", "strong" to "Strong").forEach { (value, label) ->
-                                    FilterChip(
+                                    MettleGlassChoiceChip(
                                         selected = state.restTimer.vibrationStrength.lowercase() == value,
                                         enabled = state.restTimer.vibrationEnabled,
                                         onClick = { viewModel.update { it.copy(vibrationStrength = value) } },
@@ -132,7 +132,7 @@ fun SettingsScreen() {
                             },
                         )
 
-                        Button(
+                        MettleGlassActionButton(
                             onClick = viewModel::testRestAlert,
                             enabled = !state.saving,
                             modifier = Modifier.fillMaxWidth(),

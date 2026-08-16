@@ -224,7 +224,7 @@ private fun ImportTrainState(
                     Text(it, style = MaterialTheme.typography.labelLarge)
                 }
                 Spacer(Modifier.height(18.dp))
-                Button(onClick = onImport, enabled = !importing, modifier = Modifier.fillMaxWidth()) {
+                MettleGlassActionButton(onClick = onImport, enabled = !importing, modifier = Modifier.fillMaxWidth()) {
                     if (importing) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(10.dp))
@@ -257,7 +257,7 @@ private fun ProgrammeTrainState(
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("ψ", "φ", "π", "&").forEach { day ->
-                    FilterChip(
+                    MettleGlassChoiceChip(
                         selected = state.selectedDay == day,
                         onClick = { onDaySelected(day) },
                         label = { Text(day) },
@@ -281,7 +281,7 @@ private fun ProgrammeTrainState(
         }
         item {
             val selectedPlan = state.plans[state.selectedMode]
-            Button(
+            MettleGlassActionButton(
                 onClick = onStart,
                 enabled = selectedPlan?.exercises?.isNotEmpty() == true && !state.loading,
                 modifier = Modifier.fillMaxWidth(),
@@ -370,7 +370,7 @@ private fun ActiveTrainState(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     TrainingMode.entries.forEach { candidate ->
-                        FilterChip(
+                        MettleGlassChoiceChip(
                             selected = selectedMode == candidate,
                             enabled = workout.session.status == "active" && !loading,
                             onClick = { onModeSelected(candidate) },
@@ -399,7 +399,7 @@ private fun ActiveTrainState(
 
         if (workout.session.status == "active") {
             item {
-                Button(onClick = onCompleteSession, enabled = !loading, modifier = Modifier.fillMaxWidth()) {
+                MettleGlassActionButton(onClick = onCompleteSession, enabled = !loading, modifier = Modifier.fillMaxWidth()) {
                     Text("Complete session", modifier = Modifier.padding(vertical = 6.dp))
                 }
             }
@@ -440,7 +440,7 @@ private fun TrainExerciseCard(
                     Text(entity.importanceSnapshot.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelMedium)
                     Text(entity.exerciseNameSnapshot, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 }
-                AssistChip(
+                MettleGlassAssistChip(
                     onClick = { expanded = !expanded },
                     label = {
                         Text(
@@ -487,7 +487,7 @@ private fun TrainExerciseCard(
             }
 
             Spacer(Modifier.height(14.dp))
-            OutlinedButton(onClick = onToggleComplete, enabled = sessionActive, modifier = Modifier.fillMaxWidth()) {
+            MettleGlassActionButton(accent = false, onClick = onToggleComplete, enabled = sessionActive, modifier = Modifier.fillMaxWidth()) {
                 Text(if (completed) "Reopen exercise" else "Complete exercise")
             }
         }
@@ -529,7 +529,7 @@ private fun MetricSetRow(
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (needsExternalLoad) {
-                    OutlinedButton(onClick = onOpenCalculator, enabled = enabled, modifier = Modifier.weight(1f)) {
+                    MettleGlassActionButton(accent = false, onClick = onOpenCalculator, enabled = enabled, modifier = Modifier.weight(1f)) {
                         Text("${draft.load.ifEmpty { "—" }} ${set.unit}")
                     }
                 }
@@ -569,7 +569,7 @@ private fun MetricSetRow(
             }
 
             Spacer(Modifier.height(8.dp))
-            FilledTonalButton(
+            MettleGlassActionButton(
                 onClick = {
                     focusManager.clearFocus(force = true)
                     onLogSet()
@@ -640,7 +640,7 @@ private fun LoadCalculatorDialog(
                 rows.forEach { row ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         row.forEach { key ->
-                            FilledTonalButton(
+                            MettleGlassActionButton(
                                 onClick = {
                                     expression = when (key) {
                                         "C" -> ""
@@ -658,7 +658,7 @@ private fun LoadCalculatorDialog(
                 }
             }
         },
-        confirmButton = { Button(onClick = { resolved?.let(onUseValue) }, enabled = resolved != null) { Text("Use value") } },
+        confirmButton = { MettleGlassActionButton(onClick = { resolved?.let(onUseValue) }, enabled = resolved != null) { Text("Use value") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
