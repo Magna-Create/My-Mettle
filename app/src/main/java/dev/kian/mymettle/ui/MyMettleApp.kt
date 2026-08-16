@@ -3,7 +3,6 @@ package dev.kian.mymettle.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -135,20 +134,11 @@ fun MyMettleApp() {
                         )
                     }
                 },
-            ) { innerPadding ->
-                // The intensity artwork is deliberately full-height and the hotbar floats over it.
-                // Applying Scaffold's bottom-bar padding here exposed the Haze source as a
-                // full-width strip behind the toolbar, producing the rectangular backdrop seen on
-                // device. Other destinations keep their existing inset behaviour.
-                val contentModifier = if (currentRoute == INTENSITY_ROUTE) {
-                    Modifier.fillMaxSize()
-                } else {
-                    Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                }
-
-                Box(modifier = contentModifier) {
+            ) { _ ->
+                // The hotbar is a floating glass surface on every destination. Let each screen
+                // continue underneath it so there is never a Scaffold-reserved colour strip behind
+                // the bar; the same live artwork the user sees is also what Haze can sample.
+                Box(modifier = Modifier.fillMaxSize()) {
                     NavHost(navController = navController, startDestination = HOME_ROUTE) {
                         composable(HOME_ROUTE) {
                             HomeScreen(
