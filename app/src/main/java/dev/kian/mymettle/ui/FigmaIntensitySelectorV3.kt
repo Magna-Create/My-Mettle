@@ -90,18 +90,18 @@ private data class IntensityV3ModeVisual(
 
 private val IntensityV3ModeVisuals = listOf(
     IntensityV3ModeVisual(
-        mode = TrainingMode.B,
-        title = "Focused Day",
-        description = "More than Busy Day, without committing to the full session.",
+        mode = TrainingMode.C,
+        title = "Nice & Chill",
+        description = "Fewer sets, with the same movement coverage.",
         centreX = 153f,
         centreY = 651f,
         glowScale = 0.30f,
         ambientColour = Color(0xFF557B79),
     ),
     IntensityV3ModeVisual(
-        mode = TrainingMode.A,
-        title = "All In",
-        description = "The complete programmed session.",
+        mode = TrainingMode.B,
+        title = "Busy Day",
+        description = "More than Nice & Chill, without committing to the full session.",
         centreX = 298f,
         centreY = 651f,
         glowScale = 0.40f,
@@ -117,9 +117,9 @@ private val IntensityV3ModeVisuals = listOf(
         ambientColour = Color(0xFF606F70),
     ),
     IntensityV3ModeVisual(
-        mode = TrainingMode.C,
-        title = "Busy Day",
-        description = "Fewer sets, with the same movement coverage.",
+        mode = TrainingMode.A,
+        title = "All In",
+        description = "The complete programmed session.",
         centreX = 363f,
         centreY = 780f,
         glowScale = 0.54f,
