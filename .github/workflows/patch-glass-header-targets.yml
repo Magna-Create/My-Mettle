@@ -26,64 +26,59 @@ jobs:
           from pathlib import Path
           import re
 
+          def replace_once(text, pattern, replacement, label, flags=0):
+              updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)
+              if count != 1:
+                  raise RuntimeError(f'{label} replacement count={count}')
+              return updated
+
           daily_path = Path('app/src/main/java/dev/kian/mymettle/ui/FigmaDailyUpdate.kt')
           daily = daily_path.read_text(encoding='utf-8')
 
-          daily = daily.replace(
-              '.width(metrics.dp(81))\n                .height(metrics.dp(49.388)),',
+          daily = replace_once(
+              daily,
+              r'\.width\(metrics\.dp\(81\)\)\s*\n\s*\.height\(metrics\.dp\(49\.388\)\),',
               '.width(metrics.dp(96))\n                .height(metrics.dp(52)),',
-              1,
+              'Daily capsule size',
           )
-          old_daily_row = '''            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = metrics.dp(6.1735)),
-                horizontalArrangement = Arrangement.spacedBy(metrics.dp(3.08675)),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {'''
-          new_daily_row = '''            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {'''
-          if old_daily_row not in daily:
-              raise RuntimeError('Daily header row shape changed')
-          daily = daily.replace(old_daily_row, new_daily_row, 1)
-
-          daily_pattern = re.compile(
+          daily = replace_once(
+              daily,
+              r'modifier = Modifier\s*\n\s*\.fillMaxSize\(\)\s*\n\s*\.padding\(horizontal = metrics\.dp\(6\.1735\)\),\s*\n\s*horizontalArrangement = Arrangement\.spacedBy\(metrics\.dp\(3\.08675\)\),',
+              'modifier = Modifier.fillMaxSize(),\n                horizontalArrangement = Arrangement.SpaceBetween,',
+              'Daily header row',
+          )
+          daily = replace_once(
+              daily,
               r'@Composable\nprivate fun FigmaHeaderIconButton\(.*?\n}\n\n@Composable\nprivate fun FigmaHeroGreeting',
-              re.S,
-          )
-          daily_replacement = '''@Composable
-          private fun FigmaHeaderIconButton(
-              imageVector: androidx.compose.ui.graphics.vector.ImageVector,
-              contentDescription: String,
-              onClick: () -> Unit,
-              metrics: FigmaMetrics,
-          ) {
-              MettleGlassIconTouchTarget(
-                  modifier = Modifier
-                      .width(metrics.dp(48))
-                      .fillMaxHeight(),
-                  imageVector = imageVector,
-                  contentDescription = contentDescription,
-                  onClick = onClick,
-                  iconSize = DpSize(metrics.dp(16.3916), metrics.dp(16.3916)),
-                  contentAlpha = 0.80f,
-                  pressedHaloSize = metrics.dp(36),
-              )
-          }
+              '''@Composable
+private fun FigmaHeaderIconButton(
+    imageVector: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    metrics: FigmaMetrics,
+) {
+    MettleGlassIconTouchTarget(
+        modifier = Modifier
+            .width(metrics.dp(48))
+            .fillMaxHeight(),
+        imageVector = imageVector,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        iconSize = DpSize(metrics.dp(16.3916), metrics.dp(16.3916)),
+        contentAlpha = 0.80f,
+        pressedHaloSize = metrics.dp(36),
+    )
+}
 
-          @Composable
-          private fun FigmaHeroGreeting'''
-          daily, count = daily_pattern.subn(daily_replacement, daily, count=1)
-          if count != 1:
-              raise RuntimeError(f'Daily header icon replacement count={count}')
+@Composable
+private fun FigmaHeroGreeting''',
+              'Daily header target',
+              flags=re.S,
+          )
           daily_path.write_text(daily, encoding='utf-8')
 
           intensity_path = Path('app/src/main/java/dev/kian/mymettle/ui/FigmaIntensitySelectorV3.kt')
           intensity = intensity_path.read_text(encoding='utf-8')
-
           if 'import androidx.compose.ui.unit.DpSize\n' not in intensity:
               intensity = intensity.replace(
                   'import androidx.compose.ui.unit.Dp\n',
@@ -91,56 +86,46 @@ jobs:
                   1,
               )
 
-          intensity = intensity.replace(
-              '.width(metrics.dp(81))\n                .height(metrics.dp(49.388)),',
+          intensity = replace_once(
+              intensity,
+              r'\.width\(metrics\.dp\(81\)\)\s*\n\s*\.height\(metrics\.dp\(49\.388\)\),',
               '.width(metrics.dp(96))\n                .height(metrics.dp(52)),',
-              1,
+              'Intensity capsule size',
           )
-          old_intensity_row = '''            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = metrics.dp(6.17)),
-                horizontalArrangement = Arrangement.spacedBy(metrics.dp(3.09)),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {'''
-          new_intensity_row = '''            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {'''
-          if old_intensity_row not in intensity:
-              raise RuntimeError('Intensity header row shape changed')
-          intensity = intensity.replace(old_intensity_row, new_intensity_row, 1)
-
-          intensity_pattern = re.compile(
+          intensity = replace_once(
+              intensity,
+              r'modifier = Modifier\s*\n\s*\.fillMaxSize\(\)\s*\n\s*\.padding\(horizontal = metrics\.dp\(6\.17\)\),\s*\n\s*horizontalArrangement = Arrangement\.spacedBy\(metrics\.dp\(3\.09\)\),',
+              'modifier = Modifier.fillMaxSize(),\n                horizontalArrangement = Arrangement.SpaceBetween,',
+              'Intensity header row',
+          )
+          intensity = replace_once(
+              intensity,
               r'@Composable\nprivate fun IntensityV3HeaderIcon\(.*?\n}\n\n@Composable\nprivate fun IntensityV3ModeCopy',
-              re.S,
-          )
-          intensity_replacement = '''@Composable
-          private fun IntensityV3HeaderIcon(
-              imageVector: androidx.compose.ui.graphics.vector.ImageVector,
-              contentDescription: String,
-              onClick: () -> Unit,
-              metrics: IntensityV3Metrics,
-          ) {
-              MettleGlassIconTouchTarget(
-                  modifier = Modifier
-                      .width(metrics.dp(48))
-                      .fillMaxHeight(),
-                  imageVector = imageVector,
-                  contentDescription = contentDescription,
-                  onClick = onClick,
-                  iconSize = DpSize(metrics.dp(16.39), metrics.dp(16.39)),
-                  contentAlpha = 0.82f,
-                  pressedHaloSize = metrics.dp(36),
-              )
-          }
+              '''@Composable
+private fun IntensityV3HeaderIcon(
+    imageVector: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    metrics: IntensityV3Metrics,
+) {
+    MettleGlassIconTouchTarget(
+        modifier = Modifier
+            .width(metrics.dp(48))
+            .fillMaxHeight(),
+        imageVector = imageVector,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        iconSize = DpSize(metrics.dp(16.39), metrics.dp(16.39)),
+        contentAlpha = 0.82f,
+        pressedHaloSize = metrics.dp(36),
+    )
+}
 
-          @Composable
-          private fun IntensityV3ModeCopy'''
-          intensity, count = intensity_pattern.subn(intensity_replacement, intensity, count=1)
-          if count != 1:
-              raise RuntimeError(f'Intensity header icon replacement count={count}')
+@Composable
+private fun IntensityV3ModeCopy''',
+              'Intensity header target',
+              flags=re.S,
+          )
           intensity_path.write_text(intensity, encoding='utf-8')
           PY
 
