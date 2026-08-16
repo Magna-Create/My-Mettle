@@ -766,12 +766,19 @@ fun MettleBottomToolbar(
                     .width(metrics.dp(220))
                     .height(metrics.dp(64)),
                 shape = CircleShape,
-                fill = MettleOnPrimaryContainer.copy(alpha = 0.30f),
-                shadowElevation = metrics.dp(4),
-                shadowAlpha = 0.16f,
-                glassBlurRadius = metrics.dp(4),
-                glassRefractionDisplacement = metrics.dp(3.2),
-                glassRefractionStrength = 0.22f,
+                // The global hotbar should inherit its colour from whatever is physically behind
+                // it. Keep the tint nearly neutral and use edge/refraction/shadow for separation.
+                fill = Color.White.copy(alpha = 0.035f),
+                shadowElevation = metrics.dp(7),
+                shadowAlpha = 0.24f,
+                shadowBlurRadius = metrics.dp(14),
+                shadowOffsetY = metrics.dp(3),
+                shadowSpread = metrics.dp(0.5),
+                glassBlurRadius = metrics.dp(5.5),
+                glassRefractionDisplacement = metrics.dp(4.8),
+                glassRefractionStrength = 0.38f,
+                borderWidth = metrics.dp(0.65),
+                borderColor = Color.White.copy(alpha = 0.16f),
             ) {
                 Row(
                     modifier = Modifier
