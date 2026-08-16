@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -111,12 +112,16 @@ fun SettingsScreen() {
 
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Vibration strength", style = MaterialTheme.typography.titleSmall)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
                                 listOf("gentle" to "Gentle", "medium" to "Medium", "strong" to "Strong").forEach { (value, label) ->
                                     MettleGlassChoiceChip(
                                         selected = state.restTimer.vibrationStrength.lowercase() == value,
                                         enabled = state.restTimer.vibrationEnabled,
                                         onClick = { viewModel.update { it.copy(vibrationStrength = value) } },
+                                        modifier = Modifier.weight(1f),
                                         label = { Text(label) },
                                     )
                                 }
