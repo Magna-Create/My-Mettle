@@ -136,11 +136,19 @@ fun MyMettleApp() {
                     }
                 },
             ) { innerPadding ->
-                Box(
-                    modifier = Modifier
+                // The intensity artwork is deliberately full-height and the hotbar floats over it.
+                // Applying Scaffold's bottom-bar padding here exposed the static Haze source as a
+                // full-width strip behind the toolbar, producing the rectangular backdrop seen on
+                // device. Other destinations keep their existing inset behaviour.
+                val contentModifier = if (currentRoute == INTENSITY_ROUTE) {
+                    Modifier.fillMaxSize()
+                } else {
+                    Modifier
                         .fillMaxSize()
-                        .padding(innerPadding),
-                ) {
+                        .padding(innerPadding)
+                }
+
+                Box(modifier = contentModifier) {
                     NavHost(navController = navController, startDestination = HOME_ROUTE) {
                         composable(HOME_ROUTE) {
                             HomeScreen(
