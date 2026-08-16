@@ -1,5 +1,12 @@
 package dev.kian.mymettle.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -9,19 +16,28 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import dev.kian.mymettle.ui.theme.MettleOnPrimaryContainer
 
@@ -69,6 +85,67 @@ internal fun MettleControlGlassSurface(
         onClick = onClick,
     ) {
         content()
+    }
+}
+
+/**
+ * Large invisible hit target for icons that live inside a shared glass surface.
+ *
+ * Material's default indication is intentionally disabled: it draws inside each child's rectangular
+ * layout bounds and was the source of the bright box that appeared over the hotbar. Press feedback
+ * is instead a tiny circular halo plus icon compression, both safely contained inside the glass.
+ */
+@Composable
+internal fun MettleGlassIconTouchTarget(
+    imageVector: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    iconSize: DpSize,
+    modifier: Modifier = Modifier,
+    contentAlpha: Float = 0.84f,
+    pressedHaloSize: Dp = 38.dp,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val haloAlpha by animateFloatAsState(
+        targetValue = if (pressed) 0.052f else 0f,
+        animationSpec = tween(durationMillis = 90),
+        label = "mettle-glass-icon-halo",
+    )
+    val iconScale by animateFloatAsState(
+        targetValue = if (pressed) 0.94f else 1f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
+        label = "mettle-glass-icon-scale",
+    )
+
+    Box(
+        modifier = modifier.clickable(
+            interactionSource = interactionSource,
+            indication = null,
+            role = Role.Button,
+            onClick = onClick,
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(pressedHaloSize)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = haloAlpha)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = imageVector,
+                contentDescription = contentDescription,
+                tint = Color.White.copy(alpha = contentAlpha),
+                modifier = Modifier
+                    .size(iconSize)
+                    .graphicsLayer {
+                        scaleX = iconScale
+                        scaleY = iconScale
+                    },
+            )
+        }
     }
 }
 
