@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 
 private const val IntensityToolbarReferenceWidth = 453f
-private val IntensityToolbarTint = Color(0xFFBBEBED)
 
 private data class IntensityToolbarItem(
     val contentDescription: String,
@@ -35,9 +34,8 @@ private data class IntensityToolbarItem(
 )
 
 /**
- * Intensity keeps the current four-destination hotbar geometry, but its material is deliberately
- * clear Haze glass rather than a coloured translucent pill. The selector artwork should remain
- * plainly visible through the bar; colour comes from the refracted backdrop, not from paint.
+ * Intensity keeps the current four-destination hotbar geometry. This surface is deliberately
+ * unpainted: Haze provides the material, the selector artwork provides the colour.
  */
 @Composable
 internal fun IntensityBottomToolbarV2(
@@ -73,16 +71,15 @@ internal fun IntensityBottomToolbarV2(
                     .width(scaled(220))
                     .height(scaled(64)),
                 shape = CircleShape,
-                // Haze tint is not equivalent to a normal alpha fill. 30% here was effectively
-                // painting an opaque mint slab over the refraction. Keep tint almost neutral and
-                // let the selector lighting itself colour the glass.
-                tint = IntensityToolbarTint.copy(alpha = 0.045f),
-                blurRadius = scaled(14),
-                refractionDisplacement = scaled(7),
-                refractionStrength = 0.56f,
+                // No cyan paint and no dark base coat: the bar is the Haze optical material only.
+                tint = Color.Transparent,
+                baseColor = Color.Transparent,
+                blurRadius = scaled(4.5),
+                refractionDisplacement = scaled(9),
+                refractionStrength = 0.78f,
                 shadowElevation = scaled(3),
                 borderWidth = scaled(0.7),
-                borderColor = Color.White.copy(alpha = 0.18f),
+                borderColor = Color.White.copy(alpha = 0.22f),
             ) {
                 Row(
                     modifier = Modifier
@@ -102,7 +99,7 @@ internal fun IntensityBottomToolbarV2(
                             Icon(
                                 imageVector = destination.icon,
                                 contentDescription = destination.contentDescription,
-                                tint = Color.White.copy(alpha = 0.86f),
+                                tint = Color.White.copy(alpha = 0.88f),
                                 modifier = Modifier.size(
                                     DpSize(
                                         scaled(destination.width),
