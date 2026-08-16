@@ -12,6 +12,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.draw.innerShadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.semantics.Role
@@ -50,6 +51,9 @@ internal fun MettleGlassSurface(
     baseColor: Color = Color.Transparent,
     borderWidth: Dp = 0.dp,
     borderColor: Color = Color.Transparent,
+    innerShadowRadius: Dp = 0.dp,
+    innerShadowOffsetY: Dp = 0.dp,
+    innerShadowAlpha: Float = 0f,
     enabled: Boolean = true,
     selected: Boolean? = null,
     onClick: (() -> Unit)? = null,
@@ -129,10 +133,28 @@ internal fun MettleGlassSurface(
         Modifier
     }
 
+    // Inset shading belongs to the component rather than the optical material. Selected toggles,
+    // primary actions and dock-like controls can therefore keep their own pressure/depth behaviour
+    // while sharing the exact same glass recipe.
+    val insetShadowModifier = if (innerShadowRadius > 0.dp && innerShadowAlpha > 0f) {
+        Modifier.innerShadow(
+            shape = shape,
+            shadow = Shadow(
+                radius = innerShadowRadius,
+                spread = 0.dp,
+                color = Color.Black.copy(alpha = innerShadowAlpha),
+                offset = DpOffset(0.dp, innerShadowOffsetY),
+            ),
+        )
+    } else {
+        Modifier
+    }
+
     Box(
         modifier = modifier
             .then(liftShadowModifier)
             .then(materialModifier)
+            .then(insetShadowModifier)
             .then(
                 if (borderWidth > 0.dp) {
                     Modifier.border(borderWidth, borderColor, shape)
