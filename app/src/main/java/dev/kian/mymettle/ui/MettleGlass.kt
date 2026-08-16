@@ -31,8 +31,8 @@ import dev.chrisbanes.haze.glass.hazeGlass
 import dev.kian.mymettle.ui.theme.MettleBackground
 
 /**
- * The backdrop is owned at app level. Keeping it in a composition local makes the visual
- * component independent of navigation and gives us one place to replace Haze if required.
+ * HazeState is owned at app level. Individual destinations register the live artwork that should
+ * be sampled into that state, while glass surfaces consume it through this composition local.
  */
 internal val LocalMettleHazeState = staticCompositionLocalOf<HazeState?> { null }
 
