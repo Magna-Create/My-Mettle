@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - "native/**"
+      - "agent/**"
   pull_request:
 
 jobs:
@@ -38,4 +39,4 @@ jobs:
         run: python3 tools/reference_data/generate_reference_assets.py --check
 
       - name: Test and build debug APK
-        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace
