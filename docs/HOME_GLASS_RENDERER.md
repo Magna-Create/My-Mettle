@@ -17,6 +17,21 @@ The selected renderer is Haze `2.0.0-alpha05`, using the matching `haze` and `ha
 
 Daily Update registers its normal app gradient at app level. The Intensity destination keeps a full-window `MettleBackground` source for wide-layout gutters and additionally registers the exact animated selector Canvas as a Haze source. That Canvas uses the same live `ambientColour`, `warmPulse` and `activeMode` values that are visible on screen, so stationary glass continues to update while the backdrop animation changes. Do not introduce a separate static reconstruction of a live backdrop for Haze sampling.
 
+### Haze 2 UI API contract
+
+All Compose UI glass must use the typed Haze 2 Glass path exposed through `MettleGlassSurface`:
+
+- register sampled artwork with `Modifier.hazeSource(HazeState)`;
+- keep the shared state as `rememberHazeState()` without the removed `blurEnabled` constructor argument;
+- define glass as an immutable/replayable `GlassStyle`;
+- render it with `Modifier.hazeGlass(input = HazeInput.Sources(state), style = style, ...)`;
+- replace a style through recomposition when its parameters change rather than mutating an effect object;
+- keep one renderer/style path rather than platform-specific Glass fallbacks in app UI code.
+
+Removed or pre-typed-Glass APIs must not be reintroduced into `app/src/main/java/dev/kian/mymettle/ui`. This includes v1 aliases such as `HazeTint`, `HazeStyle`, `LocalHazeStyle`, `haze` and `hazeChild`, the removed `rememberHazeState(blurEnabled = ...)` form, the old `tints = ...` property, and the earlier Glass effect/renderer types (`HazeGlassStyle`, `GlassVisualEffect`, `glassEffect`, `GlassRenderer*`, grouped `GlassLighting`/`GlassColor`/`GlassRendering`, and `GlassStyle.Unspecified`).
+
+The Gradle `verifyHaze2Ui` task scans every Kotlin source under the UI package for these legacy patterns and is attached to `preBuild`. Therefore the normal `./gradlew :app:assembleDebug` path fails before compilation if an obsolete Haze API is reintroduced.
+
 | Candidate | Useful capability | Decision |
 | --- | --- | --- |
 | [Haze](https://github.com/chrisbanes/haze) | Compose backdrop capture plus blur, refractive glass, interaction and graceful optical fallback | Selected and isolated behind `MettleGlassSurface` |
