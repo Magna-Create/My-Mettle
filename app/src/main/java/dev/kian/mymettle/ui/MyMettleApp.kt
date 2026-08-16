@@ -25,6 +25,7 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 
 private const val HOME_ROUTE = "home"
+private const val INTENSITY_ROUTE = "intensity"
 private const val TRAIN_ROUTE = "train"
 private const val LIBRARY_ROUTE = "library"
 private const val HISTORY_ROUTE = "history"
@@ -101,6 +102,19 @@ fun MyMettleApp() {
                     NavHost(navController = navController, startDestination = HOME_ROUTE) {
                         composable(HOME_ROUTE) {
                             HomeScreen(
+                                viewModel = workoutViewModel,
+                                onChooseIntensity = {
+                                    navController.navigate(INTENSITY_ROUTE) {
+                                        launchSingleTop = true
+                                    }
+                                },
+                                onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
+                                onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
+                                onOpenAccount = { openMainDestination(HISTORY_ROUTE) },
+                            )
+                        }
+                        composable(INTENSITY_ROUTE) {
+                            IntensitySelectorScreen(
                                 viewModel = workoutViewModel,
                                 onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
                                 onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
