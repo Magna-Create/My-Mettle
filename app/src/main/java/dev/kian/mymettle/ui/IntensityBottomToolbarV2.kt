@@ -77,7 +77,9 @@ internal fun IntensityBottomToolbarV2(
                 blurRadius = scaled(4.5),
                 refractionDisplacement = scaled(9),
                 refractionStrength = 0.78f,
-                shadowElevation = scaled(3),
+                // A little more lift than the moving selector lens; the shadow is now rendered
+                // behind the transparent glass rather than relying on opaque material contrast.
+                shadowElevation = scaled(4.5),
                 borderWidth = scaled(0.7),
                 borderColor = Color.White.copy(alpha = 0.22f),
             ) {
