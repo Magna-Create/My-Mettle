@@ -130,7 +130,7 @@ fun MyMettleApp() {
                                 onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
                             )
                         } else {
-                            MettleBottomToolbar(
+                            MettleBottomToolbarV2(
                                 selectedIndex = when (currentRoute) {
                                     HOME_ROUTE -> 0
                                     TRAIN_ROUTE -> 1
