@@ -62,6 +62,67 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
+val verifyHaze2Ui by tasks.registering {
+    group = "verification"
+    description = "Reject removed Haze v1 and pre-typed-Glass APIs from the Compose UI."
+
+    val uiSourceRoot = file("src/main/java/dev/kian/mymettle/ui")
+    inputs.dir(uiSourceRoot)
+
+    doLast {
+        val forbiddenPatterns = listOf(
+            Regex("""\bHazeTint\b""") to "HazeTint was removed; do not reintroduce the v1 alias.",
+            Regex("""\bHazeStyle\b""") to "HazeStyle is a removed v1 alias.",
+            Regex("""\bLocalHazeStyle\b""") to "LocalHazeStyle is a removed v1 alias.",
+            Regex("""\bHazeGlassStyle\b""") to "Use immutable GlassStyle with Modifier.hazeGlass.",
+            Regex("""\bGlassVisualEffect\b""") to "Use GlassStyle plus the typed Modifier.hazeGlass API.",
+            Regex("""\bGlassRenderer(?:Cache)?\b""") to "Renderer internals must not be selected from app UI code.",
+            Regex("""\bGlassStyleConfiguration\b""") to "Use immutable GlassStyle directly.",
+            Regex("""\bGlassLighting\b""") to "Write lighting properties inside GlassStyle instead of grouped legacy values.",
+            Regex("""\bGlassColor\b""") to "Write colour properties inside GlassStyle instead of grouped legacy values.",
+            Regex("""\bGlassRendering\b""") to "Write rendering properties inside GlassStyle instead of grouped legacy values.",
+            Regex("""GlassStyle\s*\.\s*Unspecified""") to "Use GlassStyle itself as the empty/replayable style.",
+            Regex("""\btints\s*=""") to "The old Haze tint list is not part of the Haze 2 Glass API.",
+            Regex("""rememberHazeState\s*\([^)]*\bblurEnabled\s*=""") to "rememberHazeState no longer accepts blurEnabled.",
+            Regex("""\bglassEffect\s*(?:\{|\()""") to "Use the typed Modifier.hazeGlass(input, style, …) API.",
+            Regex("""\.hazeChild\s*\(""") to "Use hazeEffect for Haze 2 blur effects; hazeChild is removed.",
+            Regex("""\.haze\s*\(""") to "Use hazeSource; the old haze source alias is removed.",
+        )
+
+        val violations = buildList {
+            uiSourceRoot
+                .walkTopDown()
+                .filter { it.isFile && it.extension == "kt" }
+                .forEach { sourceFile ->
+                    val source = sourceFile.readText()
+                    forbiddenPatterns.forEach { (pattern, reason) ->
+                        pattern.findAll(source).forEach { match ->
+                            val lineNumber = source
+                                .take(match.range.first)
+                                .count { it == '\n' } + 1
+                            add(
+                                "${sourceFile.relativeTo(projectDir).path}:$lineNumber — $reason " +
+                                    "[${match.value}]",
+                            )
+                        }
+                    }
+                }
+        }
+
+        check(violations.isEmpty()) {
+            buildString {
+                appendLine("Legacy Haze API usage found in Compose UI:")
+                violations.forEach { appendLine(" - $it") }
+                append("My Mettle Native targets Haze 2.0.0-alpha05 typed Glass APIs.")
+            }
+        }
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(verifyHaze2Ui)
+}
+
 dependencies {
     val composeBom = platform(libs.androidx.compose.bom)
     val cameraXVersion = "1.6.1"
