@@ -53,7 +53,24 @@ fun MyMettleApp() {
         else -> MettleWindowWidthClass.Compact
     }
 
+    fun openHomeDestination() {
+        // Intensity is a transient step, not a restorable main destination. Popping directly to
+        // Home removes it from the stack so returning after a completed workout always lands on
+        // Daily Update rather than resurrecting the selector.
+        val popped = navController.popBackStack(HOME_ROUTE, inclusive = false)
+        if (!popped) {
+            navController.navigate(HOME_ROUTE) {
+                launchSingleTop = true
+                restoreState = false
+            }
+        }
+    }
+
     fun openMainDestination(route: String) {
+        if (route == HOME_ROUTE) {
+            openHomeDestination()
+            return
+        }
         navController.navigate(route) {
             popUpTo(HOME_ROUTE) { saveState = true }
             launchSingleTop = true
@@ -61,13 +78,29 @@ fun MyMettleApp() {
         }
     }
 
+    fun openWorkoutFromIntensity() {
+        // Do not save the selector state when moving into a workout. Saving this leaf route was
+        // the reason Home could later restore the Intensity screen after session completion.
+        navController.navigate(TRAIN_ROUTE) {
+            popUpTo(HOME_ROUTE) { saveState = false }
+            launchSingleTop = true
+            restoreState = false
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        // Capture only the artwork behind the interface. Glass surfaces are siblings,
-        // preventing them from recursively sampling their own output.
-        MettleGradientBackground(
-            modifier = Modifier.hazeSource(hazeState),
-            content = {},
-        )
+        // Haze samples the app-level artwork. The selector gets its own cool backdrop so its glass
+        // surfaces do not inherit the green Daily Update source.
+        if (currentRoute == INTENSITY_ROUTE) {
+            IntensityHazeBackdrop(
+                modifier = Modifier.hazeSource(hazeState),
+            )
+        } else {
+            MettleGradientBackground(
+                modifier = Modifier.hazeSource(hazeState),
+                content = {},
+            )
+        }
 
         CompositionLocalProvider(
             LocalMettleHazeState provides hazeState,
@@ -79,19 +112,28 @@ fun MyMettleApp() {
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 bottomBar = {
-                    MettleBottomToolbar(
-                        selectedIndex = when (currentRoute) {
-                            HOME_ROUTE -> 0
-                            TRAIN_ROUTE -> 1
-                            HISTORY_ROUTE -> 2
-                            LIBRARY_ROUTE -> 3
-                            else -> -1
-                        },
-                        onOpenHome = { openMainDestination(HOME_ROUTE) },
-                        onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
-                        onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
-                        onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
-                    )
+                    if (currentRoute == INTENSITY_ROUTE) {
+                        IntensityBottomToolbar(
+                            onOpenHome = ::openHomeDestination,
+                            onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
+                            onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
+                            onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
+                        )
+                    } else {
+                        MettleBottomToolbar(
+                            selectedIndex = when (currentRoute) {
+                                HOME_ROUTE -> 0
+                                TRAIN_ROUTE -> 1
+                                HISTORY_ROUTE -> 2
+                                LIBRARY_ROUTE -> 3
+                                else -> -1
+                            },
+                            onOpenHome = ::openHomeDestination,
+                            onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
+                            onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
+                            onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
+                        )
+                    }
                 },
             ) { innerPadding ->
                 Box(
@@ -106,6 +148,7 @@ fun MyMettleApp() {
                                 onChooseIntensity = {
                                     navController.navigate(INTENSITY_ROUTE) {
                                         launchSingleTop = true
+                                        restoreState = false
                                     }
                                 },
                                 onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
@@ -114,9 +157,9 @@ fun MyMettleApp() {
                             )
                         }
                         composable(INTENSITY_ROUTE) {
-                            IntensitySelectorScreen(
+                            IntensitySelectorScreenV2(
                                 viewModel = workoutViewModel,
-                                onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
+                                onOpenWorkout = ::openWorkoutFromIntensity,
                                 onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
                                 onOpenAccount = { openMainDestination(HISTORY_ROUTE) },
                             )
