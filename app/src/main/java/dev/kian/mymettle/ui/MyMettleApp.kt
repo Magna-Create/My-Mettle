@@ -1,5 +1,6 @@
 package dev.kian.mymettle.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.window.core.layout.WindowSizeClass
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import dev.kian.mymettle.ui.theme.MettleBackground
 
 private const val HOME_ROUTE = "home"
 private const val INTENSITY_ROUTE = "intensity"
@@ -41,7 +43,9 @@ fun MyMettleApp() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: HOME_ROUTE
 
-    // General glass (headers, selector lens, etc.) samples destination-owned backdrop sources.
+    // General glass (headers, selector lens, page controls, etc.) samples destination-appropriate
+    // backdrop sources. Daily Update gets its live green field, Intensity registers its animated
+    // Canvas, while the information-dense native screens sample the same dark base they render on.
     val hazeState = rememberHazeState()
     // The global hotbar needs the *composited destination* as its source so opaque screens, cards
     // and scrolling content are sampled exactly as rendered rather than exposing the app gradient
@@ -95,17 +99,31 @@ fun MyMettleApp() {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Keep one app-owned HazeState while letting each destination register the artwork that is
-        // actually visible. Intensity uses this full-window base plus its own live animated Canvas.
-        if (currentRoute == INTENSITY_ROUTE) {
-            IntensityHazeBase(
-                modifier = Modifier.hazeSource(hazeState),
-            )
-        } else {
-            MettleGradientBackground(
-                modifier = Modifier.hazeSource(hazeState),
-                content = {},
-            )
+        // One app-owned HazeState, with the visible destination deciding what base artwork belongs
+        // in it. This avoids repeating the old hotbar bug where controls on an opaque dark screen
+        // accidentally refracted the green Daily Update gradient hidden underneath that screen.
+        when (currentRoute) {
+            INTENSITY_ROUTE -> {
+                IntensityHazeBase(
+                    modifier = Modifier.hazeSource(hazeState),
+                )
+            }
+
+            HOME_ROUTE -> {
+                MettleGradientBackground(
+                    modifier = Modifier.hazeSource(hazeState),
+                    content = {},
+                )
+            }
+
+            else -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .hazeSource(hazeState)
+                        .background(MettleBackground),
+                )
+            }
         }
 
         CompositionLocalProvider(
