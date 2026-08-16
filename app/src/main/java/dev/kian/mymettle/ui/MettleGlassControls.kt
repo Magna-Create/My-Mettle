@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -69,11 +71,12 @@ internal fun MettleControlGlassSurface(
     }
 }
 
+/** Material FilterChip-shaped API so older screens can migrate without changing their state model. */
 @Composable
 internal fun MettleGlassChoiceChip(
     selected: Boolean,
     onClick: () -> Unit,
-    label: String,
+    label: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -82,6 +85,7 @@ internal fun MettleGlassChoiceChip(
     } else {
         Color.White.copy(alpha = 0.028f)
     }
+    val contentColor = Color.White.copy(alpha = if (enabled) 0.94f else 0.42f)
 
     MettleControlGlassSurface(
         modifier = modifier
@@ -102,16 +106,48 @@ internal fun MettleGlassChoiceChip(
             modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = label,
-                color = Color.White.copy(alpha = if (enabled) 0.94f else 0.42f),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            )
+            CompositionLocalProvider(LocalContentColor provides contentColor) {
+                ProvideTextStyle(
+                    MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                    ),
+                ) {
+                    label()
+                }
+            }
         }
     }
 }
 
+/** Material AssistChip-shaped API for compact disclosure controls. */
+@Composable
+internal fun MettleGlassAssistChip(
+    onClick: () -> Unit,
+    label: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    MettleControlGlassSurface(
+        modifier = modifier.heightIn(min = 40.dp),
+        shape = RoundedCornerShape(14.dp),
+        tint = Color.White.copy(alpha = 0.028f),
+        enabled = enabled,
+        shadowElevation = 2.5.dp,
+        borderColor = Color.White.copy(alpha = 0.18f),
+        onClick = onClick,
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 7.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            CompositionLocalProvider(LocalContentColor provides Color.White.copy(alpha = if (enabled) 0.90f else 0.40f)) {
+                ProvideTextStyle(MaterialTheme.typography.labelLarge) { label() }
+            }
+        }
+    }
+}
+
+/** Material Button/OutlinedButton/FilledTonalButton-shaped API for page-level actions. */
 @Composable
 internal fun MettleGlassActionButton(
     onClick: () -> Unit,
@@ -126,6 +162,7 @@ internal fun MettleGlassActionButton(
     } else {
         Color.White.copy(alpha = if (enabled) 0.035f else 0.018f)
     }
+    val contentColor = Color.White.copy(alpha = if (enabled) 0.96f else 0.42f)
 
     MettleControlGlassSurface(
         modifier = modifier.defaultMinSize(minHeight = 48.dp),
@@ -136,12 +173,16 @@ internal fun MettleGlassActionButton(
         borderColor = Color.White.copy(alpha = if (enabled) 0.24f else 0.10f),
         onClick = onClick,
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 11.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-            content = content,
-        )
+        CompositionLocalProvider(LocalContentColor provides contentColor) {
+            ProvideTextStyle(MaterialTheme.typography.labelLarge) {
+                Row(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 11.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = content,
+                )
+            }
+        }
     }
 }
 
