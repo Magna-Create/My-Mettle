@@ -4,6 +4,7 @@ import dev.kian.mymettle.domain.exercise.ExecutionProfileId
 import dev.kian.mymettle.domain.exercise.ExerciseId
 import dev.kian.mymettle.domain.exercise.LoadResolution
 import dev.kian.mymettle.domain.training.ExercisePrescription
+import dev.kian.mymettle.domain.training.PrescriptionLoadEvidence
 import dev.kian.mymettle.domain.training.TrainingTargetId
 import kotlin.math.abs
 import kotlin.math.round
@@ -14,8 +15,7 @@ data class PrescriptionRequest(
     val targetIds: List<TrainingTargetId>,
     val sets: Int,
     val repRange: IntRange,
-    val targetRir: Double?,
-    val previousPerformedLoad: Double?,
+    val loadEvidence: PrescriptionLoadEvidence?,
     val permitsExternalLoad: Boolean,
     val loadResolution: LoadResolution?,
     val restSeconds: Int,
@@ -38,21 +38,20 @@ interface PrescriptionEngine {
 class HistoryBackedPrescriptionEngine : PrescriptionEngine {
     override val modelVersion: String = MODEL_VERSION
 
-    override fun generate(request: PrescriptionRequest): ExercisePrescription = ExercisePrescription(
-        exerciseId = request.exerciseId,
-        executionProfileId = request.executionProfileId,
-        targetIds = request.targetIds.distinct(),
-        sets = request.sets,
-        repRange = request.repRange,
-        targetRir = request.targetRir,
-        prescribedLoad = if (request.permitsExternalLoad) {
-            request.previousPerformedLoad?.let { request.loadResolution.conform(it) }
-        } else {
-            null
-        },
-        restSeconds = request.restSeconds,
-        generatedByModelVersion = modelVersion,
-    )
+    override fun generate(request: PrescriptionRequest): ExercisePrescription {
+        val retainedEvidence = request.loadEvidence.takeIf { request.permitsExternalLoad }
+        return ExercisePrescription(
+            exerciseId = request.exerciseId,
+            executionProfileId = request.executionProfileId,
+            targetIds = request.targetIds.distinct(),
+            sets = request.sets,
+            repRange = request.repRange,
+            prescribedLoad = retainedEvidence?.anchorLoad?.let { request.loadResolution.conform(it) },
+            loadEvidence = retainedEvidence,
+            restSeconds = request.restSeconds,
+            generatedByModelVersion = modelVersion,
+        )
+    }
 
     private fun LoadResolution?.conform(value: Double): Double {
         if (this == null) return value.coerceAtLeast(0.0)
@@ -75,5 +74,36 @@ class HistoryBackedPrescriptionEngine : PrescriptionEngine {
 
     companion object {
         const val MODEL_VERSION = "n-bio-5-observed-profile-prescription-v0"
+    }
+}
+
+/**
+ * Chooses evidence without translating between exercises. Inference wins when it exists; raw
+ * same-profile history remains an explicit compatibility fallback until a run is recomputed.
+ */
+object SameProfileLoadEvidenceResolver {
+    const val INFERENCE_SOURCE = "inference_same_profile_anchor"
+    const val RAW_HISTORY_SOURCE = "raw_same_profile_history"
+
+    fun resolve(
+        inferredLoad: Double?,
+        inferredSetRecordId: String?,
+        inferenceRunId: String?,
+        rawLoad: Double?,
+        rawSetRecordId: String?,
+    ): PrescriptionLoadEvidence? = when {
+        inferredLoad != null -> PrescriptionLoadEvidence(
+            source = INFERENCE_SOURCE,
+            anchorLoad = inferredLoad,
+            sourceSetRecordId = inferredSetRecordId,
+            inferenceRunId = inferenceRunId,
+        )
+        rawLoad != null -> PrescriptionLoadEvidence(
+            source = RAW_HISTORY_SOURCE,
+            anchorLoad = rawLoad,
+            sourceSetRecordId = rawSetRecordId,
+            inferenceRunId = null,
+        )
+        else -> null
     }
 }

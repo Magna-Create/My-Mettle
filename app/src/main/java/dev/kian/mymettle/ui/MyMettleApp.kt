@@ -4,17 +4,23 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -23,7 +29,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.window.core.layout.WindowSizeClass
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import dev.kian.mymettle.developer.BiologyTaskController
+import dev.kian.mymettle.developer.BiologyTaskPhase
 import dev.kian.mymettle.ui.theme.MettleBackground
+import dev.kian.mymettle.timer.RestTimerController
 
 private const val HOME_ROUTE = "home"
 private const val INTENSITY_ROUTE = "intensity"
@@ -31,6 +40,7 @@ private const val TRAIN_ROUTE = "train"
 private const val LIBRARY_ROUTE = "library"
 private const val HISTORY_ROUTE = "history"
 private const val SETTINGS_ROUTE = "settings"
+private const val BIOLOGY_DEVELOPER_ROUTE = "settings/biology-developer"
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -42,6 +52,9 @@ fun MyMettleApp() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: HOME_ROUTE
+    val biologyTask by BiologyTaskController.state.collectAsState()
+    val restTimer = remember(context) { RestTimerController.get(context) }
+    val restTimerSnapshot by restTimer.state.collectAsState()
 
     // General glass (headers, selector lens, page controls, etc.) samples destination-appropriate
     // backdrop sources. Daily Update gets its live green field, Intensity registers its animated
@@ -140,28 +153,44 @@ fun MyMettleApp() {
                     // destination below, while glass inside that destination continues using the
                     // normal destination-owned hazeState and therefore cannot self-sample.
                     CompositionLocalProvider(LocalMettleHazeState provides bottomBarHazeState) {
-                        if (currentRoute == INTENSITY_ROUTE) {
-                            IntensityBottomToolbarV2(
-                                onOpenHome = ::openHomeDestination,
-                                onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
-                                onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
-                                onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
-                            )
-                        } else {
-                            MettleBottomToolbarV2(
-                                selectedIndex = when (currentRoute) {
-                                    HOME_ROUTE -> 0
-                                    TRAIN_ROUTE -> 1
-                                    HISTORY_ROUTE -> 2
-                                    LIBRARY_ROUTE -> 3
-                                    else -> -1
-                                },
-                                onOpenHome = ::openHomeDestination,
-                                onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
-                                onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
-                                onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
-                            )
-                        }
+                        MettleBottomToolbarV2(
+                            selectedIndex = when (currentRoute) {
+                                HOME_ROUTE -> 0
+                                HISTORY_ROUTE -> 1
+                                LIBRARY_ROUTE -> 2
+                                TRAIN_ROUTE -> 3
+                                else -> -1
+                            },
+                            onOpenHome = ::openHomeDestination,
+                            onOpenWorkout = {
+                                if (currentRoute == TRAIN_ROUTE && workoutViewModel.uiState.workout != null) {
+                                    workoutViewModel.showExerciseSetup()
+                                } else {
+                                    openMainDestination(TRAIN_ROUTE)
+                                }
+                            },
+                            onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
+                            onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
+                            onQuickSelect = {
+                                when {
+                                    restTimerSnapshot.visible -> RestTimerOverlayUi.expand()
+                                    currentRoute == TRAIN_ROUTE && workoutViewModel.uiState.workout != null -> {
+                                        workoutViewModel.showQuickSelect()
+                                    }
+                                    else -> openMainDestination(TRAIN_ROUTE)
+                                }
+                            },
+                            onLongPressWorkout = {
+                                if (currentRoute == TRAIN_ROUTE && workoutViewModel.uiState.workout != null) {
+                                    workoutViewModel.showFinishSheet()
+                                } else {
+                                    openMainDestination(TRAIN_ROUTE)
+                                }
+                            },
+                            leadingIcon = if (restTimerSnapshot.visible) MettleIcons.Timer else MettleIcons.QuickSelect,
+                            leadingDescription = if (restTimerSnapshot.visible) "Rest timer" else "Quick select",
+                            transparentMaterial = currentRoute == INTENSITY_ROUTE,
+                        )
                     }
                 },
             ) { _ ->
@@ -196,14 +225,44 @@ fun MyMettleApp() {
                                 onOpenAccount = { openMainDestination(HISTORY_ROUTE) },
                             )
                         }
-                        composable(TRAIN_ROUTE) { TrainScreen(workoutViewModel) }
+                        composable(TRAIN_ROUTE) {
+                            TrainScreen(
+                                viewModel = workoutViewModel,
+                                onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
+                                onOpenAccount = { openMainDestination(HISTORY_ROUTE) },
+                            )
+                        }
                         composable(LIBRARY_ROUTE) { ExerciseLibraryScreen() }
                         composable(HISTORY_ROUTE) { HistoryScreen() }
-                        composable(SETTINGS_ROUTE) { SettingsScreen() }
+                        composable(SETTINGS_ROUTE) {
+                            SettingsScreen(
+                                onOpenDeveloper = {
+                                    navController.navigate(BIOLOGY_DEVELOPER_ROUTE) {
+                                        launchSingleTop = true
+                                    }
+                                },
+                            )
+                        }
+                        composable(BIOLOGY_DEVELOPER_ROUTE) {
+                            BiologyDeveloperScreen(onBack = { navController.popBackStack() })
+                        }
                     }
                     NativeRestTimerOverlay()
                     ExerciseReflectionOverlay(workoutViewModel)
                     SessionOutcomeOverlay(workoutViewModel)
+                    if (biologyTask.phase != BiologyTaskPhase.IDLE) {
+                        AssistChip(
+                            onClick = {
+                                navController.navigate(BIOLOGY_DEVELOPER_ROUTE) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = 8.dp),
+                            label = { Text(biologyTask.label ?: "Biological task") },
+                        )
+                    }
                 }
             }
         }

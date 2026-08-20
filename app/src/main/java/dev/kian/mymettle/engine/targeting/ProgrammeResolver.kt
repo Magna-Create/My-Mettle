@@ -62,7 +62,6 @@ data class ExerciseSelectionCandidate(
     val preferencePriority: Double,
     val preferredSetCap: Int,
     val repRange: IntRange,
-    val targetRir: Double?,
     val restSeconds: Int,
     /** Confidence-weighted recruitment coverage by independent target identity. */
     val targetCoverage: Map<TrainingTargetId, Double>,
@@ -73,7 +72,6 @@ data class ExerciseSelectionCandidate(
         require(preferencePriority in 0.0..1.0) { "Exercise-preference priority must be between 0 and 1." }
         require(preferredSetCap > 0) { "Exercise-preference set cap must be positive." }
         require(repRange.first > 0 && repRange.last >= repRange.first) { "Rep range must be positive and ordered." }
-        require(targetRir == null || targetRir in 0.0..10.0) { "Target RIR must be between 0 and 10." }
         require(restSeconds >= 0) { "Rest time cannot be negative." }
         require(targetCoverage.values.all { it >= 0.0 }) { "Target coverage cannot be negative." }
     }

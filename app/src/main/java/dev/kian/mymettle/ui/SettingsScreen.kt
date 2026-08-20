@@ -11,9 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -42,6 +41,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.kian.mymettle.BuildConfig
 import java.util.Locale
 
 private const val FigmaDiagnosticReferenceWidth = 453f
@@ -49,7 +49,7 @@ private const val FigmaDiagnosticReferenceHeight = 983f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onOpenDeveloper: () -> Unit) {
     val context = LocalContext.current
     val viewModel: SettingsViewModel = viewModel(
         factory = remember(context) { SettingsViewModelFactory(context) },
@@ -79,15 +79,15 @@ fun SettingsScreen() {
                 contentAlignment = Alignment.Center,
             ) { CircularProgressIndicator() }
         } else {
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(innerPadding),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                item {
+                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(18.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -149,31 +149,40 @@ fun SettingsScreen() {
                         }
                     }
                 }
+                }
 
-                Text(
-                    "The persistent countdown notification is required while the timer is running in the background, so it is not exposed as an off switch here.",
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                item {
+                    Text(
+                        "The persistent countdown notification is required while the timer is running in the background, so it is not exposed as an off switch here.",
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
 
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Text(
-                            "Developer options",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            "Tools for checking native rendering and layout behaviour.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        TextButton(onClick = { showScreenDiagnostics = true }) {
-                            Text("Screen diagnostics")
+                if (BuildConfig.DEBUG) {
+                    item {
+                        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(18.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                Text(
+                                    "Developer options",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                Text(
+                                    "Inspect rendering, targets, resolver choices, inference evidence and load provenance.",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                TextButton(onClick = { showScreenDiagnostics = true }) {
+                                    Text("Screen diagnostics")
+                                }
+                                Button(onClick = onOpenDeveloper, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Open biological developer tools")
+                                }
+                            }
                         }
                     }
                 }

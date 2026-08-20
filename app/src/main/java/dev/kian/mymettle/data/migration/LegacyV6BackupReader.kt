@@ -300,12 +300,15 @@ object LegacyV6BackupReader {
                         executionProfileId = "execution_${exerciseId}_default",
                         executionProfileNameSnapshot = "Default",
                         prescribedLoad = sessionExercise.doubleRequired("plannedLoad"),
+                        prescribedLoadEvidenceSource = "legacy_session_snapshot",
+                        prescribedLoadEvidenceSetId = null,
+                        prescribedLoadInferenceRunId = null,
+                        prescribedLoadAnchor = sessionExercise.doubleRequired("plannedLoad"),
                         prescriptionMode = prescription.stringRequired("mode"),
                         prescriptionIncluded = prescription.optBoolean("included", true),
                         prescribedSets = prescribedSetCount,
                         repMin = prescription.intRequired("repMin"),
                         repMax = prescription.intRequired("repMax"),
-                        targetRir = null,
                         restSeconds = prescription.intRequired("restSeconds"),
                         generatedByModelVersion = "legacy-v6-session-snapshot-v1",
                         deferToAnd = prescription.optBoolean("deferToAnd", false),
@@ -314,6 +317,7 @@ object LegacyV6BackupReader {
                         startedAt = sessionExercise.stringOrNull("startedAt"),
                         completedAt = sessionExercise.stringOrNull("completedAt"),
                         movementReason = sessionExercise.optString("movementReason", "base_routine"),
+                        substitutedFromExerciseId = null,
                     )
 
                     sessionExercise.arrayRequired("sets").objects().forEachIndexed { fallbackSetIndex, set ->
@@ -332,8 +336,6 @@ object LegacyV6BackupReader {
                             unit = set.stringRequired("unit"),
                             completedAt = set.stringOrNull("completedAt"),
                             note = set.stringOrNull("note"),
-                            rir = set.doubleOrNull("rir"),
-                            effortSource = set.stringOrNull("effortSource"),
                             warmUp = warmUp,
                             kind = kind,
                         )

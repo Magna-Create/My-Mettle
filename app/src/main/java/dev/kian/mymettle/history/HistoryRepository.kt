@@ -154,7 +154,9 @@ class HistoryRepository(
             updatedAt = now,
         )
         dao.upsertReflection(reflection)
-        dao.upsertSession(completedSession(sessionId).copy(editedAt = now))
+        val session = dao.session(sessionId) ?: throw NativeWorkoutException("Session not found.")
+        if (session.status == "discarded") throw NativeWorkoutException("A discarded session cannot be rated.")
+        dao.upsertSession(session.copy(editedAt = now))
         reflection
     }
 

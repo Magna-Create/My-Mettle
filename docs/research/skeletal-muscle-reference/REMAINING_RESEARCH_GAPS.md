@@ -174,7 +174,7 @@ Open questions include:
 
 - target-dose units;
 - set stimulus function;
-- effect of RIR, reps, load and ROM;
+- effect of reps, load and ROM; Native v0 intentionally does not collect subjective RIR.
 - decay/recovery model;
 - long-term development update;
 - relationship between structural capacity and exercise-specific capability;

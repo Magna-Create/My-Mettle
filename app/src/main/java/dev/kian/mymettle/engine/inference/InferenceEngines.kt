@@ -24,9 +24,9 @@ interface StimulusEstimator {
 /**
  * A deliberately non-biological v0 evidence projection.
  *
- * One completed working set contributes recruitment-weighted set units. RIR changes confidence in
- * the evidence, not its magnitude, so this scaffold does not disguise an arbitrary effort curve as
- * a hypertrophy equation. A later estimator can reinterpret the same immutable set history.
+ * One completed working set contributes recruitment-weighted set units. This scaffold deliberately
+ * has no subjective effort modifier or claimed hypertrophy equation. A later estimator can
+ * reinterpret the same immutable set history.
  */
 class WeightedWorkingSetStimulusEstimator : StimulusEstimator {
     override val modelVersion: String = MODEL_VERSION
@@ -37,11 +37,6 @@ class WeightedWorkingSetStimulusEstimator : StimulusEstimator {
     ): List<StimulusEstimate> {
         if (set.warmUp || !set.hasPerformedWork) return emptyList()
 
-        val evidenceConfidence = if (set.rir == null) {
-            WITHOUT_RIR_CONFIDENCE
-        } else {
-            WITH_RIR_CONFIDENCE
-        }
         return recruitment
             .filter { it.weighting > 0.0 }
             .map { allocation ->
@@ -53,7 +48,7 @@ class WeightedWorkingSetStimulusEstimator : StimulusEstimator {
                     role = allocation.role,
                     recruitmentWeighting = allocation.weighting,
                     estimatedStimulus = allocation.weighting,
-                    confidence = (allocation.confidence * evidenceConfidence).coerceIn(0.0, 1.0),
+                    confidence = (allocation.confidence * WORKING_SET_CONFIDENCE).coerceIn(0.0, 1.0),
                     modelVersion = modelVersion,
                 )
             }
@@ -61,8 +56,7 @@ class WeightedWorkingSetStimulusEstimator : StimulusEstimator {
 
     companion object {
         const val MODEL_VERSION = "n-bio-4-weighted-working-set-v0"
-        private const val WITH_RIR_CONFIDENCE = 0.75
-        private const val WITHOUT_RIR_CONFIDENCE = 0.40
+        private const val WORKING_SET_CONFIDENCE = 0.40
     }
 }
 
@@ -136,7 +130,7 @@ class ObservedPerformanceTranslationModel : ExerciseTranslationModel {
         .groupBy { it.executionProfileId }
         .map { (profileId, samples) ->
             val latest = samples.maxWith(compareBy<CompletedSetEvidence> { it.completedAt }.thenBy { it.setRecordId })
-            val normalisedUncertainty = if (latest.rir == null) 1.0 else 0.5
+            val normalisedUncertainty = 1.0
             ExerciseTranslationState(
                 executionProfileId = profileId,
                 observedLoadAnchor = latest.load?.let { value ->
@@ -152,7 +146,6 @@ class ObservedPerformanceTranslationModel : ExerciseTranslationModel {
                 observedDistanceMetresAnchor = latest.distanceMetres?.let { value ->
                     estimate(value, normalisedUncertainty, latest.setRecordId)
                 },
-                observedRirAnchor = latest.rir,
                 sampleCount = samples.map { it.setRecordId }.distinct().size,
                 updatedAt = latest.completedAt,
                 modelVersion = modelVersion,

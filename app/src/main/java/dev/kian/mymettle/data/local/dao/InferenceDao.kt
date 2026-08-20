@@ -22,8 +22,6 @@ data class CompletedSetEvidenceRow(
     val durationSeconds: Int?,
     val distanceMetres: Double?,
     val unit: String,
-    val rir: Double?,
-    val effortSource: String?,
     val warmUp: Boolean,
     val kind: String,
 )
@@ -45,8 +43,6 @@ interface InferenceDao {
             sr.durationSeconds AS durationSeconds,
             sr.distanceMetres AS distanceMetres,
             sr.unit AS unit,
-            sr.rir AS rir,
-            sr.effortSource AS effortSource,
             sr.warmUp AS warmUp,
             sr.kind AS kind
         FROM set_record AS sr

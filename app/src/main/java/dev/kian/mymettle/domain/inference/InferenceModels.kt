@@ -58,8 +58,6 @@ data class CompletedSetEvidence(
     val durationSeconds: Int?,
     val distanceMetres: Double?,
     val unit: String,
-    val rir: Double?,
-    val effortSource: String?,
     val warmUp: Boolean,
     val kind: String,
 ) {
@@ -71,7 +69,6 @@ data class CompletedSetEvidence(
         require(reps == null || reps >= 0) { "Performed reps cannot be negative." }
         require(durationSeconds == null || durationSeconds >= 0) { "Duration cannot be negative." }
         require(distanceMetres == null || distanceMetres >= 0.0) { "Distance cannot be negative." }
-        require(rir == null || rir in 0.0..10.0) { "RIR must be between 0 and 10." }
     }
 
     val hasPerformedWork: Boolean
@@ -134,7 +131,6 @@ data class ExerciseTranslationState(
     val observedRepAnchor: Estimate<Double>?,
     val observedDurationSecondsAnchor: Estimate<Double>?,
     val observedDistanceMetresAnchor: Estimate<Double>?,
-    val observedRirAnchor: Double?,
     val sampleCount: Int,
     val updatedAt: Instant,
     val modelVersion: String,

@@ -28,7 +28,7 @@ Deleting/rebuilding them does not edit `session`, `session_exercise` or `set_rec
 - `muscle_state_snapshot` keeps development, volume scale, structural-capacity scale, recent
   stimulus and recovery as separate estimates rather than one exercise-owned score.
 - `exercise_translation_state` stores execution-profile-specific observed
-  load/rep/duration/distance/RIR anchors, uncertainty and sample count.
+  load/rep/duration/distance anchors, uncertainty and sample count.
 
 User state is side-addressable. The v0 engine writes `bilateral` because present execution and set
 evidence is not side-resolved; the schema can later hold independent left/right estimates without
@@ -41,8 +41,8 @@ boundaries.
 
 The first implementations are deliberately conservative:
 
-- A completed non-warm-up set creates recruitment-weighted set units. RIR affects evidence
-  confidence only; it does not feed an invented effort/hypertrophy curve.
+- A completed non-warm-up set creates recruitment-weighted set units. It does not feed an
+  invented effort/hypertrophy curve.
 - Every independently tracked segment receives a neutral `developmentIndex = 1.0` with maximum
   uncertainty. Evidence count is recorded, while volume, structural capacity, recent stimulus and
   recovery remain null. All-time evidence is not mislabeled as recent stimulus.

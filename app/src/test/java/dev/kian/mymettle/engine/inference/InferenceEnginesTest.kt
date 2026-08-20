@@ -25,13 +25,10 @@ class InferenceEnginesTest {
             confidence = 0.8,
         )
 
-        val withRir = estimator.estimate(set(rir = 2.0), listOf(allocation)).single()
-        val withoutRir = estimator.estimate(set(id = "set_without_rir", rir = null), listOf(allocation)).single()
+        val estimate = estimator.estimate(set(), listOf(allocation)).single()
 
-        assertEquals(0.7, withRir.estimatedStimulus)
-        assertEquals(0.7, withoutRir.estimatedStimulus)
-        assertEquals(0.6, withRir.confidence, absoluteTolerance = 0.000001)
-        assertEquals(0.32, withoutRir.confidence, absoluteTolerance = 0.000001)
+        assertEquals(0.7, estimate.estimatedStimulus)
+        assertEquals(0.32, estimate.confidence, absoluteTolerance = 0.000001)
         assertTrue(estimator.estimate(set(warmUp = true), listOf(allocation)).isEmpty())
     }
 
@@ -71,8 +68,8 @@ class InferenceEnginesTest {
         val model = ObservedPerformanceTranslationModel()
         val states = model.infer(
             listOf(
-                set(id = "set_1", completedAt = "2026-08-10T10:00:00Z", load = 65.0, reps = 9, rir = null),
-                set(id = "set_2", completedAt = "2026-08-11T10:00:00Z", load = 70.0, reps = 8, rir = 2.0),
+                set(id = "set_1", completedAt = "2026-08-10T10:00:00Z", load = 65.0, reps = 9),
+                set(id = "set_2", completedAt = "2026-08-11T10:00:00Z", load = 70.0, reps = 8),
                 set(id = "warmup", completedAt = "2026-08-11T11:00:00Z", load = 40.0, reps = 10, warmUp = true),
             ),
         )
@@ -81,8 +78,7 @@ class InferenceEnginesTest {
         assertEquals(70.0, state.observedLoadAnchor?.value)
         assertEquals("kg", state.observedLoadUnit)
         assertEquals(8.0, state.observedRepAnchor?.value)
-        assertEquals(0.5, state.observedLoadAnchor?.uncertainty)
-        assertEquals(2.0, state.observedRirAnchor)
+        assertEquals(1.0, state.observedLoadAnchor?.uncertainty)
         assertEquals("set_2", state.observedLoadAnchor?.sourceId)
         assertEquals(2, state.sampleCount)
     }
@@ -92,7 +88,6 @@ class InferenceEnginesTest {
         completedAt: String = "2026-08-11T10:00:00Z",
         load: Double? = 70.0,
         reps: Int? = 8,
-        rir: Double? = 2.0,
         warmUp: Boolean = false,
     ): CompletedSetEvidence = CompletedSetEvidence(
         setRecordId = id,
@@ -104,8 +99,6 @@ class InferenceEnginesTest {
         durationSeconds = null,
         distanceMetres = null,
         unit = "kg",
-        rir = rir,
-        effortSource = rir?.let { "user" },
         warmUp = warmUp,
         kind = if (warmUp) "warm_up" else "prescribed",
     )
