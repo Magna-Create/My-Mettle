@@ -32,6 +32,7 @@ import dev.chrisbanes.haze.rememberHazeState
 import dev.kian.mymettle.developer.BiologyTaskController
 import dev.kian.mymettle.developer.BiologyTaskPhase
 import dev.kian.mymettle.ui.theme.MettleBackground
+import dev.kian.mymettle.timer.RestTimerController
 
 private const val HOME_ROUTE = "home"
 private const val INTENSITY_ROUTE = "intensity"
@@ -52,6 +53,8 @@ fun MyMettleApp() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: HOME_ROUTE
     val biologyTask by BiologyTaskController.state.collectAsState()
+    val restTimer = remember(context) { RestTimerController.get(context) }
+    val restTimerSnapshot by restTimer.state.collectAsState()
 
     // General glass (headers, selector lens, page controls, etc.) samples destination-appropriate
     // backdrop sources. Daily Update gets its live green field, Intensity registers its animated
@@ -150,28 +153,44 @@ fun MyMettleApp() {
                     // destination below, while glass inside that destination continues using the
                     // normal destination-owned hazeState and therefore cannot self-sample.
                     CompositionLocalProvider(LocalMettleHazeState provides bottomBarHazeState) {
-                        if (currentRoute == INTENSITY_ROUTE) {
-                            IntensityBottomToolbarV2(
-                                onOpenHome = ::openHomeDestination,
-                                onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
-                                onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
-                                onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
-                            )
-                        } else {
-                            MettleBottomToolbarV2(
-                                selectedIndex = when (currentRoute) {
-                                    HOME_ROUTE -> 0
-                                    TRAIN_ROUTE -> 1
-                                    HISTORY_ROUTE -> 2
-                                    LIBRARY_ROUTE -> 3
-                                    else -> -1
-                                },
-                                onOpenHome = ::openHomeDestination,
-                                onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
-                                onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
-                                onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
-                            )
-                        }
+                        MettleBottomToolbarV2(
+                            selectedIndex = when (currentRoute) {
+                                HOME_ROUTE -> 0
+                                HISTORY_ROUTE -> 1
+                                LIBRARY_ROUTE -> 2
+                                TRAIN_ROUTE -> 3
+                                else -> -1
+                            },
+                            onOpenHome = ::openHomeDestination,
+                            onOpenWorkout = {
+                                if (currentRoute == TRAIN_ROUTE && workoutViewModel.uiState.workout != null) {
+                                    workoutViewModel.showExerciseSetup()
+                                } else {
+                                    openMainDestination(TRAIN_ROUTE)
+                                }
+                            },
+                            onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
+                            onOpenLibrary = { openMainDestination(LIBRARY_ROUTE) },
+                            onQuickSelect = {
+                                when {
+                                    restTimerSnapshot.visible -> RestTimerOverlayUi.expand()
+                                    currentRoute == TRAIN_ROUTE && workoutViewModel.uiState.workout != null -> {
+                                        workoutViewModel.showQuickSelect()
+                                    }
+                                    else -> openMainDestination(TRAIN_ROUTE)
+                                }
+                            },
+                            onLongPressWorkout = {
+                                if (currentRoute == TRAIN_ROUTE && workoutViewModel.uiState.workout != null) {
+                                    workoutViewModel.showFinishSheet()
+                                } else {
+                                    openMainDestination(TRAIN_ROUTE)
+                                }
+                            },
+                            leadingIcon = if (restTimerSnapshot.visible) MettleIcons.Timer else MettleIcons.QuickSelect,
+                            leadingDescription = if (restTimerSnapshot.visible) "Rest timer" else "Quick select",
+                            transparentMaterial = currentRoute == INTENSITY_ROUTE,
+                        )
                     }
                 },
             ) { _ ->
@@ -206,7 +225,13 @@ fun MyMettleApp() {
                                 onOpenAccount = { openMainDestination(HISTORY_ROUTE) },
                             )
                         }
-                        composable(TRAIN_ROUTE) { TrainScreen(workoutViewModel) }
+                        composable(TRAIN_ROUTE) {
+                            TrainScreen(
+                                viewModel = workoutViewModel,
+                                onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
+                                onOpenAccount = { openMainDestination(HISTORY_ROUTE) },
+                            )
+                        }
                         composable(LIBRARY_ROUTE) { ExerciseLibraryScreen() }
                         composable(HISTORY_ROUTE) { HistoryScreen() }
                         composable(SETTINGS_ROUTE) {

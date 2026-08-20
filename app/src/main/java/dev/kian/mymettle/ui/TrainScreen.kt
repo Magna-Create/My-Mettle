@@ -69,7 +69,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private class TrainSetDraft(set: SetRecordEntity) {
+internal class TrainSetDraft(set: SetRecordEntity) {
     var load by mutableStateOf(set.load?.let(::formatDecimal).orEmpty())
     var reps by mutableStateOf(set.reps?.toString().orEmpty())
     var durationSeconds by mutableStateOf(set.durationSeconds?.toString().orEmpty())
@@ -83,7 +83,11 @@ private data class LoadCalculatorTarget(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TrainScreen(viewModel: N2WorkoutViewModel) {
+fun TrainScreen(
+    viewModel: N2WorkoutViewModel,
+    onOpenSettings: () -> Unit = {},
+    onOpenAccount: () -> Unit = {},
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state = viewModel.uiState
@@ -102,59 +106,66 @@ fun TrainScreen(viewModel: N2WorkoutViewModel) {
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("My Mettle", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            state.workout?.let { "${it.session.daySymbol} · ${state.selectedMode.label}" }
-                                ?: if (state.hasProgramme) "Train" else "Native migration",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-            )
-        },
-    ) { innerPadding ->
-        when {
-            state.loading && state.workout == null -> LoadingTrainState(Modifier.padding(innerPadding))
+    if (state.workout != null) {
+        FigmaWorkoutSession(
+            state = state,
+            drafts = drafts,
+            onOpenSettings = onOpenSettings,
+            onOpenAccount = onOpenAccount,
+            onOpenCalculator = { exercise, set -> calculatorTarget = LoadCalculatorTarget(exercise, set) },
+            onSaveDraft = { exercise, set, draft ->
+                persistDraft(viewModel, exercise, set, draft, logged = set.completedAt != null)
+            },
+            onLogSet = { exercise, set, draft ->
+                persistDraft(viewModel, exercise, set, draft, logged = true)
+            },
+            onSwapExercise = viewModel::requestExerciseSwap,
+            onSelectSwap = viewModel::swapExercise,
+            onDismissSwap = viewModel::dismissExerciseSwap,
+            onShowSets = viewModel::showWorkoutSets,
+            onShowSetup = viewModel::showExerciseSetup,
+            onToggleExercise = viewModel::toggleExercise,
+            onRateExercise = viewModel::rateExercise,
+            onDismissSheet = viewModel::dismissWorkoutSheet,
+            onShowDelete = viewModel::showDeleteConfirmation,
+            onCompleteSession = viewModel::completeSession,
+            onDiscardSession = viewModel::discardActiveSession,
+        )
+    } else {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text("My Mettle", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (state.hasProgramme) "Train" else "Native migration",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                )
+            },
+        ) { innerPadding ->
+            when {
+                state.loading -> LoadingTrainState(Modifier.padding(innerPadding))
 
-            !state.hasProgramme -> ImportTrainState(
-                modifier = Modifier.padding(innerPadding),
-                importing = state.importing,
-                importSummary = state.importSummary,
-                onImport = { importLauncher.launch(arrayOf("application/json", "text/*")) },
-            )
+                !state.hasProgramme -> ImportTrainState(
+                    modifier = Modifier.padding(innerPadding),
+                    importing = state.importing,
+                    importSummary = state.importSummary,
+                    onImport = { importLauncher.launch(arrayOf("application/json", "text/*")) },
+                )
 
-            state.workout == null -> ProgrammeTrainState(
-                modifier = Modifier.padding(innerPadding),
-                state = state,
-                onDaySelected = viewModel::selectDay,
-                onModeSelected = viewModel::selectMode,
-                onStart = viewModel::startSession,
-            )
-
-            else -> ActiveTrainState(
-                modifier = Modifier.padding(innerPadding),
-                workout = state.workout,
-                selectedMode = state.selectedMode,
-                loading = state.loading,
-                drafts = drafts,
-                onModeSelected = viewModel::selectMode,
-                onOpenCalculator = { exercise, set -> calculatorTarget = LoadCalculatorTarget(exercise, set) },
-                onSaveDraft = { exercise, set, draft ->
-                    persistDraft(viewModel, exercise, set, draft, logged = set.completedAt != null)
-                },
-                onLogSet = { exercise, set, draft ->
-                    persistDraft(viewModel, exercise, set, draft, logged = true)
-                },
-                onSwapExercise = viewModel::requestExerciseSwap,
-                onToggleExercise = viewModel::toggleExercise,
-                onCompleteSession = viewModel::completeSession,
-            )
+                else -> ProgrammeTrainState(
+                    modifier = Modifier.padding(innerPadding),
+                    state = state,
+                    onDaySelected = viewModel::selectDay,
+                    onModeSelected = viewModel::selectMode,
+                    onStart = viewModel::startSession,
+                )
+            }
         }
     }
 
@@ -180,15 +191,6 @@ fun TrainScreen(viewModel: N2WorkoutViewModel) {
         )
     }
 
-    state.swapTarget?.let { target ->
-        ExerciseSwapSheet(
-            current = target,
-            options = state.swapOptions,
-            loading = state.loadingSwapOptions,
-            onDismiss = viewModel::dismissExerciseSwap,
-            onSelect = viewModel::swapExercise,
-        )
-    }
 }
 
 private fun persistDraft(

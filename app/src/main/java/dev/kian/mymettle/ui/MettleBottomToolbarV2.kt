@@ -1,7 +1,6 @@
 package dev.kian.mymettle.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -16,25 +15,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 
 private const val ToolbarReferenceWidth = 453f
 
-private data class ToolbarItem(
-    val contentDescription: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+private data class ToolbarDestination(
+    val label: String,
+    val icon: ImageVector,
     val width: Float,
     val height: Float,
     val onClick: () -> Unit,
 )
 
-/**
- * Global floating hotbar.
- *
- * Geometry intentionally mirrors IntensityBottomToolbarV2 exactly. The shared control-glass
- * primitive owns the material now so every other glass interactable can reuse this exact optic.
- */
+/** The split five-control hotbar from the Workout Session Figma frames. */
 @Composable
 internal fun MettleBottomToolbarV2(
     selectedIndex: Int,
@@ -42,64 +37,84 @@ internal fun MettleBottomToolbarV2(
     onOpenWorkout: () -> Unit,
     onOpenHistory: () -> Unit,
     onOpenLibrary: () -> Unit,
+    onQuickSelect: () -> Unit = onOpenWorkout,
+    onLongPressWorkout: () -> Unit = onOpenWorkout,
+    leadingIcon: ImageVector = MettleIcons.QuickSelect,
+    leadingDescription: String = "Quick select",
+    transparentMaterial: Boolean = false,
 ) {
-    val destinations = listOf(
-        ToolbarItem("Daily Update", MettleIcons.Cycle, 23f, 23f, onOpenHome),
-        ToolbarItem("Workout", MettleIcons.SportsMartialArts, 20f, 23f, onOpenWorkout),
-        ToolbarItem("Progress", MettleIcons.AddChart, 20f, 20f, onOpenHistory),
-        ToolbarItem("Exercise library", MettleIcons.CardsStack, 23f, 20f, onOpenLibrary),
+    val middle = listOf(
+        ToolbarDestination("Daily Update", MettleIcons.Cycle, 23f, 23f, onOpenHome),
+        ToolbarDestination("Progress", MettleIcons.AddChart, 20f, 20f, onOpenHistory),
+        ToolbarDestination("Exercise library", MettleIcons.CardsStack, 23f, 20f, onOpenLibrary),
     )
 
     BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding(),
+        modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
     ) {
-        val scale = (minOf(maxWidth, ToolbarReferenceWidth.dp).value /
-            ToolbarReferenceWidth).coerceAtMost(1f)
+        val scale = (minOf(maxWidth, ToolbarReferenceWidth.dp).value / ToolbarReferenceWidth)
+            .coerceAtMost(1f)
         fun scaled(value: Number) = (value.toFloat() * scale).dp
+        val tint = if (transparentMaterial) Color.Transparent else Color.White.copy(alpha = 0.028f)
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = scaled(6)),
-            contentAlignment = Alignment.Center,
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = scaled(39), vertical = scaled(6)),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             MettleControlGlassSurface(
-                modifier = Modifier
-                    .width(scaled(220))
-                    .height(scaled(64)),
+                modifier = Modifier.width(scaled(64)).height(scaled(64)),
                 shape = CircleShape,
-                tint = Color.White.copy(alpha = 0.028f),
-                shadowElevation = scaled(4.5),
-                borderWidth = scaled(0.7),
-                borderColor = Color.White.copy(alpha = 0.22f),
+                tint = tint,
+            ) {
+                MettleGlassIconTouchTarget(
+                    modifier = Modifier.fillMaxSize(),
+                    imageVector = leadingIcon,
+                    contentDescription = leadingDescription,
+                    onClick = onQuickSelect,
+                    iconSize = DpSize(scaled(24), scaled(24)),
+                    contentAlpha = 1f,
+                )
+            }
+
+            MettleControlGlassSurface(
+                modifier = Modifier.width(scaled(168)).height(scaled(64)),
+                shape = CircleShape,
+                tint = tint,
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = scaled(8)),
-                    horizontalArrangement = Arrangement.spacedBy(scaled(4)),
+                    modifier = Modifier.fillMaxSize().padding(horizontal = scaled(6)),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
-                    destinations.forEachIndexed { index, destination ->
-                        val isSelected = selectedIndex == index
+                    middle.forEachIndexed { index, destination ->
                         MettleGlassIconTouchTarget(
-                            modifier = Modifier
-                                .width(scaled(48))
-                                .fillMaxHeight(),
+                            modifier = Modifier.width(scaled(48)).fillMaxHeight(),
                             imageVector = destination.icon,
-                            contentDescription = destination.contentDescription,
+                            contentDescription = destination.label,
                             onClick = destination.onClick,
-                            iconSize = DpSize(
-                                scaled(destination.width),
-                                scaled(destination.height),
-                            ),
-                            contentAlpha = if (isSelected) 1f else 0.84f,
+                            iconSize = DpSize(scaled(destination.width), scaled(destination.height)),
+                            contentAlpha = if (selectedIndex == index) 1f else 0.80f,
                             pressedHaloSize = scaled(38),
                         )
                     }
                 }
+            }
+
+            MettleControlGlassSurface(
+                modifier = Modifier.width(scaled(64)).height(scaled(64)),
+                shape = CircleShape,
+                tint = tint,
+            ) {
+                MettleGlassIconTouchTarget(
+                    modifier = Modifier.fillMaxSize(),
+                    imageVector = MettleIcons.SportsMartialArts,
+                    contentDescription = "Workout. Hold to finish.",
+                    onClick = onOpenWorkout,
+                    onLongClick = onLongPressWorkout,
+                    iconSize = DpSize(scaled(20), scaled(23)),
+                    contentAlpha = if (selectedIndex == 3) 1f else 0.84f,
+                )
             }
         }
     }

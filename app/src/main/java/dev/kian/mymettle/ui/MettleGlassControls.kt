@@ -5,6 +5,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -96,10 +97,12 @@ internal fun MettleControlGlassSurface(
  * is instead a tiny circular halo plus icon compression, both safely contained inside the glass.
  */
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 internal fun MettleGlassIconTouchTarget(
     imageVector: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     iconSize: DpSize,
     modifier: Modifier = Modifier,
     contentAlpha: Float = 0.84f,
@@ -118,13 +121,25 @@ internal fun MettleGlassIconTouchTarget(
         label = "mettle-glass-icon-scale",
     )
 
-    Box(
-        modifier = modifier.clickable(
+    val clickModifier = if (onLongClick == null) {
+        modifier.clickable(
             interactionSource = interactionSource,
             indication = null,
             role = Role.Button,
             onClick = onClick,
-        ),
+        )
+    } else {
+        modifier.combinedClickable(
+            interactionSource = interactionSource,
+            indication = null,
+            role = Role.Button,
+            onClick = onClick,
+            onLongClick = onLongClick,
+        )
+    }
+
+    Box(
+        modifier = clickModifier,
         contentAlignment = Alignment.Center,
     ) {
         Box(

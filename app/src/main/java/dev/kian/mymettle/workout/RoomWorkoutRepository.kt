@@ -106,6 +106,13 @@ data class ActiveWorkoutExercise(
     val targetIds: List<TrainingTargetId>,
     val sets: List<SetRecordEntity>,
     val previousCompletedSets: List<SetRecordEntity>,
+    val details: WorkoutExerciseDetails = WorkoutExerciseDetails(),
+)
+
+data class WorkoutExerciseDetails(
+    val setupNotes: String = "",
+    val cues: List<String> = emptyList(),
+    val setupMediaPaths: List<String> = emptyList(),
 )
 
 data class ActiveWorkout(
@@ -129,6 +136,7 @@ class RoomWorkoutRepository(
     private val inferenceRepository: RoomInferenceRepository = RoomInferenceRepository(database),
 ) {
     private val dao get() = database.workoutDao()
+    private val libraryDao get() = database.libraryDao()
 
     suspend fun hasImportedProgramme(): Boolean = dao.appState() != null && dao.profileCount() > 0
 
@@ -236,6 +244,7 @@ class RoomWorkoutRepository(
         val session = dao.session(sessionId) ?: throw NativeWorkoutException("Active workout is missing.")
         val targets = dao.sessionTargets(sessionId).filter { it.included }.map(SessionTargetEntity::toDomain)
         val exercises = dao.sessionExercises(sessionId).map { exercise ->
+            val memory = libraryDao.memory(exercise.exerciseId)
             ActiveWorkoutExercise(
                 entity = exercise,
                 targetIds = dao.sessionExerciseTargets(exercise.id).map { TrainingTargetId(it.sessionTargetId) },
@@ -245,9 +254,32 @@ class RoomWorkoutRepository(
                     excludeSessionId = sessionId,
                     limit = 12,
                 ),
+                details = WorkoutExerciseDetails(
+                    setupNotes = memory?.setupNotes.orEmpty(),
+                    cues = libraryDao.cues(exercise.exerciseId).map { it.cue },
+                    setupMediaPaths = libraryDao.setupMedia(exercise.exerciseId).map { it.relativePath },
+                ),
             )
         }
         return ActiveWorkout(session, targets, exercises)
+    }
+
+    suspend fun discardActiveSession(sessionId: String) = database.withTransaction {
+        val session = dao.session(sessionId) ?: throw NativeWorkoutException("Workout not found.")
+        if (session.status != "active") throw NativeWorkoutException("Only an active workout can be discarded.")
+        val state = dao.appState() ?: throw NativeWorkoutException("App state is missing.")
+        val now = timestamp()
+        dao.upsertSessions(
+            listOf(
+                session.copy(
+                    status = "discarded",
+                    discardedAt = now,
+                    editedAt = now,
+                    excludedFromInsights = true,
+                ),
+            ),
+        )
+        dao.upsertAppState(state.copy(activeSessionId = null, updatedAt = now))
     }
 
     /**
