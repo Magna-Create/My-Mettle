@@ -19,7 +19,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
@@ -104,21 +106,26 @@ fun NativeRestTimerOverlay() {
             },
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(500.dp)
+                    .padding(horizontal = 50.dp)
+                    .padding(bottom = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(snapshot.exerciseName, color = Color(0xFFC3C8BB), fontSize = 15.sp)
-                Spacer(Modifier.height(9.dp))
+                Spacer(Modifier.height(16.dp))
+                Text(snapshot.exerciseName, color = Color(0xFFE1E4DA), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Spacer(Modifier.height(8.dp))
                 Text(
                     if (snapshot.phase == RestTimerPhase.READY) "Ready" else formatTime(remainingSeconds),
                     color = Color(0xFFE1E4DA),
-                    fontSize = 66.sp,
-                    lineHeight = 70.sp,
+                    fontSize = 60.sp,
+                    lineHeight = 68.sp,
                     fontWeight = FontWeight.Medium,
                 )
-                Spacer(Modifier.height(4.dp))
-                TimerWaveform(Modifier.fillMaxWidth().height(44.dp))
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(15.dp))
+                TimerWaveform(Modifier.fillMaxWidth().height(42.dp))
+                Spacer(Modifier.height(18.dp))
 
                 if (snapshot.phase == RestTimerPhase.READY) {
                     MettleGlassActionButton(onClick = { controller.dismissReady() }, modifier = Modifier.fillMaxWidth()) {
@@ -132,26 +139,22 @@ fun NativeRestTimerOverlay() {
                         }
                         TimerCircle("+15") { controller.adjust(15) }
                     }
-                    Spacer(Modifier.height(18.dp))
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .combinedClickable(onClick = {}, onLongClick = { controller.stop() }),
-                        shape = CircleShape,
-                        color = Color(0xFFFFB4AB),
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text("Hold to cancel", color = Color(0xFF690005), fontWeight = FontWeight.SemiBold)
-                        }
+                    Spacer(Modifier.height(16.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        TimerPill(
+                            label = "Hold to cancel",
+                            colour = Color(0xFFFFB4AB),
+                            modifier = Modifier.weight(1f),
+                            onClick = {},
+                            onLongClick = { controller.stop() },
+                        )
+                        TimerPill(
+                            label = "Minimise timer",
+                            colour = Color(0xFFBBEBED),
+                            modifier = Modifier.weight(1f),
+                            onClick = { expanded = false },
+                        )
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Minimise timer",
-                        modifier = Modifier.fillMaxWidth().height(48.dp).combinedClickable(onClick = { expanded = false }),
-                        color = Color(0xFFBBEBED),
-                        textAlign = TextAlign.Center,
-                    )
                 }
             }
         }
@@ -179,9 +182,44 @@ private fun TimerWaveform(modifier: Modifier = Modifier) {
 
 @Composable
 private fun TimerCircle(label: String, onClick: () -> Unit) {
-    MettleControlGlassSurface(modifier = Modifier.size(72.dp), shape = CircleShape, onClick = onClick) {
+    MettleControlGlassSurface(
+        modifier = Modifier.size(100.dp),
+        shape = CircleShape,
+        tint = Color(0xFFBBEBED).copy(alpha = .028f),
+        borderColor = Color(0xFFBBEBED).copy(alpha = .36f),
+        shadowElevation = 5.dp,
+        onClick = onClick,
+    ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(label, color = Color(0xFFE1E4DA), fontSize = 20.sp, fontWeight = FontWeight.Medium)
+            Text(label, color = Color(0xFFE1E4DA), fontSize = 24.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TimerPill(
+    label: String,
+    colour: Color,
+    modifier: Modifier,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+) {
+    Box(
+        modifier = modifier
+            .height(50.dp)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+    ) {
+        MettleControlGlassSurface(
+            modifier = Modifier.fillMaxSize(),
+            shape = CircleShape,
+            tint = colour.copy(alpha = .055f),
+            borderColor = colour.copy(alpha = .48f),
+            shadowElevation = 4.dp,
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(label, color = colour, fontSize = 14.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+            }
         }
     }
 }
