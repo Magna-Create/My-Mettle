@@ -1,6 +1,11 @@
 package dev.kian.mymettle.ui
 
 import android.graphics.BitmapFactory
+import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -8,20 +13,26 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,7 +45,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,43 +53,66 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.chrisbanes.haze.hazeSource
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.workout.ActiveWorkout
 import dev.kian.mymettle.workout.ActiveWorkoutExercise
 import dev.kian.mymettle.workout.ExerciseSwapOption
 import java.io.File
+import kotlin.math.hypot
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+private const val WorkoutReferenceWidth = 453f
 private val WorkoutInk = Color(0xFF11140F)
+private val WorkoutSurfaceLow = Color(0xFF191D17)
+private val WorkoutCard = Color(0xE61A3A37)
+private val WorkoutCardQuiet = Color(0xCC23423F)
 private val WorkoutPaper = Color(0xFFE1E4DA)
 private val WorkoutPaperMuted = Color(0xFFC3C8BB)
 private val WorkoutCyan = Color(0xFFBBEBED)
 private val WorkoutCyanStrong = Color(0xFFA0CFD0)
 private val WorkoutDarkCyan = Color(0xFF002021)
 private val WorkoutGreen = Color(0xFFC3EFAD)
-private val WorkoutGreenDark = Color(0xFF436833)
+private val WorkoutGreenDark = Color(0xFF1E3B19)
 private val WorkoutDelete = Color(0xFFFFB4AB)
-private val WorkoutCardShape = RoundedCornerShape(22.dp)
+private val WorkoutCardShape = RoundedCornerShape(25.dp)
+
+private data class WorkoutMetrics(val scale: Float) {
+    fun dp(value: Number): Dp = (value.toFloat() * scale).dp
+    fun sp(value: Number): TextUnit = (value.toFloat() * scale).sp
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +121,6 @@ internal fun FigmaWorkoutSession(
     drafts: MutableMap<String, TrainSetDraft>,
     onOpenSettings: () -> Unit,
     onOpenAccount: () -> Unit,
-    onOpenCalculator: (ActiveWorkoutExercise, SetRecordEntity) -> Unit,
     onSaveDraft: (ActiveWorkoutExercise, SetRecordEntity, TrainSetDraft) -> Unit,
     onLogSet: (ActiveWorkoutExercise, SetRecordEntity, TrainSetDraft) -> Unit,
     onSwapExercise: (ActiveWorkoutExercise) -> Unit,
@@ -104,122 +136,174 @@ internal fun FigmaWorkoutSession(
     onDiscardSession: () -> Unit,
 ) {
     val workout = requireNotNull(state.workout)
+    val focusManager = LocalFocusManager.current
     val focused = workout.exercises.firstOrNull { it.entity.id == state.focusedExerciseId }
         ?: workout.exercises.firstOrNull { it.entity.status != "completed" }
         ?: workout.exercises.first()
+    val listState = rememberLazyListState()
 
-    Box(modifier = Modifier.fillMaxSize().background(WorkoutInk)) {
-        when {
-            state.swapTarget != null -> WorkoutSubstitutionScreen(
-                current = state.swapTarget,
-                options = state.swapOptions,
-                loading = state.loadingSwapOptions,
-                onDismiss = onDismissSwap,
-                onSelect = onSelectSwap,
-            )
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val viewportWidth = minOf(maxWidth, WorkoutReferenceWidth.dp)
+        val metrics = WorkoutMetrics((viewportWidth.value / WorkoutReferenceWidth).coerceAtMost(1f))
 
-            state.workoutSurface == WorkoutSurface.QUICK_SELECT -> WorkoutQuickSelectScreen(
+        Box(
+            modifier = Modifier
+                .width(viewportWidth)
+                .fillMaxHeight()
+                .align(Alignment.TopCenter)
+                .background(WorkoutInk),
+        ) {
+            WorkoutBackdrop(onTap = { focusManager.clearFocus(force = true) })
+
+            when {
+                state.swapTarget != null -> WorkoutSubstitutionContent(
+                    current = state.swapTarget,
+                    options = state.swapOptions,
+                    loading = state.loadingSwapOptions,
+                    onDismiss = onDismissSwap,
+                    onSelect = onSelectSwap,
+                    metrics = metrics,
+                )
+
+                state.workoutSurface == WorkoutSurface.QUICK_SELECT -> WorkoutQuickSelectContent(
+                    workout = workout,
+                    onSelect = onShowSets,
+                    metrics = metrics,
+                )
+
+                else -> WorkoutExerciseContent(
+                    workout = workout,
+                    focusedId = focused.entity.id,
+                    setupExerciseId = focused.entity.id.takeIf { state.workoutSurface == WorkoutSurface.SETUP },
+                    drafts = drafts,
+                    loading = state.loading,
+                    listState = listState,
+                    onFocusExercise = onShowSets,
+                    onShowSetup = onShowSetup,
+                    onSaveDraft = onSaveDraft,
+                    onLogSet = onLogSet,
+                    onSwap = onSwapExercise,
+                    onToggleExercise = onToggleExercise,
+                    onRateExercise = onRateExercise,
+                    metrics = metrics,
+                )
+            }
+
+            WorkoutViewportScrims(metrics)
+            WorkoutHeader(
                 workout = workout,
-                focusedId = focused.entity.id,
-                onSelect = onShowSets,
+                metrics = metrics,
                 onOpenSettings = onOpenSettings,
                 onOpenAccount = onOpenAccount,
             )
 
-            state.workoutSurface == WorkoutSurface.SETUP -> WorkoutSetupScreen(
-                workout = workout,
-                exercise = focused,
-                onReturn = { onShowSets(focused.entity.id) },
-                onSwap = { onSwapExercise(focused) },
-                onOpenSettings = onOpenSettings,
-                onOpenAccount = onOpenAccount,
-            )
-
-            else -> WorkoutSetsScreen(
-                workout = workout,
-                focusedId = focused.entity.id,
-                drafts = drafts,
-                loading = state.loading,
-                onFocusExercise = onShowSets,
-                onShowSetup = onShowSetup,
-                onOpenCalculator = onOpenCalculator,
-                onSaveDraft = onSaveDraft,
-                onLogSet = onLogSet,
-                onSwap = onSwapExercise,
-                onToggleExercise = onToggleExercise,
-                onRateExercise = onRateExercise,
-                onOpenSettings = onOpenSettings,
-                onOpenAccount = onOpenAccount,
-            )
-        }
-
-        if (state.workoutSurface == WorkoutSurface.FINISH) {
-            FinishWorkoutSheet(
-                destructive = false,
-                onDismiss = onDismissSheet,
-                onComplete = onCompleteSession,
-                onDelete = onShowDelete,
-            )
-        }
-        if (state.workoutSurface == WorkoutSurface.DELETE_CONFIRM) {
-            FinishWorkoutSheet(
-                destructive = true,
-                onDismiss = onDismissSheet,
-                onComplete = onCompleteSession,
-                onDelete = onDiscardSession,
-            )
+            if (state.workoutSurface == WorkoutSurface.FINISH) {
+                FinishWorkoutGestureSheet(
+                    destructive = false,
+                    onDismiss = onDismissSheet,
+                    onComplete = onCompleteSession,
+                    onDelete = onShowDelete,
+                )
+            }
+            if (state.workoutSurface == WorkoutSurface.DELETE_CONFIRM) {
+                FinishWorkoutGestureSheet(
+                    destructive = true,
+                    onDismiss = onDismissSheet,
+                    onComplete = onCompleteSession,
+                    onDelete = onDiscardSession,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun WorkoutSetsScreen(
+private fun WorkoutBackdrop(onTap: () -> Unit) {
+    val hazeState = LocalMettleHazeState.current
+    Canvas(
+        Modifier
+            .fillMaxSize()
+            .clickable(onClick = onTap)
+            .then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier),
+    ) {
+        drawRect(WorkoutInk)
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0xFF5E7A7A), Color(0xFF384745), Color.Transparent),
+                center = Offset(size.width * .5f, size.height * 1.08f),
+                radius = size.height * .86f,
+            ),
+            alpha = .86f,
+        )
+        drawRect(
+            brush = Brush.verticalGradient(
+                listOf(Color.Black.copy(alpha = .42f), Color.Transparent, Color.Transparent),
+                endY = size.height * .30f,
+            ),
+        )
+    }
+}
+
+@Composable
+private fun WorkoutExerciseContent(
     workout: ActiveWorkout,
     focusedId: String,
+    setupExerciseId: String?,
     drafts: MutableMap<String, TrainSetDraft>,
     loading: Boolean,
+    listState: LazyListState,
     onFocusExercise: (String?) -> Unit,
     onShowSetup: () -> Unit,
-    onOpenCalculator: (ActiveWorkoutExercise, SetRecordEntity) -> Unit,
     onSaveDraft: (ActiveWorkoutExercise, SetRecordEntity, TrainSetDraft) -> Unit,
     onLogSet: (ActiveWorkoutExercise, SetRecordEntity, TrainSetDraft) -> Unit,
     onSwap: (ActiveWorkoutExercise) -> Unit,
     onToggleExercise: (ActiveWorkoutExercise) -> Unit,
     onRateExercise: (ActiveWorkoutExercise) -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenAccount: () -> Unit,
+    metrics: WorkoutMetrics,
 ) {
     val visible = workout.exercises.filter {
         it.entity.prescriptionIncluded || it.entity.status == "completed" || it.sets.any { set -> set.completedAt != null }
     }
+    val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(focusedId, setupExerciseId, visible.map { it.entity.id }) {
+        val index = visible.indexOfFirst { it.entity.id == focusedId }
+        if (index >= 0) listState.animateScrollToItem(index)
+    }
+
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 48.dp, bottom = 112.dp),
-        verticalArrangement = Arrangement.spacedBy(15.dp),
+        contentPadding = PaddingValues(
+            start = metrics.dp(17),
+            end = metrics.dp(18),
+            top = metrics.dp(129),
+            bottom = metrics.dp(145),
+        ),
+        verticalArrangement = Arrangement.spacedBy(metrics.dp(12)),
     ) {
-        item {
-            WorkoutHeader(
-                workout = workout,
-                focusedId = focusedId,
-                onProgressPoint = onFocusExercise,
-                onOpenSettings = onOpenSettings,
-                onOpenAccount = onOpenAccount,
-            )
-        }
         items(visible, key = { it.entity.id }) { exercise ->
             WorkoutExerciseCard(
                 exercise = exercise,
                 focused = exercise.entity.id == focusedId,
+                showSetup = exercise.entity.id == setupExerciseId,
                 drafts = drafts,
                 enabled = workout.session.status == "active" && !loading,
-                onFocus = { onFocusExercise(exercise.entity.id) },
-                onSetup = { onFocusExercise(exercise.entity.id); onShowSetup() },
-                onOpenCalculator = { set -> onOpenCalculator(exercise, set) },
+                onFocus = {
+                    focusManager.clearFocus(force = true)
+                    onFocusExercise(exercise.entity.id)
+                },
+                onSetup = {
+                    focusManager.clearFocus(force = true)
+                    onFocusExercise(exercise.entity.id)
+                    onShowSetup()
+                },
                 onSaveDraft = { set, draft -> onSaveDraft(exercise, set, draft) },
                 onLogSet = { set, draft -> onLogSet(exercise, set, draft) },
                 onSwap = { onSwap(exercise) },
                 onToggleExercise = { onToggleExercise(exercise) },
                 onRateExercise = { onRateExercise(exercise) },
+                metrics = metrics,
             )
         }
     }
@@ -228,27 +312,29 @@ private fun WorkoutSetsScreen(
 @Composable
 private fun WorkoutHeader(
     workout: ActiveWorkout,
-    focusedId: String,
-    onProgressPoint: (String?) -> Unit,
+    metrics: WorkoutMetrics,
     onOpenSettings: () -> Unit,
     onOpenAccount: () -> Unit,
 ) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.width(128.dp)) {
-            Text("My Mettle", color = WorkoutPaper, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
-            Text("Workout Session", color = WorkoutPaperMuted, fontSize = 13.sp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .height(metrics.dp(70))
+            .padding(horizontal = metrics.dp(20)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.width(metrics.dp(125))) {
+            Text("My Mettle", color = WorkoutCyan, fontSize = metrics.sp(24), lineHeight = metrics.sp(27))
+            Text("Workout Session", color = WorkoutPaperMuted, fontSize = metrics.sp(12), lineHeight = metrics.sp(16))
         }
-        WorkoutWaveProgress(
-            workout = workout,
-            focusedId = focusedId,
-            onProgressPoint = onProgressPoint,
-            modifier = Modifier.weight(1f),
-        )
-        Spacer(Modifier.width(8.dp))
+        WorkoutWaveProgress(workout, Modifier.weight(1f).height(metrics.dp(49)), metrics)
+        Spacer(Modifier.width(metrics.dp(18)))
         MettleControlGlassSurface(
-            modifier = Modifier.width(80.dp).height(42.dp),
+            modifier = Modifier.width(metrics.dp(81)).height(metrics.dp(49)),
             shape = CircleShape,
-            tint = Color.White.copy(alpha = 0.02f),
+            tint = Color.White.copy(alpha = .025f),
+            shadowElevation = metrics.dp(3),
         ) {
             Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 MettleGlassIconTouchTarget(
@@ -256,14 +342,14 @@ private fun WorkoutHeader(
                     imageVector = MettleIcons.Settings,
                     contentDescription = "Workout settings",
                     onClick = onOpenSettings,
-                    iconSize = androidx.compose.ui.unit.DpSize(17.dp, 16.dp),
+                    iconSize = DpSize(metrics.dp(17), metrics.dp(16)),
                 )
                 MettleGlassIconTouchTarget(
                     modifier = Modifier.weight(1f).fillMaxSize(),
                     imageVector = MettleIcons.AccountCircle,
                     contentDescription = "Account",
                     onClick = onOpenAccount,
-                    iconSize = androidx.compose.ui.unit.DpSize(16.dp, 16.dp),
+                    iconSize = DpSize(metrics.dp(16), metrics.dp(16)),
                 )
             }
         }
@@ -271,67 +357,85 @@ private fun WorkoutHeader(
 }
 
 @Composable
-private fun WorkoutWaveProgress(
-    workout: ActiveWorkout,
-    focusedId: String,
-    onProgressPoint: (String?) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val activeIndex = workout.exercises.indexOfFirst { it.entity.id == focusedId }.coerceAtLeast(0)
+private fun WorkoutWaveProgress(workout: ActiveWorkout, modifier: Modifier, metrics: WorkoutMetrics) {
+    val visible = workout.exercises.filter { it.entity.prescriptionIncluded }
+    val completed = visible.count { it.entity.status == "completed" }
+    val progress = if (visible.isEmpty()) 0f else completed.toFloat() / visible.size
     MettleControlGlassSurface(
-        modifier = modifier.height(42.dp),
+        modifier = modifier,
         shape = CircleShape,
-        tint = Color.White.copy(alpha = 0.018f),
+        tint = Color.White.copy(alpha = .018f),
+        shadowElevation = metrics.dp(3),
     ) {
-        Box(Modifier.fillMaxSize().padding(horizontal = 14.dp)) {
-            Canvas(Modifier.fillMaxSize()) {
-                val y = size.height / 2f
-                val path = Path().apply {
-                    moveTo(0f, y)
-                    cubicTo(size.width * .20f, y, size.width * .20f, y - 7f, size.width * .35f, y - 7f)
-                    cubicTo(size.width * .50f, y - 7f, size.width * .50f, y + 7f, size.width * .65f, y + 7f)
-                    cubicTo(size.width * .80f, y + 7f, size.width * .80f, y, size.width, y)
-                }
-                drawPath(path, WorkoutPaperMuted.copy(alpha = .75f), style = Stroke(1.4.dp.toPx(), cap = StrokeCap.Round))
-                val count = workout.exercises.size.coerceAtLeast(1)
-                workout.exercises.forEachIndexed { index, exercise ->
-                    val x = if (count == 1) size.width / 2f else size.width * index / (count - 1f)
-                    drawCircle(
-                        color = when {
-                            exercise.entity.status == "completed" -> WorkoutGreen
-                            index == activeIndex -> WorkoutCyan
-                            else -> WorkoutPaperMuted
-                        },
-                        radius = if (index == activeIndex) 4.5.dp.toPx() else 3.dp.toPx(),
-                        center = Offset(x, y),
-                    )
-                }
+        Canvas(Modifier.fillMaxSize().padding(horizontal = metrics.dp(5), vertical = metrics.dp(15))) {
+            val y = size.height / 2f
+            val markerX = (size.width * (.34f + progress * .58f)).coerceIn(size.width * .34f, size.width * .92f)
+            val waveEnd = size.width * .33f
+            val path = Path().apply {
+                moveTo(0f, y)
+                cubicTo(size.width * .06f, y - size.height * .45f, size.width * .10f, y + size.height * .45f, size.width * .16f, y)
+                cubicTo(size.width * .22f, y - size.height * .40f, size.width * .27f, y + size.height * .38f, waveEnd, y)
             }
-            Row(Modifier.fillMaxSize()) {
-                workout.exercises.forEach { exercise ->
-                    Box(
-                        Modifier.weight(1f).fillMaxSize().clickable { onProgressPoint(exercise.entity.id) },
-                    )
-                }
-            }
+            drawPath(path, WorkoutCyan, style = Stroke(metrics.dp(3).toPx(), cap = StrokeCap.Round))
+            drawLine(WorkoutPaper, Offset(waveEnd + metrics.dp(7).toPx(), y), Offset(size.width, y), metrics.dp(2).toPx(), StrokeCap.Round)
+            drawLine(
+                WorkoutPaper,
+                Offset(markerX, y - metrics.dp(8).toPx()),
+                Offset(markerX, y + metrics.dp(8).toPx()),
+                metrics.dp(3).toPx(),
+                StrokeCap.Round,
+            )
         }
     }
+}
+
+@Composable
+private fun WorkoutViewportScrims(metrics: WorkoutMetrics) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(metrics.dp(132))
+            .align(Alignment.TopCenter)
+            .blur(metrics.dp(10))
+            .background(
+                Brush.verticalGradient(
+                    0f to WorkoutInk,
+                    .74f to WorkoutInk.copy(alpha = .92f),
+                    1f to Color.Transparent,
+                ),
+            ),
+    )
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(metrics.dp(150))
+            .align(Alignment.BottomCenter)
+            .blur(metrics.dp(12))
+            .background(
+                Brush.verticalGradient(
+                    0f to Color.Transparent,
+                    .46f to WorkoutInk.copy(alpha = .82f),
+                    1f to WorkoutInk,
+                ),
+            ),
+    )
 }
 
 @Composable
 private fun WorkoutExerciseCard(
     exercise: ActiveWorkoutExercise,
     focused: Boolean,
+    showSetup: Boolean,
     drafts: MutableMap<String, TrainSetDraft>,
     enabled: Boolean,
     onFocus: () -> Unit,
     onSetup: () -> Unit,
-    onOpenCalculator: (SetRecordEntity) -> Unit,
     onSaveDraft: (SetRecordEntity, TrainSetDraft) -> Unit,
     onLogSet: (SetRecordEntity, TrainSetDraft) -> Unit,
     onSwap: () -> Unit,
     onToggleExercise: () -> Unit,
     onRateExercise: () -> Unit,
+    metrics: WorkoutMetrics,
 ) {
     val entity = exercise.entity
     val completed = entity.status == "completed"
@@ -341,85 +445,94 @@ private fun WorkoutExerciseCard(
     val logged = sets.count { it.completedAt != null }
 
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onFocus),
+        modifier = Modifier.fillMaxWidth(),
         shape = WorkoutCardShape,
-        color = if (completed) WorkoutGreen else WorkoutPaper,
-        shadowElevation = if (focused) 5.dp else 1.dp,
+        color = if (completed) WorkoutGreenDark.copy(alpha = .90f) else WorkoutCard,
+        border = BorderStroke(metrics.dp(.7), Color.White.copy(alpha = if (focused) .22f else .08f)),
+        shadowElevation = if (focused) metrics.dp(6) else metrics.dp(2),
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                Surface(modifier = Modifier.size(56.dp), shape = CircleShape, color = if (completed) WorkoutGreenDark else WorkoutCyanStrong) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            MettleIcons.SportsMartialArts,
-                            contentDescription = null,
-                            tint = if (completed) WorkoutGreen else WorkoutDarkCyan,
-                            modifier = Modifier.size(25.dp),
-                        )
-                    }
-                }
-                Spacer(Modifier.width(13.dp))
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(metrics.dp(114))
+                    .clickable(onClick = onFocus)
+                    .padding(start = metrics.dp(16), end = metrics.dp(18)),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Column(Modifier.weight(1f)) {
                     Text(
                         entity.exerciseNameSnapshot,
-                        color = WorkoutInk,
-                        fontSize = 24.sp,
-                        lineHeight = 26.sp,
+                        color = WorkoutPaper,
+                        fontSize = metrics.sp(28),
+                        lineHeight = metrics.sp(36),
                         fontWeight = FontWeight.Medium,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
-                        entity.executionProfileNameSnapshot,
-                        color = WorkoutInk.copy(alpha = .65f),
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
                 }
-                Text(if (completed) "✓" else "↗", color = WorkoutDarkCyan, fontSize = 24.sp)
+                MettleControlGlassSurface(
+                    modifier = Modifier.size(metrics.dp(80)),
+                    shape = CircleShape,
+                    tint = if (completed) WorkoutGreen.copy(alpha = .08f) else WorkoutCyan.copy(alpha = .035f),
+                    shadowElevation = metrics.dp(4),
+                    borderColor = Color.White.copy(alpha = .35f),
+                    onClick = if (completed) null else onSetup,
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = MettleIcons.SportsMartialArts,
+                            contentDescription = if (completed) null else "Open exercise setup",
+                            tint = if (completed) WorkoutGreen else WorkoutCyan,
+                            modifier = Modifier.size(metrics.dp(29)),
+                        )
+                    }
+                }
             }
 
-            Spacer(Modifier.height(13.dp))
             Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(7.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = metrics.dp(16)),
+                horizontalArrangement = Arrangement.spacedBy(metrics.dp(8)),
             ) {
-                WorkoutChip(entity.importanceSnapshot.replaceFirstChar { it.uppercase() })
-                WorkoutChip("${entity.repMin}–${entity.repMax} reps")
-                WorkoutChip("${entity.restSeconds}s rest")
-                entity.prescribedLoad?.let { WorkoutChip("${trimNumber(it)} load") }
-                if (completed) WorkoutChip("$logged/${entity.prescribedSets} Sets Complete", success = true)
+                WorkoutChip(entity.importanceSnapshot.replaceFirstChar { it.uppercase() }, metrics)
+                WorkoutChip("${entity.repMin}–${entity.repMax} reps", metrics)
+                WorkoutChip("${entity.restSeconds}s rest", metrics)
+                entity.prescribedLoad?.let { WorkoutChip("${trimNumber(it)} load progression", metrics) }
+                if (completed) WorkoutChip("$logged/${entity.prescribedSets} Sets Complete", metrics, success = true)
             }
+            Spacer(Modifier.height(metrics.dp(14)))
+            Box(Modifier.fillMaxWidth().height(metrics.dp(1)).background(Color.White.copy(alpha = .10f)))
 
-            if (completed) {
-                Spacer(Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    WorkoutCardButton("Rate exercise", onRateExercise, Modifier.weight(1f))
-                    WorkoutCardButton("Mark undone", onToggleExercise, Modifier.weight(1f))
-                }
-            } else {
-                Spacer(Modifier.height(15.dp))
-                sets.forEachIndexed { index, set ->
-                    val draft = drafts.getOrPut(set.id) { TrainSetDraft(set) }
-                    WorkoutSetRow(
-                        displayIndex = index,
-                        exercise = exercise,
-                        set = set,
-                        draft = draft,
-                        enabled = enabled,
-                        isCurrent = focused && set.completedAt == null && sets.take(index).all { it.completedAt != null },
-                        onOpenCalculator = { onOpenCalculator(set) },
-                        onSaveDraft = { onSaveDraft(set, draft) },
-                        onLogSet = { onLogSet(set, draft) },
+            when {
+                completed -> CompletedExerciseActions(onRateExercise, onToggleExercise, metrics)
+                showSetup -> WorkoutSetupBody(exercise, onReturn = onFocus, metrics = metrics)
+                else -> {
+                    Column(Modifier.padding(top = metrics.dp(15))) {
+                        sets.forEachIndexed { index, set ->
+                            val draft = drafts.getOrPut(set.id) { TrainSetDraft(set) }
+                            WorkoutSetRow(
+                                displayIndex = index,
+                                exercise = exercise,
+                                set = set,
+                                draft = draft,
+                                enabled = enabled,
+                                isCurrent = focused && set.completedAt == null && sets.take(index).all { it.completedAt != null },
+                                onSaveDraft = { onSaveDraft(set, draft) },
+                                onLogSet = { onLogSet(set, draft) },
+                                metrics = metrics,
+                            )
+                            if (index != sets.lastIndex) Spacer(Modifier.height(metrics.dp(3)))
+                        }
+                    }
+                    WorkoutExerciseActions(
+                        onSwap = onSwap,
+                        onRate = onRateExercise,
+                        onComplete = onToggleExercise,
+                        metrics = metrics,
                     )
-                    if (index != sets.lastIndex) Spacer(Modifier.height(9.dp))
-                }
-                Spacer(Modifier.height(15.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    WorkoutCardButton("Setup", onSetup, Modifier.weight(1f))
-                    WorkoutCardButton("Substitute", onSwap, Modifier.weight(1f))
-                    WorkoutCardButton("Complete", onToggleExercise, Modifier.weight(1f))
                 }
             }
         }
@@ -434,9 +547,9 @@ private fun WorkoutSetRow(
     draft: TrainSetDraft,
     enabled: Boolean,
     isCurrent: Boolean,
-    onOpenCalculator: () -> Unit,
     onSaveDraft: () -> Unit,
     onLogSet: () -> Unit,
+    metrics: WorkoutMetrics,
 ) {
     val focusManager = LocalFocusManager.current
     val profile = exercise.entity.executionProfileNameSnapshot.lowercase()
@@ -457,63 +570,91 @@ private fun WorkoutSetRow(
     val ready = when (metric) {
         "duration" -> draft.durationSeconds.toIntOrNull()?.let { it > 0 } == true
         "distance" -> draft.distanceMetres.toDoubleOrNull()?.let { it > 0 } == true
-        "reps" -> draft.reps.toIntOrNull()?.let { it >= 0 } == true
-        else -> draft.reps.toIntOrNull() != null &&
+        "reps" -> draft.reps.toIntOrNull()?.let { it > 0 } == true
+        else -> draft.reps.toIntOrNull()?.let { it > 0 } == true &&
             (exercise.entity.loadRelationshipSnapshot == "bodyweight" || draft.load.toDoubleOrNull() != null)
     }
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Surface(
-            modifier = Modifier.size(width = 50.dp, height = 52.dp).clickable(enabled = enabled && ready, onClick = {
-                focusManager.clearFocus(force = true)
-                onLogSet()
-            }),
-            shape = RoundedCornerShape(16.dp),
-            color = when {
-                set.completedAt != null -> WorkoutGreenDark
-                isCurrent -> WorkoutCyanStrong
-                else -> WorkoutPaperMuted.copy(alpha = .58f)
-            },
-            shadowElevation = if (isCurrent) 8.dp else 0.dp,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(label, color = if (set.completedAt != null) WorkoutGreen else WorkoutInk, fontWeight = FontWeight.SemiBold)
+    Surface(
+        modifier = Modifier.fillMaxWidth().height(metrics.dp(132)),
+        color = Color.Transparent,
+        border = BorderStroke(metrics.dp(.65), Color.White.copy(alpha = .23f)),
+        shape = RoundedCornerShape(metrics.dp(25)),
+    ) {
+        Row {
+            Box(
+                modifier = Modifier
+                    .width(metrics.dp(85))
+                    .fillMaxHeight()
+                    .background(
+                        when {
+                            set.completedAt != null -> WorkoutGreen.copy(alpha = .13f)
+                            isCurrent -> WorkoutCyan.copy(alpha = .10f)
+                            else -> Color.White.copy(alpha = .045f)
+                        },
+                    )
+                    .clickable(enabled = enabled && ready) {
+                        focusManager.clearFocus(force = true)
+                        onLogSet()
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                if (isCurrent) {
+                    Box(
+                        Modifier
+                            .size(metrics.dp(78))
+                            .blur(metrics.dp(18))
+                            .background(WorkoutCyan.copy(alpha = .22f), CircleShape),
+                    )
+                }
+                Text(
+                    label,
+                    color = if (set.completedAt != null) WorkoutGreen else WorkoutPaper,
+                    fontSize = metrics.sp(24),
+                    fontWeight = FontWeight.Medium,
+                )
             }
-        }
-        Spacer(Modifier.width(10.dp))
-        if (metric != "reps") {
-            WorkoutMetricField(
-                value = fieldOne,
-                label = fieldOneLabel,
-                enabled = enabled,
-                decimal = metric != "duration",
-                modifier = Modifier.weight(1f),
-                onClick = if (metric == "load_reps") onOpenCalculator else null,
-                onValueChange = { value ->
-                    when (metric) {
-                        "duration" -> draft.durationSeconds = value.filter(Char::isDigit).take(5)
-                        "distance" -> draft.distanceMetres = workoutDecimalInput(value)
-                        else -> draft.load = workoutDecimalInput(value)
-                    }
-                    onSaveDraft()
-                },
-                onDone = onSaveDraft,
-            )
-            Spacer(Modifier.width(10.dp))
-        }
-        if (needsReps) {
-            WorkoutMetricField(
-                value = draft.reps,
-                label = "Reps",
-                enabled = enabled,
-                decimal = false,
-                modifier = Modifier.weight(1f),
-                onValueChange = { draft.reps = it.filter(Char::isDigit).take(3); onSaveDraft() },
-                onDone = {
-                    focusManager.clearFocus(force = true)
-                    if (ready) onLogSet() else onSaveDraft()
-                },
-            )
+            Column(
+                modifier = Modifier.weight(1f).padding(metrics.dp(9)),
+                verticalArrangement = Arrangement.spacedBy(metrics.dp(8)),
+            ) {
+                if (metric != "reps") {
+                    WorkoutMetricField(
+                        value = fieldOne,
+                        label = fieldOneLabel,
+                        enabled = enabled,
+                        decimal = metric != "duration",
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        onValueChange = { value ->
+                            when (metric) {
+                                "duration" -> draft.durationSeconds = value.filter(Char::isDigit).take(5)
+                                "distance" -> draft.distanceMetres = workoutDecimalInput(value)
+                                else -> draft.load = workoutDecimalInput(value)
+                            }
+                        },
+                        onDone = onSaveDraft,
+                    )
+                }
+                if (needsReps) {
+                    WorkoutMetricField(
+                        value = draft.reps,
+                        label = "Reps",
+                        enabled = enabled,
+                        decimal = false,
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        onValueChange = {
+                            draft.reps = it.filter(Char::isDigit).take(3)
+                        },
+                        onDone = {
+                            focusManager.clearFocus(force = true)
+                            if (ready) onLogSet() else onSaveDraft()
+                        },
+                        onFocusLost = {
+                            if (ready) onLogSet() else onSaveDraft()
+                        },
+                    )
+                }
+            }
         }
     }
 }
@@ -527,115 +668,168 @@ private fun WorkoutMetricField(
     modifier: Modifier,
     onValueChange: (String) -> Unit,
     onDone: () -> Unit,
-    onClick: (() -> Unit)? = null,
+    onFocusLost: () -> Unit = onDone,
 ) {
+    var hadFocus by remember { mutableStateOf(false) }
     Surface(
-        modifier = modifier.height(52.dp).then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier),
-        shape = RoundedCornerShape(16.dp),
-        color = Color.White.copy(alpha = .52f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, WorkoutInk.copy(alpha = .14f)),
+        modifier = modifier,
+        shape = RoundedCornerShape(11.dp),
+        color = WorkoutDarkCyan.copy(alpha = .94f),
+        border = BorderStroke(.5.dp, Color.White.copy(alpha = .08f)),
     ) {
-        Column(Modifier.padding(horizontal = 13.dp, vertical = 6.dp), verticalArrangement = Arrangement.Center) {
-            Text(label, color = WorkoutInk.copy(alpha = .58f), fontSize = 10.sp)
+        Column(Modifier.padding(horizontal = 13.dp, vertical = 5.dp), verticalArrangement = Arrangement.Center) {
+            Text(label, color = WorkoutCyan.copy(alpha = .78f), fontSize = 10.sp, lineHeight = 11.sp)
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
-                enabled = enabled && onClick == null,
+                enabled = enabled,
+                modifier = Modifier.onFocusChanged { focus ->
+                    if (focus.isFocused) hadFocus = true
+                    if (!focus.isFocused && hadFocus) {
+                        hadFocus = false
+                        onFocusLost()
+                    }
+                },
                 singleLine = true,
-                textStyle = TextStyle(color = WorkoutInk, fontSize = 17.sp, fontWeight = FontWeight.Medium),
+                textStyle = TextStyle(color = WorkoutPaper, fontSize = 16.sp, lineHeight = 18.sp),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number,
                     imeAction = ImeAction.Done,
                 ),
-                keyboardActions = KeyboardActions(onDone = { onDone() }),
-                decorationBox = { inner -> if (value.isEmpty()) Text("—", color = WorkoutInk.copy(alpha = .32f)) else inner() },
+                keyboardActions = KeyboardActions(onDone = {
+                    hadFocus = false
+                    onDone()
+                }),
+                decorationBox = { inner ->
+                    if (value.isEmpty()) Text("00", color = WorkoutPaper.copy(alpha = .38f), fontSize = 16.sp) else inner()
+                },
             )
         }
     }
 }
 
 @Composable
-private fun WorkoutChip(text: String, success: Boolean = false) {
+private fun WorkoutChip(text: String, metrics: WorkoutMetrics, success: Boolean = false) {
     Surface(
-        shape = CircleShape,
-        color = if (success) WorkoutGreenDark else WorkoutCyanStrong.copy(alpha = .58f),
+        shape = RoundedCornerShape(metrics.dp(6)),
+        color = Color.Transparent,
+        border = BorderStroke(metrics.dp(.7), if (success) WorkoutGreen.copy(alpha = .55f) else WorkoutPaperMuted.copy(alpha = .42f)),
     ) {
         Text(
             text,
-            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
-            color = if (success) WorkoutGreen else WorkoutDarkCyan,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = metrics.dp(10), vertical = metrics.dp(5)),
+            color = if (success) WorkoutGreen else WorkoutPaperMuted,
+            fontSize = metrics.sp(12),
+            lineHeight = metrics.sp(15),
         )
     }
 }
 
 @Composable
-private fun WorkoutCardButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.heightIn(min = 42.dp).clickable(onClick = onClick),
-        shape = CircleShape,
-        color = WorkoutDarkCyan,
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(text, color = WorkoutCyan, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 8.dp))
+private fun WorkoutExerciseActions(
+    onSwap: () -> Unit,
+    onRate: () -> Unit,
+    onComplete: () -> Unit,
+    metrics: WorkoutMetrics,
+) {
+    Column(Modifier.padding(horizontal = metrics.dp(15), vertical = metrics.dp(16))) {
+        WorkoutCardButton("Substitute this exercise", onSwap, Modifier.fillMaxWidth(), metrics)
+        Spacer(Modifier.height(metrics.dp(12)))
+        Row(horizontalArrangement = Arrangement.spacedBy(metrics.dp(12))) {
+            WorkoutCardButton("Rate exercise", onRate, Modifier.weight(1f), metrics)
+            WorkoutCardButton("Complete exercise", onComplete, Modifier.weight(1f), metrics)
         }
     }
 }
 
 @Composable
-private fun WorkoutSetupScreen(
-    workout: ActiveWorkout,
-    exercise: ActiveWorkoutExercise,
-    onReturn: () -> Unit,
-    onSwap: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenAccount: () -> Unit,
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 48.dp, bottom = 112.dp),
-        verticalArrangement = Arrangement.spacedBy(15.dp),
+private fun CompletedExerciseActions(onRate: () -> Unit, onUndo: () -> Unit, metrics: WorkoutMetrics) {
+    Row(
+        modifier = Modifier.padding(horizontal = metrics.dp(15), vertical = metrics.dp(20)),
+        horizontalArrangement = Arrangement.spacedBy(metrics.dp(12)),
     ) {
-        item { WorkoutHeader(workout, exercise.entity.id, {}, onOpenSettings, onOpenAccount) }
-        item {
-            Surface(shape = WorkoutCardShape, color = WorkoutPaper) {
-                Column(Modifier.padding(18.dp)) {
-                    Text(exercise.entity.exerciseNameSnapshot, color = WorkoutInk, fontSize = 28.sp, lineHeight = 30.sp, fontWeight = FontWeight.Medium)
-                    Spacer(Modifier.height(9.dp))
-                    Text("Setup", color = WorkoutInk.copy(alpha = .58f), fontSize = 13.sp)
-                    Spacer(Modifier.height(13.dp))
-                    val notes = exercise.details.setupNotes.ifBlank { exercise.entity.movementReason }
-                    Text(notes.ifBlank { "Set the equipment to a stable, comfortable position and use the cues below." }, color = WorkoutInk, fontSize = 16.sp, lineHeight = 22.sp)
-                    exercise.details.cues.forEach { cue ->
-                        Spacer(Modifier.height(8.dp))
-                        Text("• $cue", color = WorkoutInk.copy(alpha = .82f), fontSize = 14.sp, lineHeight = 19.sp)
-                    }
-                    Spacer(Modifier.height(18.dp))
-                    SetupMediaStrip(exercise.details.setupMediaPaths)
-                    Spacer(Modifier.height(18.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        WorkoutCardButton("Return to sets", onReturn, Modifier.weight(1f))
-                        WorkoutCardButton("Substitute", onSwap, Modifier.weight(1f))
-                    }
+        WorkoutCardButton("Rate exercise", onRate, Modifier.weight(1f), metrics)
+        WorkoutCardButton("Mark undone", onUndo, Modifier.weight(1f), metrics)
+    }
+}
+
+@Composable
+private fun WorkoutCardButton(text: String, onClick: () -> Unit, modifier: Modifier, metrics: WorkoutMetrics) {
+    MettleControlGlassSurface(
+        modifier = modifier.heightIn(min = metrics.dp(48)),
+        shape = CircleShape,
+        tint = WorkoutCyan.copy(alpha = .022f),
+        borderColor = WorkoutCyan.copy(alpha = .58f),
+        shadowElevation = metrics.dp(4),
+        onClick = onClick,
+    ) {
+        Box(Modifier.fillMaxSize().padding(horizontal = metrics.dp(10)), contentAlignment = Alignment.Center) {
+            Text(text, color = WorkoutPaper, fontSize = metrics.sp(14), fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Composable
+private fun WorkoutSetupBody(exercise: ActiveWorkoutExercise, onReturn: () -> Unit, metrics: WorkoutMetrics) {
+    Column(Modifier.padding(horizontal = metrics.dp(16), vertical = metrics.dp(12))) {
+        val notes = exercise.details.setupNotes.ifBlank { exercise.entity.movementReason }
+        Row(verticalAlignment = Alignment.Top) {
+            Text(
+                notes.ifBlank { "Set the equipment to a stable, comfortable position and follow your setup cues." },
+                modifier = Modifier.weight(1f),
+                color = WorkoutPaper,
+                fontSize = metrics.sp(14),
+                lineHeight = metrics.sp(20),
+            )
+            Spacer(Modifier.width(metrics.dp(10)))
+            MettleControlGlassSurface(
+                modifier = Modifier.size(metrics.dp(58)),
+                shape = CircleShape,
+                tint = WorkoutCyan.copy(alpha = .025f),
+                borderColor = WorkoutCyan.copy(alpha = .52f),
+                shadowElevation = metrics.dp(3),
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("✎", color = WorkoutCyan, fontSize = metrics.sp(23))
                 }
             }
         }
+        exercise.details.cues.forEach { cue ->
+            Spacer(Modifier.height(metrics.dp(5)))
+            Text("• $cue", color = WorkoutPaperMuted, fontSize = metrics.sp(13), lineHeight = metrics.sp(18))
+        }
+        Spacer(Modifier.height(metrics.dp(18)))
+        SetupMediaStrip(exercise.details.setupMediaPaths, metrics)
+        Spacer(Modifier.height(metrics.dp(20)))
+        WorkoutCardButton("Return to sets", onReturn, Modifier.fillMaxWidth(), metrics)
     }
 }
 
 @Composable
-private fun SetupMediaStrip(paths: List<String>) {
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        paths.forEach { path -> SetupMediaImage(path) }
-        Surface(modifier = Modifier.width(122.dp).aspectRatio(1.2f), shape = RoundedCornerShape(18.dp), color = WorkoutPaperMuted.copy(alpha = .55f)) {
-            Box(contentAlignment = Alignment.Center) { Text("＋\nAdd", color = WorkoutInk, textAlign = TextAlign.Center, fontSize = 15.sp) }
+private fun SetupMediaStrip(paths: List<String>, metrics: WorkoutMetrics) {
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(metrics.dp(10)),
+    ) {
+        Surface(
+            modifier = Modifier.width(metrics.dp(56)).height(metrics.dp(196)),
+            shape = RoundedCornerShape(metrics.dp(25)),
+            color = Color.White.copy(alpha = .06f),
+            border = BorderStroke(metrics.dp(.7), Color.White.copy(alpha = .22f)),
+        ) { Box(contentAlignment = Alignment.Center) { Text("+", color = WorkoutPaper, fontSize = metrics.sp(24)) } }
+        paths.forEach { path -> SetupMediaImage(path, metrics) }
+        if (paths.isEmpty()) {
+            Surface(
+                modifier = Modifier.width(metrics.dp(252)).height(metrics.dp(196)),
+                shape = RoundedCornerShape(metrics.dp(25)),
+                color = Color.White.copy(alpha = .04f),
+            ) { Box(contentAlignment = Alignment.Center) { Text("Setup photos", color = WorkoutPaperMuted) } }
         }
     }
 }
 
 @Composable
-private fun SetupMediaImage(relativePath: String) {
+private fun SetupMediaImage(relativePath: String, metrics: WorkoutMetrics) {
     val context = LocalContext.current
     val bitmap by produceState<android.graphics.Bitmap?>(null, relativePath) {
         value = withContext(Dispatchers.IO) {
@@ -644,47 +838,71 @@ private fun SetupMediaImage(relativePath: String) {
             if (candidate.isFile) BitmapFactory.decodeFile(candidate.absolutePath) else null
         }
     }
-    Surface(modifier = Modifier.width(160.dp).aspectRatio(1.35f), shape = RoundedCornerShape(18.dp), color = WorkoutPaperMuted.copy(alpha = .55f)) {
-        if (bitmap != null) {
-            Image(bitmap!!.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-        } else {
-            Box(contentAlignment = Alignment.Center) { Text("Setup photo", color = WorkoutInk.copy(alpha = .55f)) }
-        }
+    Surface(
+        modifier = Modifier.width(metrics.dp(252)).height(metrics.dp(196)),
+        shape = RoundedCornerShape(metrics.dp(25)),
+        color = Color.White.copy(alpha = .05f),
+    ) {
+        if (bitmap != null) Image(bitmap!!.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        else Box(contentAlignment = Alignment.Center) { Text("Setup photo", color = WorkoutPaperMuted) }
     }
 }
 
 @Composable
-private fun WorkoutQuickSelectScreen(
+private fun WorkoutQuickSelectContent(
     workout: ActiveWorkout,
-    focusedId: String,
     onSelect: (String?) -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenAccount: () -> Unit,
+    metrics: WorkoutMetrics,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 48.dp, bottom = 112.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(
+            start = metrics.dp(17),
+            end = metrics.dp(18),
+            top = metrics.dp(129),
+            bottom = metrics.dp(145),
+        ),
+        verticalArrangement = Arrangement.spacedBy(metrics.dp(10)),
     ) {
-        item { WorkoutHeader(workout, focusedId, onSelect, onOpenSettings, onOpenAccount) }
-        item { Text("Quick Select", color = WorkoutPaper, fontSize = 31.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)) }
         items(workout.exercises, key = { it.entity.id }) { exercise ->
             val done = exercise.entity.status == "completed"
             Surface(
-                modifier = Modifier.fillMaxWidth().clickable { onSelect(exercise.entity.id) },
+                modifier = Modifier.fillMaxWidth().height(metrics.dp(114)).clickable { onSelect(exercise.entity.id) },
                 shape = WorkoutCardShape,
-                color = if (done) WorkoutGreen else WorkoutPaper,
+                color = if (done) WorkoutGreenDark.copy(alpha = .90f) else WorkoutCard,
+                border = BorderStroke(metrics.dp(.6), Color.White.copy(alpha = .10f)),
+                shadowElevation = metrics.dp(2),
             ) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(modifier = Modifier.size(48.dp), shape = CircleShape, color = if (done) WorkoutGreenDark else WorkoutCyanStrong) {
-                        Box(contentAlignment = Alignment.Center) { Text("${exercise.entity.position + 1}", color = if (done) WorkoutGreen else WorkoutDarkCyan, fontWeight = FontWeight.Bold) }
-                    }
-                    Spacer(Modifier.width(13.dp))
+                Row(Modifier.padding(start = metrics.dp(16), end = metrics.dp(18)), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(exercise.entity.exerciseNameSnapshot, color = WorkoutInk, fontSize = 20.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${exercise.entity.prescribedSets} sets · ${exercise.entity.repMin}–${exercise.entity.repMax} reps", color = WorkoutInk.copy(alpha = .58f), fontSize = 12.sp)
+                        Text(
+                            exercise.entity.exerciseNameSnapshot,
+                            color = WorkoutPaper,
+                            fontSize = metrics.sp(28),
+                            lineHeight = metrics.sp(36),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
-                    Text("↔", color = WorkoutDarkCyan, fontSize = 25.sp)
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        MettleControlGlassSurface(
+                            modifier = Modifier.size(metrics.dp(80)),
+                            shape = CircleShape,
+                            tint = if (done) WorkoutGreen.copy(alpha = .07f) else WorkoutCyan.copy(alpha = .03f),
+                            borderColor = Color.White.copy(alpha = .34f),
+                            shadowElevation = metrics.dp(4),
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("→", color = if (done) WorkoutGreen else WorkoutPaper, fontSize = metrics.sp(34))
+                            }
+                        }
+                        Text(
+                            "${exercise.entity.position + 1}",
+                            color = WorkoutPaperMuted,
+                            fontSize = metrics.sp(11),
+                            modifier = Modifier.padding(end = metrics.dp(2)),
+                        )
+                    }
                 }
             }
         }
@@ -692,12 +910,13 @@ private fun WorkoutQuickSelectScreen(
 }
 
 @Composable
-private fun WorkoutSubstitutionScreen(
+private fun WorkoutSubstitutionContent(
     current: ActiveWorkoutExercise,
     options: List<ExerciseSwapOption>,
     loading: Boolean,
     onDismiss: () -> Unit,
     onSelect: (ExerciseSwapOption) -> Unit,
+    metrics: WorkoutMetrics,
 ) {
     var query by remember { mutableStateOf("") }
     val filtered = options.filter {
@@ -705,71 +924,93 @@ private fun WorkoutSubstitutionScreen(
     }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 48.dp, bottom = 112.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(
+            start = metrics.dp(17),
+            end = metrics.dp(18),
+            top = metrics.dp(120),
+            bottom = metrics.dp(145),
+        ),
+        verticalArrangement = Arrangement.spacedBy(metrics.dp(10)),
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Substitute", color = WorkoutPaper, fontSize = 30.sp, fontWeight = FontWeight.Medium)
-                    Text(current.entity.exerciseNameSnapshot, color = WorkoutPaperMuted, fontSize = 14.sp)
-                }
-                TextButton(onClick = onDismiss) { Text("Close", color = WorkoutCyan) }
-            }
-        }
-        item {
-            Surface(shape = CircleShape, color = WorkoutPaper) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("⌕", color = WorkoutInk, fontSize = 25.sp)
-                    Spacer(Modifier.width(10.dp))
+            MettleControlGlassSurface(
+                modifier = Modifier.fillMaxWidth().height(metrics.dp(64)),
+                shape = CircleShape,
+                tint = Color.White.copy(alpha = .025f),
+                borderColor = Color.White.copy(alpha = .10f),
+                shadowElevation = metrics.dp(3),
+            ) {
+                Row(Modifier.fillMaxSize().padding(horizontal = metrics.dp(20)), verticalAlignment = Alignment.CenterVertically) {
+                    Text("☰", color = WorkoutPaperMuted, fontSize = metrics.sp(20))
+                    Spacer(Modifier.width(metrics.dp(14)))
                     BasicTextField(
                         value = query,
                         onValueChange = { query = it },
                         modifier = Modifier.weight(1f),
-                        textStyle = TextStyle(color = WorkoutInk, fontSize = 17.sp),
+                        textStyle = TextStyle(color = WorkoutPaper, fontSize = metrics.sp(17)),
                         singleLine = true,
-                        decorationBox = { inner -> if (query.isEmpty()) Text("Search compatible exercises", color = WorkoutInk.copy(alpha = .48f)) else inner() },
+                        decorationBox = { inner ->
+                            if (query.isEmpty()) Text("Search for specific exercises", color = WorkoutPaperMuted, fontSize = metrics.sp(17)) else inner()
+                        },
                     )
+                    Text("⌕", color = WorkoutPaperMuted, fontSize = metrics.sp(24))
                 }
             }
         }
         if (loading) {
-            item { Box(Modifier.fillMaxWidth().padding(28.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = WorkoutCyan) } }
+            item { Box(Modifier.fillMaxWidth().padding(metrics.dp(30)), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = WorkoutCyan) } }
         } else {
             items(filtered, key = { it.executionProfileId }) { option ->
                 Surface(
-                    modifier = Modifier.fillMaxWidth().clickable { onSelect(option) },
+                    modifier = Modifier.fillMaxWidth().height(metrics.dp(114)).clickable { onSelect(option) },
                     shape = WorkoutCardShape,
-                    color = WorkoutPaper,
+                    color = WorkoutCard,
+                    border = BorderStroke(metrics.dp(.6), Color.White.copy(alpha = .10f)),
                 ) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(modifier = Modifier.size(48.dp), shape = CircleShape, color = WorkoutCyanStrong) {
-                            Box(contentAlignment = Alignment.Center) { Text("${options.indexOf(option) + 1}", color = WorkoutDarkCyan, fontWeight = FontWeight.Bold) }
-                        }
-                        Spacer(Modifier.width(13.dp))
+                    Row(Modifier.padding(start = metrics.dp(16), end = metrics.dp(18)), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(option.exerciseName, color = WorkoutInk, fontSize = 20.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(option.executionProfileName, color = WorkoutInk.copy(alpha = .58f), fontSize = 12.sp, maxLines = 1)
-                            Spacer(Modifier.height(6.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                WorkoutChip("${option.prescription.sets} sets")
-                                WorkoutChip("${option.prescription.repRange.first}–${option.prescription.repRange.last} reps")
-                            }
+                            Text(option.exerciseName, color = WorkoutPaper, fontSize = metrics.sp(26), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(option.executionProfileName, color = WorkoutPaperMuted, fontSize = metrics.sp(13), maxLines = 1)
                         }
-                        Text("↔", color = WorkoutDarkCyan, fontSize = 25.sp)
+                        MettleControlGlassSurface(
+                            modifier = Modifier.size(metrics.dp(80)),
+                            shape = CircleShape,
+                            tint = WorkoutCyan.copy(alpha = .03f),
+                            borderColor = Color.White.copy(alpha = .34f),
+                            shadowElevation = metrics.dp(4),
+                        ) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("⇆", color = WorkoutPaper, fontSize = metrics.sp(29)) } }
                     }
                 }
             }
             if (filtered.isEmpty()) {
-                item { Text("No target-compatible replacements match that search.", color = WorkoutPaperMuted, modifier = Modifier.padding(20.dp)) }
+                item { Text("No target-compatible replacements match that search.", color = WorkoutPaperMuted, modifier = Modifier.padding(metrics.dp(20))) }
             }
+        }
+        item {
+            WorkoutCardButton(
+                text = "Return to ${current.entity.exerciseNameSnapshot}",
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                metrics = metrics,
+            )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+private enum class FinishChoice { KEEP_TRAINING, COMPLETE, DELETE }
+
+private data class FinishTarget(
+    val choice: FinishChoice,
+    val x: Float,
+    val y: Float,
+    val size: Float,
+    val symbol: String,
+    val colour: Color,
+)
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-private fun FinishWorkoutSheet(
+private fun FinishWorkoutGestureSheet(
     destructive: Boolean,
     onDismiss: () -> Unit,
     onComplete: () -> Unit,
@@ -777,46 +1018,175 @@ private fun FinishWorkoutSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = WorkoutPaper,
-        contentColor = WorkoutInk,
-        dragHandle = {
-            Surface(modifier = Modifier.padding(top = 11.dp).size(width = 42.dp, height = 5.dp), shape = CircleShape, color = WorkoutInk.copy(alpha = .25f)) {}
-        },
+        containerColor = WorkoutSurfaceLow,
+        contentColor = WorkoutPaper,
+        dragHandle = null,
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 34.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                if (destructive) "Delete workout?" else "Finish workout?",
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Medium,
-                color = WorkoutInk,
+        BoxWithConstraints(Modifier.fillMaxWidth().height(620.dp)) {
+            val density = LocalDensity.current
+            val view = LocalView.current
+            val widthScale = (maxWidth.value / WorkoutReferenceWidth).coerceAtMost(1f)
+            val targets = remember(destructive) {
+                if (destructive) {
+                    listOf(
+                        FinishTarget(FinishChoice.KEEP_TRAINING, 335f, 215f, 120f, "×", WorkoutCyan),
+                        FinishTarget(FinishChoice.DELETE, 205f, 355f, 120f, "⌫", WorkoutDelete),
+                    )
+                } else {
+                    listOf(
+                        FinishTarget(FinishChoice.DELETE, 114f, 285f, 80f, "⌫", WorkoutDelete),
+                        FinishTarget(FinishChoice.KEEP_TRAINING, 355f, 345f, 120f, "×", WorkoutCyan),
+                        FinishTarget(FinishChoice.COMPLETE, 234f, 405f, 120f, "✓", WorkoutGreen),
+                    )
+                }
+            }
+            var dragging by remember { mutableStateOf(false) }
+            var rawOffset by remember { mutableStateOf(Offset.Zero) }
+            var dragOrigin by remember { mutableStateOf(Offset.Zero) }
+            var active by remember { mutableStateOf<FinishChoice?>(null) }
+            var settling by remember { mutableStateOf(false) }
+            val settle by animateFloatAsState(
+                targetValue = if (settling) 1f else 0f,
+                animationSpec = spring(dampingRatio = .72f, stiffness = 440f),
+                label = "finish-handle-return",
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                if (destructive) "This removes the active session from progress and insights." else "Complete the session, keep training, or delete it.",
-                color = WorkoutInk.copy(alpha = .62f),
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(24.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                FinishBubble("×", "Keep training", WorkoutCyanStrong, onDismiss)
-                if (!destructive) FinishBubble("✓", "Complete", WorkoutGreen, onComplete)
-                FinishBubble("⌫", if (destructive) "Delete now" else "Delete", WorkoutDelete, onDelete)
+            val shownOffset = if (settling) rawOffset * (1f - settle) else rawOffset
+            val homeDp = Offset(383f * widthScale, 555f)
+            val homePx = with(density) { Offset(homeDp.x.dp.toPx(), homeDp.y.dp.toPx()) }
+
+            LaunchedEffect(settling) {
+                if (settling) {
+                    kotlinx.coroutines.delay(330)
+                    rawOffset = Offset.Zero
+                    settling = false
+                }
+            }
+
+            Box(Modifier.align(Alignment.TopCenter).padding(top = 16.dp).size(width = 32.dp, height = 4.dp).background(WorkoutPaperMuted.copy(alpha = .7f), CircleShape))
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(top = 70.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(if (destructive) "Delete" else "Finished?", color = if (destructive) WorkoutDelete else WorkoutPaper, fontSize = 48.sp, fontWeight = FontWeight.Medium)
+                Text(if (destructive) "Exit & Delete Workout?" else "Drag the handle", color = WorkoutPaper, fontSize = 25.sp, fontWeight = FontWeight.Medium)
+            }
+
+            targets.forEach { target ->
+                val selected = active == target.choice
+                Surface(
+                    modifier = Modifier
+                        .offset(x = (target.x * widthScale - target.size * widthScale / 2f).dp, y = (target.y - target.size / 2f).dp)
+                        .size((target.size * widthScale).dp),
+                    shape = CircleShape,
+                    color = target.colour.copy(alpha = if (selected) .45f else .16f),
+                    border = BorderStroke(if (selected) 3.dp else 1.dp, target.colour.copy(alpha = if (selected) .95f else .28f)),
+                    shadowElevation = if (selected) 12.dp else 1.dp,
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(target.symbol, color = target.colour, fontSize = if (target.size > 90) 54.sp else 34.sp)
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset {
+                        IntOffset(
+                            (homePx.x - 32.dp.toPx()).roundToInt(),
+                            (homePx.y - 32.dp.toPx()).roundToInt(),
+                        )
+                    }
+                    .size(64.dp)
+                    .pointerInteropFilter { event ->
+                        when (event.actionMasked) {
+                            MotionEvent.ACTION_DOWN -> {
+                                dragging = true
+                                settling = false
+                                rawOffset = Offset.Zero
+                                dragOrigin = Offset(event.x, event.y)
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                true
+                            }
+                            MotionEvent.ACTION_MOVE -> {
+                                rawOffset = Offset(event.x - dragOrigin.x, event.y - dragOrigin.y)
+                                val handle = homePx + rawOffset
+                                val next = targets.minByOrNull { target ->
+                                    val targetPx = with(density) {
+                                        Offset((target.x * widthScale).dp.toPx(), target.y.dp.toPx())
+                                    }
+                                    hypot(handle.x - targetPx.x, handle.y - targetPx.y)
+                                }?.takeIf { target ->
+                                    val targetPx = with(density) {
+                                        Offset((target.x * widthScale).dp.toPx(), target.y.dp.toPx())
+                                    }
+                                    hypot(handle.x - targetPx.x, handle.y - targetPx.y) < with(density) { (target.size * .72f).dp.toPx() }
+                                }?.choice
+                                if (next != active) {
+                                    active = next
+                                    if (next != null) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                }
+                                true
+                            }
+                            MotionEvent.ACTION_UP -> {
+                                val confirmed = active
+                                dragging = false
+                                active = null
+                                when (confirmed) {
+                                    FinishChoice.KEEP_TRAINING -> onDismiss()
+                                    FinishChoice.COMPLETE -> onComplete()
+                                    FinishChoice.DELETE -> onDelete()
+                                    null -> settling = true
+                                }
+                                true
+                            }
+                            MotionEvent.ACTION_CANCEL -> {
+                                dragging = false
+                                active = null
+                                settling = true
+                                true
+                            }
+                            else -> true
+                        }
+                    },
+            ) {
+                MettleControlGlassSurface(
+                    modifier = Modifier.fillMaxSize(),
+                    shape = CircleShape,
+                    tint = WorkoutCyan.copy(alpha = if (dragging) .08f else .035f),
+                    borderColor = WorkoutPaper.copy(alpha = .52f),
+                    shadowElevation = 7.dp,
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(MettleIcons.SportsMartialArts, null, tint = WorkoutPaper, modifier = Modifier.size(24.dp))
+                    }
+                }
+            }
+
+            if (dragging || settling) {
+                Box(
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(
+                                (homePx.x - 32.dp.toPx() + shownOffset.x).roundToInt(),
+                                (homePx.y - 32.dp.toPx() + shownOffset.y).roundToInt(),
+                            )
+                        }
+                        .size(64.dp),
+                ) {
+                    MettleControlGlassSurface(
+                        modifier = Modifier.fillMaxSize(),
+                        shape = CircleShape,
+                        tint = WorkoutCyan.copy(alpha = if (active != null) .10f else .045f),
+                        borderColor = WorkoutPaper.copy(alpha = .62f),
+                        shadowElevation = 9.dp,
+                    ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(MettleIcons.SportsMartialArts, null, tint = WorkoutPaper, modifier = Modifier.size(24.dp))
+                        }
+                    }
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun FinishBubble(symbol: String, label: String, colour: Color, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(modifier = Modifier.size(72.dp).clickable(onClick = onClick), shape = CircleShape, color = colour) {
-            Box(contentAlignment = Alignment.Center) { Text(symbol, color = WorkoutInk, fontSize = 31.sp) }
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(label, color = WorkoutInk, fontSize = 12.sp)
     }
 }
 

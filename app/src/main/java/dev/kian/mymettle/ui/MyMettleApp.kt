@@ -13,6 +13,7 @@ import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -129,6 +130,16 @@ fun MyMettleApp() {
                 )
             }
 
+            TRAIN_ROUTE -> {
+                // The workout owns a richer radial Haze source so its header and exercise controls
+                // refract the actual session artwork rather than a flat app-level colour.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MettleBackground),
+                )
+            }
+
             else -> {
                 Box(
                     modifier = Modifier
@@ -166,7 +177,9 @@ fun MyMettleApp() {
                                 if (currentRoute == TRAIN_ROUTE && workoutViewModel.uiState.workout != null) {
                                     workoutViewModel.showExerciseSetup()
                                 } else {
-                                    openMainDestination(TRAIN_ROUTE)
+                                    openMainDestination(
+                                        if (workoutViewModel.uiState.workout == null) INTENSITY_ROUTE else TRAIN_ROUTE,
+                                    )
                                 }
                             },
                             onOpenHistory = { openMainDestination(HISTORY_ROUTE) },
@@ -177,14 +190,18 @@ fun MyMettleApp() {
                                     currentRoute == TRAIN_ROUTE && workoutViewModel.uiState.workout != null -> {
                                         workoutViewModel.showQuickSelect()
                                     }
-                                    else -> openMainDestination(TRAIN_ROUTE)
+                                    else -> openMainDestination(
+                                        if (workoutViewModel.uiState.workout == null) INTENSITY_ROUTE else TRAIN_ROUTE,
+                                    )
                                 }
                             },
                             onLongPressWorkout = {
                                 if (currentRoute == TRAIN_ROUTE && workoutViewModel.uiState.workout != null) {
                                     workoutViewModel.showFinishSheet()
                                 } else {
-                                    openMainDestination(TRAIN_ROUTE)
+                                    openMainDestination(
+                                        if (workoutViewModel.uiState.workout == null) INTENSITY_ROUTE else TRAIN_ROUTE,
+                                    )
                                 }
                             },
                             leadingIcon = if (restTimerSnapshot.visible) MettleIcons.Timer else MettleIcons.QuickSelect,
@@ -226,11 +243,21 @@ fun MyMettleApp() {
                             )
                         }
                         composable(TRAIN_ROUTE) {
-                            TrainScreen(
-                                viewModel = workoutViewModel,
-                                onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
-                                onOpenAccount = { openMainDestination(HISTORY_ROUTE) },
-                            )
+                            if (workoutViewModel.uiState.workout == null) {
+                                LaunchedEffect(Unit) {
+                                    navController.navigate(INTENSITY_ROUTE) {
+                                        popUpTo(TRAIN_ROUTE) { inclusive = true }
+                                        launchSingleTop = true
+                                        restoreState = false
+                                    }
+                                }
+                            } else {
+                                TrainScreen(
+                                    viewModel = workoutViewModel,
+                                    onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
+                                    onOpenAccount = { openMainDestination(HISTORY_ROUTE) },
+                                )
+                            }
                         }
                         composable(LIBRARY_ROUTE) { ExerciseLibraryScreen() }
                         composable(HISTORY_ROUTE) { HistoryScreen() }
