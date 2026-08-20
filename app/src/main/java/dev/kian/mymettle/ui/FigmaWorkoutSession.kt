@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -390,7 +391,7 @@ private fun WorkoutWaveProgress(workout: ActiveWorkout, modifier: Modifier, metr
 }
 
 @Composable
-private fun WorkoutViewportScrims(metrics: WorkoutMetrics) {
+private fun BoxScope.WorkoutViewportScrims(metrics: WorkoutMetrics) {
     Box(
         Modifier
             .fillMaxWidth()
