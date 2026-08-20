@@ -163,8 +163,6 @@ private fun CompletedSetEvidenceRow.toDomain(): CompletedSetEvidence = Completed
     durationSeconds = durationSeconds,
     distanceMetres = distanceMetres,
     unit = unit,
-    rir = rir,
-    effortSource = effortSource,
     warmUp = warmUp,
     kind = kind,
 )
@@ -284,7 +282,6 @@ private fun ExerciseTranslationState.toEntity(runId: InferenceRunId): ExerciseTr
         observedDurationUncertainty = observedDurationSecondsAnchor?.uncertainty,
         observedDistanceMetresAnchor = observedDistanceMetresAnchor?.value,
         observedDistanceUncertainty = observedDistanceMetresAnchor?.uncertainty,
-        observedRirAnchor = observedRirAnchor,
         observedAnchorSetRecordId = observedLoadAnchor?.sourceId
             ?: observedRepAnchor?.sourceId
             ?: observedDurationSecondsAnchor?.sourceId
@@ -321,7 +318,6 @@ private fun ExerciseTranslationStateEntity.toDomain(): ExerciseTranslationState 
         observedAnchorSetRecordId,
         modelVersion,
     ),
-    observedRirAnchor = observedRirAnchor,
     sampleCount = sampleCount,
     updatedAt = Instant.parse(updatedAt),
     modelVersion = modelVersion,

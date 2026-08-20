@@ -74,6 +74,19 @@ data class ResolvedTrainingTarget(
     }
 }
 
+/** The same-execution-profile evidence that justified a generated load suggestion. */
+data class PrescriptionLoadEvidence(
+    val source: String,
+    val anchorLoad: Double,
+    val sourceSetRecordId: String?,
+    val inferenceRunId: String?,
+) {
+    init {
+        require(source.isNotBlank()) { "Prescription load-evidence source cannot be blank." }
+        require(anchorLoad >= 0.0) { "Prescription load-evidence anchor cannot be negative." }
+    }
+}
+
 /** A resolved, session-specific intervention generated from targets and current evidence. */
 data class ExercisePrescription(
     val exerciseId: ExerciseId,
@@ -81,8 +94,8 @@ data class ExercisePrescription(
     val targetIds: List<TrainingTargetId>,
     val sets: Int,
     val repRange: IntRange,
-    val targetRir: Double?,
     val prescribedLoad: Double?,
+    val loadEvidence: PrescriptionLoadEvidence?,
     val restSeconds: Int,
     val generatedByModelVersion: String,
 ) {
@@ -91,8 +104,10 @@ data class ExercisePrescription(
         require(repRange.first > 0 && repRange.last >= repRange.first) {
             "A generated prescription must contain a valid positive rep range."
         }
-        require(targetRir == null || targetRir in 0.0..10.0) { "Target RIR must be between 0 and 10." }
         require(prescribedLoad == null || prescribedLoad >= 0.0) { "Prescribed load cannot be negative." }
+        require(prescribedLoad != null || loadEvidence == null) {
+            "A prescription cannot retain load evidence when it has no prescribed load."
+        }
         require(restSeconds >= 0) { "Rest time cannot be negative." }
         require(generatedByModelVersion.isNotBlank()) { "Prescription model version cannot be blank." }
         require(targetIds.distinct().size == targetIds.size) {

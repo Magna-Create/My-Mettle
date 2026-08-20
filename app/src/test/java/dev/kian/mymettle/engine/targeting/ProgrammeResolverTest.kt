@@ -122,7 +122,6 @@ class ProgrammeResolverTest {
         preferencePriority = priority,
         preferredSetCap = 3,
         repRange = 8..12,
-        targetRir = null,
         restSeconds = 120,
         targetCoverage = targetNames.associate { TrainingTargetId("target_$it") to 1.0 },
     )
