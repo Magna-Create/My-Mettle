@@ -161,8 +161,11 @@ internal fun FigmaWorkoutSession(
                 .align(Alignment.TopCenter)
                 .background(WorkoutInk),
         ) {
-            Box(Modifier.fillMaxSize().hazeSource(viewportHazeState)) {
-                WorkoutBackdrop(onTap = { focusManager.clearFocus(force = true) })
+            Box(Modifier.fillMaxSize()) {
+                WorkoutBackdrop(
+                    modifier = Modifier.fillMaxSize().hazeSource(viewportHazeState),
+                    onTap = { focusManager.clearFocus(force = true) },
+                )
 
                 when {
                     state.swapTarget != null -> WorkoutSubstitutionContent(
@@ -234,13 +237,9 @@ internal fun FigmaWorkoutSession(
 }
 
 @Composable
-private fun WorkoutBackdrop(onTap: () -> Unit) {
-    val hazeState = LocalMettleHazeState.current
+private fun WorkoutBackdrop(modifier: Modifier = Modifier, onTap: () -> Unit) {
     Canvas(
-        Modifier
-            .fillMaxSize()
-            .clickable(onClick = onTap)
-            .then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier),
+        modifier.clickable(onClick = onTap),
     ) {
         drawRect(WorkoutInk)
         drawRect(
@@ -507,15 +506,17 @@ private fun WorkoutExerciseCard(
         .filter { it.setIndex < entity.prescribedSets || it.completedAt != null }
         .sortedBy { it.setIndex }
     val logged = sets.count { it.completedAt != null }
+    val cardHazeState = rememberHazeState()
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().hazeSource(cardHazeState),
         shape = WorkoutCardShape,
         color = if (completed) WorkoutGreenDark.copy(alpha = .90f) else WorkoutCard,
         border = BorderStroke(metrics.dp(.7), Color.White.copy(alpha = if (focused) .22f else .08f)),
         shadowElevation = if (focused) metrics.dp(6) else metrics.dp(2),
     ) {
-        Column {
+        CompositionLocalProvider(LocalMettleHazeState provides cardHazeState) {
+            Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -612,6 +613,7 @@ private fun WorkoutExerciseCard(
                         metrics = metrics,
                     )
                 }
+            }
             }
         }
     }
@@ -1069,14 +1071,20 @@ private fun WorkoutQuickSelectContent(
     ) {
         items(workout.exercises, key = { it.entity.id }) { exercise ->
             val done = exercise.entity.status == "completed"
+            val cardHazeState = rememberHazeState()
             Surface(
-                modifier = Modifier.fillMaxWidth().height(metrics.dp(114)).clickable { onSelect(exercise.entity.id) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(metrics.dp(114))
+                    .hazeSource(cardHazeState)
+                    .clickable { onSelect(exercise.entity.id) },
                 shape = WorkoutCardShape,
                 color = if (done) WorkoutGreenDark.copy(alpha = .90f) else WorkoutCard,
                 border = BorderStroke(metrics.dp(.6), Color.White.copy(alpha = .10f)),
                 shadowElevation = metrics.dp(2),
             ) {
-                Row(Modifier.padding(start = metrics.dp(16), end = metrics.dp(18)), verticalAlignment = Alignment.CenterVertically) {
+                CompositionLocalProvider(LocalMettleHazeState provides cardHazeState) {
+                    Row(Modifier.padding(start = metrics.dp(16), end = metrics.dp(18)), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(
                             exercise.entity.exerciseNameSnapshot,
@@ -1113,6 +1121,7 @@ private fun WorkoutQuickSelectContent(
                             modifier = Modifier.padding(end = metrics.dp(1), top = metrics.dp(1)),
                         )
                     }
+                    }
                 }
             }
         }
@@ -1143,41 +1152,32 @@ private fun WorkoutSubstitutionContent(
         verticalArrangement = Arrangement.spacedBy(metrics.dp(10)),
     ) {
         item {
-            MettleControlGlassSurface(
-                modifier = Modifier.fillMaxWidth().height(metrics.dp(64)),
-                shape = CircleShape,
-                tint = Color.White.copy(alpha = .025f),
-                borderColor = Color.White.copy(alpha = .10f),
-                shadowElevation = metrics.dp(3),
-            ) {
-                Row(Modifier.fillMaxSize().padding(horizontal = metrics.dp(20)), verticalAlignment = Alignment.CenterVertically) {
-                    Text("☰", color = WorkoutPaperMuted, fontSize = metrics.sp(20))
-                    Spacer(Modifier.width(metrics.dp(14)))
-                    BasicTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        modifier = Modifier.weight(1f),
-                        textStyle = TextStyle(color = WorkoutPaper, fontSize = metrics.sp(17)),
-                        singleLine = true,
-                        decorationBox = { inner ->
-                            if (query.isEmpty()) Text("Search for specific exercises", color = WorkoutPaperMuted, fontSize = metrics.sp(17)) else inner()
-                        },
-                    )
-                    Text("⌕", color = WorkoutPaperMuted, fontSize = metrics.sp(24))
-                }
-            }
+            MettleExerciseSearchField(
+                value = query,
+                onValueChange = { query = it },
+                height = metrics.dp(64),
+                foreground = WorkoutPaper,
+                muted = WorkoutPaperMuted,
+                accent = WorkoutCyan,
+            )
         }
         if (loading) {
             item { Box(Modifier.fillMaxWidth().padding(metrics.dp(30)), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = WorkoutCyan) } }
         } else {
             items(filtered, key = { it.executionProfileId }) { option ->
+                val cardHazeState = rememberHazeState()
                 Surface(
-                    modifier = Modifier.fillMaxWidth().height(metrics.dp(114)).clickable { onSelect(option) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(metrics.dp(114))
+                        .hazeSource(cardHazeState)
+                        .clickable { onSelect(option) },
                     shape = WorkoutCardShape,
                     color = WorkoutCard,
                     border = BorderStroke(metrics.dp(.6), Color.White.copy(alpha = .10f)),
                 ) {
-                    Row(Modifier.padding(start = metrics.dp(16), end = metrics.dp(18)), verticalAlignment = Alignment.CenterVertically) {
+                    CompositionLocalProvider(LocalMettleHazeState provides cardHazeState) {
+                        Row(Modifier.padding(start = metrics.dp(16), end = metrics.dp(18)), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(option.exerciseName, color = WorkoutPaper, fontSize = metrics.sp(22), lineHeight = metrics.sp(28), fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(option.executionProfileName, color = WorkoutPaperMuted, fontSize = metrics.sp(13), maxLines = 1)
@@ -1198,6 +1198,7 @@ private fun WorkoutSubstitutionContent(
                                     modifier = Modifier.size(metrics.dp(30)),
                                 )
                             }
+                        }
                         }
                     }
                 }

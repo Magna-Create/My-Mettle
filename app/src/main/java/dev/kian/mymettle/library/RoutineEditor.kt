@@ -30,20 +30,86 @@ data class RoutineEditDraft(
     val days: List<RoutineBoardDay>,
 ) {
     fun moveWithinDay(slotId: String, targetIndex: Int): RoutineEditDraft {
-        val sourceDay = days.firstOrNull { day -> day.slots.any { it.id == slotId } }
-            ?: error("Routine slot $slotId does not exist.")
-        val sourceIndex = sourceDay.slots.indexOfFirst { it.id == slotId }
-        val destination = targetIndex.coerceIn(0, sourceDay.slots.lastIndex)
-        if (sourceIndex == destination) return this
-
-        val reordered = sourceDay.slots.toMutableList()
-        val moving = reordered.removeAt(sourceIndex)
-        reordered.add(destination, moving)
-        val normalised = reordered.mapIndexed { index, slot ->
-            slot.copy(daySymbol = sourceDay.symbol, position = index)
-        }
-        return copy(days = days.map { if (it.symbol == sourceDay.symbol) it.copy(slots = normalised) else it })
+        val sourceDay = dayContaining(slotId)
+        return move(slotId, sourceDay.symbol, targetIndex)
     }
+
+    /**
+     * Release-only placement shared by drag/drop and the accessibility fallback menu.
+     * The target index is evaluated after removing the source slot, so a card never oscillates
+     * beneath the pointer while it is being dragged.
+     */
+    fun move(slotId: String, targetDaySymbol: String, targetIndex: Int): RoutineEditDraft {
+        val sourceDay = dayContaining(slotId)
+        val destinationDay = days.firstOrNull { it.symbol == targetDaySymbol }
+            ?: error("Routine day $targetDaySymbol does not exist.")
+        val sourceIndex = sourceDay.slots.indexOfFirst { it.id == slotId }
+        val targetSlotsWithoutSource = destinationDay.slots.filterNot { it.id == slotId }
+        val destination = targetIndex.coerceIn(0, targetSlotsWithoutSource.size)
+        if (sourceDay.symbol == destinationDay.symbol && sourceIndex == destination) return this
+
+        val moving = sourceDay.slots[sourceIndex]
+        return replaceDays(
+            days.map { day ->
+                val withoutSource = day.slots.filterNot { it.id == slotId }
+                if (day.symbol == destinationDay.symbol) {
+                    val placed = withoutSource.toMutableList().apply {
+                        add(destination, moving.copy(daySymbol = targetDaySymbol))
+                    }
+                    day.copy(slots = placed)
+                } else {
+                    day.copy(slots = withoutSource)
+                }
+            },
+        )
+    }
+
+    fun insert(slot: RoutineBoardSlot, targetDaySymbol: String, targetIndex: Int = Int.MAX_VALUE): RoutineEditDraft {
+        require(days.none { day -> day.slots.any { it.id == slot.id } }) {
+            "Routine slot ${slot.id} already exists."
+        }
+        val destinationDay = days.firstOrNull { it.symbol == targetDaySymbol }
+            ?: error("Routine day $targetDaySymbol does not exist.")
+        val destination = targetIndex.coerceIn(0, destinationDay.slots.size)
+        return replaceDays(
+            days.map { day ->
+                if (day.symbol != targetDaySymbol) return@map day
+                val placed = day.slots.toMutableList().apply {
+                    add(destination, slot.copy(daySymbol = targetDaySymbol))
+                }
+                day.copy(slots = placed)
+            },
+        )
+    }
+
+    fun duplicate(slotId: String, duplicateId: String): RoutineEditDraft {
+        val sourceDay = dayContaining(slotId)
+        val sourceIndex = sourceDay.slots.indexOfFirst { it.id == slotId }
+        return insert(
+            slot = sourceDay.slots[sourceIndex].copy(id = duplicateId),
+            targetDaySymbol = sourceDay.symbol,
+            targetIndex = sourceIndex + 1,
+        )
+    }
+
+    fun remove(slotId: String): RoutineEditDraft {
+        dayContaining(slotId)
+        return replaceDays(days.map { day -> day.copy(slots = day.slots.filterNot { it.id == slotId }) })
+    }
+
+    private fun dayContaining(slotId: String): RoutineBoardDay =
+        days.firstOrNull { day -> day.slots.any { it.id == slotId } }
+            ?: error("Routine slot $slotId does not exist.")
+
+    private fun replaceDays(nextDays: List<RoutineBoardDay>): RoutineEditDraft = copy(
+        days = nextDays.map { day ->
+            day.copy(
+                slots = day.slots.mapIndexed { index, slot ->
+                    slot.copy(daySymbol = day.symbol, position = index)
+                },
+            )
+        },
+    )
 }
 
 fun RoutineBoard.editDraft(): RoutineEditDraft = RoutineEditDraft(versionId, days)

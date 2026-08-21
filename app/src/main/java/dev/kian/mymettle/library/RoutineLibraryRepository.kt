@@ -1,8 +1,8 @@
 package dev.kian.mymettle.library
 
 import androidx.room.withTransaction
+import dev.kian.mymettle.data.migration.LegacyTargetProjector
 import dev.kian.mymettle.data.local.MyMettleDatabase
-import dev.kian.mymettle.data.local.entity.ProgrammeTargetEntity
 import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.RoutineVersionEntity
 import java.time.Instant
@@ -35,12 +35,7 @@ class RoutineLibraryRepository(private val database: MyMettleDatabase) {
         )
     }
 
-    /**
-     * Alpha16 deliberately commits within-day ordering only. Cross-day moves also change N-Bio
-     * targets and programme constraints, so they stay disabled until the Native target projector
-     * is part of the editor transaction.
-     */
-    suspend fun commitReorder(draft: RoutineEditDraft): RoutineBoard = database.withTransaction {
+    suspend fun commitDraft(draft: RoutineEditDraft): RoutineBoard = database.withTransaction {
         val state = dao.appState() ?: error("App state is missing.")
         require(state.currentRoutineVersionId == draft.baseVersionId) {
             "The routine changed while this draft was open. Reopen the editor and try again."
@@ -49,16 +44,13 @@ class RoutineLibraryRepository(private val database: MyMettleDatabase) {
         val originalDays = dao.routineDays(base.id)
         val originalSlots = originalDays.flatMap { dao.routineSlots(base.id, it) }
         val draftSlots = draft.days.flatMap { it.slots }
-        require(originalSlots.map { it.id }.toSet() == draftSlots.map { it.id }.toSet()) {
-            "This editor pass may reorder slots, but may not add or remove them yet."
-        }
-        val originalDayBySlot = originalSlots.associate { it.id to it.daySymbol }
-        require(draftSlots.all { originalDayBySlot[it.id] == it.daySymbol }) {
-            "Moving exercises between days will arrive with Native N-Bio target projection."
+        require(draftSlots.map { it.id }.distinct().size == draftSlots.size) {
+            "A routine draft cannot contain the same slot identity twice."
         }
 
         val now = Instant.now().toString()
         val nextId = "routine_${UUID.randomUUID()}"
+        val changeReason = describeChange(originalSlots, draftSlots)
         dao.upsertRoutineVersions(
             listOf(
                 RoutineVersionEntity(
@@ -68,35 +60,95 @@ class RoutineLibraryRepository(private val database: MyMettleDatabase) {
                     createdAt = now,
                     effectiveAt = now,
                     source = "native-library",
-                    changeReason = "Reordered routine exercises",
+                    changeReason = changeReason,
                 ),
             ),
         )
         val originalById = originalSlots.associateBy { it.id }
-        dao.upsertRoutineSlots(
-            draft.days.flatMap { day ->
-                day.slots.mapIndexed { index, slot ->
-                    originalById.getValue(slot.id).copy(
+        val nextSlots = draft.days.flatMap { day ->
+            day.slots.mapIndexed { index, slot ->
+                originalById[slot.id]
+                    ?.copy(
                         routineVersionId = nextId,
                         daySymbol = day.symbol,
                         position = index,
                     )
-                }
-            },
-        )
-        dao.upsertProgrammeTargets(
+                    ?: RoutineSlotEntity(
+                        id = slot.id,
+                        routineVersionId = nextId,
+                        daySymbol = day.symbol,
+                        exerciseId = slot.exerciseId,
+                        position = index,
+                        importance = slot.importance,
+                        lockedToDay = slot.lockedToDay,
+                        preferredSets = slot.preferredSets,
+                        repMin = slot.repMin,
+                        repMax = slot.repMax,
+                        restSeconds = slot.restSeconds,
+                    )
+            }
+        }
+        dao.upsertRoutineSlots(nextSlots)
+
+        val membershipChanged = originalSlots.associate { it.id to it.daySymbol } !=
+            nextSlots.associate { it.id to it.daySymbol }
+        val nextTargets = if (membershipChanged) {
+            // Programme intent stays independent from exercise identity, but moving/adding/removing
+            // slots needs a defensible new baseline. Re-project PRIME recruitment with explicit
+            // provenance; historical versions retain their original targets untouched.
+            val exerciseIds = nextSlots.map { it.exerciseId }.distinct()
+            val profiles = if (exerciseIds.isEmpty()) emptyList() else dao.executionProfiles(exerciseIds)
+            val profileIds = profiles.map { it.id }
+            val recruitment = if (profileIds.isEmpty()) emptyList() else dao.recruitmentAllocations(profileIds)
+            LegacyTargetProjector.project(
+                routineSlots = nextSlots,
+                executionProfiles = profiles,
+                sessions = emptyList(),
+                sessionExercises = emptyList(),
+                recruitment = recruitment,
+            ).programmeTargets.map { target ->
+                target.copy(
+                    id = "programme_target_${UUID.randomUUID()}",
+                    routineVersionId = nextId,
+                    source = "native-library-structural-projection-v1",
+                )
+            }
+        } else {
             dao.programmeTargetsForRoutine(base.id).map { target ->
                 target.copy(
                     id = "programme_target_${UUID.randomUUID()}",
                     routineVersionId = nextId,
                 )
-            },
-        )
+            }
+        }
+        dao.upsertProgrammeTargets(nextTargets)
         dao.upsertProgrammeModeConstraints(
-            dao.programmeModeConstraintsForRoutine(base.id).map { it.copy(routineVersionId = nextId) },
+            dao.programmeModeConstraintsForRoutine(base.id).map {
+                it.copy(
+                    routineVersionId = nextId,
+                )
+            },
         )
         dao.upsertAppState(state.copy(currentRoutineVersionId = nextId, updatedAt = now))
         requireNotNull(board())
+    }
+
+    private fun describeChange(
+        original: List<RoutineSlotEntity>,
+        edited: List<RoutineBoardSlot>,
+    ): String {
+        val originalIds = original.mapTo(mutableSetOf()) { it.id }
+        val editedIds = edited.mapTo(mutableSetOf()) { it.id }
+        val additions = (editedIds - originalIds).size
+        val removals = (originalIds - editedIds).size
+        val originalDay = original.associate { it.id to it.daySymbol }
+        val movedDays = edited.count { slot -> originalDay[slot.id]?.let { it != slot.daySymbol } == true }
+        return buildList {
+            if (additions > 0) add("added $additions")
+            if (removals > 0) add("removed $removals")
+            if (movedDays > 0) add("moved $movedDays between days")
+            if (isEmpty()) add("reordered exercises")
+        }.joinToString(prefix = "Library edit: ", separator = ", ")
     }
 
     private fun RoutineSlotEntity.toBoardSlot(exerciseName: String) = RoutineBoardSlot(
