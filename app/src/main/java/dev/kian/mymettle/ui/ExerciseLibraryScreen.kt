@@ -90,6 +90,7 @@ import dev.kian.mymettle.library.RoutineBoardDay
 import dev.kian.mymettle.library.RoutineBoardSlot
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
@@ -316,13 +317,19 @@ private fun RoutineBoardContent(
         }
     }
 
-    LaunchedEffect(drag?.pointerInWindow) {
-        val pointer = drag?.pointerInWindow ?: return@LaunchedEffect
-        if (rootBounds == Rect.Zero) return@LaunchedEffect
-        val edge = with(density) { 76.dp.toPx() }
-        when {
-            pointer.y < rootBounds.top + edge -> listState.scrollBy(-22f)
-            pointer.y > rootBounds.bottom - edge -> listState.scrollBy(22f)
+    LaunchedEffect(drag?.slot?.id, rootBounds) {
+        while (drag != null && rootBounds != Rect.Zero) {
+            val pointer = drag?.pointerInWindow ?: break
+            val edge = with(density) { 76.dp.toPx() }
+            val scrollDelta = when {
+                pointer.y < rootBounds.top + edge -> -22f
+                pointer.y > rootBounds.bottom - edge -> 22f
+                else -> 0f
+            }
+            if (scrollDelta != 0f) {
+                listState.scrollBy(scrollDelta)
+            }
+            delay(16)
         }
     }
 
@@ -363,7 +370,10 @@ private fun RoutineBoardContent(
                                 fontWeight = FontWeight.Medium,
                             )
                         }
-                        MettleGlassActionButton(onClick = onBeginEdit) { Text("Edit routine") }
+                        MettleGlassActionButton(
+                            onClick = onBeginEdit,
+                            modifier = Modifier.width(142.dp),
+                        ) { Text("Edit routine") }
                     }
                 }
             }
@@ -519,16 +529,16 @@ private fun RoutineDayCard(
                         )
                     }
                 }
-                day.slots.forEachIndexed { index, slot ->
-                    val previewSlots = day.slots.filterNot { it.id == drag?.slot?.id }
+                val previewSlots = day.slots.filterNot { it.id == drag?.slot?.id }
+                day.slots.forEach { slot ->
                     val previewIndex = previewSlots.indexOfFirst { it.id == slot.id }
-                    if (editing && drag?.dropTarget == RoutineDropTarget(day.symbol, previewIndex)) {
-                        RoutineInsertionMarker()
-                    }
                     RoutineSlotRow(
                         slot = slot,
                         editing = editing,
                         dragging = drag?.slot?.id == slot.id,
+                        showInsertionBefore = editing &&
+                            previewIndex >= 0 &&
+                            drag?.dropTarget == RoutineDropTarget(day.symbol, previewIndex),
                         onBounds = { onSlotBounds(slot.id, it) },
                         onDragStart = { pointer, bounds -> onDragStart(slot, pointer, bounds) },
                         onDrag = onDrag,
@@ -539,15 +549,22 @@ private fun RoutineDayCard(
                     )
                 }
                 val previewCount = day.slots.count { it.id != drag?.slot?.id }
-                if (editing && drag?.dropTarget == RoutineDropTarget(day.symbol, previewCount)) {
-                    RoutineInsertionMarker()
-                }
                 if (editing) {
-                    MettleGlassActionButton(
-                        onClick = onAddExercise,
-                        modifier = Modifier.fillMaxWidth(),
-                        accent = false,
-                    ) { Text("+  Add exercise") }
+                    Box(Modifier.fillMaxWidth()) {
+                        MettleGlassActionButton(
+                            onClick = onAddExercise,
+                            modifier = Modifier.fillMaxWidth(),
+                            accent = false,
+                        ) { Text("+  Add exercise") }
+                        if (drag?.dropTarget == RoutineDropTarget(day.symbol, previewCount)) {
+                            RoutineInsertionMarker(
+                                Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(horizontal = 14.dp)
+                                    .zIndex(2f),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -559,6 +576,7 @@ private fun RoutineSlotRow(
     slot: RoutineBoardSlot,
     editing: Boolean,
     dragging: Boolean,
+    showInsertionBefore: Boolean,
     onBounds: (Rect) -> Unit,
     onDragStart: (Offset, Rect) -> Unit,
     onDrag: (Offset) -> Unit,
@@ -640,6 +658,14 @@ private fun RoutineSlotRow(
                 }
             }
         }
+        if (showInsertionBefore) {
+            RoutineInsertionMarker(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 14.dp)
+                    .zIndex(2f),
+            )
+        }
     }
 }
 
@@ -708,16 +734,20 @@ private fun RoutineEditingToolbar(
             Text("ROUTINE V${version ?: "—"} · DRAFT", style = MaterialTheme.typography.labelSmall)
             Text("Editing routine", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
-        MettleGlassActionButton(onClick = onSave, enabled = !saving) {
+        MettleGlassActionButton(
+            onClick = onSave,
+            modifier = Modifier.width(112.dp),
+            enabled = !saving,
+        ) {
             Text(if (saving) "Saving…" else "Done")
         }
     }
 }
 
 @Composable
-private fun RoutineInsertionMarker() {
+private fun RoutineInsertionMarker(modifier: Modifier = Modifier) {
     Box(
-        Modifier
+        modifier
             .fillMaxWidth()
             .height(4.dp)
             .background(
