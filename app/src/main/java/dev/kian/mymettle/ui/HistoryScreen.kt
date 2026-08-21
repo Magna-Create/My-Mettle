@@ -30,7 +30,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -54,7 +53,10 @@ import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen() {
+fun HistoryScreen(
+    onOpenSettings: () -> Unit,
+    onOpenAccount: () -> Unit,
+) {
     val context = LocalContext.current
     val viewModel: HistoryViewModel = viewModel(
         factory = remember(context) { HistoryViewModelFactory(context) },
@@ -64,17 +66,10 @@ fun HistoryScreen() {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("History", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "What actually happened",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
+            MettleAppHeader(
+                destination = "Session History",
+                onOpenSettings = onOpenSettings,
+                onOpenAccount = onOpenAccount,
             )
         },
     ) { innerPadding ->

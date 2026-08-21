@@ -283,7 +283,12 @@ fun MyMettleApp() {
                                 onOpenAccount = { openMainDestination(ACCOUNT_ROUTE) },
                             )
                         }
-                        composable(HISTORY_ROUTE) { HistoryScreen() }
+                        composable(HISTORY_ROUTE) {
+                            HistoryScreen(
+                                onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
+                                onOpenAccount = { openMainDestination(ACCOUNT_ROUTE) },
+                            )
+                        }
                         composable(ACCOUNT_ROUTE) {
                             AccountScreen(
                                 onBack = { navController.popBackStack() },
@@ -297,6 +302,7 @@ fun MyMettleApp() {
                                         launchSingleTop = true
                                     }
                                 },
+                                onOpenAccount = { openMainDestination(ACCOUNT_ROUTE) },
                             )
                         }
                         composable(BIOLOGY_DEVELOPER_ROUTE) {
