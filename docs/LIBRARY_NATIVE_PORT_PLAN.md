@@ -101,3 +101,10 @@ After creation, offer setup notes, cues and camera capture through the existing 
 ## Suggested implementation sequence
 
 Ship phases 1–3 together behind a Library feature flag, then phase 4, then phases 5–6. Promote the new Library only after existing workout generation produces the same session from an unchanged routine and the editor produces a new, validated version from a changed routine.
+
+## Alpha16 implementation checkpoint
+
+- Native now loads the active immutable routine into four Library lanes alongside the existing exercise catalogue.
+- The first editor slice supports accessible within-day reordering and commits a cloned routine version, programme targets and mode constraints in one Room transaction.
+- Interactive Library cards and reorder controls sample a local green surface through scoped Haze rather than exposing the app background.
+- Cross-day drag/drop, draft recovery, creation, management and archives remain in the ordered phases above. Cross-day movement is intentionally blocked until target projection can update N-Bio data in the same transaction.

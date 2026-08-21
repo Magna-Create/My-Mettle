@@ -59,10 +59,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -401,60 +403,83 @@ private fun WorkoutWaveProgress(workout: ActiveWorkout, modifier: Modifier, metr
 
 @Composable
 private fun BoxScope.WorkoutViewportScrims(metrics: WorkoutMetrics) {
-    // A single continuous optical layer avoids the hard seams produced by the previous stack of
-    // overlapping rectangular blur bands. The smooth tint masks provide the progressive fade.
-    MettleGlassSurface(
+    // These are deliberately not glass. A continuous fog curve plus subtle dithering approximates
+    // the progressive obscuration in the mock-up without refraction, edge highlights or a second
+    // live Haze render pass over the scrolling workout.
+    ProgressiveFogScrim(
         modifier = Modifier
             .fillMaxWidth()
             .height(metrics.dp(132))
             .align(Alignment.TopCenter),
-        shape = RoundedCornerShape(0.dp),
-        tint = WorkoutInk.copy(alpha = .07f),
-        blurRadius = metrics.dp(12),
-        refractionDisplacement = 0.dp,
-        refractionStrength = 0f,
-        shadowElevation = 0.dp,
-        grainStrength = 0f,
-    ) {}
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(metrics.dp(132))
-            .align(Alignment.TopCenter)
-            .background(
-                Brush.verticalGradient(
-                    0f to WorkoutInk.copy(alpha = .72f),
-                    .64f to WorkoutInk.copy(alpha = .34f),
-                    1f to Color.Transparent,
-                ),
-            ),
+        edgeAtTop = true,
+        edgeAlpha = .76f,
     )
 
-    MettleGlassSurface(
+    ProgressiveFogScrim(
         modifier = Modifier
             .fillMaxWidth()
             .height(metrics.dp(142))
             .align(Alignment.BottomCenter),
-        shape = RoundedCornerShape(0.dp),
-        tint = WorkoutInk.copy(alpha = .06f),
-        blurRadius = metrics.dp(12),
-        refractionDisplacement = 0.dp,
-        refractionStrength = 0f,
-        shadowElevation = 0.dp,
-        grainStrength = 0f,
-    ) {}
+        edgeAtTop = false,
+        edgeAlpha = .58f,
+    )
+}
+
+@Composable
+private fun ProgressiveFogScrim(
+    modifier: Modifier,
+    edgeAtTop: Boolean,
+    edgeAlpha: Float,
+) {
     Box(
-        Modifier
-            .fillMaxWidth()
-            .height(metrics.dp(142))
-            .align(Alignment.BottomCenter)
-            .background(
-                Brush.verticalGradient(
-                    0f to Color.Transparent,
-                    .58f to WorkoutInk.copy(alpha = .22f),
-                    1f to WorkoutInk.copy(alpha = .52f),
-                ),
-            ),
+        modifier.drawWithCache {
+            val colours = if (edgeAtTop) {
+                listOf(
+                    WorkoutInk.copy(alpha = edgeAlpha),
+                    WorkoutInk.copy(alpha = edgeAlpha * .72f),
+                    WorkoutInk.copy(alpha = edgeAlpha * .34f),
+                    Color.Transparent,
+                )
+            } else {
+                listOf(
+                    Color.Transparent,
+                    WorkoutInk.copy(alpha = edgeAlpha * .25f),
+                    WorkoutInk.copy(alpha = edgeAlpha * .66f),
+                    WorkoutInk.copy(alpha = edgeAlpha),
+                )
+            }
+            val fog = Brush.verticalGradient(
+                0f to colours[0],
+                .34f to colours[1],
+                .70f to colours[2],
+                1f to colours[3],
+            )
+            val ditherStep = 7.dp.toPx().coerceAtLeast(1f)
+            val lightPoints = ArrayList<Offset>()
+            val darkPoints = ArrayList<Offset>()
+            var y = ditherStep * .5f
+            var row = 0
+            while (y < size.height) {
+                var x = if (row % 2 == 0) ditherStep * .35f else ditherStep * .8f
+                while (x < size.width) {
+                    val point = Offset(x, y)
+                    if ((((x.toInt() * 31) xor (y.toInt() * 17)) and 1) == 0) {
+                        lightPoints += point
+                    } else {
+                        darkPoints += point
+                    }
+                    x += ditherStep
+                }
+                y += ditherStep
+                row += 1
+            }
+            val strokeWidth = 1.1.dp.toPx()
+            onDrawBehind {
+                drawRect(fog)
+                drawPoints(lightPoints, PointMode.Points, Color.White.copy(alpha = .005f), strokeWidth)
+                drawPoints(darkPoints, PointMode.Points, Color.Black.copy(alpha = .007f), strokeWidth)
+            }
+        },
     )
 }
 
@@ -583,6 +608,7 @@ private fun WorkoutExerciseCard(
                         onSwap = onSwap,
                         onRate = onRateExercise,
                         onComplete = onToggleExercise,
+                        allSetsComplete = sets.isNotEmpty() && sets.all { it.completedAt != null },
                         metrics = metrics,
                     )
                 }
@@ -849,6 +875,7 @@ private fun WorkoutExerciseActions(
     onSwap: () -> Unit,
     onRate: () -> Unit,
     onComplete: () -> Unit,
+    allSetsComplete: Boolean,
     metrics: WorkoutMetrics,
 ) {
     Column(Modifier.padding(horizontal = metrics.dp(15), vertical = metrics.dp(16))) {
@@ -856,7 +883,25 @@ private fun WorkoutExerciseActions(
         Spacer(Modifier.height(metrics.dp(12)))
         Row(horizontalArrangement = Arrangement.spacedBy(metrics.dp(12))) {
             WorkoutCardButton("Rate exercise", onRate, Modifier.weight(1f), metrics)
-            WorkoutCardButton("Complete exercise", onComplete, Modifier.weight(1f), metrics)
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                if (allSetsComplete) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth(.82f)
+                            .height(metrics.dp(18))
+                            .align(Alignment.BottomCenter)
+                            .offset(y = metrics.dp(7))
+                            .blur(metrics.dp(12))
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(Color.Transparent, WorkoutGreen.copy(alpha = .74f), Color.Transparent),
+                                ),
+                                CircleShape,
+                            ),
+                    )
+                }
+                WorkoutCardButton("Complete exercise", onComplete, Modifier.fillMaxWidth(), metrics)
+            }
         }
     }
 }
@@ -970,7 +1015,11 @@ private fun SetupMediaStrip(paths: List<String>, onAddPhoto: () -> Unit, metrics
             tint = WorkoutCyan.copy(alpha = .035f),
             borderColor = WorkoutCyan.copy(alpha = .32f),
             onClick = onAddPhoto,
-        ) { Box(contentAlignment = Alignment.Center) { Text("+", color = WorkoutPaper, fontSize = metrics.sp(24)) } }
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("+", color = WorkoutPaper, fontSize = metrics.sp(24), textAlign = TextAlign.Center)
+            }
+        }
         paths.forEach { path -> SetupMediaImage(path, metrics) }
         if (paths.isEmpty()) {
             Surface(
