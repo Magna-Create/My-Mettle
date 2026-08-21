@@ -12,10 +12,12 @@ import dev.kian.mymettle.data.local.DatabaseProvider
 import dev.kian.mymettle.domain.exercise.Exercise
 import dev.kian.mymettle.library.ExerciseLibraryRepository
 import dev.kian.mymettle.library.RoutineBoard
+import dev.kian.mymettle.library.RoutineBoardSlot
 import dev.kian.mymettle.library.RoutineEditDraft
 import dev.kian.mymettle.library.RoutineLibraryRepository
 import dev.kian.mymettle.library.editDraft
 import java.io.File
+import java.util.UUID
 import kotlinx.coroutines.launch
 
 data class ExerciseLibraryUiState(
@@ -88,6 +90,51 @@ class ExerciseLibraryViewModel(
         uiState = uiState.copy(routineDraft = draft.moveWithinDay(slotId, current + delta))
     }
 
+    fun placeRoutineSlot(slotId: String, daySymbol: String, index: Int) {
+        val draft = uiState.routineDraft ?: return
+        uiState = uiState.copy(routineDraft = draft.move(slotId, daySymbol, index))
+    }
+
+    fun addExerciseToRoutine(exerciseId: String, daySymbol: String) {
+        val draft = uiState.routineDraft ?: return
+        val exercise = uiState.exercises.firstOrNull { it.id.value == exerciseId } ?: return
+        val exemplar = draft.days.asSequence().flatMap { it.slots.asSequence() }
+            .firstOrNull { it.exerciseId == exerciseId }
+        val slot = exemplar?.copy(
+            id = "slot_${UUID.randomUUID()}",
+            daySymbol = daySymbol,
+        ) ?: RoutineBoardSlot(
+            id = "slot_${UUID.randomUUID()}",
+            exerciseId = exerciseId,
+            exerciseName = exercise.name,
+            daySymbol = daySymbol,
+            position = Int.MAX_VALUE,
+            importance = "accessory",
+            preferredSets = 3,
+            repMin = 8,
+            repMax = 12,
+            restSeconds = 90,
+            lockedToDay = false,
+        )
+        uiState = uiState.copy(routineDraft = draft.insert(slot, daySymbol))
+    }
+
+    fun duplicateRoutineSlot(slotId: String) {
+        val draft = uiState.routineDraft ?: return
+        uiState = uiState.copy(
+            routineDraft = draft.duplicate(slotId, "slot_${UUID.randomUUID()}"),
+        )
+    }
+
+    fun removeRoutineSlot(slotId: String) {
+        val draft = uiState.routineDraft ?: return
+        uiState = uiState.copy(routineDraft = draft.remove(slotId))
+    }
+
+    fun selectExercise(exerciseId: String) {
+        select(uiState.exercises.firstOrNull { it.id.value == exerciseId })
+    }
+
     fun saveRoutineEdit() {
         val draft = uiState.routineDraft ?: return
         if (draft == uiState.routine?.editDraft()) {
@@ -97,7 +144,7 @@ class ExerciseLibraryViewModel(
         if (uiState.savingRoutine) return
         viewModelScope.launch {
             uiState = uiState.copy(savingRoutine = true, error = null)
-            runCatching { routineRepository.commitReorder(draft) }
+            runCatching { routineRepository.commitDraft(draft) }
                 .onSuccess { routine ->
                     uiState = uiState.copy(
                         savingRoutine = false,

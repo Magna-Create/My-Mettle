@@ -108,3 +108,17 @@ Ship phases 1–3 together behind a Library feature flag, then phase 4, then pha
 - The first editor slice supports accessible within-day reordering and commits a cloned routine version, programme targets and mode constraints in one Room transaction.
 - Interactive Library cards and reorder controls sample a local green surface through scoped Haze rather than exposing the app background.
 - Cross-day drag/drop, draft recovery, creation, management and archives remain in the ordered phases above. Cross-day movement is intentionally blocked until target projection can update N-Bio data in the same transaction.
+
+## Alpha17 implementation checkpoint
+
+- Replaced the temporary arrow controls with release-only long-press drag/drop, a lifted ghost,
+  insertion marker, edge scrolling, pickup/target/drop haptics and the full placement fallback.
+- Cross-day placement now commits atomically. Reorders clone existing programme targets; structural
+  membership changes generate a new explicitly sourced PRIME-recruitment projection for the edited
+  version without touching historical versions or active-session snapshots.
+- Added searchable insertion of an existing catalogue exercise into any day, plus duplicate and
+  remove actions inside the same draft transaction.
+- Exercise quick-view cards now match the workout substitution composition and defer full N-Bio
+  recruitment detail to the expanded exercise sheet.
+- Import Routine, draft recovery, brand-new exercise creation, archives and version-history UI remain
+  in their existing later phases.
