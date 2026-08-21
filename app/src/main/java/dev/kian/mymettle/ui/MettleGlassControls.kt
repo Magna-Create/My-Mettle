@@ -55,30 +55,42 @@ internal fun MettleControlGlassSurface(
     modifier: Modifier,
     shape: RoundedCornerShape = CircleShape,
     tint: Color = Color.White.copy(alpha = 0.028f),
+    baseColor: Color = Color.Transparent,
     enabled: Boolean = true,
     selected: Boolean? = null,
     shadowElevation: Dp = 4.dp,
     innerShadowRadius: Dp = 0.dp,
     innerShadowOffsetY: Dp = 0.dp,
     innerShadowAlpha: Float = 0f,
-    borderWidth: Dp = 0.7.dp,
-    borderColor: Color = Color.White.copy(alpha = 0.22f),
+    borderWidth: Dp = 0.35.dp,
+    borderColor: Color = Color.White.copy(alpha = 0.10f),
+    preserveEdgeDefinition: Boolean = false,
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
+    val resolvedBorderWidth = if (preserveEdgeDefinition || borderWidth <= 0.4.dp) {
+        borderWidth
+    } else {
+        0.4.dp
+    }
+    val resolvedBorderColor = if (preserveEdgeDefinition) {
+        borderColor
+    } else {
+        borderColor.copy(alpha = borderColor.alpha.coerceAtMost(0.12f))
+    }
     MettleGlassSurface(
         modifier = modifier,
         shape = shape,
         tint = tint,
-        baseColor = Color.Transparent,
+        baseColor = baseColor,
         // These are the current global hotbar optics. Keep this primitive as the material source
         // of truth rather than re-tuning individual buttons by eye.
         blurRadius = 8.5.dp,
         refractionDisplacement = 9.dp,
         refractionStrength = 0.70f,
         shadowElevation = shadowElevation,
-        borderWidth = borderWidth,
-        borderColor = borderColor,
+        borderWidth = resolvedBorderWidth,
+        borderColor = resolvedBorderColor,
         innerShadowRadius = innerShadowRadius,
         innerShadowOffsetY = innerShadowOffsetY,
         innerShadowAlpha = innerShadowAlpha,

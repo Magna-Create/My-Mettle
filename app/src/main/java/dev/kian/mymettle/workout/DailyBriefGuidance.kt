@@ -3,22 +3,25 @@ package dev.kian.mymettle.workout
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
+private const val DailyProteinGramsPerKg = 1.60
+private const val ProteinServingGramsPerKg = 0.25
+
 /**
  * A compact, explainable summary for the Daily Brief.
  *
- * This is session guidance rather than a meal plan. Protein uses the commonly recommended
- * 0.25-0.40 g/kg serving range (0.30 g/kg as the displayed target), while carbohydrate and water
- * are deliberately conservative workload bands. The latter should become sweat-rate and dietary-
- * context aware once those inputs exist.
+ * This is compact training-day guidance rather than a meal plan. The primary protein number is a
+ * daily target of 1.6 g/kg; the smaller distribution hint uses 0.25 g/kg per meal. Carbohydrate is
+ * an optional pre-session amount, not a mandatory mirrored pre/post dose. It scales conservatively
+ * with session demand because fasting state, previous meals and total daily energy are not yet
+ * represented in the profile.
  */
 data class DailyBriefGuidance(
     val workingSets: Int,
     val estimatedMinutes: Int,
     val emphasis: String,
-    val proteinBefore: String,
-    val proteinAfter: String,
+    val proteinDaily: String,
+    val proteinPerMeal: String,
     val carbohydratesBefore: String,
-    val carbohydratesAfter: String,
     val waterDuring: String,
     val isWeightAware: Boolean,
 )
@@ -40,9 +43,12 @@ fun dailyBriefGuidance(profile: DailyBriefSessionProfile): DailyBriefGuidance {
         else -> SessionDemand.LIGHT
     }
     val validBodyweight = profile.bodyweightKg?.takeIf { it in 35.0..250.0 }
-    val protein = validBodyweight
-        ?.let { roundToFive((it * 0.30).coerceIn(20.0, 40.0)).toString() }
-        ?: "30"
+    val proteinDaily = validBodyweight
+        ?.let { roundToFive(it * DailyProteinGramsPerKg).toString() }
+        ?: "—"
+    val proteinPerMeal = validBodyweight
+        ?.let { roundToFive((it * ProteinServingGramsPerKg).coerceIn(20.0, 40.0)).toString() }
+        ?: "20–40"
     val carbohydrates = if (validBodyweight == null) {
         demand.fallbackCarbohydrates.toString()
     } else {
@@ -63,10 +69,9 @@ fun dailyBriefGuidance(profile: DailyBriefSessionProfile): DailyBriefGuidance {
             .toList()
             .joinToString(" + ")
             .ifBlank { "Full body" },
-        proteinBefore = protein,
-        proteinAfter = protein,
+        proteinDaily = proteinDaily,
+        proteinPerMeal = proteinPerMeal,
         carbohydratesBefore = carbohydrates,
-        carbohydratesAfter = carbohydrates,
         waterDuring = demand.waterDuring,
         isWeightAware = validBodyweight != null,
     )
@@ -118,9 +123,12 @@ private enum class SessionDemand(
     val fallbackCarbohydrates: Int,
     val waterDuring: String,
 ) {
-    LIGHT(0.50, 25, 35, "500"),
-    MODERATE(0.75, 35, 50, "600"),
-    HIGH(1.00, 45, 70, "700"),
+    // Acute carbohydrate benefit is context-dependent in resistance training. These deliberately
+    // small optional amounts are a usability heuristic, not a claim that a fed session requires a
+    // pre-workout supplement or a matching post-workout bolus.
+    LIGHT(0.30, 15, 20, "500"),
+    MODERATE(0.40, 20, 30, "600"),
+    HIGH(0.50, 25, 40, "700"),
 }
 
 private fun roundToFive(value: Double): Int = (value / 5.0).roundToInt() * 5

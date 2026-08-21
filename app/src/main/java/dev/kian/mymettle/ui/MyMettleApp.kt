@@ -229,6 +229,7 @@ fun MyMettleApp() {
                             leadingProgress = restTimerProgress.takeIf { restTimerSnapshot.visible },
                             showWorkoutControls = workoutViewModel.uiState.workout != null,
                             transparentMaterial = currentRoute == INTENSITY_ROUTE,
+                            preserveEdgeDefinition = currentRoute == HOME_ROUTE,
                         )
                     }
                 },
