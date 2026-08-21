@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -196,7 +197,7 @@ internal fun MettleGlassChoiceChip(
         onClick = onClick,
     ) {
         Box(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
             CompositionLocalProvider(LocalContentColor provides contentColor) {
@@ -230,7 +231,7 @@ internal fun MettleGlassAssistChip(
         onClick = onClick,
     ) {
         Box(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 7.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center,
         ) {
             CompositionLocalProvider(LocalContentColor provides Color.White.copy(alpha = if (enabled) 0.90f else 0.40f)) {
@@ -249,14 +250,17 @@ internal fun MettleGlassActionButton(
     accent: Boolean = true,
     shadowElevation: Dp = 4.dp,
     contentPadding: PaddingValues = PaddingValues(horizontal = 18.dp, vertical = 11.dp),
+    containerTint: Color? = null,
+    outlineColor: Color? = null,
+    foregroundColor: Color? = null,
     content: @Composable RowScope.() -> Unit,
 ) {
-    val tint = if (accent) {
+    val tint = containerTint ?: if (accent) {
         MettleOnPrimaryContainer.copy(alpha = if (enabled) 0.10f else 0.035f)
     } else {
         Color.White.copy(alpha = if (enabled) 0.035f else 0.018f)
     }
-    val contentColor = Color.White.copy(alpha = if (enabled) 0.96f else 0.42f)
+    val contentColor = foregroundColor ?: Color.White.copy(alpha = if (enabled) 0.96f else 0.42f)
 
     MettleControlGlassSurface(
         modifier = modifier.defaultMinSize(minHeight = 48.dp),
@@ -264,13 +268,13 @@ internal fun MettleGlassActionButton(
         tint = tint,
         enabled = enabled,
         shadowElevation = if (enabled) shadowElevation else 1.dp,
-        borderColor = Color.White.copy(alpha = if (enabled) 0.24f else 0.10f),
+        borderColor = outlineColor ?: Color.White.copy(alpha = if (enabled) 0.24f else 0.10f),
         onClick = onClick,
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             ProvideTextStyle(MaterialTheme.typography.labelLarge) {
                 Row(
-                    modifier = Modifier.fillMaxSize().padding(contentPadding),
+                    modifier = Modifier.fillMaxWidth().padding(contentPadding),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                     content = content,

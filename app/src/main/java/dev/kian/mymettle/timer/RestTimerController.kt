@@ -22,6 +22,7 @@ data class RestTimerSnapshot(
     val startedElapsedRealtime: Long = 0L,
     val endElapsedRealtime: Long = 0L,
     val pausedRemainingMillis: Long = 0L,
+    val totalDurationMillis: Long = 0L,
 ) {
     val visible: Boolean get() = phase != RestTimerPhase.IDLE
     val active: Boolean get() = phase == RestTimerPhase.RUNNING || phase == RestTimerPhase.PAUSED
@@ -34,6 +35,12 @@ data class RestTimerSnapshot(
 
     fun remainingSeconds(nowElapsed: Long = SystemClock.elapsedRealtime()): Int =
         ceil(remainingMillis(nowElapsed) / 1000.0).toInt().coerceAtLeast(0)
+
+    fun elapsedFraction(nowElapsed: Long = SystemClock.elapsedRealtime()): Float {
+        if (phase == RestTimerPhase.READY) return 1f
+        val total = totalDurationMillis.coerceAtLeast(1L)
+        return (1f - remainingMillis(nowElapsed).toFloat() / total.toFloat()).coerceIn(0f, 1f)
+    }
 }
 
 class RestTimerController private constructor(context: Context) {
@@ -119,6 +126,7 @@ internal class RestTimerPersistence(context: Context) {
             startedElapsedRealtime = preferences.getLong(KEY_STARTED_ELAPSED, 0L),
             endElapsedRealtime = preferences.getLong(KEY_END_ELAPSED, 0L),
             pausedRemainingMillis = preferences.getLong(KEY_PAUSED_REMAINING, 0L),
+            totalDurationMillis = preferences.getLong(KEY_TOTAL_DURATION, 0L),
         )
     }
 
@@ -129,6 +137,7 @@ internal class RestTimerPersistence(context: Context) {
             .putLong(KEY_STARTED_ELAPSED, snapshot.startedElapsedRealtime)
             .putLong(KEY_END_ELAPSED, snapshot.endElapsedRealtime)
             .putLong(KEY_PAUSED_REMAINING, snapshot.pausedRemainingMillis)
+            .putLong(KEY_TOTAL_DURATION, snapshot.totalDurationMillis)
             .apply()
     }
 
@@ -142,5 +151,6 @@ internal class RestTimerPersistence(context: Context) {
         const val KEY_STARTED_ELAPSED = "started_elapsed"
         const val KEY_END_ELAPSED = "end_elapsed"
         const val KEY_PAUSED_REMAINING = "paused_remaining"
+        const val KEY_TOTAL_DURATION = "total_duration"
     }
 }

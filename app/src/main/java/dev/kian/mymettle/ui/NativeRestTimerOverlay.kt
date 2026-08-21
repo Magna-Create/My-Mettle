@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,11 +18,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,11 +37,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -68,6 +66,7 @@ fun NativeRestTimerOverlay() {
     val snapshot by controller.state.collectAsState()
     var expanded by remember { mutableStateOf(false) }
     var remainingSeconds by remember { mutableIntStateOf(snapshot.remainingSeconds()) }
+    var elapsedFraction by remember { mutableStateOf(snapshot.elapsedFraction()) }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     LaunchedEffect(Unit) { controller.refresh() }
@@ -86,9 +85,11 @@ fun NativeRestTimerOverlay() {
     }
     LaunchedEffect(snapshot.phase, snapshot.endElapsedRealtime, snapshot.pausedRemainingMillis) {
         remainingSeconds = snapshot.remainingSeconds()
+        elapsedFraction = snapshot.elapsedFraction()
         while (snapshot.phase == RestTimerPhase.RUNNING && remainingSeconds > 0) {
-            delay(1_000)
+            delay(250)
             remainingSeconds = snapshot.remainingSeconds()
+            elapsedFraction = snapshot.elapsedFraction()
         }
     }
 
@@ -108,8 +109,8 @@ fun NativeRestTimerOverlay() {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(500.dp)
-                    .padding(horizontal = 50.dp)
+                    .height(440.dp)
+                    .padding(horizontal = 34.dp)
                     .padding(bottom = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -123,9 +124,19 @@ fun NativeRestTimerOverlay() {
                     lineHeight = 68.sp,
                     fontWeight = FontWeight.Medium,
                 )
-                Spacer(Modifier.height(15.dp))
-                TimerWaveform(Modifier.fillMaxWidth().height(42.dp))
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(8.dp))
+                Slider(
+                    value = elapsedFraction,
+                    onValueChange = {},
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        disabledThumbColor = Color(0xFFBBEBED),
+                        disabledActiveTrackColor = Color(0xFFA0CFD0),
+                        disabledInactiveTrackColor = Color(0xFFE1E4DA).copy(alpha = .32f),
+                    ),
+                )
+                Spacer(Modifier.height(10.dp))
 
                 if (snapshot.phase == RestTimerPhase.READY) {
                     MettleGlassActionButton(onClick = { controller.dismissReady() }, modifier = Modifier.fillMaxWidth()) {
@@ -134,7 +145,10 @@ fun NativeRestTimerOverlay() {
                 } else {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         TimerCircle("−15") { controller.adjust(-15) }
-                        TimerCircle(if (snapshot.phase == RestTimerPhase.RUNNING) "Ⅱ" else "▶") {
+                        TimerCircle(
+                            icon = if (snapshot.phase == RestTimerPhase.RUNNING) MettleIcons.Pause else MettleIcons.PlayArrow,
+                            description = if (snapshot.phase == RestTimerPhase.RUNNING) "Pause timer" else "Resume timer",
+                        ) {
                             if (snapshot.phase == RestTimerPhase.RUNNING) controller.pause() else controller.resume()
                         }
                         TimerCircle("+15") { controller.adjust(15) }
@@ -162,28 +176,9 @@ fun NativeRestTimerOverlay() {
 }
 
 @Composable
-private fun TimerWaveform(modifier: Modifier = Modifier) {
-    Canvas(modifier) {
-        val y = size.height / 2f
-        val path = Path().apply {
-            moveTo(0f, y)
-            val points = 16
-            for (index in 1..points) {
-                val x = size.width * index / points
-                val amplitude = if (index in 5..11) size.height * .32f else size.height * .12f
-                val pointY = y + if (index % 2 == 0) amplitude else -amplitude
-                lineTo(x, pointY)
-            }
-        }
-        drawPath(path, Color(0xFFA0CFD0), style = Stroke(2.dp.toPx(), cap = StrokeCap.Round))
-        drawCircle(Color(0xFFBBEBED), radius = 4.dp.toPx(), center = Offset(size.width * .62f, y))
-    }
-}
-
-@Composable
 private fun TimerCircle(label: String, onClick: () -> Unit) {
     MettleControlGlassSurface(
-        modifier = Modifier.size(100.dp),
+        modifier = Modifier.size(78.dp),
         shape = CircleShape,
         tint = Color(0xFFBBEBED).copy(alpha = .028f),
         borderColor = Color(0xFFBBEBED).copy(alpha = .36f),
@@ -191,7 +186,23 @@ private fun TimerCircle(label: String, onClick: () -> Unit) {
         onClick = onClick,
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(label, color = Color(0xFFE1E4DA), fontSize = 24.sp, fontWeight = FontWeight.Medium)
+            Text(label, color = Color(0xFFE1E4DA), fontSize = 21.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
+@Composable
+private fun TimerCircle(icon: ImageVector, description: String, onClick: () -> Unit) {
+    MettleControlGlassSurface(
+        modifier = Modifier.size(78.dp),
+        shape = CircleShape,
+        tint = Color(0xFFBBEBED).copy(alpha = .04f),
+        borderColor = Color(0xFFBBEBED).copy(alpha = .42f),
+        shadowElevation = 5.dp,
+        onClick = onClick,
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = description, tint = Color(0xFFE1E4DA), modifier = Modifier.size(28.dp))
         }
     }
 }

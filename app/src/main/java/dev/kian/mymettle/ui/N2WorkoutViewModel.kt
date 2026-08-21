@@ -260,8 +260,7 @@ class N2WorkoutViewModel(
     }
 
     fun rateExercise(exercise: ActiveWorkoutExercise) {
-        val workout = uiState.workout ?: return
-        if (exercise.entity.status != "completed") return
+        uiState.workout ?: return
         viewModelScope.launch {
             runCatching { historyRepository.reflection(exercise.entity.id) }
                 .onSuccess { reflection ->

@@ -16,7 +16,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +36,8 @@ import dev.kian.mymettle.developer.BiologyTaskController
 import dev.kian.mymettle.developer.BiologyTaskPhase
 import dev.kian.mymettle.ui.theme.MettleBackground
 import dev.kian.mymettle.timer.RestTimerController
+import dev.kian.mymettle.timer.RestTimerPhase
+import kotlinx.coroutines.delay
 
 private const val HOME_ROUTE = "home"
 private const val INTENSITY_ROUTE = "intensity"
@@ -56,6 +60,19 @@ fun MyMettleApp() {
     val biologyTask by BiologyTaskController.state.collectAsState()
     val restTimer = remember(context) { RestTimerController.get(context) }
     val restTimerSnapshot by restTimer.state.collectAsState()
+    var restTimerProgress by remember { mutableFloatStateOf(restTimerSnapshot.elapsedFraction()) }
+    LaunchedEffect(
+        restTimerSnapshot.phase,
+        restTimerSnapshot.endElapsedRealtime,
+        restTimerSnapshot.pausedRemainingMillis,
+        restTimerSnapshot.totalDurationMillis,
+    ) {
+        restTimerProgress = restTimerSnapshot.elapsedFraction()
+        while (restTimerSnapshot.phase == RestTimerPhase.RUNNING) {
+            delay(250)
+            restTimerProgress = restTimerSnapshot.elapsedFraction()
+        }
+    }
 
     // General glass (headers, selector lens, page controls, etc.) samples destination-appropriate
     // backdrop sources. Daily Update gets its live green field, Intensity registers its animated
@@ -160,10 +177,12 @@ fun MyMettleApp() {
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 bottomBar = {
+                    val finishOverlayVisible = currentRoute == TRAIN_ROUTE &&
+                        workoutViewModel.uiState.workoutSurface in setOf(WorkoutSurface.FINISH, WorkoutSurface.DELETE_CONFIRM)
                     // Override only the hotbar's Haze input. Its source is the complete rendered
                     // destination below, while glass inside that destination continues using the
                     // normal destination-owned hazeState and therefore cannot self-sample.
-                    CompositionLocalProvider(LocalMettleHazeState provides bottomBarHazeState) {
+                    if (!finishOverlayVisible) CompositionLocalProvider(LocalMettleHazeState provides bottomBarHazeState) {
                         MettleBottomToolbarV2(
                             selectedIndex = when (currentRoute) {
                                 HOME_ROUTE -> 0
@@ -175,7 +194,7 @@ fun MyMettleApp() {
                             onOpenHome = ::openHomeDestination,
                             onOpenWorkout = {
                                 if (currentRoute == TRAIN_ROUTE && workoutViewModel.uiState.workout != null) {
-                                    workoutViewModel.showExerciseSetup()
+                                    Unit
                                 } else {
                                     openMainDestination(
                                         if (workoutViewModel.uiState.workout == null) INTENSITY_ROUTE else TRAIN_ROUTE,
@@ -206,6 +225,8 @@ fun MyMettleApp() {
                             },
                             leadingIcon = if (restTimerSnapshot.visible) MettleIcons.Timer else MettleIcons.QuickSelect,
                             leadingDescription = if (restTimerSnapshot.visible) "Rest timer" else "Quick select",
+                            leadingProgress = restTimerProgress.takeIf { restTimerSnapshot.visible },
+                            showWorkoutControls = workoutViewModel.uiState.workout != null,
                             transparentMaterial = currentRoute == INTENSITY_ROUTE,
                         )
                     }
