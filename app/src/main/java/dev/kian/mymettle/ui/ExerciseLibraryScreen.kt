@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -324,15 +323,13 @@ private fun RoutineDayCard(
 ) {
     val shape = RoundedCornerShape(28.dp)
     val cardHaze = rememberHazeState()
-    Box(modifier = Modifier.fillMaxWidth().clip(shape)) {
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .hazeSource(cardHaze)
-                .background(
-                    Brush.verticalGradient(listOf(Color(0xFF173C35), Color(0xFF15302B))),
-                ),
-        )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Brush.verticalGradient(listOf(Color(0xFF173C35), Color(0xFF15302B))))
+            .hazeSource(cardHaze),
+    ) {
         CompositionLocalProvider(LocalMettleHazeState provides cardHaze) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -424,13 +421,13 @@ private fun dayLabel(symbol: String): String = when (symbol) {
 private fun LibraryExerciseCard(item: Exercise, onClick: () -> Unit) {
     val shape = RoundedCornerShape(24.dp)
     val localSurface = rememberHazeState()
-    Box(Modifier.fillMaxWidth().clip(shape)) {
-        Box(
-            Modifier
-                .matchParentSize()
-                .hazeSource(localSurface)
-                .background(Brush.verticalGradient(listOf(Color(0xFF183832), Color(0xFF132824)))),
-        )
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Brush.verticalGradient(listOf(Color(0xFF183832), Color(0xFF132824))))
+            .hazeSource(localSurface),
+    ) {
         CompositionLocalProvider(LocalMettleHazeState provides localSurface) {
             MettleControlGlassSurface(
                 modifier = Modifier.fillMaxWidth(),
