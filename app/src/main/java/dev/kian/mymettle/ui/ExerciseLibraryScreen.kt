@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -88,6 +89,8 @@ import dev.kian.mymettle.domain.exercise.Exercise
 import dev.kian.mymettle.domain.exercise.ExerciseSetupMedia
 import dev.kian.mymettle.library.RoutineBoardDay
 import dev.kian.mymettle.library.RoutineBoardSlot
+import dev.kian.mymettle.ui.theme.MettleOnPrimaryContainer
+import dev.kian.mymettle.ui.theme.MettleOnSurfaceVariant
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -96,7 +99,10 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExerciseLibraryScreen() {
+fun ExerciseLibraryScreen(
+    onOpenSettings: () -> Unit,
+    onOpenAccount: () -> Unit,
+) {
     val context = LocalContext.current
     val viewModel: ExerciseLibraryViewModel = viewModel(
         factory = remember(context) { ExerciseLibraryViewModelFactory(context) },
@@ -125,18 +131,9 @@ fun ExerciseLibraryScreen() {
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Library", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "Routine, exercises and setup",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+            LibraryAppBar(
+                onOpenSettings = onOpenSettings,
+                onOpenAccount = onOpenAccount,
             )
         },
     ) { innerPadding ->
@@ -147,50 +144,36 @@ fun ExerciseLibraryScreen() {
                     Brush.verticalGradient(
                         listOf(Color(0xFF10150F), Color(0xFF132018), Color(0xFF10140F)),
                     ),
-                ),
+                )
+                .padding(innerPadding),
         ) {
             if (state.loading) {
                 Box(
-                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) { CircularProgressIndicator() }
             } else {
-                Column(Modifier.fillMaxSize().padding(innerPadding)) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        MettleGlassChoiceChip(
-                            selected = state.section == LibrarySection.ROUTINE,
-                            onClick = { viewModel.selectSection(LibrarySection.ROUTINE) },
-                            label = { Text("Routine") },
-                        )
-                        MettleGlassChoiceChip(
-                            selected = state.section == LibrarySection.EXERCISES,
-                            onClick = { viewModel.selectSection(LibrarySection.EXERCISES) },
-                            label = { Text("Exercises") },
-                        )
-                    }
-                    if (state.section == LibrarySection.ROUTINE) {
-                        RoutineBoardContent(
-                            state = state,
-                            onBeginEdit = viewModel::beginRoutineEdit,
-                            onCancelEdit = viewModel::cancelRoutineEdit,
-                            onSaveEdit = viewModel::saveRoutineEdit,
-                            onMove = viewModel::moveRoutineSlot,
-                            onPlace = viewModel::placeRoutineSlot,
-                            onAddExercise = viewModel::addExerciseToRoutine,
-                            onDuplicate = viewModel::duplicateRoutineSlot,
-                            onRemove = viewModel::removeRoutineSlot,
-                            onOpenExercise = viewModel::selectExercise,
-                        )
-                    } else {
-                        ExerciseCatalogueContent(
-                            state = state,
-                            onQueryChange = viewModel::setQuery,
-                            onSelect = viewModel::select,
-                        )
-                    }
+                if (state.section == LibrarySection.ROUTINE) {
+                    RoutineBoardContent(
+                        state = state,
+                        onSectionSelected = viewModel::selectSection,
+                        onBeginEdit = viewModel::beginRoutineEdit,
+                        onCancelEdit = viewModel::cancelRoutineEdit,
+                        onSaveEdit = viewModel::saveRoutineEdit,
+                        onMove = viewModel::moveRoutineSlot,
+                        onPlace = viewModel::placeRoutineSlot,
+                        onAddExercise = viewModel::addExerciseToRoutine,
+                        onDuplicate = viewModel::duplicateRoutineSlot,
+                        onRemove = viewModel::removeRoutineSlot,
+                        onOpenExercise = viewModel::selectExercise,
+                    )
+                } else {
+                    ExerciseCatalogueContent(
+                        state = state,
+                        onSectionSelected = viewModel::selectSection,
+                        onQueryChange = viewModel::setQuery,
+                        onSelect = viewModel::select,
+                    )
                 }
             }
         }
@@ -237,9 +220,90 @@ fun ExerciseLibraryScreen() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LibraryAppBar(
+    onOpenSettings: () -> Unit,
+    onOpenAccount: () -> Unit,
+) {
+    TopAppBar(
+        title = {
+            Column {
+                Text(
+                    "My Mettle",
+                    color = MettleOnPrimaryContainer,
+                    fontSize = 24.sp,
+                    lineHeight = 30.sp,
+                )
+                Text(
+                    "Library",
+                    color = MettleOnSurfaceVariant,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        },
+        actions = {
+            MettleControlGlassSurface(
+                modifier = Modifier.width(96.dp).height(52.dp),
+                tint = MettleOnPrimaryContainer.copy(alpha = .075f),
+                borderColor = Color.White.copy(alpha = .20f),
+                shadowElevation = 3.dp,
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    MettleGlassIconTouchTarget(
+                        modifier = Modifier.size(width = 48.dp, height = 52.dp),
+                        imageVector = MettleIcons.Settings,
+                        contentDescription = "Settings",
+                        onClick = onOpenSettings,
+                        iconSize = DpSize(17.dp, 17.dp),
+                    )
+                    MettleGlassIconTouchTarget(
+                        modifier = Modifier.size(width = 48.dp, height = 52.dp),
+                        imageVector = MettleIcons.AccountCircle,
+                        contentDescription = "Account",
+                        onClick = onOpenAccount,
+                        iconSize = DpSize(17.dp, 17.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+    )
+}
+
+@Composable
+private fun LibrarySectionTabs(
+    selected: LibrarySection,
+    onSelected: (LibrarySection) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        MettleGlassChoiceChip(
+            selected = selected == LibrarySection.ROUTINE,
+            onClick = { onSelected(LibrarySection.ROUTINE) },
+            label = { Text("Routine") },
+        )
+        MettleGlassChoiceChip(
+            selected = selected == LibrarySection.EXERCISES,
+            onClick = { onSelected(LibrarySection.EXERCISES) },
+            label = { Text("Exercises") },
+        )
+    }
+}
+
 @Composable
 private fun ExerciseCatalogueContent(
     state: ExerciseLibraryUiState,
+    onSectionSelected: (LibrarySection) -> Unit,
     onQueryChange: (String) -> Unit,
     onSelect: (Exercise?) -> Unit,
 ) {
@@ -248,6 +312,12 @@ private fun ExerciseCatalogueContent(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 150.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        item {
+            LibrarySectionTabs(
+                selected = state.section,
+                onSelected = onSectionSelected,
+            )
+        }
         item {
             MettleExerciseSearchField(
                 value = state.query,
@@ -274,6 +344,7 @@ private fun ExerciseCatalogueContent(
 @Composable
 private fun RoutineBoardContent(
     state: ExerciseLibraryUiState,
+    onSectionSelected: (LibrarySection) -> Unit,
     onBeginEdit: () -> Unit,
     onCancelEdit: () -> Unit,
     onSaveEdit: () -> Unit,
@@ -344,6 +415,12 @@ private fun RoutineBoardContent(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 150.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            item {
+                LibrarySectionTabs(
+                    selected = state.section,
+                    onSelected = onSectionSelected,
+                )
+            }
             item {
                 if (editing) {
                     RoutineEditingToolbar(
