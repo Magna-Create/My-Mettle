@@ -42,9 +42,9 @@ fun dailyBriefGuidance(profile: DailyBriefSessionProfile): DailyBriefGuidance {
     val validBodyweight = profile.bodyweightKg?.takeIf { it in 35.0..250.0 }
     val protein = validBodyweight
         ?.let { roundToFive((it * 0.30).coerceIn(20.0, 40.0)).toString() }
-        ?: "20–40"
+        ?: "30"
     val carbohydrates = if (validBodyweight == null) {
-        demand.fallbackCarbohydrates
+        demand.fallbackCarbohydrates.toString()
     } else {
         roundToFive(
             (validBodyweight * demand.carbohydrateGramsPerKg)
@@ -115,12 +115,12 @@ fun ActiveWorkout.dailyBriefGuidance(): DailyBriefGuidance {
 private enum class SessionDemand(
     val carbohydrateGramsPerKg: Double,
     val minimumCarbohydrates: Int,
-    val fallbackCarbohydrates: String,
+    val fallbackCarbohydrates: Int,
     val waterDuring: String,
 ) {
-    LIGHT(0.50, 25, "25–40", "400–600"),
-    MODERATE(0.75, 35, "40–60", "500–700"),
-    HIGH(1.00, 45, "60–80", "600–800"),
+    LIGHT(0.50, 25, 35, "500"),
+    MODERATE(0.75, 35, 50, "600"),
+    HIGH(1.00, 45, 70, "700"),
 }
 
 private fun roundToFive(value: Double): Int = (value / 5.0).roundToInt() * 5

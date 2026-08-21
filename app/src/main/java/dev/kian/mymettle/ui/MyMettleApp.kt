@@ -44,6 +44,7 @@ private const val INTENSITY_ROUTE = "intensity"
 private const val TRAIN_ROUTE = "train"
 private const val LIBRARY_ROUTE = "library"
 private const val HISTORY_ROUTE = "history"
+private const val ACCOUNT_ROUTE = "account"
 private const val SETTINGS_ROUTE = "settings"
 private const val BIOLOGY_DEVELOPER_ROUTE = "settings/biology-developer"
 
@@ -140,7 +141,7 @@ fun MyMettleApp() {
                 )
             }
 
-            HOME_ROUTE -> {
+            HOME_ROUTE, ACCOUNT_ROUTE -> {
                 MettleGradientBackground(
                     modifier = Modifier.hazeSource(hazeState),
                     content = {},
@@ -252,7 +253,7 @@ fun MyMettleApp() {
                                 },
                                 onOpenWorkout = { openMainDestination(TRAIN_ROUTE) },
                                 onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
-                                onOpenAccount = { openMainDestination(HISTORY_ROUTE) },
+                                onOpenAccount = { openMainDestination(ACCOUNT_ROUTE) },
                             )
                         }
                         composable(INTENSITY_ROUTE) {
@@ -260,7 +261,7 @@ fun MyMettleApp() {
                                 viewModel = workoutViewModel,
                                 onOpenWorkout = ::openWorkoutFromIntensity,
                                 onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
-                                onOpenAccount = { openMainDestination(HISTORY_ROUTE) },
+                                onOpenAccount = { openMainDestination(ACCOUNT_ROUTE) },
                             )
                         }
                         composable(TRAIN_ROUTE) {
@@ -272,12 +273,18 @@ fun MyMettleApp() {
                                 TrainScreen(
                                     viewModel = workoutViewModel,
                                     onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
-                                    onOpenAccount = { openMainDestination(HISTORY_ROUTE) },
+                                    onOpenAccount = { openMainDestination(ACCOUNT_ROUTE) },
                                 )
                             }
                         }
                         composable(LIBRARY_ROUTE) { ExerciseLibraryScreen() }
                         composable(HISTORY_ROUTE) { HistoryScreen() }
+                        composable(ACCOUNT_ROUTE) {
+                            AccountScreen(
+                                onBack = { navController.popBackStack() },
+                                onProfileSaved = workoutViewModel::refresh,
+                            )
+                        }
                         composable(SETTINGS_ROUTE) {
                             SettingsScreen(
                                 onOpenDeveloper = {

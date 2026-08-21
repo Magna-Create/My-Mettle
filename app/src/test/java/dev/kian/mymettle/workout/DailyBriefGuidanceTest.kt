@@ -7,7 +7,7 @@ import kotlin.test.assertTrue
 
 class DailyBriefGuidanceTest {
     @Test
-    fun `light session without bodyweight uses honest ranges`() {
+    fun `light session without bodyweight uses conservative defaults`() {
         val guidance = dailyBriefGuidance(
             DailyBriefSessionProfile(
                 workingSets = 8,
@@ -17,9 +17,9 @@ class DailyBriefGuidanceTest {
             ),
         )
 
-        assertEquals("20–40", guidance.proteinBefore)
-        assertEquals("25–40", guidance.carbohydratesBefore)
-        assertEquals("400–600", guidance.waterDuring)
+        assertEquals("30", guidance.proteinBefore)
+        assertEquals("35", guidance.carbohydratesBefore)
+        assertEquals("500", guidance.waterDuring)
         assertEquals("Glutes + Quads", guidance.emphasis)
         assertFalse(guidance.isWeightAware)
     }
@@ -37,7 +37,7 @@ class DailyBriefGuidanceTest {
 
         assertEquals("25", guidance.proteinBefore)
         assertEquals("60", guidance.carbohydratesBefore)
-        assertEquals("500–700", guidance.waterDuring)
+        assertEquals("600", guidance.waterDuring)
         assertEquals("Shoulders + Triceps", guidance.emphasis)
         assertTrue(guidance.isWeightAware)
     }
@@ -55,7 +55,7 @@ class DailyBriefGuidanceTest {
 
         assertEquals("40", guidance.proteinAfter)
         assertEquals("100", guidance.carbohydratesAfter)
-        assertEquals("600–800", guidance.waterDuring)
+        assertEquals("700", guidance.waterDuring)
         assertEquals("Full body", guidance.emphasis)
     }
 }

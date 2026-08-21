@@ -1,5 +1,9 @@
 package dev.kian.mymettle.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.workout.ActiveWorkoutExercise
 import dev.kian.mymettle.workout.evaluateLoadExpression
@@ -51,8 +56,25 @@ fun TrainScreen(
     val state = viewModel.uiState
     if (state.workout == null) return
 
+    val context = LocalContext.current
     val drafts = remember { mutableStateMapOf<String, TrainSetDraft>() }
     var calculatorTarget by remember { mutableStateOf<LoadCalculatorTarget?>(null) }
+    var cameraExercise by remember { mutableStateOf<ActiveWorkoutExercise?>(null) }
+    var showCamera by remember { mutableStateOf(false) }
+    var cameraPermissionDenied by remember { mutableStateOf(false) }
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        showCamera = granted && cameraExercise != null
+        cameraPermissionDenied = !granted
+    }
+
+    fun openSetupCamera(exercise: ActiveWorkoutExercise) {
+        cameraExercise = exercise
+        when (context.checkSelfPermission(Manifest.permission.CAMERA)) {
+            PackageManager.PERMISSION_GRANTED -> showCamera = true
+            else -> cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
     FigmaWorkoutSession(
         state = state,
         drafts = drafts,
@@ -70,6 +92,7 @@ fun TrainScreen(
         onDismissSwap = viewModel::dismissExerciseSwap,
         onShowSets = viewModel::showWorkoutSets,
         onShowSetup = viewModel::showExerciseSetup,
+        onAddSetupPhoto = ::openSetupCamera,
         onToggleExercise = viewModel::toggleExercise,
         onRateExercise = viewModel::rateExercise,
         onDismissSheet = viewModel::dismissWorkoutSheet,
@@ -78,6 +101,32 @@ fun TrainScreen(
         onCompleteWithoutReview = { viewModel.completeSession(skipReview = true) },
         onDiscardSession = viewModel::discardActiveSession,
     )
+
+    cameraExercise?.takeIf { showCamera }?.let { exercise ->
+        SetupCameraOverlay(
+            exerciseName = exercise.entity.exerciseNameSnapshot,
+            onCaptured = { captureFile ->
+                showCamera = false
+                cameraExercise = null
+                viewModel.addCapturedSetupPhoto(exercise, captureFile)
+            },
+            onDismiss = {
+                showCamera = false
+                cameraExercise = null
+            },
+        )
+    }
+
+    if (cameraPermissionDenied) {
+        AlertDialog(
+            onDismissRequest = { cameraPermissionDenied = false },
+            title = { Text("Camera permission needed") },
+            text = { Text("My Mettle only opens the camera when you tap the setup-photo button.") },
+            confirmButton = {
+                TextButton(onClick = { cameraPermissionDenied = false }) { Text("OK") }
+            },
+        )
+    }
 
     calculatorTarget?.let { target ->
         val draft = drafts.getOrPut(target.set.id) { TrainSetDraft(target.set) }

@@ -13,6 +13,7 @@ import dev.kian.mymettle.data.local.entity.SessionReviewEntity
 import dev.kian.mymettle.data.migration.LegacyImportReport
 import dev.kian.mymettle.data.migration.LegacyV6Importer
 import dev.kian.mymettle.history.HistoryRepository
+import dev.kian.mymettle.library.ExerciseLibraryRepository
 import dev.kian.mymettle.timer.RestTimerController
 import dev.kian.mymettle.workout.ActiveWorkout
 import dev.kian.mymettle.workout.ActiveWorkoutExercise
@@ -26,6 +27,7 @@ import dev.kian.mymettle.workout.TrainingMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 enum class WorkoutSurface {
     SETS,
@@ -48,6 +50,7 @@ data class N2WorkoutUiState(
     val swapTarget: ActiveWorkoutExercise? = null,
     val swapOptions: List<ExerciseSwapOption> = emptyList(),
     val loadingSwapOptions: Boolean = false,
+    val savingSetupPhoto: Boolean = false,
     val reflectionTarget: ActiveWorkoutExercise? = null,
     val reflection: ExerciseReflectionEntity? = null,
     val savingReflection: Boolean = false,
@@ -64,6 +67,7 @@ class N2WorkoutViewModel(
     private val repository: RoomWorkoutRepository,
     private val outcomeRepository: SessionOutcomeRepository,
     private val historyRepository: HistoryRepository,
+    private val libraryRepository: ExerciseLibraryRepository,
     private val importer: LegacyV6Importer,
     private val restTimer: RestTimerController,
 ) : ViewModel() {
@@ -119,6 +123,29 @@ class N2WorkoutViewModel(
         if (uiState.workout != null) return
         viewModelScope.launch {
             runCatching { loadProgrammeDay(day, uiState.selectedMode) }.onFailure(::showError)
+        }
+    }
+
+    fun addCapturedSetupPhoto(exercise: ActiveWorkoutExercise, captureFile: File) {
+        if (uiState.savingSetupPhoto) {
+            captureFile.delete()
+            return
+        }
+        viewModelScope.launch {
+            uiState = uiState.copy(savingSetupPhoto = true, error = null)
+            runCatching {
+                libraryRepository.addCapturedSetupPhoto(exercise.entity.exerciseId, captureFile)
+                repository.activeWorkout()
+            }.onSuccess { refreshed ->
+                uiState = uiState.copy(
+                    savingSetupPhoto = false,
+                    workout = refreshed ?: uiState.workout,
+                )
+            }.onFailure { error ->
+                captureFile.delete()
+                uiState = uiState.copy(savingSetupPhoto = false)
+                showError(error)
+            }
         }
     }
 
@@ -519,6 +546,7 @@ class N2WorkoutViewModel(
             savingReflection = false,
             savingReview = false,
             loadingSwapOptions = false,
+            savingSetupPhoto = false,
             error = error.message ?: error::class.java.simpleName,
         )
     }
@@ -537,6 +565,7 @@ class N2WorkoutViewModelFactory(context: Context) : ViewModelProvider.Factory {
             repository = RoomWorkoutRepository(database),
             outcomeRepository = SessionOutcomeRepository(database),
             historyRepository = HistoryRepository(database),
+            libraryRepository = ExerciseLibraryRepository(appContext, database),
             importer = LegacyV6Importer(appContext, database),
             restTimer = RestTimerController.get(appContext),
         ) as T
