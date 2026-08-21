@@ -44,7 +44,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -381,13 +381,11 @@ private fun WorkoutWaveProgress(workout: ActiveWorkout, modifier: Modifier, metr
             modifier = Modifier.fillMaxSize().padding(horizontal = metrics.dp(10)),
             contentAlignment = Alignment.Center,
         ) {
-            LinearWavyProgressIndicator(
+            LinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(metrics.dp(13)),
+                modifier = Modifier.fillMaxWidth().height(metrics.dp(6)).clip(CircleShape),
                 color = WorkoutCyan,
-                trackColor = WorkoutPaper.copy(alpha = .88f),
-                amplitude = { completedProgress -> if (completedProgress <= 0f) 0f else 1f },
-                wavelength = metrics.dp(18),
+                trackColor = WorkoutPaper.copy(alpha = .34f),
             )
         }
     }
