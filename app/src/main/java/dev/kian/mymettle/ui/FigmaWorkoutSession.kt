@@ -131,6 +131,7 @@ internal fun FigmaWorkoutSession(
     onDismissSwap: () -> Unit,
     onShowSets: (String?) -> Unit,
     onShowSetup: () -> Unit,
+    onAddSetupPhoto: (ActiveWorkoutExercise) -> Unit,
     onToggleExercise: (ActiveWorkoutExercise) -> Unit,
     onRateExercise: (ActiveWorkoutExercise) -> Unit,
     onDismissSheet: () -> Unit,
@@ -186,6 +187,7 @@ internal fun FigmaWorkoutSession(
                         listState = listState,
                         onFocusExercise = onShowSets,
                         onShowSetup = onShowSetup,
+                        onAddSetupPhoto = onAddSetupPhoto,
                         onOpenCalculator = onOpenCalculator,
                         onSaveDraft = onSaveDraft,
                         onLogSet = onLogSet,
@@ -266,6 +268,7 @@ private fun WorkoutExerciseContent(
     listState: LazyListState,
     onFocusExercise: (String?) -> Unit,
     onShowSetup: () -> Unit,
+    onAddSetupPhoto: (ActiveWorkoutExercise) -> Unit,
     onOpenCalculator: (ActiveWorkoutExercise, SetRecordEntity) -> Unit,
     onSaveDraft: (ActiveWorkoutExercise, SetRecordEntity, TrainSetDraft) -> Unit,
     onLogSet: (ActiveWorkoutExercise, SetRecordEntity, TrainSetDraft) -> Unit,
@@ -311,6 +314,7 @@ private fun WorkoutExerciseContent(
                     onFocusExercise(exercise.entity.id)
                     onShowSetup()
                 },
+                onAddSetupPhoto = { onAddSetupPhoto(exercise) },
                 onOpenCalculator = { set -> onOpenCalculator(exercise, set) },
                 onSaveDraft = { set, draft -> onSaveDraft(exercise, set, draft) },
                 onLogSet = { set, draft -> onLogSet(exercise, set, draft) },
@@ -397,26 +401,21 @@ private fun WorkoutWaveProgress(workout: ActiveWorkout, modifier: Modifier, metr
 
 @Composable
 private fun BoxScope.WorkoutViewportScrims(metrics: WorkoutMetrics) {
-    listOf(
-        Triple(0f, 13f, .13f),
-        Triple(38f, 8f, .085f),
-        Triple(78f, 4f, .04f),
-    ).forEach { (offset, blur, tintAlpha) ->
-        MettleGlassSurface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(metrics.dp(54))
-                .align(Alignment.TopCenter)
-                .offset(y = metrics.dp(offset)),
-            shape = RoundedCornerShape(0.dp),
-            tint = WorkoutInk.copy(alpha = tintAlpha),
-            blurRadius = metrics.dp(blur),
-            refractionDisplacement = 0.dp,
-            refractionStrength = 0f,
-            shadowElevation = 0.dp,
-            grainStrength = 0f,
-        ) {}
-    }
+    // A single continuous optical layer avoids the hard seams produced by the previous stack of
+    // overlapping rectangular blur bands. The smooth tint masks provide the progressive fade.
+    MettleGlassSurface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(metrics.dp(132))
+            .align(Alignment.TopCenter),
+        shape = RoundedCornerShape(0.dp),
+        tint = WorkoutInk.copy(alpha = .07f),
+        blurRadius = metrics.dp(12),
+        refractionDisplacement = 0.dp,
+        refractionStrength = 0f,
+        shadowElevation = 0.dp,
+        grainStrength = 0f,
+    ) {}
     Box(
         Modifier
             .fillMaxWidth()
@@ -431,26 +430,19 @@ private fun BoxScope.WorkoutViewportScrims(metrics: WorkoutMetrics) {
             ),
     )
 
-    listOf(
-        Triple(0f, 13f, .12f),
-        Triple(38f, 8f, .075f),
-        Triple(76f, 4f, .035f),
-    ).forEach { (offset, blur, tintAlpha) ->
-        MettleGlassSurface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(metrics.dp(58))
-                .align(Alignment.BottomCenter)
-                .offset(y = -metrics.dp(offset)),
-            shape = RoundedCornerShape(0.dp),
-            tint = WorkoutInk.copy(alpha = tintAlpha),
-            blurRadius = metrics.dp(blur),
-            refractionDisplacement = 0.dp,
-            refractionStrength = 0f,
-            shadowElevation = 0.dp,
-            grainStrength = 0f,
-        ) {}
-    }
+    MettleGlassSurface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(metrics.dp(142))
+            .align(Alignment.BottomCenter),
+        shape = RoundedCornerShape(0.dp),
+        tint = WorkoutInk.copy(alpha = .06f),
+        blurRadius = metrics.dp(12),
+        refractionDisplacement = 0.dp,
+        refractionStrength = 0f,
+        shadowElevation = 0.dp,
+        grainStrength = 0f,
+    ) {}
     Box(
         Modifier
             .fillMaxWidth()
@@ -475,6 +467,7 @@ private fun WorkoutExerciseCard(
     enabled: Boolean,
     onFocus: () -> Unit,
     onSetup: () -> Unit,
+    onAddSetupPhoto: () -> Unit,
     onOpenCalculator: (SetRecordEntity) -> Unit,
     onSaveDraft: (SetRecordEntity, TrainSetDraft) -> Unit,
     onLogSet: (SetRecordEntity, TrainSetDraft) -> Unit,
@@ -506,6 +499,18 @@ private fun WorkoutExerciseCard(
                     .padding(start = metrics.dp(16), end = metrics.dp(18)),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        entity.exerciseNameSnapshot,
+                        color = WorkoutPaper,
+                        fontSize = metrics.sp(26),
+                        lineHeight = metrics.sp(32),
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Spacer(Modifier.width(metrics.dp(12)))
                 MettleControlGlassSurface(
                     modifier = Modifier.size(metrics.dp(80)),
                     shape = CircleShape,
@@ -522,18 +527,6 @@ private fun WorkoutExerciseCard(
                             modifier = Modifier.size(metrics.dp(if (completed) 32 else 29)),
                         )
                     }
-                }
-                Spacer(Modifier.width(metrics.dp(12)))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        entity.exerciseNameSnapshot,
-                        color = WorkoutPaper,
-                        fontSize = metrics.sp(26),
-                        lineHeight = metrics.sp(32),
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
                 }
             }
 
@@ -559,7 +552,12 @@ private fun WorkoutExerciseCard(
 
             when {
                 completed -> CompletedExerciseActions(onRateExercise, onToggleExercise, metrics)
-                showSetup -> WorkoutSetupBody(exercise, onReturn = onFocus, metrics = metrics)
+                showSetup -> WorkoutSetupBody(
+                    exercise = exercise,
+                    onAddPhoto = onAddSetupPhoto,
+                    onReturn = onFocus,
+                    metrics = metrics,
+                )
                 else -> {
                     Column(Modifier.padding(top = metrics.dp(15))) {
                         sets.forEachIndexed { index, set ->
@@ -898,7 +896,12 @@ private fun WorkoutCardButton(text: String, onClick: () -> Unit, modifier: Modif
 }
 
 @Composable
-private fun WorkoutSetupBody(exercise: ActiveWorkoutExercise, onReturn: () -> Unit, metrics: WorkoutMetrics) {
+private fun WorkoutSetupBody(
+    exercise: ActiveWorkoutExercise,
+    onAddPhoto: () -> Unit,
+    onReturn: () -> Unit,
+    metrics: WorkoutMetrics,
+) {
     Column(Modifier.padding(horizontal = metrics.dp(16), vertical = metrics.dp(16))) {
         val notes = exercise.details.setupNotes
             .ifBlank { exercise.entity.movementReason }
@@ -949,23 +952,24 @@ private fun WorkoutSetupBody(exercise: ActiveWorkoutExercise, onReturn: () -> Un
             )
         }
         Spacer(Modifier.height(metrics.dp(20)))
-        SetupMediaStrip(exercise.details.setupMediaPaths, metrics)
+        SetupMediaStrip(exercise.details.setupMediaPaths, onAddPhoto, metrics)
         Spacer(Modifier.height(metrics.dp(20)))
         WorkoutCardButton("Return to sets", onReturn, Modifier.fillMaxWidth(), metrics)
     }
 }
 
 @Composable
-private fun SetupMediaStrip(paths: List<String>, metrics: WorkoutMetrics) {
+private fun SetupMediaStrip(paths: List<String>, onAddPhoto: () -> Unit, metrics: WorkoutMetrics) {
     Row(
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(metrics.dp(10)),
     ) {
-        Surface(
+        MettleControlGlassSurface(
             modifier = Modifier.width(metrics.dp(56)).height(metrics.dp(196)),
             shape = RoundedCornerShape(metrics.dp(25)),
-            color = Color.White.copy(alpha = .06f),
-            border = BorderStroke(metrics.dp(.7), Color.White.copy(alpha = .22f)),
+            tint = WorkoutCyan.copy(alpha = .035f),
+            borderColor = WorkoutCyan.copy(alpha = .32f),
+            onClick = onAddPhoto,
         ) { Box(contentAlignment = Alignment.Center) { Text("+", color = WorkoutPaper, fontSize = metrics.sp(24)) } }
         paths.forEach { path -> SetupMediaImage(path, metrics) }
         if (paths.isEmpty()) {

@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -264,7 +262,10 @@ internal fun MettleGlassActionButton(
     val contentColor = foregroundColor ?: Color.White.copy(alpha = if (enabled) 0.96f else 0.42f)
 
     MettleControlGlassSurface(
-        modifier = modifier.defaultMinSize(minHeight = 48.dp),
+        // Bound the control before its child fills the surface. An unbounded fillMaxHeight here
+        // previously consumed the rest of timer sheets, while a content-sized child sat a few
+        // pixels high inside normal buttons. Callers can still request any height up to 64 dp.
+        modifier = modifier.heightIn(min = 48.dp, max = 64.dp),
         shape = CircleShape,
         tint = tint,
         enabled = enabled,
@@ -274,12 +275,16 @@ internal fun MettleGlassActionButton(
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             ProvideTextStyle(MaterialTheme.typography.labelLarge) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(contentPadding),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                    content = content,
-                )
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(contentPadding),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        content = content,
+                    )
+                }
             }
         }
     }
