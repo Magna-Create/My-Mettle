@@ -49,6 +49,7 @@ internal fun MettleBottomToolbarV2(
     leadingProgress: Float? = null,
     showWorkoutControls: Boolean = true,
     transparentMaterial: Boolean = false,
+    preserveEdgeDefinition: Boolean = false,
 ) {
     val middle = listOf(
         ToolbarDestination("Daily Update", MettleIcons.Cycle, 23f, 23f, onOpenHome),
@@ -74,6 +75,7 @@ internal fun MettleBottomToolbarV2(
                     modifier = Modifier.width(scaled(64)).height(scaled(64)),
                     shape = CircleShape,
                     tint = tint,
+                    preserveEdgeDefinition = preserveEdgeDefinition,
                 ) {
                     Canvas(Modifier.fillMaxSize()) {
                         leadingProgress?.let { progress ->
@@ -106,6 +108,7 @@ internal fun MettleBottomToolbarV2(
                 modifier = Modifier.width(scaled(168)).height(scaled(64)),
                 shape = CircleShape,
                 tint = tint,
+                preserveEdgeDefinition = preserveEdgeDefinition,
             ) {
                 Row(
                     modifier = Modifier.fillMaxSize().padding(horizontal = scaled(6)),
@@ -131,6 +134,7 @@ internal fun MettleBottomToolbarV2(
                     modifier = Modifier.width(scaled(64)).height(scaled(64)),
                     shape = CircleShape,
                     tint = tint,
+                    preserveEdgeDefinition = preserveEdgeDefinition,
                 ) {
                     MettleGlassIconTouchTarget(
                         modifier = Modifier.fillMaxSize(),

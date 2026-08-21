@@ -17,8 +17,9 @@ class DailyBriefGuidanceTest {
             ),
         )
 
-        assertEquals("30", guidance.proteinBefore)
-        assertEquals("35", guidance.carbohydratesBefore)
+        assertEquals("—", guidance.proteinDaily)
+        assertEquals("20–40", guidance.proteinPerMeal)
+        assertEquals("20", guidance.carbohydratesBefore)
         assertEquals("500", guidance.waterDuring)
         assertEquals("Glutes + Quads", guidance.emphasis)
         assertFalse(guidance.isWeightAware)
@@ -35,15 +36,33 @@ class DailyBriefGuidanceTest {
             ),
         )
 
-        assertEquals("25", guidance.proteinBefore)
-        assertEquals("60", guidance.carbohydratesBefore)
+        assertEquals("130", guidance.proteinDaily)
+        assertEquals("20", guidance.proteinPerMeal)
+        assertEquals("30", guidance.carbohydratesBefore)
         assertEquals("600", guidance.waterDuring)
         assertEquals("Shoulders + Triceps", guidance.emphasis)
         assertTrue(guidance.isWeightAware)
     }
 
     @Test
-    fun `high session clamps protein to evidence supported serving range`() {
+    fun `short moderate lifting day does not duplicate pre and post fuel`() {
+        val guidance = dailyBriefGuidance(
+            DailyBriefSessionProfile(
+                workingSets = 15,
+                estimatedDurationSeconds = 39 * 60,
+                bodyweightKg = 65.0,
+                targetSegments = emptyList(),
+            ),
+        )
+
+        assertEquals("105", guidance.proteinDaily)
+        assertEquals("20", guidance.proteinPerMeal)
+        assertEquals("25", guidance.carbohydratesBefore)
+        assertEquals("600", guidance.waterDuring)
+    }
+
+    @Test
+    fun `high session separates daily protein from serving guidance`() {
         val guidance = dailyBriefGuidance(
             DailyBriefSessionProfile(
                 workingSets = 20,
@@ -53,8 +72,9 @@ class DailyBriefGuidanceTest {
             ),
         )
 
-        assertEquals("40", guidance.proteinAfter)
-        assertEquals("100", guidance.carbohydratesAfter)
+        assertEquals("290", guidance.proteinDaily)
+        assertEquals("40", guidance.proteinPerMeal)
+        assertEquals("90", guidance.carbohydratesBefore)
         assertEquals("700", guidance.waterDuring)
         assertEquals("Full body", guidance.emphasis)
     }

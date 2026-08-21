@@ -634,13 +634,13 @@ private fun IntensityV3HandleDock(
         refractionDisplacement = metrics.dp(2.4),
         refractionStrength = 0.22f,
         shadowElevation = metrics.dp(1.5),
-        borderWidth = metrics.dp(0.65),
-        borderColor = IntensityV3OnTertiaryContainer.copy(alpha = 0.32f),
+        borderWidth = metrics.dp(0.32),
+        borderColor = IntensityV3OnTertiaryContainer.copy(alpha = 0.10f),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val thin = metrics.dp(0.72).toPx()
             drawCircle(
-                color = Color.White.copy(alpha = 0.34f),
+                color = Color.White.copy(alpha = 0.16f),
                 radius = size.minDimension * 0.31f,
                 style = Stroke(width = thin),
             )
@@ -649,7 +649,7 @@ private fun IntensityV3HandleDock(
                 radius = size.minDimension * 0.22f,
             )
             drawCircle(
-                color = Color.White.copy(alpha = 0.24f),
+                color = Color.White.copy(alpha = 0.12f),
                 radius = size.minDimension * 0.19f,
                 style = Stroke(width = thin * 0.82f),
             )
@@ -682,8 +682,8 @@ private fun IntensityV3MovingGlassLens(
         refractionDisplacement = metrics.dp(if (active) 9 else 6.5),
         refractionStrength = if (active) 0.64f else 0.52f,
         shadowElevation = metrics.dp(if (active) 5 else 2),
-        borderWidth = metrics.dp(if (active) 1.0 else 0.72),
-        borderColor = IntensityV3OnTertiaryContainer.copy(alpha = if (active) 0.62f else 0.42f),
+        borderWidth = metrics.dp(if (active) 0.42 else 0.30),
+        borderColor = IntensityV3OnTertiaryContainer.copy(alpha = if (active) 0.14f else 0.08f),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val thin = metrics.dp(if (active) 0.95 else 0.78).toPx()

@@ -44,7 +44,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -65,6 +64,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PointMode
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -95,14 +96,15 @@ import dev.kian.mymettle.workout.ExerciseSwapOption
 import java.io.File
 import kotlin.math.hypot
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val WorkoutReferenceWidth = 453f
 private val WorkoutInk = Color(0xFF11140F)
 private val WorkoutSurfaceLow = Color(0xFF191D17)
-private val WorkoutCard = Color(0xE61A3A37)
-private val WorkoutCardQuiet = Color(0xCC23423F)
+private val WorkoutCard = Color(0xA81A3A37)
+private val WorkoutCardQuiet = Color(0x9923423F)
 private val WorkoutPaper = Color(0xFFE1E4DA)
 private val WorkoutPaperMuted = Color(0xFFC3C8BB)
 private val WorkoutCyan = Color(0xFFBBEBED)
@@ -380,6 +382,11 @@ private fun WorkoutWaveProgress(workout: ActiveWorkout, modifier: Modifier, metr
     val visible = workout.exercises.filter { it.entity.prescriptionIncluded }
     val completed = visible.count { it.entity.status == "completed" }
     val progress = if (visible.isEmpty()) 0f else completed.toFloat() / visible.size
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = spring(dampingRatio = .84f, stiffness = 280f),
+        label = "workout-progress",
+    )
     MettleControlGlassSurface(
         modifier = modifier,
         shape = CircleShape,
@@ -390,12 +397,64 @@ private fun WorkoutWaveProgress(workout: ActiveWorkout, modifier: Modifier, metr
             modifier = Modifier.fillMaxSize().padding(horizontal = metrics.dp(10)),
             contentAlignment = Alignment.Center,
         ) {
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(metrics.dp(6)).clip(CircleShape),
-                color = WorkoutCyan,
-                trackColor = WorkoutPaper.copy(alpha = .34f),
-            )
+            Canvas(Modifier.fillMaxWidth().height(metrics.dp(31))) {
+                val centreY = size.height / 2f
+                val endX = size.width * animatedProgress.coerceIn(0f, 1f)
+                val trackStroke = metrics.dp(2.1).toPx()
+
+                drawLine(
+                    color = WorkoutPaper.copy(alpha = .52f),
+                    start = Offset(endX, centreY),
+                    end = Offset(size.width, centreY),
+                    strokeWidth = trackStroke,
+                )
+
+                if (endX > 0f) {
+                    val amplitude = metrics.dp(2.5).toPx()
+                    val wavelength = metrics.dp(18).toPx().coerceAtLeast(1f)
+                    val step = metrics.dp(1.5).toPx().coerceAtLeast(1f)
+                    val wave = Path().apply {
+                        moveTo(0f, centreY)
+                        var x = step
+                        while (x < endX) {
+                            lineTo(x, centreY + sin((x / wavelength) * Math.PI * 2.0).toFloat() * amplitude)
+                            x += step
+                        }
+                        lineTo(endX, centreY)
+                    }
+
+                    drawPath(
+                        path = wave,
+                        color = WorkoutCyan.copy(alpha = .07f),
+                        style = Stroke(width = metrics.dp(13).toPx()),
+                    )
+                    drawPath(
+                        path = wave,
+                        color = WorkoutCyan.copy(alpha = .18f),
+                        style = Stroke(width = metrics.dp(6).toPx()),
+                    )
+                    drawPath(
+                        path = wave,
+                        color = WorkoutCyan,
+                        style = Stroke(width = trackStroke),
+                    )
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(WorkoutCyan.copy(alpha = .22f), Color.Transparent),
+                            center = Offset(endX, centreY),
+                            radius = metrics.dp(19).toPx(),
+                        ),
+                        radius = metrics.dp(19).toPx(),
+                        center = Offset(endX, centreY),
+                    )
+                    drawLine(
+                        color = WorkoutPaper,
+                        start = Offset(endX, centreY - metrics.dp(9).toPx()),
+                        end = Offset(endX, centreY + metrics.dp(9).toPx()),
+                        strokeWidth = metrics.dp(2.2).toPx(),
+                    )
+                }
+            }
         }
     }
 }
@@ -511,9 +570,9 @@ private fun WorkoutExerciseCard(
     Surface(
         modifier = Modifier.fillMaxWidth().hazeSource(cardHazeState),
         shape = WorkoutCardShape,
-        color = if (completed) WorkoutGreenDark.copy(alpha = .90f) else WorkoutCard,
-        border = BorderStroke(metrics.dp(.7), Color.White.copy(alpha = if (focused) .22f else .08f)),
-        shadowElevation = if (focused) metrics.dp(6) else metrics.dp(2),
+        color = if (completed) WorkoutGreenDark.copy(alpha = .72f) else WorkoutCard,
+        border = null,
+        shadowElevation = if (focused) metrics.dp(4) else metrics.dp(2),
     ) {
         CompositionLocalProvider(LocalMettleHazeState provides cardHazeState) {
             Column {
@@ -672,8 +731,8 @@ private fun WorkoutSetRow(
                 drawRect(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            WorkoutCyanStrong.copy(alpha = .34f),
-                            WorkoutCyan.copy(alpha = .13f),
+                            WorkoutCyanStrong.copy(alpha = .20f),
+                            WorkoutCyan.copy(alpha = .07f),
                             Color.Transparent,
                         ),
                         center = Offset(size.width * .12f, size.height * .52f),
@@ -685,7 +744,7 @@ private fun WorkoutSetRow(
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = Color.Transparent,
-            border = BorderStroke(metrics.dp(.65), Color.White.copy(alpha = .23f)),
+            border = BorderStroke(metrics.dp(.3), Color.White.copy(alpha = .065f)),
             shape = shape,
         ) {
             Row {
@@ -696,8 +755,8 @@ private fun WorkoutSetRow(
                     .background(
                         when {
                             set.completedAt != null -> WorkoutGreen.copy(alpha = .13f)
-                            isCurrent -> WorkoutCyan.copy(alpha = .10f)
-                            else -> Color.White.copy(alpha = .045f)
+                            isCurrent -> WorkoutCyan.copy(alpha = .065f)
+                            else -> Color.White.copy(alpha = .035f)
                         },
                     )
                     .clickable(enabled = enabled && ready) {
@@ -797,10 +856,11 @@ private fun WorkoutMetricField(
     MettleControlGlassSurface(
         modifier = modifier,
         shape = RoundedCornerShape(11.dp),
-        tint = WorkoutDarkCyan.copy(alpha = .16f),
-        borderWidth = .5.dp,
-        borderColor = WorkoutCyan.copy(alpha = .14f),
-        shadowElevation = 1.dp,
+        tint = WorkoutCyan.copy(alpha = .018f),
+        baseColor = WorkoutDarkCyan.copy(alpha = .72f),
+        borderWidth = .3.dp,
+        borderColor = WorkoutCyan.copy(alpha = .07f),
+        shadowElevation = .5.dp,
     ) {
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
             BasicTextField(
@@ -860,7 +920,10 @@ private fun WorkoutChip(text: String, metrics: WorkoutMetrics, success: Boolean 
     Surface(
         shape = RoundedCornerShape(metrics.dp(6)),
         color = Color.Transparent,
-        border = BorderStroke(metrics.dp(.7), if (success) WorkoutGreen.copy(alpha = .55f) else WorkoutPaperMuted.copy(alpha = .42f)),
+        border = BorderStroke(
+            metrics.dp(.45),
+            if (success) WorkoutGreen.copy(alpha = .20f) else WorkoutPaperMuted.copy(alpha = .15f),
+        ),
     ) {
         Text(
             text,
@@ -927,7 +990,7 @@ private fun WorkoutCardButton(text: String, onClick: () -> Unit, modifier: Modif
         shadowElevation = metrics.dp(4),
         accent = false,
         containerTint = WorkoutCyan.copy(alpha = .055f),
-        outlineColor = WorkoutCyan.copy(alpha = .42f),
+        outlineColor = WorkoutCyan.copy(alpha = .10f),
         foregroundColor = WorkoutPaper,
         contentPadding = PaddingValues(horizontal = metrics.dp(13), vertical = metrics.dp(9)),
     ) {

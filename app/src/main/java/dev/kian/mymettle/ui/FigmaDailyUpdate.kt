@@ -87,6 +87,7 @@ private data class FigmaNutritionGuidance(
     val before: String? = null,
     val after: String? = null,
     val combined: String? = null,
+    val combinedLabel: String? = null,
     val unit: String,
 )
 
@@ -111,20 +112,20 @@ internal fun FigmaDailyUpdateScreen(
                 emoji = "🧀",
                 title = "Protein",
                 timing = if (guidance.isWeightAware) {
-                    "Per meal · weight-aware"
+                    "Daily · ${guidance.proteinPerMeal} g per meal"
                 } else {
-                    "Per meal near training"
+                    "Add weight in Account"
                 },
-                before = guidance.proteinBefore,
-                after = guidance.proteinAfter,
-                unit = "G",
+                combined = guidance.proteinDaily,
+                combinedLabel = "Daily target",
+                unit = if (guidance.isWeightAware) "G" else "",
             ),
             FigmaNutritionGuidance(
                 emoji = "🥪",
                 title = "Carbohydrates",
-                timing = "Scaled to session demand",
-                before = guidance.carbohydratesBefore,
-                after = guidance.carbohydratesAfter,
+                timing = "Optional · if fasted or low-fuelled",
+                combined = guidance.carbohydratesBefore,
+                combinedLabel = "Pre-session",
                 unit = "G",
             ),
             FigmaNutritionGuidance(
@@ -428,7 +429,7 @@ private fun FigmaNutritionHeading(modifier: Modifier, metrics: FigmaMetrics) {
         Spacer(Modifier.height(metrics.dp(7)))
         Text(
             modifier = Modifier.padding(start = metrics.dp(3)),
-            text = "Pre and Post Workout Fuel Guide:",
+            text = "Training Day Fuel Guide:",
             color = MettleOnSurface.copy(alpha = 0.80f),
             fontSize = metrics.sp(14),
             lineHeight = metrics.sp(20),
@@ -518,7 +519,7 @@ private fun FigmaNutritionCard(
                 modifier = Modifier.width(metrics.dp(184)),
                 amount = guidance.combined,
                 unit = guidance.unit,
-                label = null,
+                label = guidance.combinedLabel,
                 background = Color(0xFF153809),
                 metrics = metrics,
             )
@@ -898,6 +899,7 @@ private fun FigmaTintedSurface(
                 tint = fill.asMettleControlGlassTint(),
                 enabled = enabled,
                 shadowElevation = if (shadowBehindTranslucent) 0.dp else shadowElevation,
+                preserveEdgeDefinition = true,
                 onClick = onClick,
             ) {
                 content()
