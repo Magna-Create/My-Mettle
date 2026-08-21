@@ -26,6 +26,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
@@ -54,6 +55,7 @@ import dev.kian.mymettle.ui.theme.MettleOutlineVariant
 import dev.kian.mymettle.ui.theme.MettlePrimary
 import dev.kian.mymettle.ui.theme.MettlePrimaryContainer
 import dev.kian.mymettle.ui.theme.MettleSurfaceContainerLow
+import dev.kian.mymettle.workout.DailyBriefGuidance
 
 private const val FigmaReferenceWidth = 453f
 
@@ -88,38 +90,13 @@ private data class FigmaNutritionGuidance(
     val unit: String,
 )
 
-private val FigmaNutritionItems = listOf(
-    FigmaNutritionGuidance(
-        emoji = "🧀",
-        title = "Protein",
-        timing = "1-2 Hours before training.",
-        before = "65",
-        after = "65",
-        unit = "G",
-    ),
-    FigmaNutritionGuidance(
-        emoji = "🥪",
-        title = "Carbohydrates",
-        timing = "2-4 Hours before training.",
-        before = "65",
-        after = "65",
-        unit = "G",
-    ),
-    FigmaNutritionGuidance(
-        emoji = "💧",
-        title = "Water",
-        timing = "Throughout Workout",
-        combined = "400-500",
-        unit = "mL",
-    ),
-)
-
 @Composable
 internal fun FigmaDailyUpdateScreen(
     selectedDay: String,
     dayDisplaySymbol: String,
     daySpokenName: String,
     exerciseCount: Int,
+    guidance: DailyBriefGuidance,
     daySelectionEnabled: Boolean,
     beginEnabled: Boolean,
     beginLabel: String,
@@ -128,6 +105,37 @@ internal fun FigmaDailyUpdateScreen(
     onOpenSettings: () -> Unit,
     onOpenAccount: () -> Unit,
 ) {
+    val nutritionItems = remember(guidance) {
+        listOf(
+            FigmaNutritionGuidance(
+                emoji = "🧀",
+                title = "Protein",
+                timing = if (guidance.isWeightAware) {
+                    "Per meal · weight-aware"
+                } else {
+                    "Per meal near training"
+                },
+                before = guidance.proteinBefore,
+                after = guidance.proteinAfter,
+                unit = "G",
+            ),
+            FigmaNutritionGuidance(
+                emoji = "🥪",
+                title = "Carbohydrates",
+                timing = "Scaled to session demand",
+                before = guidance.carbohydratesBefore,
+                after = guidance.carbohydratesAfter,
+                unit = "G",
+            ),
+            FigmaNutritionGuidance(
+                emoji = "💧",
+                title = "Water",
+                timing = "During · adapt to sweat rate",
+                combined = guidance.waterDuring,
+                unit = "mL",
+            ),
+        )
+    }
     FigmaDailyViewport { metrics ->
         Box(modifier = Modifier.fillMaxSize()) {
             FigmaDailyAppBar(
@@ -147,6 +155,7 @@ internal fun FigmaDailyUpdateScreen(
             FigmaInsightChips(
                 modifier = Modifier.offset(x = metrics.dp(21), y = metrics.dp(250)),
                 exerciseCount = exerciseCount,
+                guidance = guidance,
                 metrics = metrics,
             )
 
@@ -155,13 +164,13 @@ internal fun FigmaDailyUpdateScreen(
                 metrics = metrics,
             )
 
-            FigmaNutritionItems.forEachIndexed { index, guidance ->
+            nutritionItems.forEachIndexed { index, item ->
                 FigmaNutritionCard(
                     modifier = Modifier.offset(
                         x = metrics.dp(21),
                         y = metrics.dp(347 + (index * 108)),
                     ),
-                    guidance = guidance,
+                    guidance = item,
                     metrics = metrics,
                 )
             }
@@ -350,13 +359,14 @@ private fun FigmaHeroGreeting(
 private fun FigmaInsightChips(
     modifier: Modifier,
     exerciseCount: Int,
+    guidance: DailyBriefGuidance,
     metrics: FigmaMetrics,
 ) {
     val chips = listOf(
         "$exerciseCount Exercises" to 97f,
-        "5-min warm-up" to 121f,
-        "2/3 Core Days" to 114f,
-        "No.1 Improvement from π last week was: [EXERCISE NAME]" to 404f,
+        "${guidance.workingSets} working sets" to 126f,
+        "~${guidance.estimatedMinutes} min session" to 126f,
+        "${guidance.emphasis} emphasis" to 190f,
     )
 
     Box(
@@ -418,7 +428,7 @@ private fun FigmaNutritionHeading(modifier: Modifier, metrics: FigmaMetrics) {
         Spacer(Modifier.height(metrics.dp(7)))
         Text(
             modifier = Modifier.padding(start = metrics.dp(3)),
-            text = "Pre and Post Workout Dietary Recommendations:",
+            text = "Pre and Post Workout Fuel Guide:",
             color = MettleOnSurface.copy(alpha = 0.80f),
             fontSize = metrics.sp(14),
             lineHeight = metrics.sp(20),
@@ -557,7 +567,7 @@ private fun FigmaNutritionAmount(
                 modifier = Modifier.alignByBaseline(),
                 text = amount,
                 color = MettlePrimary,
-                fontSize = metrics.sp(32.2),
+                fontSize = metrics.sp(if (amount.length > 3) 25.3 else 32.2),
                 lineHeight = metrics.sp(42),
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
