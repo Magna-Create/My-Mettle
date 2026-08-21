@@ -33,6 +33,8 @@ import dev.kian.mymettle.ui.theme.MettleOnPrimaryContainer
 import dev.kian.mymettle.ui.theme.MettleOnSurface
 import dev.kian.mymettle.ui.theme.MettleOnSurfaceVariant
 import dev.kian.mymettle.ui.theme.MettlePrimary
+import dev.kian.mymettle.workout.DailyBriefSessionProfile
+import dev.kian.mymettle.workout.dailyBriefGuidance
 
 @Composable
 fun MettleGradientBackground(
@@ -113,12 +115,23 @@ fun HomeScreen(
                 ?: 0
             val canBegin = state.workout != null ||
                 (!state.loading && plan?.exercises?.isNotEmpty() == true)
+            val dailyBrief = state.workout?.dailyBriefGuidance()
+                ?: plan?.dailyBriefGuidance(state.bodyweightKg)
+                ?: dailyBriefGuidance(
+                    DailyBriefSessionProfile(
+                        workingSets = 0,
+                        estimatedDurationSeconds = 0,
+                        bodyweightKg = state.bodyweightKg,
+                        targetSegments = emptyList(),
+                    ),
+                )
 
             FigmaDailyUpdateScreen(
                 selectedDay = state.selectedDay,
                 dayDisplaySymbol = dayDisplaySymbol,
                 daySpokenName = daySpokenName,
                 exerciseCount = exerciseCount,
+                guidance = dailyBrief,
                 daySelectionEnabled = state.workout == null && !state.loading,
                 beginEnabled = canBegin,
                 beginLabel = if (state.workout == null) "Begin Session" else "Resume Session",

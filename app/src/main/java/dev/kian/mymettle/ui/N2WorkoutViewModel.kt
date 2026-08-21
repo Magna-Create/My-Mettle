@@ -23,7 +23,9 @@ import dev.kian.mymettle.workout.SessionAchievement
 import dev.kian.mymettle.workout.SessionAchievementScorer
 import dev.kian.mymettle.workout.SessionOutcomeRepository
 import dev.kian.mymettle.workout.TrainingMode
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class WorkoutSurface {
     SETS,
@@ -38,6 +40,7 @@ data class N2WorkoutUiState(
     val hasProgramme: Boolean = false,
     val selectedDay: String = "π",
     val selectedMode: TrainingMode = TrainingMode.B,
+    val bodyweightKg: Double? = null,
     val plans: Map<TrainingMode, NativeWorkoutPlan> = emptyMap(),
     val workout: ActiveWorkout? = null,
     val workoutSurface: WorkoutSurface = WorkoutSurface.SETS,
@@ -92,6 +95,7 @@ class N2WorkoutViewModel(
                         hasProgramme = true,
                         selectedDay = active.session.daySymbol,
                         selectedMode = modeFromCode(active.session.mode),
+                        bodyweightKg = active.session.bodyweightSnapshotKg,
                         workout = active,
                         workoutSurface = WorkoutSurface.SETS,
                         focusedExerciseId = active.exercises.firstOrNull { it.entity.status != "completed" }?.entity?.id
@@ -480,7 +484,12 @@ class N2WorkoutViewModel(
     }
 
     private suspend fun loadProgrammeDay(day: String, preferredMode: TrainingMode) {
-        val plans = TrainingMode.entries.associateWith { mode -> repository.plan(day, mode) }
+        // Planning resolves targets, candidates, inference and prescriptions. Keep that work off the
+        // Compose/main thread; Room moves its own queries to its executor as each plan is built.
+        val plans = withContext(Dispatchers.Default) {
+            TrainingMode.entries.associateWith { mode -> repository.plan(day, mode) }
+        }
+        val bodyweightKg = repository.latestBodyweightKg()
         val selected = if (plans[preferredMode]?.exercises?.isNotEmpty() == true) {
             preferredMode
         } else {
@@ -491,6 +500,7 @@ class N2WorkoutViewModel(
             hasProgramme = true,
             selectedDay = day,
             selectedMode = selected,
+            bodyweightKg = bodyweightKg,
             plans = plans,
             workout = null,
             reflectionTarget = null,

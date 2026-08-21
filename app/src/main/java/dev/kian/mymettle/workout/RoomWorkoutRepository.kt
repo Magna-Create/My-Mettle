@@ -140,6 +140,8 @@ class RoomWorkoutRepository(
 
     suspend fun hasImportedProgramme(): Boolean = dao.appState() != null && dao.profileCount() > 0
 
+    suspend fun latestBodyweightKg(): Double? = dao.latestBodyMeasurement()?.weightKg
+
     suspend fun plan(day: String, mode: TrainingMode): NativeWorkoutPlan {
         val state = dao.appState() ?: throw NativeWorkoutException("No native programme has been imported yet.")
         return planForRoutine(state.currentRoutineVersionId, day, mode)
