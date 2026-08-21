@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -262,10 +263,9 @@ internal fun MettleGlassActionButton(
     val contentColor = foregroundColor ?: Color.White.copy(alpha = if (enabled) 0.96f else 0.42f)
 
     MettleControlGlassSurface(
-        // Bound the control before its child fills the surface. An unbounded fillMaxHeight here
-        // previously consumed the rest of timer sheets, while a content-sized child sat a few
-        // pixels high inside normal buttons. Callers can still request any height up to 64 dp.
-        modifier = modifier.heightIn(min = 48.dp, max = 64.dp),
+        // A concrete default keeps centred content from greedily taking the parent's maximum
+        // height. An explicit caller height (for example 56 dp on a primary action) still wins.
+        modifier = modifier.height(52.dp),
         shape = CircleShape,
         tint = tint,
         enabled = enabled,

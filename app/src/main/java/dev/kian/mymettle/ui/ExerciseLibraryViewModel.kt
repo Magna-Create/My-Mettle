@@ -11,13 +11,21 @@ import androidx.lifecycle.viewModelScope
 import dev.kian.mymettle.data.local.DatabaseProvider
 import dev.kian.mymettle.domain.exercise.Exercise
 import dev.kian.mymettle.library.ExerciseLibraryRepository
+import dev.kian.mymettle.library.RoutineBoard
+import dev.kian.mymettle.library.RoutineEditDraft
+import dev.kian.mymettle.library.RoutineLibraryRepository
+import dev.kian.mymettle.library.editDraft
 import java.io.File
 import kotlinx.coroutines.launch
 
 data class ExerciseLibraryUiState(
     val loading: Boolean = true,
     val savingMedia: Boolean = false,
+    val savingRoutine: Boolean = false,
     val exercises: List<Exercise> = emptyList(),
+    val routine: RoutineBoard? = null,
+    val routineDraft: RoutineEditDraft? = null,
+    val section: LibrarySection = LibrarySection.ROUTINE,
     val query: String = "",
     val selected: Exercise? = null,
     val error: String? = null,
@@ -37,8 +45,11 @@ data class ExerciseLibraryUiState(
         }
 }
 
+enum class LibrarySection { ROUTINE, EXERCISES }
+
 class ExerciseLibraryViewModel(
     private val repository: ExerciseLibraryRepository,
+    private val routineRepository: RoutineLibraryRepository,
 ) : ViewModel() {
     var uiState by mutableStateOf(ExerciseLibraryUiState())
         private set
@@ -50,8 +61,50 @@ class ExerciseLibraryViewModel(
     fun refresh() {
         viewModelScope.launch {
             uiState = uiState.copy(loading = true, error = null)
-            runCatching { repository.all() }
-                .onSuccess { items -> uiState = uiState.copy(loading = false, exercises = items) }
+            runCatching { repository.all() to routineRepository.board() }
+                .onSuccess { (items, routine) ->
+                    uiState = uiState.copy(loading = false, exercises = items, routine = routine)
+                }
+                .onFailure(::showError)
+        }
+    }
+
+    fun selectSection(section: LibrarySection) {
+        uiState = uiState.copy(section = section)
+    }
+
+    fun beginRoutineEdit() {
+        uiState = uiState.copy(routineDraft = uiState.routine?.editDraft())
+    }
+
+    fun cancelRoutineEdit() {
+        uiState = uiState.copy(routineDraft = null)
+    }
+
+    fun moveRoutineSlot(slotId: String, delta: Int) {
+        val draft = uiState.routineDraft ?: return
+        val day = draft.days.firstOrNull { candidate -> candidate.slots.any { it.id == slotId } } ?: return
+        val current = day.slots.indexOfFirst { it.id == slotId }
+        uiState = uiState.copy(routineDraft = draft.moveWithinDay(slotId, current + delta))
+    }
+
+    fun saveRoutineEdit() {
+        val draft = uiState.routineDraft ?: return
+        if (draft == uiState.routine?.editDraft()) {
+            cancelRoutineEdit()
+            return
+        }
+        if (uiState.savingRoutine) return
+        viewModelScope.launch {
+            uiState = uiState.copy(savingRoutine = true, error = null)
+            runCatching { routineRepository.commitReorder(draft) }
+                .onSuccess { routine ->
+                    uiState = uiState.copy(
+                        savingRoutine = false,
+                        routine = routine,
+                        routineDraft = null,
+                    )
+                }
                 .onFailure(::showError)
         }
     }
@@ -113,6 +166,7 @@ class ExerciseLibraryViewModel(
         uiState = uiState.copy(
             loading = false,
             savingMedia = false,
+            savingRoutine = false,
             error = error.message ?: error::class.java.simpleName,
         )
     }
@@ -126,6 +180,7 @@ class ExerciseLibraryViewModelFactory(context: Context) : ViewModelProvider.Fact
         val database = DatabaseProvider.get(appContext)
         return ExerciseLibraryViewModel(
             ExerciseLibraryRepository(appContext, database),
+            RoutineLibraryRepository(database),
         ) as T
     }
 }

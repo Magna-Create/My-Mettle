@@ -124,6 +124,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM app_state WHERE id = 'primary' LIMIT 1")
     suspend fun appState(): AppStateEntity?
 
+    @Query("SELECT * FROM routine_version WHERE id = :routineVersionId LIMIT 1")
+    suspend fun routineVersion(routineVersionId: String): RoutineVersionEntity?
+
     @Query("SELECT * FROM exercise WHERE archived = 0 ORDER BY name COLLATE NOCASE")
     fun observeActiveExercises(): Flow<List<ExerciseEntity>>
 
@@ -163,6 +166,9 @@ interface WorkoutDao {
     )
     suspend fun programmeTargets(routineVersionId: String, daySymbol: String): List<ProgrammeTargetEntity>
 
+    @Query("SELECT * FROM programme_target WHERE routineVersionId = :routineVersionId")
+    suspend fun programmeTargetsForRoutine(routineVersionId: String): List<ProgrammeTargetEntity>
+
     @Query(
         """
         SELECT * FROM programme_mode_constraint
@@ -175,6 +181,9 @@ interface WorkoutDao {
         daySymbol: String,
         mode: String,
     ): ProgrammeModeConstraintEntity?
+
+    @Query("SELECT * FROM programme_mode_constraint WHERE routineVersionId = :routineVersionId")
+    suspend fun programmeModeConstraintsForRoutine(routineVersionId: String): List<ProgrammeModeConstraintEntity>
 
     @Query("SELECT * FROM body_measurement WHERE weightKg IS NOT NULL ORDER BY recordedAt DESC LIMIT 1")
     suspend fun latestBodyMeasurement(): BodyMeasurementEntity?

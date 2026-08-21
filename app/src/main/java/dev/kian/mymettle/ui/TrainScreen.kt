@@ -165,8 +165,8 @@ private fun LoadCalculatorDialog(
         listOf("7", "8", "9", "÷"),
         listOf("4", "5", "6", "×"),
         listOf("1", "2", "3", "−"),
-        listOf("0", ".", "(", "+"),
-        listOf(")", "⌫", "C", "="),
+        listOf(".", "0", "⌫", "+"),
+        listOf("C", "Enter"),
     )
 
     AlertDialog(
@@ -211,10 +211,11 @@ private fun LoadCalculatorDialog(
                         row.forEach { key ->
                             MettleGlassActionButton(
                                 onClick = {
-                                    expression = when (key) {
+                                    if (key == "Enter") {
+                                        evaluated?.let(onUseValue)
+                                    } else expression = when (key) {
                                         "C" -> ""
                                         "⌫" -> expression.dropLast(1)
-                                        "=" -> evaluated?.let(::formatDecimal) ?: expression
                                         "×" -> expression + "*"
                                         "÷" -> expression + "/"
                                         "−" -> expression + "-"
@@ -223,28 +224,23 @@ private fun LoadCalculatorDialog(
                                 },
                                 modifier = Modifier.weight(1f).height(52.dp),
                                 contentPadding = PaddingValues(0.dp),
-                                accent = key == "=",
+                                accent = key == "Enter",
+                                enabled = key != "Enter" || evaluated != null,
                             ) {
                                 if (key == "⌫") {
                                     Icon(MettleIcons.Backspace, contentDescription = "Backspace", modifier = Modifier.height(20.dp))
                                 } else {
-                                    Text(key, fontSize = 17.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium)
+                                    Text(
+                                        key,
+                                        fontSize = if (key == "Enter") 12.sp else 17.sp,
+                                        lineHeight = 20.sp,
+                                        fontWeight = FontWeight.Medium,
+                                    )
                                 }
                             }
                         }
                     }
                 }
-                Spacer(Modifier.height(5.dp))
-                MettleGlassActionButton(
-                    onClick = { evaluated?.let(onUseValue) },
-                    enabled = evaluated != null,
-                    modifier = Modifier.fillMaxWidth().height(54.dp),
-                ) { Text("Use value", fontSize = 16.sp, fontWeight = FontWeight.Medium) }
-                MettleGlassActionButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    accent = false,
-                ) { Text("Cancel", fontSize = 15.sp, fontWeight = FontWeight.Medium) }
             }
         },
         confirmButton = {},
