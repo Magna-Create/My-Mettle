@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -20,7 +21,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.workout.ActiveWorkoutExercise
 import dev.kian.mymettle.workout.evaluateLoadExpression
@@ -70,7 +74,8 @@ fun TrainScreen(
         onRateExercise = viewModel::rateExercise,
         onDismissSheet = viewModel::dismissWorkoutSheet,
         onShowDelete = viewModel::showDeleteConfirmation,
-        onCompleteSession = viewModel::completeSession,
+        onCompleteSession = { viewModel.completeSession() },
+        onCompleteWithoutReview = { viewModel.completeSession(skipReview = true) },
         onDiscardSession = viewModel::discardActiveSession,
     )
 
@@ -105,6 +110,8 @@ private fun LoadCalculatorDialog(
 ) {
     var expression by remember(initialValue) { mutableStateOf(initialValue) }
     val evaluated = remember(expression) { runCatching { evaluateLoadExpression(expression) }.getOrNull() }
+    val formattedResult = evaluated?.let(::formatDecimal)
+    val showEvaluation = formattedResult != null && expression.trim() != formattedResult
     val rows = listOf(
         listOf("7", "8", "9", "÷"),
         listOf("4", "5", "6", "×"),
@@ -115,22 +122,38 @@ private fun LoadCalculatorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Load calculator") },
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(30.dp),
+        containerColor = Color(0xFF1E281B),
+        tonalElevation = 0.dp,
+        title = { Text("Load calculator", fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.Medium) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 MettleControlGlassSurface(
-                    modifier = Modifier.fillMaxWidth().height(74.dp),
+                    modifier = Modifier.fillMaxWidth().height(82.dp),
                     tint = MaterialTheme.colorScheme.primary.copy(alpha = .05f),
                     borderColor = MaterialTheme.colorScheme.primary.copy(alpha = .34f),
                 ) {
                     Column(
-                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
                         horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.Center,
                     ) {
-                        Text(expression.ifBlank { "0" }, style = MaterialTheme.typography.headlineSmall)
+                        if (showEvaluation) {
+                            Text(
+                                expression,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 14.sp,
+                                lineHeight = 18.sp,
+                                maxLines = 1,
+                            )
+                        }
                         Text(
-                            evaluated?.let(::formatDecimal) ?: "—",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            if (showEvaluation) formattedResult.orEmpty() else expression.ifBlank { "0" },
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 29.sp,
+                            lineHeight = 34.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
                         )
                     }
                 }
@@ -149,21 +172,33 @@ private fun LoadCalculatorDialog(
                                         else -> expression + key
                                     }
                                 },
-                                modifier = Modifier.weight(1f).height(48.dp),
+                                modifier = Modifier.weight(1f).height(52.dp),
                                 contentPadding = PaddingValues(0.dp),
                                 accent = key == "=",
-                            ) { Text(key) }
+                            ) {
+                                if (key == "⌫") {
+                                    Icon(MettleIcons.Backspace, contentDescription = "Backspace", modifier = Modifier.height(20.dp))
+                                } else {
+                                    Text(key, fontSize = 17.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium)
+                                }
+                            }
                         }
                     }
                 }
+                Spacer(Modifier.height(5.dp))
+                MettleGlassActionButton(
+                    onClick = { evaluated?.let(onUseValue) },
+                    enabled = evaluated != null,
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                ) { Text("Use value", fontSize = 16.sp, fontWeight = FontWeight.Medium) }
+                MettleGlassActionButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    accent = false,
+                ) { Text("Cancel", fontSize = 15.sp, fontWeight = FontWeight.Medium) }
             }
         },
-        confirmButton = {
-            MettleGlassActionButton(onClick = { evaluated?.let(onUseValue) }, enabled = evaluated != null) {
-                Text("Use value")
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = {},
     )
 }
 

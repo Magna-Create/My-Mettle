@@ -266,11 +266,7 @@ fun MyMettleApp() {
                         composable(TRAIN_ROUTE) {
                             if (workoutViewModel.uiState.workout == null) {
                                 LaunchedEffect(Unit) {
-                                    navController.navigate(INTENSITY_ROUTE) {
-                                        popUpTo(TRAIN_ROUTE) { inclusive = true }
-                                        launchSingleTop = true
-                                        restoreState = false
-                                    }
+                                    openHomeDestination()
                                 }
                             } else {
                                 TrainScreen(

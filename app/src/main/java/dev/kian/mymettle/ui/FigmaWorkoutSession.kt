@@ -66,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -135,6 +136,7 @@ internal fun FigmaWorkoutSession(
     onDismissSheet: () -> Unit,
     onShowDelete: () -> Unit,
     onCompleteSession: () -> Unit,
+    onCompleteWithoutReview: () -> Unit,
     onDiscardSession: () -> Unit,
 ) {
     val workout = requireNotNull(state.workout)
@@ -209,6 +211,7 @@ internal fun FigmaWorkoutSession(
                         destructive = false,
                         onDismiss = onDismissSheet,
                         onComplete = onCompleteSession,
+                        onCompleteWithoutReview = onCompleteWithoutReview,
                         onDelete = onShowDelete,
                     )
                 }
@@ -217,6 +220,7 @@ internal fun FigmaWorkoutSession(
                         destructive = true,
                         onDismiss = onDismissSheet,
                         onComplete = onCompleteSession,
+                        onCompleteWithoutReview = onCompleteWithoutReview,
                         onDelete = onDiscardSession,
                     )
                 }
@@ -540,11 +544,15 @@ private fun WorkoutExerciseCard(
                     .padding(horizontal = metrics.dp(16)),
                 horizontalArrangement = Arrangement.spacedBy(metrics.dp(8)),
             ) {
-                WorkoutChip(entity.importanceSnapshot.replaceFirstChar { it.uppercase() }, metrics)
-                WorkoutChip("${entity.repMin}–${entity.repMax} reps", metrics)
-                WorkoutChip("${entity.restSeconds}s rest", metrics)
-                entity.prescribedLoad?.let { WorkoutChip("${trimNumber(it)} load progression", metrics) }
-                if (completed) WorkoutChip("$logged/${entity.prescribedSets} Sets Complete", metrics, success = true)
+                if (completed) {
+                    WorkoutChip("$logged/${entity.prescribedSets} Sets Complete", metrics, success = true)
+                    entity.prescribedLoad?.let { WorkoutChip("${trimNumber(it)} load progression", metrics) }
+                } else {
+                    WorkoutChip(entity.importanceSnapshot.replaceFirstChar { it.uppercase() }, metrics)
+                    WorkoutChip("${entity.repMin}–${entity.repMax} reps", metrics)
+                    WorkoutChip("${entity.restSeconds}s rest", metrics)
+                    entity.prescribedLoad?.let { WorkoutChip("${trimNumber(it)} load progression", metrics) }
+                }
             }
             Spacer(Modifier.height(metrics.dp(14)))
             Box(Modifier.fillMaxWidth().height(metrics.dp(1)).background(Color.White.copy(alpha = .10f)))
@@ -556,6 +564,7 @@ private fun WorkoutExerciseCard(
                     Column(Modifier.padding(top = metrics.dp(15))) {
                         sets.forEachIndexed { index, set ->
                             val draft = drafts.getOrPut(set.id) { TrainSetDraft(set) }
+                            val setShape = workoutSetShape(index, sets.lastIndex, metrics)
                             WorkoutSetRow(
                                 displayIndex = index,
                                 exercise = exercise,
@@ -563,12 +572,13 @@ private fun WorkoutExerciseCard(
                                 draft = draft,
                                 enabled = enabled,
                                 isCurrent = focused && set.completedAt == null && sets.take(index).all { it.completedAt != null },
+                                shape = setShape,
                                 onOpenCalculator = { onOpenCalculator(set) },
                                 onSaveDraft = { onSaveDraft(set, draft) },
                                 onLogSet = { onLogSet(set, draft) },
                                 metrics = metrics,
                             )
-                            if (index != sets.lastIndex) Spacer(Modifier.height(metrics.dp(3)))
+                            if (index != sets.lastIndex) Spacer(Modifier.height(metrics.dp(1.5)))
                         }
                     }
                     WorkoutExerciseActions(
@@ -591,6 +601,7 @@ private fun WorkoutSetRow(
     draft: TrainSetDraft,
     enabled: Boolean,
     isCurrent: Boolean,
+    shape: RoundedCornerShape,
     onOpenCalculator: () -> Unit,
     onSaveDraft: () -> Unit,
     onLogSet: () -> Unit,
@@ -620,7 +631,12 @@ private fun WorkoutSetRow(
             (exercise.entity.loadRelationshipSnapshot == "bodyweight" || draft.load.toDoubleOrNull() != null)
     }
 
-    Box(Modifier.fillMaxWidth().height(metrics.dp(132))) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(metrics.dp(132))
+            .clip(shape),
+    ) {
         if (isCurrent) {
             Canvas(
                 Modifier
@@ -630,12 +646,12 @@ private fun WorkoutSetRow(
                 drawRect(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            WorkoutCyanStrong.copy(alpha = .42f),
-                            WorkoutCyan.copy(alpha = .16f),
+                            WorkoutCyanStrong.copy(alpha = .34f),
+                            WorkoutCyan.copy(alpha = .13f),
                             Color.Transparent,
                         ),
-                        center = Offset(size.width * .18f, size.height * .52f),
-                        radius = size.width * .58f,
+                        center = Offset(size.width * .12f, size.height * .52f),
+                        radius = size.width * .34f,
                     ),
                 )
             }
@@ -644,7 +660,7 @@ private fun WorkoutSetRow(
             modifier = Modifier.fillMaxSize(),
             color = Color.Transparent,
             border = BorderStroke(metrics.dp(.65), Color.White.copy(alpha = .23f)),
-            shape = RoundedCornerShape(metrics.dp(25)),
+            shape = shape,
         ) {
             Row {
             Box(
@@ -715,6 +731,27 @@ private fun WorkoutSetRow(
             }
         }
         }
+    }
+}
+
+private fun workoutSetShape(index: Int, lastIndex: Int, metrics: WorkoutMetrics): RoundedCornerShape {
+    val outer = metrics.dp(25)
+    val inner = metrics.dp(5)
+    return when {
+        lastIndex == 0 -> RoundedCornerShape(outer)
+        index == 0 -> RoundedCornerShape(
+            topStart = outer,
+            topEnd = outer,
+            bottomEnd = inner,
+            bottomStart = inner,
+        )
+        index == lastIndex -> RoundedCornerShape(
+            topStart = inner,
+            topEnd = inner,
+            bottomEnd = outer,
+            bottomStart = outer,
+        )
+        else -> RoundedCornerShape(inner)
     }
 }
 
@@ -847,42 +884,71 @@ private fun WorkoutCardButton(text: String, onClick: () -> Unit, modifier: Modif
         containerTint = WorkoutCyan.copy(alpha = .055f),
         outlineColor = WorkoutCyan.copy(alpha = .42f),
         foregroundColor = WorkoutPaper,
-        contentPadding = PaddingValues(horizontal = metrics.dp(12), vertical = metrics.dp(10)),
+        contentPadding = PaddingValues(horizontal = metrics.dp(13), vertical = metrics.dp(9)),
     ) {
-        Text(text, fontSize = metrics.sp(13), lineHeight = metrics.sp(16), fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+        Text(
+            text,
+            fontSize = metrics.sp(14.5),
+            lineHeight = metrics.sp(20),
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+        )
     }
 }
 
 @Composable
 private fun WorkoutSetupBody(exercise: ActiveWorkoutExercise, onReturn: () -> Unit, metrics: WorkoutMetrics) {
-    Column(Modifier.padding(horizontal = metrics.dp(16), vertical = metrics.dp(12))) {
-        val notes = exercise.details.setupNotes.ifBlank { exercise.entity.movementReason }
-        Row(verticalAlignment = Alignment.Top) {
+    Column(Modifier.padding(horizontal = metrics.dp(16), vertical = metrics.dp(16))) {
+        val notes = exercise.details.setupNotes
+            .ifBlank { exercise.entity.movementReason }
+            .replace(Regex("(?i)^Target\\s+\\d+\\s*[–-]\\s*\\d+\\s+RIR\\.\\s*"), "")
+            .trim()
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                notes.ifBlank { "Set the equipment to a stable, comfortable position and follow your setup cues." },
+                "Setup",
                 modifier = Modifier.weight(1f),
-                color = WorkoutPaper,
-                fontSize = metrics.sp(14),
-                lineHeight = metrics.sp(20),
+                color = WorkoutPaperMuted,
+                fontSize = metrics.sp(13),
+                lineHeight = metrics.sp(18),
+                fontWeight = FontWeight.Medium,
             )
-            Spacer(Modifier.width(metrics.dp(10)))
             MettleControlGlassSurface(
                 modifier = Modifier.size(metrics.dp(58)),
                 shape = CircleShape,
                 tint = WorkoutCyan.copy(alpha = .025f),
-                borderColor = WorkoutCyan.copy(alpha = .52f),
+                borderColor = WorkoutCyan.copy(alpha = .38f),
                 shadowElevation = metrics.dp(3),
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("✎", color = WorkoutCyan, fontSize = metrics.sp(23))
+                    Icon(
+                        MettleIcons.Edit,
+                        contentDescription = "Edit setup notes",
+                        tint = WorkoutCyan,
+                        modifier = Modifier.size(metrics.dp(22)),
+                    )
                 }
             }
         }
+        Spacer(Modifier.height(metrics.dp(8)))
+        Text(
+            notes.ifBlank { "Set the equipment to a stable, comfortable position and follow your setup cues." },
+            modifier = Modifier.fillMaxWidth(),
+            color = WorkoutPaper,
+            fontSize = metrics.sp(14.5),
+            lineHeight = metrics.sp(20.5),
+            fontWeight = FontWeight.Normal,
+        )
         exercise.details.cues.forEach { cue ->
-            Spacer(Modifier.height(metrics.dp(5)))
-            Text("• $cue", color = WorkoutPaperMuted, fontSize = metrics.sp(13), lineHeight = metrics.sp(18))
+            Spacer(Modifier.height(metrics.dp(7)))
+            Text(
+                "• $cue",
+                color = WorkoutPaperMuted,
+                fontSize = metrics.sp(13.5),
+                lineHeight = metrics.sp(19),
+            )
         }
-        Spacer(Modifier.height(metrics.dp(18)))
+        Spacer(Modifier.height(metrics.dp(20)))
         SetupMediaStrip(exercise.details.setupMediaPaths, metrics)
         Spacer(Modifier.height(metrics.dp(20)))
         WorkoutCardButton("Return to sets", onReturn, Modifier.fillMaxWidth(), metrics)
@@ -1098,7 +1164,7 @@ private fun WorkoutSubstitutionContent(
     }
 }
 
-private enum class FinishChoice { KEEP_TRAINING, COMPLETE, DELETE }
+private enum class FinishChoice { KEEP_TRAINING, COMPLETE, COMPLETE_WITHOUT_REVIEW, DELETE }
 
 private data class FinishTarget(
     val choice: FinishChoice,
@@ -1114,6 +1180,7 @@ private fun FinishWorkoutGestureOverlay(
     destructive: Boolean,
     onDismiss: () -> Unit,
     onComplete: () -> Unit,
+    onCompleteWithoutReview: () -> Unit,
     onDelete: () -> Unit,
 ) {
     BoxWithConstraints(
@@ -1136,6 +1203,7 @@ private fun FinishWorkoutGestureOverlay(
                     FinishTarget(FinishChoice.DELETE, .25f, .52f, 82.dp, MettleIcons.Backspace, WorkoutDelete),
                     FinishTarget(FinishChoice.KEEP_TRAINING, .78f, .62f, 120.dp, MettleIcons.Close, WorkoutCyan),
                     FinishTarget(FinishChoice.COMPLETE, .51f, .76f, 120.dp, MettleIcons.Check, WorkoutGreen),
+                    FinishTarget(FinishChoice.COMPLETE_WITHOUT_REVIEW, .23f, .78f, 82.dp, MettleIcons.DoneAll, WorkoutGreen),
                 )
             }
         }
@@ -1152,6 +1220,14 @@ private fun FinishWorkoutGestureOverlay(
         val shownOffset = if (settling) rawOffset * (1f - settle) else rawOffset
 
         fun targetCentre(target: FinishTarget) = Offset(widthPx * target.xFraction, heightPx * target.yFraction)
+        fun resolveTarget(handle: Offset, thresholdScale: Float = .72f): FinishChoice? =
+            targets.minByOrNull { target ->
+                val centre = targetCentre(target)
+                hypot(handle.x - centre.x, handle.y - centre.y)
+            }?.takeIf { target ->
+                val centre = targetCentre(target)
+                hypot(handle.x - centre.x, handle.y - centre.y) < with(density) { target.size.toPx() * thresholdScale }
+            }?.choice
 
         LaunchedEffect(settling) {
             if (settling) {
@@ -1211,8 +1287,10 @@ private fun FinishWorkoutGestureOverlay(
                 .offset { IntOffset((homePx.x - 46.dp.toPx()).roundToInt(), (homePx.y - 46.dp.toPx()).roundToInt()) }
                 .size(92.dp)
                 .pointerInput(destructive, widthPx, heightPx) {
+                    var velocityTracker = VelocityTracker()
                     detectDragGestures(
                         onDragStart = {
+                            velocityTracker = VelocityTracker()
                             dragging = true
                             settling = false
                             rawOffset = Offset.Zero
@@ -1222,25 +1300,31 @@ private fun FinishWorkoutGestureOverlay(
                             change.consume()
                             rawOffset += amount
                             val handle = homePx + rawOffset
-                            val next = targets.minByOrNull { target ->
-                                val centre = targetCentre(target)
-                                hypot(handle.x - centre.x, handle.y - centre.y)
-                            }?.takeIf { target ->
-                                val centre = targetCentre(target)
-                                hypot(handle.x - centre.x, handle.y - centre.y) < with(density) { target.size.toPx() * .72f }
-                            }?.choice
+                            velocityTracker.addPosition(change.uptimeMillis, handle)
+                            val next = resolveTarget(handle)
                             if (next != active) {
                                 active = next
                                 if (next != null) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             }
                         },
                         onDragEnd = {
-                            val confirmed = active
+                            val velocity = velocityTracker.calculateVelocity()
+                            val rawProjection = Offset(velocity.x, velocity.y) * .11f
+                            val maximumProjection = with(density) { 180.dp.toPx() }
+                            val projectionLength = hypot(rawProjection.x, rawProjection.y)
+                            val projection = if (projectionLength > maximumProjection) {
+                                rawProjection * (maximumProjection / projectionLength)
+                            } else {
+                                rawProjection
+                            }
+                            val confirmed = active ?: resolveTarget(homePx + rawOffset + projection, thresholdScale = .88f)
                             dragging = false
                             active = null
+                            if (confirmed != null) view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                             when (confirmed) {
                                 FinishChoice.KEEP_TRAINING -> onDismiss()
                                 FinishChoice.COMPLETE -> onComplete()
+                                FinishChoice.COMPLETE_WITHOUT_REVIEW -> onCompleteWithoutReview()
                                 FinishChoice.DELETE -> onDelete()
                                 null -> settling = true
                             }

@@ -379,7 +379,7 @@ class N2WorkoutViewModel(
         }
     }
 
-    fun completeSession() {
+    fun completeSession(skipReview: Boolean = false) {
         val workout = uiState.workout ?: return
         if (workout.session.status != "active") return
         restTimer.stop()
@@ -387,16 +387,29 @@ class N2WorkoutViewModel(
             uiState = uiState.copy(loading = true, error = null, reflectionTarget = null, reflection = null)
             runCatching {
                 val completed = repository.completeSession(workout.session.id)
-                val review = outcomeRepository.review(completed.session.id)
+                val review = if (skipReview) null else outcomeRepository.review(completed.session.id)
                 completed to review
             }.onSuccess { (completed, review) ->
-                uiState = uiState.copy(
-                    loading = false,
-                    workout = completed,
-                    sessionCompleted = true,
-                    achievement = SessionAchievementScorer.score(completed),
-                    sessionReview = review,
-                )
+                if (skipReview) {
+                    uiState = uiState.copy(
+                        loading = false,
+                        workout = null,
+                        workoutSurface = WorkoutSurface.SETS,
+                        focusedExerciseId = null,
+                        sessionCompleted = false,
+                        achievement = null,
+                        sessionReview = null,
+                    )
+                    loadProgrammeDay(uiState.selectedDay, uiState.selectedMode)
+                } else {
+                    uiState = uiState.copy(
+                        loading = false,
+                        workout = completed,
+                        sessionCompleted = true,
+                        achievement = SessionAchievementScorer.score(completed),
+                        sessionReview = review,
+                    )
+                }
             }.onFailure(::showError)
         }
     }

@@ -150,6 +150,24 @@ internal object MettleIcons {
             pathData = "M8 5V19L19 12L8 5Z",
         )
     }
+
+    val Edit: ImageVector by lazy {
+        figmaIcon(
+            name = "edit",
+            width = 24f,
+            height = 24f,
+            pathData = "M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z",
+        )
+    }
+
+    val DoneAll: ImageVector by lazy {
+        figmaIcon(
+            name = "done_all",
+            width = 24f,
+            height = 24f,
+            pathData = "M18 7L16.59 5.59L10.25 11.93L11.66 13.34L18 7ZM22.24 5.59L11.66 16.17L7.48 12L6.07 13.41L11.66 19L23.66 7L22.24 5.59ZM0.41 13.41L6 19L7.41 17.59L1.83 12L0.41 13.41Z",
+        )
+    }
 }
 
 private fun figmaIcon(
