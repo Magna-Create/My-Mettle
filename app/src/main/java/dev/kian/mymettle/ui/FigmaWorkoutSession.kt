@@ -2,7 +2,6 @@ package dev.kian.mymettle.ui
 
 import android.graphics.BitmapFactory
 import android.view.HapticFeedbackConstants
-import android.view.MotionEvent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
@@ -10,6 +9,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,10 +43,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,7 +56,6 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -62,11 +63,9 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -85,6 +84,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.workout.ActiveWorkout
 import dev.kian.mymettle.workout.ActiveWorkoutExercise
@@ -122,6 +122,7 @@ internal fun FigmaWorkoutSession(
     drafts: MutableMap<String, TrainSetDraft>,
     onOpenSettings: () -> Unit,
     onOpenAccount: () -> Unit,
+    onOpenCalculator: (ActiveWorkoutExercise, SetRecordEntity) -> Unit,
     onSaveDraft: (ActiveWorkoutExercise, SetRecordEntity, TrainSetDraft) -> Unit,
     onLogSet: (ActiveWorkoutExercise, SetRecordEntity, TrainSetDraft) -> Unit,
     onSwapExercise: (ActiveWorkoutExercise) -> Unit,
@@ -142,6 +143,7 @@ internal fun FigmaWorkoutSession(
         ?: workout.exercises.firstOrNull { it.entity.status != "completed" }
         ?: workout.exercises.first()
     val listState = rememberLazyListState()
+    val viewportHazeState = rememberHazeState()
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val viewportWidth = minOf(maxWidth, WorkoutReferenceWidth.dp)
@@ -154,65 +156,70 @@ internal fun FigmaWorkoutSession(
                 .align(Alignment.TopCenter)
                 .background(WorkoutInk),
         ) {
-            WorkoutBackdrop(onTap = { focusManager.clearFocus(force = true) })
+            Box(Modifier.fillMaxSize().hazeSource(viewportHazeState)) {
+                WorkoutBackdrop(onTap = { focusManager.clearFocus(force = true) })
 
-            when {
-                state.swapTarget != null -> WorkoutSubstitutionContent(
-                    current = state.swapTarget,
-                    options = state.swapOptions,
-                    loading = state.loadingSwapOptions,
-                    onDismiss = onDismissSwap,
-                    onSelect = onSelectSwap,
-                    metrics = metrics,
-                )
+                when {
+                    state.swapTarget != null -> WorkoutSubstitutionContent(
+                        current = state.swapTarget,
+                        options = state.swapOptions,
+                        loading = state.loadingSwapOptions,
+                        onDismiss = onDismissSwap,
+                        onSelect = onSelectSwap,
+                        metrics = metrics,
+                    )
 
-                state.workoutSurface == WorkoutSurface.QUICK_SELECT -> WorkoutQuickSelectContent(
-                    workout = workout,
-                    onSelect = onShowSets,
-                    metrics = metrics,
-                )
+                    state.workoutSurface == WorkoutSurface.QUICK_SELECT -> WorkoutQuickSelectContent(
+                        workout = workout,
+                        onSelect = onShowSets,
+                        metrics = metrics,
+                    )
 
-                else -> WorkoutExerciseContent(
-                    workout = workout,
-                    focusedId = focused.entity.id,
-                    setupExerciseId = focused.entity.id.takeIf { state.workoutSurface == WorkoutSurface.SETUP },
-                    drafts = drafts,
-                    loading = state.loading,
-                    listState = listState,
-                    onFocusExercise = onShowSets,
-                    onShowSetup = onShowSetup,
-                    onSaveDraft = onSaveDraft,
-                    onLogSet = onLogSet,
-                    onSwap = onSwapExercise,
-                    onToggleExercise = onToggleExercise,
-                    onRateExercise = onRateExercise,
-                    metrics = metrics,
-                )
+                    else -> WorkoutExerciseContent(
+                        workout = workout,
+                        focusedId = focused.entity.id,
+                        setupExerciseId = focused.entity.id.takeIf { state.workoutSurface == WorkoutSurface.SETUP },
+                        drafts = drafts,
+                        loading = state.loading,
+                        listState = listState,
+                        onFocusExercise = onShowSets,
+                        onShowSetup = onShowSetup,
+                        onOpenCalculator = onOpenCalculator,
+                        onSaveDraft = onSaveDraft,
+                        onLogSet = onLogSet,
+                        onSwap = onSwapExercise,
+                        onToggleExercise = onToggleExercise,
+                        onRateExercise = onRateExercise,
+                        metrics = metrics,
+                    )
+                }
             }
 
-            WorkoutViewportScrims(metrics)
-            WorkoutHeader(
-                workout = workout,
-                metrics = metrics,
-                onOpenSettings = onOpenSettings,
-                onOpenAccount = onOpenAccount,
-            )
+            CompositionLocalProvider(LocalMettleHazeState provides viewportHazeState) {
+                WorkoutViewportScrims(metrics)
+                WorkoutHeader(
+                    workout = workout,
+                    metrics = metrics,
+                    onOpenSettings = onOpenSettings,
+                    onOpenAccount = onOpenAccount,
+                )
 
-            if (state.workoutSurface == WorkoutSurface.FINISH) {
-                FinishWorkoutGestureSheet(
-                    destructive = false,
-                    onDismiss = onDismissSheet,
-                    onComplete = onCompleteSession,
-                    onDelete = onShowDelete,
-                )
-            }
-            if (state.workoutSurface == WorkoutSurface.DELETE_CONFIRM) {
-                FinishWorkoutGestureSheet(
-                    destructive = true,
-                    onDismiss = onDismissSheet,
-                    onComplete = onCompleteSession,
-                    onDelete = onDiscardSession,
-                )
+                if (state.workoutSurface == WorkoutSurface.FINISH) {
+                    FinishWorkoutGestureOverlay(
+                        destructive = false,
+                        onDismiss = onDismissSheet,
+                        onComplete = onCompleteSession,
+                        onDelete = onShowDelete,
+                    )
+                }
+                if (state.workoutSurface == WorkoutSurface.DELETE_CONFIRM) {
+                    FinishWorkoutGestureOverlay(
+                        destructive = true,
+                        onDismiss = onDismissSheet,
+                        onComplete = onCompleteSession,
+                        onDelete = onDiscardSession,
+                    )
+                }
             }
         }
     }
@@ -255,6 +262,7 @@ private fun WorkoutExerciseContent(
     listState: LazyListState,
     onFocusExercise: (String?) -> Unit,
     onShowSetup: () -> Unit,
+    onOpenCalculator: (ActiveWorkoutExercise, SetRecordEntity) -> Unit,
     onSaveDraft: (ActiveWorkoutExercise, SetRecordEntity, TrainSetDraft) -> Unit,
     onLogSet: (ActiveWorkoutExercise, SetRecordEntity, TrainSetDraft) -> Unit,
     onSwap: (ActiveWorkoutExercise) -> Unit,
@@ -299,6 +307,7 @@ private fun WorkoutExerciseContent(
                     onFocusExercise(exercise.entity.id)
                     onShowSetup()
                 },
+                onOpenCalculator = { set -> onOpenCalculator(exercise, set) },
                 onSaveDraft = { set, draft -> onSaveDraft(exercise, set, draft) },
                 onLogSet = { set, draft -> onLogSet(exercise, set, draft) },
                 onSwap = { onSwap(exercise) },
@@ -368,23 +377,15 @@ private fun WorkoutWaveProgress(workout: ActiveWorkout, modifier: Modifier, metr
         tint = Color.White.copy(alpha = .018f),
         shadowElevation = metrics.dp(3),
     ) {
-        Canvas(Modifier.fillMaxSize().padding(horizontal = metrics.dp(5), vertical = metrics.dp(15))) {
-            val y = size.height / 2f
-            val markerX = (size.width * (.34f + progress * .58f)).coerceIn(size.width * .34f, size.width * .92f)
-            val waveEnd = size.width * .33f
-            val path = Path().apply {
-                moveTo(0f, y)
-                cubicTo(size.width * .06f, y - size.height * .45f, size.width * .10f, y + size.height * .45f, size.width * .16f, y)
-                cubicTo(size.width * .22f, y - size.height * .40f, size.width * .27f, y + size.height * .38f, waveEnd, y)
-            }
-            drawPath(path, WorkoutCyan, style = Stroke(metrics.dp(3).toPx(), cap = StrokeCap.Round))
-            drawLine(WorkoutPaper, Offset(waveEnd + metrics.dp(7).toPx(), y), Offset(size.width, y), metrics.dp(2).toPx(), StrokeCap.Round)
-            drawLine(
-                WorkoutPaper,
-                Offset(markerX, y - metrics.dp(8).toPx()),
-                Offset(markerX, y + metrics.dp(8).toPx()),
-                metrics.dp(3).toPx(),
-                StrokeCap.Round,
+        Box(
+            modifier = Modifier.fillMaxSize().padding(horizontal = metrics.dp(10)),
+            contentAlignment = Alignment.Center,
+        ) {
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth().height(metrics.dp(6)).clip(CircleShape),
+                color = WorkoutCyan,
+                trackColor = WorkoutPaper.copy(alpha = .34f),
             )
         }
     }
@@ -392,31 +393,70 @@ private fun WorkoutWaveProgress(workout: ActiveWorkout, modifier: Modifier, metr
 
 @Composable
 private fun BoxScope.WorkoutViewportScrims(metrics: WorkoutMetrics) {
+    listOf(
+        Triple(0f, 13f, .13f),
+        Triple(38f, 8f, .085f),
+        Triple(78f, 4f, .04f),
+    ).forEach { (offset, blur, tintAlpha) ->
+        MettleGlassSurface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(metrics.dp(54))
+                .align(Alignment.TopCenter)
+                .offset(y = metrics.dp(offset)),
+            shape = RoundedCornerShape(0.dp),
+            tint = WorkoutInk.copy(alpha = tintAlpha),
+            blurRadius = metrics.dp(blur),
+            refractionDisplacement = 0.dp,
+            refractionStrength = 0f,
+            shadowElevation = 0.dp,
+            grainStrength = 0f,
+        ) {}
+    }
     Box(
         Modifier
             .fillMaxWidth()
             .height(metrics.dp(132))
             .align(Alignment.TopCenter)
-            .blur(metrics.dp(10))
             .background(
                 Brush.verticalGradient(
-                    0f to WorkoutInk,
-                    .74f to WorkoutInk.copy(alpha = .92f),
+                    0f to WorkoutInk.copy(alpha = .72f),
+                    .64f to WorkoutInk.copy(alpha = .34f),
                     1f to Color.Transparent,
                 ),
             ),
     )
+
+    listOf(
+        Triple(0f, 13f, .12f),
+        Triple(38f, 8f, .075f),
+        Triple(76f, 4f, .035f),
+    ).forEach { (offset, blur, tintAlpha) ->
+        MettleGlassSurface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(metrics.dp(58))
+                .align(Alignment.BottomCenter)
+                .offset(y = -metrics.dp(offset)),
+            shape = RoundedCornerShape(0.dp),
+            tint = WorkoutInk.copy(alpha = tintAlpha),
+            blurRadius = metrics.dp(blur),
+            refractionDisplacement = 0.dp,
+            refractionStrength = 0f,
+            shadowElevation = 0.dp,
+            grainStrength = 0f,
+        ) {}
+    }
     Box(
         Modifier
             .fillMaxWidth()
-            .height(metrics.dp(150))
+            .height(metrics.dp(142))
             .align(Alignment.BottomCenter)
-            .blur(metrics.dp(12))
             .background(
                 Brush.verticalGradient(
                     0f to Color.Transparent,
-                    .46f to WorkoutInk.copy(alpha = .82f),
-                    1f to WorkoutInk,
+                    .58f to WorkoutInk.copy(alpha = .22f),
+                    1f to WorkoutInk.copy(alpha = .52f),
                 ),
             ),
     )
@@ -431,6 +471,7 @@ private fun WorkoutExerciseCard(
     enabled: Boolean,
     onFocus: () -> Unit,
     onSetup: () -> Unit,
+    onOpenCalculator: (SetRecordEntity) -> Unit,
     onSaveDraft: (SetRecordEntity, TrainSetDraft) -> Unit,
     onLogSet: (SetRecordEntity, TrainSetDraft) -> Unit,
     onSwap: () -> Unit,
@@ -461,33 +502,34 @@ private fun WorkoutExerciseCard(
                     .padding(start = metrics.dp(16), end = metrics.dp(18)),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        entity.exerciseNameSnapshot,
-                        color = WorkoutPaper,
-                        fontSize = metrics.sp(28),
-                        lineHeight = metrics.sp(36),
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
                 MettleControlGlassSurface(
                     modifier = Modifier.size(metrics.dp(80)),
                     shape = CircleShape,
-                    tint = if (completed) WorkoutGreen.copy(alpha = .08f) else WorkoutCyan.copy(alpha = .035f),
+                    tint = if (completed) WorkoutGreen.copy(alpha = .10f) else WorkoutCyan.copy(alpha = .055f),
                     shadowElevation = metrics.dp(4),
-                    borderColor = Color.White.copy(alpha = .35f),
+                    borderColor = if (completed) WorkoutGreen.copy(alpha = .50f) else WorkoutCyan.copy(alpha = .38f),
                     onClick = if (completed) null else onSetup,
                 ) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = MettleIcons.SportsMartialArts,
-                            contentDescription = if (completed) null else "Open exercise setup",
+                            imageVector = if (completed) MettleIcons.Check else MettleIcons.SportsMartialArts,
+                            contentDescription = if (completed) "Exercise completed" else "Open exercise setup",
                             tint = if (completed) WorkoutGreen else WorkoutCyan,
-                            modifier = Modifier.size(metrics.dp(29)),
+                            modifier = Modifier.size(metrics.dp(if (completed) 32 else 29)),
                         )
                     }
+                }
+                Spacer(Modifier.width(metrics.dp(12)))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        entity.exerciseNameSnapshot,
+                        color = WorkoutPaper,
+                        fontSize = metrics.sp(26),
+                        lineHeight = metrics.sp(32),
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
 
@@ -521,6 +563,7 @@ private fun WorkoutExerciseCard(
                                 draft = draft,
                                 enabled = enabled,
                                 isCurrent = focused && set.completedAt == null && sets.take(index).all { it.completedAt != null },
+                                onOpenCalculator = { onOpenCalculator(set) },
                                 onSaveDraft = { onSaveDraft(set, draft) },
                                 onLogSet = { onLogSet(set, draft) },
                                 metrics = metrics,
@@ -548,6 +591,7 @@ private fun WorkoutSetRow(
     draft: TrainSetDraft,
     enabled: Boolean,
     isCurrent: Boolean,
+    onOpenCalculator: () -> Unit,
     onSaveDraft: () -> Unit,
     onLogSet: () -> Unit,
     metrics: WorkoutMetrics,
@@ -576,16 +620,36 @@ private fun WorkoutSetRow(
             (exercise.entity.loadRelationshipSnapshot == "bodyweight" || draft.load.toDoubleOrNull() != null)
     }
 
-    Surface(
-        modifier = Modifier.fillMaxWidth().height(metrics.dp(132)),
-        color = Color.Transparent,
-        border = BorderStroke(metrics.dp(.65), Color.White.copy(alpha = .23f)),
-        shape = RoundedCornerShape(metrics.dp(25)),
-    ) {
-        Row {
+    Box(Modifier.fillMaxWidth().height(metrics.dp(132))) {
+        if (isCurrent) {
+            Canvas(
+                Modifier
+                    .fillMaxSize()
+                    .blur(metrics.dp(16)),
+            ) {
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            WorkoutCyanStrong.copy(alpha = .42f),
+                            WorkoutCyan.copy(alpha = .16f),
+                            Color.Transparent,
+                        ),
+                        center = Offset(size.width * .18f, size.height * .52f),
+                        radius = size.width * .58f,
+                    ),
+                )
+            }
+        }
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color.Transparent,
+            border = BorderStroke(metrics.dp(.65), Color.White.copy(alpha = .23f)),
+            shape = RoundedCornerShape(metrics.dp(25)),
+        ) {
+            Row {
             Box(
                 modifier = Modifier
-                    .width(metrics.dp(85))
+                    .width(metrics.dp(94))
                     .fillMaxHeight()
                     .background(
                         when {
@@ -600,14 +664,6 @@ private fun WorkoutSetRow(
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                if (isCurrent) {
-                    Box(
-                        Modifier
-                            .size(metrics.dp(78))
-                            .blur(metrics.dp(18))
-                            .background(WorkoutCyan.copy(alpha = .22f), CircleShape),
-                    )
-                }
                 Text(
                     label,
                     color = if (set.completedAt != null) WorkoutGreen else WorkoutPaper,
@@ -634,6 +690,7 @@ private fun WorkoutSetRow(
                             }
                         },
                         onDone = onSaveDraft,
+                        onCalculator = onOpenCalculator.takeIf { metric == "load_reps" },
                     )
                 }
                 if (needsReps) {
@@ -657,6 +714,7 @@ private fun WorkoutSetRow(
                 }
             }
         }
+        }
     }
 }
 
@@ -670,27 +728,32 @@ private fun WorkoutMetricField(
     onValueChange: (String) -> Unit,
     onDone: () -> Unit,
     onFocusLost: () -> Unit = onDone,
+    onCalculator: (() -> Unit)? = null,
 ) {
     var hadFocus by remember { mutableStateOf(false) }
-    Surface(
+    MettleControlGlassSurface(
         modifier = modifier,
         shape = RoundedCornerShape(11.dp),
-        color = WorkoutDarkCyan.copy(alpha = .94f),
-        border = BorderStroke(.5.dp, Color.White.copy(alpha = .08f)),
+        tint = WorkoutDarkCyan.copy(alpha = .16f),
+        borderWidth = .5.dp,
+        borderColor = WorkoutCyan.copy(alpha = .14f),
+        shadowElevation = 1.dp,
     ) {
-        Column(Modifier.padding(horizontal = 13.dp, vertical = 5.dp), verticalArrangement = Arrangement.Center) {
-            Text(label, color = WorkoutCyan.copy(alpha = .78f), fontSize = 10.sp, lineHeight = 11.sp)
+        Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
                 enabled = enabled,
-                modifier = Modifier.onFocusChanged { focus ->
-                    if (focus.isFocused) hadFocus = true
-                    if (!focus.isFocused && hadFocus) {
-                        hadFocus = false
-                        onFocusLost()
-                    }
-                },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .onFocusChanged { focus ->
+                        if (focus.isFocused) hadFocus = true
+                        if (!focus.isFocused && hadFocus) {
+                            hadFocus = false
+                            onFocusLost()
+                        }
+                    },
                 singleLine = true,
                 textStyle = TextStyle(color = WorkoutPaper, fontSize = 16.sp, lineHeight = 18.sp),
                 keyboardOptions = KeyboardOptions(
@@ -702,9 +765,29 @@ private fun WorkoutMetricField(
                     onDone()
                 }),
                 decorationBox = { inner ->
-                    if (value.isEmpty()) Text("00", color = WorkoutPaper.copy(alpha = .38f), fontSize = 16.sp) else inner()
+                    Column(
+                        Modifier.fillMaxSize().padding(start = 13.dp, end = if (onCalculator == null) 13.dp else 4.dp, top = 5.dp, bottom = 5.dp),
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(label, color = WorkoutCyan.copy(alpha = .78f), fontSize = 10.sp, lineHeight = 11.sp)
+                        if (value.isEmpty()) {
+                            Text("00", color = WorkoutPaper.copy(alpha = .38f), fontSize = 16.sp, lineHeight = 18.sp)
+                        } else {
+                            inner()
+                        }
+                    }
                 },
             )
+            if (onCalculator != null) {
+                IconButton(onClick = onCalculator, enabled = enabled, modifier = Modifier.size(46.dp)) {
+                    Icon(
+                        imageVector = MettleIcons.Calculate,
+                        contentDescription = "Open load calculator",
+                        tint = WorkoutCyan.copy(alpha = .88f),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
         }
     }
 }
@@ -756,17 +839,17 @@ private fun CompletedExerciseActions(onRate: () -> Unit, onUndo: () -> Unit, met
 
 @Composable
 private fun WorkoutCardButton(text: String, onClick: () -> Unit, modifier: Modifier, metrics: WorkoutMetrics) {
-    MettleControlGlassSurface(
-        modifier = modifier.heightIn(min = metrics.dp(48)),
-        shape = CircleShape,
-        tint = WorkoutCyan.copy(alpha = .022f),
-        borderColor = WorkoutCyan.copy(alpha = .58f),
-        shadowElevation = metrics.dp(4),
+    MettleGlassActionButton(
         onClick = onClick,
+        modifier = modifier.heightIn(min = metrics.dp(48)),
+        shadowElevation = metrics.dp(4),
+        accent = false,
+        containerTint = WorkoutCyan.copy(alpha = .055f),
+        outlineColor = WorkoutCyan.copy(alpha = .42f),
+        foregroundColor = WorkoutPaper,
+        contentPadding = PaddingValues(horizontal = metrics.dp(12), vertical = metrics.dp(10)),
     ) {
-        Box(Modifier.fillMaxSize().padding(horizontal = metrics.dp(10)), contentAlignment = Alignment.Center) {
-            Text(text, color = WorkoutPaper, fontSize = metrics.sp(14), fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
-        }
+        Text(text, fontSize = metrics.sp(13), lineHeight = metrics.sp(16), fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
     }
 }
 
@@ -879,8 +962,9 @@ private fun WorkoutQuickSelectContent(
                         Text(
                             exercise.entity.exerciseNameSnapshot,
                             color = WorkoutPaper,
-                            fontSize = metrics.sp(28),
-                            lineHeight = metrics.sp(36),
+                            fontSize = metrics.sp(22),
+                            lineHeight = metrics.sp(28),
+                            fontWeight = FontWeight.Medium,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -889,19 +973,25 @@ private fun WorkoutQuickSelectContent(
                         MettleControlGlassSurface(
                             modifier = Modifier.size(metrics.dp(80)),
                             shape = CircleShape,
-                            tint = if (done) WorkoutGreen.copy(alpha = .07f) else WorkoutCyan.copy(alpha = .03f),
-                            borderColor = Color.White.copy(alpha = .34f),
+                            tint = if (done) WorkoutGreen.copy(alpha = .11f) else WorkoutCyan.copy(alpha = .07f),
+                            borderColor = if (done) WorkoutGreen.copy(alpha = .48f) else WorkoutCyan.copy(alpha = .38f),
                             shadowElevation = metrics.dp(4),
+                            onClick = { onSelect(exercise.entity.id) },
                         ) {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("→", color = if (done) WorkoutGreen else WorkoutPaper, fontSize = metrics.sp(34))
+                                Icon(
+                                    imageVector = if (done) MettleIcons.Check else MettleIcons.ArrowForward,
+                                    contentDescription = if (done) "Open completed exercise" else "Open exercise",
+                                    tint = if (done) WorkoutGreen else WorkoutPaper,
+                                    modifier = Modifier.size(metrics.dp(30)),
+                                )
                             }
                         }
                         Text(
                             "${exercise.entity.position + 1}",
                             color = WorkoutPaperMuted,
                             fontSize = metrics.sp(11),
-                            modifier = Modifier.padding(end = metrics.dp(2)),
+                            modifier = Modifier.padding(end = metrics.dp(1), top = metrics.dp(1)),
                         )
                     }
                 }
@@ -970,16 +1060,26 @@ private fun WorkoutSubstitutionContent(
                 ) {
                     Row(Modifier.padding(start = metrics.dp(16), end = metrics.dp(18)), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(option.exerciseName, color = WorkoutPaper, fontSize = metrics.sp(26), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(option.exerciseName, color = WorkoutPaper, fontSize = metrics.sp(22), lineHeight = metrics.sp(28), fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(option.executionProfileName, color = WorkoutPaperMuted, fontSize = metrics.sp(13), maxLines = 1)
                         }
                         MettleControlGlassSurface(
                             modifier = Modifier.size(metrics.dp(80)),
                             shape = CircleShape,
-                            tint = WorkoutCyan.copy(alpha = .03f),
-                            borderColor = Color.White.copy(alpha = .34f),
+                            tint = WorkoutCyan.copy(alpha = .07f),
+                            borderColor = WorkoutCyan.copy(alpha = .38f),
                             shadowElevation = metrics.dp(4),
-                        ) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("⇆", color = WorkoutPaper, fontSize = metrics.sp(29)) } }
+                            onClick = { onSelect(option) },
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = MettleIcons.SwapHoriz,
+                                    contentDescription = "Use ${option.exerciseName}",
+                                    tint = WorkoutPaper,
+                                    modifier = Modifier.size(metrics.dp(30)),
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -1002,191 +1102,189 @@ private enum class FinishChoice { KEEP_TRAINING, COMPLETE, DELETE }
 
 private data class FinishTarget(
     val choice: FinishChoice,
-    val x: Float,
-    val y: Float,
-    val size: Float,
-    val symbol: String,
+    val xFraction: Float,
+    val yFraction: Float,
+    val size: Dp,
+    val icon: ImageVector,
     val colour: Color,
 )
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-private fun FinishWorkoutGestureSheet(
+private fun FinishWorkoutGestureOverlay(
     destructive: Boolean,
     onDismiss: () -> Unit,
     onComplete: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = WorkoutSurfaceLow,
-        contentColor = WorkoutPaper,
-        dragHandle = null,
+    BoxWithConstraints(
+        Modifier
+            .fillMaxSize()
+            .background(WorkoutInk.copy(alpha = .98f)),
     ) {
-        BoxWithConstraints(Modifier.fillMaxWidth().height(620.dp)) {
-            val density = LocalDensity.current
-            val view = LocalView.current
-            val widthScale = (maxWidth.value / WorkoutReferenceWidth).coerceAtMost(1f)
-            val targets = remember(destructive) {
-                if (destructive) {
-                    listOf(
-                        FinishTarget(FinishChoice.KEEP_TRAINING, 335f, 215f, 120f, "×", WorkoutCyan),
-                        FinishTarget(FinishChoice.DELETE, 205f, 355f, 120f, "⌫", WorkoutDelete),
-                    )
-                } else {
-                    listOf(
-                        FinishTarget(FinishChoice.DELETE, 114f, 285f, 80f, "⌫", WorkoutDelete),
-                        FinishTarget(FinishChoice.KEEP_TRAINING, 355f, 345f, 120f, "×", WorkoutCyan),
-                        FinishTarget(FinishChoice.COMPLETE, 234f, 405f, 120f, "✓", WorkoutGreen),
-                    )
-                }
+        val density = LocalDensity.current
+        val view = LocalView.current
+        val widthPx = constraints.maxWidth.toFloat()
+        val heightPx = constraints.maxHeight.toFloat()
+        val targets = remember(destructive) {
+            if (destructive) {
+                listOf(
+                    FinishTarget(FinishChoice.KEEP_TRAINING, .76f, .46f, 120.dp, MettleIcons.Close, WorkoutCyan),
+                    FinishTarget(FinishChoice.DELETE, .48f, .69f, 120.dp, MettleIcons.Backspace, WorkoutDelete),
+                )
+            } else {
+                listOf(
+                    FinishTarget(FinishChoice.DELETE, .25f, .52f, 82.dp, MettleIcons.Backspace, WorkoutDelete),
+                    FinishTarget(FinishChoice.KEEP_TRAINING, .78f, .62f, 120.dp, MettleIcons.Close, WorkoutCyan),
+                    FinishTarget(FinishChoice.COMPLETE, .51f, .76f, 120.dp, MettleIcons.Check, WorkoutGreen),
+                )
             }
-            var dragging by remember { mutableStateOf(false) }
-            var rawOffset by remember { mutableStateOf(Offset.Zero) }
-            var dragOrigin by remember { mutableStateOf(Offset.Zero) }
-            var active by remember { mutableStateOf<FinishChoice?>(null) }
-            var settling by remember { mutableStateOf(false) }
-            val settle by animateFloatAsState(
-                targetValue = if (settling) 1f else 0f,
-                animationSpec = spring(dampingRatio = .72f, stiffness = 440f),
-                label = "finish-handle-return",
+        }
+        val homePx = Offset(widthPx * .84f, heightPx * .88f)
+        var dragging by remember { mutableStateOf(false) }
+        var rawOffset by remember { mutableStateOf(Offset.Zero) }
+        var active by remember { mutableStateOf<FinishChoice?>(null) }
+        var settling by remember { mutableStateOf(false) }
+        val settle by animateFloatAsState(
+            targetValue = if (settling) 1f else 0f,
+            animationSpec = spring(dampingRatio = .72f, stiffness = 440f),
+            label = "finish-handle-return",
+        )
+        val shownOffset = if (settling) rawOffset * (1f - settle) else rawOffset
+
+        fun targetCentre(target: FinishTarget) = Offset(widthPx * target.xFraction, heightPx * target.yFraction)
+
+        LaunchedEffect(settling) {
+            if (settling) {
+                kotlinx.coroutines.delay(330)
+                rawOffset = Offset.Zero
+                settling = false
+            }
+        }
+
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(top = if (destructive) 122.dp else 110.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                if (destructive) "Delete" else "Finished?",
+                color = if (destructive) WorkoutDelete else WorkoutPaper,
+                fontSize = 48.sp,
+                fontWeight = FontWeight.Medium,
             )
-            val shownOffset = if (settling) rawOffset * (1f - settle) else rawOffset
-            val homeDp = Offset(383f * widthScale, 555f)
-            val homePx = with(density) { Offset(homeDp.x.dp.toPx(), homeDp.y.dp.toPx()) }
+            Text(
+                if (destructive) "Exit & delete workout?" else "Drag the workout button",
+                color = WorkoutPaper,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
 
-            LaunchedEffect(settling) {
-                if (settling) {
-                    kotlinx.coroutines.delay(330)
-                    rawOffset = Offset.Zero
-                    settling = false
-                }
-            }
-
-            Box(Modifier.align(Alignment.TopCenter).padding(top = 16.dp).size(width = 32.dp, height = 4.dp).background(WorkoutPaperMuted.copy(alpha = .7f), CircleShape))
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(top = 70.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(if (destructive) "Delete" else "Finished?", color = if (destructive) WorkoutDelete else WorkoutPaper, fontSize = 48.sp, fontWeight = FontWeight.Medium)
-                Text(if (destructive) "Exit & Delete Workout?" else "Drag the handle", color = WorkoutPaper, fontSize = 25.sp, fontWeight = FontWeight.Medium)
-            }
-
-            targets.forEach { target ->
-                val selected = active == target.choice
-                Surface(
-                    modifier = Modifier
-                        .offset(x = (target.x * widthScale - target.size * widthScale / 2f).dp, y = (target.y - target.size / 2f).dp)
-                        .size((target.size * widthScale).dp),
-                    shape = CircleShape,
-                    color = target.colour.copy(alpha = if (selected) .45f else .16f),
-                    border = BorderStroke(if (selected) 3.dp else 1.dp, target.colour.copy(alpha = if (selected) .95f else .28f)),
-                    shadowElevation = if (selected) 12.dp else 1.dp,
-                ) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(target.symbol, color = target.colour, fontSize = if (target.size > 90) 54.sp else 34.sp)
+        targets.forEach { target ->
+            val centre = targetCentre(target)
+            val selected = active == target.choice
+            MettleControlGlassSurface(
+                modifier = Modifier
+                    .offset {
+                        val radius = with(density) { target.size.toPx() / 2f }
+                        IntOffset((centre.x - radius).roundToInt(), (centre.y - radius).roundToInt())
                     }
+                    .size(target.size),
+                shape = CircleShape,
+                tint = target.colour.copy(alpha = if (selected) .21f else .07f),
+                borderWidth = if (selected) 2.dp else 1.dp,
+                borderColor = target.colour.copy(alpha = if (selected) .92f else .38f),
+                shadowElevation = if (selected) 14.dp else 5.dp,
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        target.icon,
+                        contentDescription = target.choice.name,
+                        tint = target.colour,
+                        modifier = Modifier.size(if (target.size > 100.dp) 48.dp else 34.dp),
+                    )
                 }
             }
+        }
 
+        Box(
+            modifier = Modifier
+                .offset { IntOffset((homePx.x - 46.dp.toPx()).roundToInt(), (homePx.y - 46.dp.toPx()).roundToInt()) }
+                .size(92.dp)
+                .pointerInput(destructive, widthPx, heightPx) {
+                    detectDragGestures(
+                        onDragStart = {
+                            dragging = true
+                            settling = false
+                            rawOffset = Offset.Zero
+                            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                        },
+                        onDrag = { change, amount ->
+                            change.consume()
+                            rawOffset += amount
+                            val handle = homePx + rawOffset
+                            val next = targets.minByOrNull { target ->
+                                val centre = targetCentre(target)
+                                hypot(handle.x - centre.x, handle.y - centre.y)
+                            }?.takeIf { target ->
+                                val centre = targetCentre(target)
+                                hypot(handle.x - centre.x, handle.y - centre.y) < with(density) { target.size.toPx() * .72f }
+                            }?.choice
+                            if (next != active) {
+                                active = next
+                                if (next != null) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            }
+                        },
+                        onDragEnd = {
+                            val confirmed = active
+                            dragging = false
+                            active = null
+                            when (confirmed) {
+                                FinishChoice.KEEP_TRAINING -> onDismiss()
+                                FinishChoice.COMPLETE -> onComplete()
+                                FinishChoice.DELETE -> onDelete()
+                                null -> settling = true
+                            }
+                        },
+                        onDragCancel = {
+                            dragging = false
+                            active = null
+                            settling = true
+                        },
+                    )
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            if (!dragging && !settling) {
+                FinishDragHandle(active = false)
+            }
+        }
+
+        if (dragging || settling) {
             Box(
                 modifier = Modifier
                     .offset {
                         IntOffset(
-                            (homePx.x - 32.dp.toPx()).roundToInt(),
-                            (homePx.y - 32.dp.toPx()).roundToInt(),
+                            (homePx.x - 32.dp.toPx() + shownOffset.x).roundToInt(),
+                            (homePx.y - 32.dp.toPx() + shownOffset.y).roundToInt(),
                         )
                     }
-                    .size(64.dp)
-                    .pointerInteropFilter { event ->
-                        when (event.actionMasked) {
-                            MotionEvent.ACTION_DOWN -> {
-                                dragging = true
-                                settling = false
-                                rawOffset = Offset.Zero
-                                dragOrigin = Offset(event.x, event.y)
-                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                true
-                            }
-                            MotionEvent.ACTION_MOVE -> {
-                                rawOffset = Offset(event.x - dragOrigin.x, event.y - dragOrigin.y)
-                                val handle = homePx + rawOffset
-                                val next = targets.minByOrNull { target ->
-                                    val targetPx = with(density) {
-                                        Offset((target.x * widthScale).dp.toPx(), target.y.dp.toPx())
-                                    }
-                                    hypot(handle.x - targetPx.x, handle.y - targetPx.y)
-                                }?.takeIf { target ->
-                                    val targetPx = with(density) {
-                                        Offset((target.x * widthScale).dp.toPx(), target.y.dp.toPx())
-                                    }
-                                    hypot(handle.x - targetPx.x, handle.y - targetPx.y) < with(density) { (target.size * .72f).dp.toPx() }
-                                }?.choice
-                                if (next != active) {
-                                    active = next
-                                    if (next != null) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                }
-                                true
-                            }
-                            MotionEvent.ACTION_UP -> {
-                                val confirmed = active
-                                dragging = false
-                                active = null
-                                when (confirmed) {
-                                    FinishChoice.KEEP_TRAINING -> onDismiss()
-                                    FinishChoice.COMPLETE -> onComplete()
-                                    FinishChoice.DELETE -> onDelete()
-                                    null -> settling = true
-                                }
-                                true
-                            }
-                            MotionEvent.ACTION_CANCEL -> {
-                                dragging = false
-                                active = null
-                                settling = true
-                                true
-                            }
-                            else -> true
-                        }
-                    },
-            ) {
-                MettleControlGlassSurface(
-                    modifier = Modifier.fillMaxSize(),
-                    shape = CircleShape,
-                    tint = WorkoutCyan.copy(alpha = if (dragging) .08f else .035f),
-                    borderColor = WorkoutPaper.copy(alpha = .52f),
-                    shadowElevation = 7.dp,
-                ) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Icon(MettleIcons.SportsMartialArts, null, tint = WorkoutPaper, modifier = Modifier.size(24.dp))
-                    }
-                }
-            }
+                    .size(64.dp),
+            ) { FinishDragHandle(active = active != null) }
+        }
+    }
+}
 
-            if (dragging || settling) {
-                Box(
-                    modifier = Modifier
-                        .offset {
-                            IntOffset(
-                                (homePx.x - 32.dp.toPx() + shownOffset.x).roundToInt(),
-                                (homePx.y - 32.dp.toPx() + shownOffset.y).roundToInt(),
-                            )
-                        }
-                        .size(64.dp),
-                ) {
-                    MettleControlGlassSurface(
-                        modifier = Modifier.fillMaxSize(),
-                        shape = CircleShape,
-                        tint = WorkoutCyan.copy(alpha = if (active != null) .10f else .045f),
-                        borderColor = WorkoutPaper.copy(alpha = .62f),
-                        shadowElevation = 9.dp,
-                    ) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(MettleIcons.SportsMartialArts, null, tint = WorkoutPaper, modifier = Modifier.size(24.dp))
-                        }
-                    }
-                }
-            }
+@Composable
+private fun FinishDragHandle(active: Boolean) {
+    MettleControlGlassSurface(
+        modifier = Modifier.fillMaxSize(),
+        shape = CircleShape,
+        tint = WorkoutCyan.copy(alpha = if (active) .12f else .045f),
+        borderColor = WorkoutPaper.copy(alpha = if (active) .80f else .52f),
+        shadowElevation = if (active) 11.dp else 7.dp,
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Icon(MettleIcons.SportsMartialArts, null, tint = WorkoutPaper, modifier = Modifier.size(24.dp))
         }
     }
 }
