@@ -85,6 +85,7 @@ internal fun MettleControlGlassSurface(
         enabled = enabled,
         selected = selected,
         onClick = onClick,
+        contentAlignment = Alignment.Center,
     ) {
         content()
     }
@@ -275,16 +276,12 @@ internal fun MettleGlassActionButton(
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             ProvideTextStyle(MaterialTheme.typography.labelLarge) {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(contentPadding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                        content = content,
-                    )
-                }
+                Row(
+                    modifier = Modifier.padding(contentPadding),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = content,
+                )
             }
         }
     }

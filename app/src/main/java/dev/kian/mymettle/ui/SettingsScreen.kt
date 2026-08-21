@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,7 +24,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,7 +47,10 @@ private const val FigmaDiagnosticReferenceHeight = 983f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onOpenDeveloper: () -> Unit) {
+fun SettingsScreen(
+    onOpenDeveloper: () -> Unit,
+    onOpenAccount: () -> Unit,
+) {
     val context = LocalContext.current
     val viewModel: SettingsViewModel = viewModel(
         factory = remember(context) { SettingsViewModelFactory(context) },
@@ -59,17 +60,10 @@ fun SettingsScreen(onOpenDeveloper: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "Native behaviour",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
+            MettleAppHeader(
+                destination = "Settings",
+                onOpenSettings = {},
+                onOpenAccount = onOpenAccount,
             )
         },
     ) { innerPadding ->
@@ -179,7 +173,10 @@ fun SettingsScreen(onOpenDeveloper: () -> Unit) {
                                 TextButton(onClick = { showScreenDiagnostics = true }) {
                                     Text("Screen diagnostics")
                                 }
-                                Button(onClick = onOpenDeveloper, modifier = Modifier.fillMaxWidth()) {
+                                MettleGlassActionButton(
+                                    onClick = onOpenDeveloper,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
                                     Text("Open biological developer tools")
                                 }
                             }

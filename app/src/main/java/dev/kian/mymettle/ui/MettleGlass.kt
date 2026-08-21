@@ -66,6 +66,7 @@ internal fun MettleGlassSurface(
     enabled: Boolean = true,
     selected: Boolean? = null,
     onClick: (() -> Unit)? = null,
+    contentAlignment: Alignment = Alignment.TopStart,
     content: @Composable () -> Unit,
 ) {
     val hazeState = LocalMettleHazeState.current
@@ -275,6 +276,7 @@ internal fun MettleGlassSurface(
                     Modifier
                 },
             ),
+        contentAlignment = contentAlignment,
     ) {
         content()
     }

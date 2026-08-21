@@ -41,8 +41,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -77,7 +75,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.DpOffset
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -89,8 +86,6 @@ import dev.kian.mymettle.domain.exercise.Exercise
 import dev.kian.mymettle.domain.exercise.ExerciseSetupMedia
 import dev.kian.mymettle.library.RoutineBoardDay
 import dev.kian.mymettle.library.RoutineBoardSlot
-import dev.kian.mymettle.ui.theme.MettleOnPrimaryContainer
-import dev.kian.mymettle.ui.theme.MettleOnSurfaceVariant
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -131,7 +126,8 @@ fun ExerciseLibraryScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            LibraryAppBar(
+            MettleAppHeader(
+                destination = "Library",
                 onOpenSettings = onOpenSettings,
                 onOpenAccount = onOpenAccount,
             )
@@ -218,64 +214,6 @@ fun ExerciseLibraryScreen(
             confirmButton = { TextButton(onClick = viewModel::dismissError) { Text("OK") } },
         )
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LibraryAppBar(
-    onOpenSettings: () -> Unit,
-    onOpenAccount: () -> Unit,
-) {
-    TopAppBar(
-        title = {
-            Column {
-                Text(
-                    "My Mettle",
-                    color = MettleOnPrimaryContainer,
-                    fontSize = 24.sp,
-                    lineHeight = 30.sp,
-                )
-                Text(
-                    "Library",
-                    color = MettleOnSurfaceVariant,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
-        },
-        actions = {
-            MettleControlGlassSurface(
-                modifier = Modifier.width(96.dp).height(52.dp),
-                tint = MettleOnPrimaryContainer.copy(alpha = .075f),
-                borderColor = Color.White.copy(alpha = .20f),
-                shadowElevation = 3.dp,
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    MettleGlassIconTouchTarget(
-                        modifier = Modifier.size(width = 48.dp, height = 52.dp),
-                        imageVector = MettleIcons.Settings,
-                        contentDescription = "Settings",
-                        onClick = onOpenSettings,
-                        iconSize = DpSize(17.dp, 17.dp),
-                    )
-                    MettleGlassIconTouchTarget(
-                        modifier = Modifier.size(width = 48.dp, height = 52.dp),
-                        imageVector = MettleIcons.AccountCircle,
-                        contentDescription = "Account",
-                        onClick = onOpenAccount,
-                        iconSize = DpSize(17.dp, 17.dp),
-                    )
-                }
-            }
-            Spacer(Modifier.width(12.dp))
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-    )
 }
 
 @Composable
