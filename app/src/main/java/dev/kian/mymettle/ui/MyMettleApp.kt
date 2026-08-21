@@ -277,7 +277,12 @@ fun MyMettleApp() {
                                 )
                             }
                         }
-                        composable(LIBRARY_ROUTE) { ExerciseLibraryScreen() }
+                        composable(LIBRARY_ROUTE) {
+                            ExerciseLibraryScreen(
+                                onOpenSettings = { openMainDestination(SETTINGS_ROUTE) },
+                                onOpenAccount = { openMainDestination(ACCOUNT_ROUTE) },
+                            )
+                        }
                         composable(HISTORY_ROUTE) { HistoryScreen() }
                         composable(ACCOUNT_ROUTE) {
                             AccountScreen(
