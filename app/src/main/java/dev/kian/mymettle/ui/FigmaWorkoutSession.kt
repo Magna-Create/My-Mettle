@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -59,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -66,6 +68,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -82,6 +85,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
@@ -567,13 +571,35 @@ private fun WorkoutExerciseCard(
     val logged = sets.count { it.completedAt != null }
     val cardHazeState = rememberHazeState()
 
-    Surface(
-        modifier = Modifier.fillMaxWidth().hazeSource(cardHazeState),
-        shape = WorkoutCardShape,
-        color = if (completed) WorkoutGreenDark.copy(alpha = .72f) else WorkoutCard,
-        border = null,
-        shadowElevation = if (focused) metrics.dp(4) else metrics.dp(2),
+    val cardColor = if (completed) WorkoutGreenDark.copy(alpha = .72f) else WorkoutCard
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .dropShadow(
+                shape = WorkoutCardShape,
+                shadow = Shadow(
+                    radius = metrics.dp(if (focused) 7 else 4.5),
+                    spread = 0.dp,
+                    color = Color.Black.copy(alpha = if (focused) .30f else .22f),
+                    offset = DpOffset(0.dp, metrics.dp(if (focused) 2.6 else 1.7)),
+                ),
+            )
+            .mettleDirectionalBorder(
+                width = metrics.dp(.7),
+                color = Color.White.copy(alpha = if (focused) .18f else .11f),
+                shape = WorkoutCardShape,
+            )
+            .clip(WorkoutCardShape),
     ) {
+        // Only the clipped card paint is a Haze source. Registering the entire Surface here used
+        // to feed its glass children and elevated layer back into their own sampling pass, which
+        // could appear as large rectangular ghosts while scrolling.
+        Box(
+            Modifier
+                .matchParentSize()
+                .hazeSource(cardHazeState)
+                .background(cardColor),
+        )
         CompositionLocalProvider(LocalMettleHazeState provides cardHazeState) {
             Column {
             Row(
@@ -741,13 +767,15 @@ private fun WorkoutSetRow(
                 )
             }
         }
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = Color.Transparent,
-            border = BorderStroke(metrics.dp(.3), Color.White.copy(alpha = .065f)),
-            shape = shape,
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .mettleDirectionalBorder(
+                    width = metrics.dp(.55),
+                    color = Color.White.copy(alpha = if (isCurrent) .17f else .12f),
+                    shape = shape,
+                ),
         ) {
-            Row {
             Box(
                 modifier = Modifier
                     .width(metrics.dp(94))
@@ -815,7 +843,6 @@ private fun WorkoutSetRow(
                 }
             }
         }
-        }
     }
 }
 
@@ -858,9 +885,9 @@ private fun WorkoutMetricField(
         shape = RoundedCornerShape(11.dp),
         tint = WorkoutCyan.copy(alpha = .018f),
         baseColor = WorkoutDarkCyan.copy(alpha = .72f),
-        borderWidth = .3.dp,
-        borderColor = WorkoutCyan.copy(alpha = .07f),
-        shadowElevation = .5.dp,
+        borderWidth = .55.dp,
+        borderColor = WorkoutCyan.copy(alpha = .18f),
+        shadowElevation = .75.dp,
     ) {
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
             BasicTextField(
@@ -920,9 +947,11 @@ private fun WorkoutChip(text: String, metrics: WorkoutMetrics, success: Boolean 
     Surface(
         shape = RoundedCornerShape(metrics.dp(6)),
         color = Color.Transparent,
-        border = BorderStroke(
-            metrics.dp(.45),
-            if (success) WorkoutGreen.copy(alpha = .20f) else WorkoutPaperMuted.copy(alpha = .15f),
+        border = null,
+        modifier = Modifier.mettleDirectionalBorder(
+            width = metrics.dp(.5),
+            color = if (success) WorkoutGreen.copy(alpha = .28f) else WorkoutPaperMuted.copy(alpha = .22f),
+            shape = RoundedCornerShape(metrics.dp(6)),
         ),
     ) {
         Text(
@@ -987,10 +1016,10 @@ private fun WorkoutCardButton(text: String, onClick: () -> Unit, modifier: Modif
     MettleGlassActionButton(
         onClick = onClick,
         modifier = modifier.heightIn(min = metrics.dp(48)),
-        shadowElevation = metrics.dp(4),
+        shadowElevation = metrics.dp(2.6),
         accent = false,
         containerTint = WorkoutCyan.copy(alpha = .055f),
-        outlineColor = WorkoutCyan.copy(alpha = .10f),
+        outlineColor = WorkoutCyan.copy(alpha = .24f),
         foregroundColor = WorkoutPaper,
         contentPadding = PaddingValues(horizontal = metrics.dp(13), vertical = metrics.dp(9)),
     ) {

@@ -1,6 +1,8 @@
 package dev.kian.mymettle.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpSize
@@ -21,6 +24,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.kian.mymettle.ui.theme.MettleOnPrimaryContainer
 import dev.kian.mymettle.ui.theme.MettleOnSurfaceVariant
+
+/** A non-refractive veil which lets scrolling content disappear progressively behind a header. */
+@Composable
+internal fun MettleAppHeaderFog(
+    modifier: Modifier = Modifier,
+    baseColor: Color = Color(0xFF10150F),
+) {
+    Box(
+        modifier = modifier.background(
+            Brush.verticalGradient(
+                0f to baseColor.copy(alpha = .98f),
+                .42f to baseColor.copy(alpha = .86f),
+                .76f to baseColor.copy(alpha = .38f),
+                1f to Color.Transparent,
+            ),
+        ),
+    )
+}
 
 /**
  * Fixed destination header for Native screens outside the Workout viewport.

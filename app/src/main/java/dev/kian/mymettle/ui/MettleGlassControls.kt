@@ -68,15 +68,10 @@ internal fun MettleControlGlassSurface(
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
-    val resolvedBorderWidth = if (preserveEdgeDefinition || borderWidth <= 0.4.dp) {
+    val resolvedBorderWidth = if (preserveEdgeDefinition || borderWidth <= 0.6.dp) {
         borderWidth
     } else {
-        0.4.dp
-    }
-    val resolvedBorderColor = if (preserveEdgeDefinition) {
-        borderColor
-    } else {
-        borderColor.copy(alpha = borderColor.alpha.coerceAtMost(0.12f))
+        0.6.dp
     }
     MettleGlassSurface(
         modifier = modifier,
@@ -90,7 +85,10 @@ internal fun MettleControlGlassSurface(
         refractionStrength = 0.70f,
         shadowElevation = shadowElevation,
         borderWidth = resolvedBorderWidth,
-        borderColor = resolvedBorderColor,
+        // Preserve the requested peak brightness; the shared primitive now reduces the outline
+        // spatially, falling away from the top-left light instead of suppressing every edge.
+        borderColor = borderColor,
+        borderFarEdgeAlpha = if (preserveEdgeDefinition) 0.30f else 0.14f,
         innerShadowRadius = innerShadowRadius,
         innerShadowOffsetY = innerShadowOffsetY,
         innerShadowAlpha = innerShadowAlpha,

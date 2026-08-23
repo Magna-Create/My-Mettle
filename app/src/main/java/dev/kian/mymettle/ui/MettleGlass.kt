@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.draw.innerShadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
@@ -46,6 +47,32 @@ import kotlin.random.Random
  */
 internal val LocalMettleHazeState = staticCompositionLocalOf<HazeState?> { null }
 
+/**
+ * A material edge is brightest towards the shared top-left light and falls away around the
+ * opposite side. This keeps an edge legible without returning to the flat outlined-button look.
+ */
+internal fun Modifier.mettleDirectionalBorder(
+    width: Dp,
+    color: Color,
+    shape: RoundedCornerShape,
+    farEdgeAlpha: Float = 0.14f,
+): Modifier {
+    if (width <= 0.dp || color.alpha <= 0f) return this
+    val farAlpha = farEdgeAlpha.coerceIn(0f, 1f)
+    return border(
+        width = width,
+        brush = Brush.linearGradient(
+            colors = listOf(
+                color,
+                color.copy(alpha = color.alpha * 0.62f),
+                color.copy(alpha = color.alpha * 0.28f),
+                color.copy(alpha = color.alpha * farAlpha),
+            ),
+        ),
+        shape = shape,
+    )
+}
+
 @OptIn(ExperimentalHazeApi::class)
 @Composable
 internal fun MettleGlassSurface(
@@ -59,6 +86,7 @@ internal fun MettleGlassSurface(
     baseColor: Color = Color.Transparent,
     borderWidth: Dp = 0.dp,
     borderColor: Color = Color.Transparent,
+    borderFarEdgeAlpha: Float = 0.14f,
     innerShadowRadius: Dp = 0.dp,
     innerShadowOffsetY: Dp = 0.dp,
     innerShadowAlpha: Float = 0f,
@@ -254,7 +282,12 @@ internal fun MettleGlassSurface(
             .then(insetShadowModifier)
             .then(
                 if (borderWidth > 0.dp) {
-                    Modifier.border(borderWidth, borderColor, shape)
+                    Modifier.mettleDirectionalBorder(
+                        width = borderWidth,
+                        color = borderColor,
+                        shape = shape,
+                        farEdgeAlpha = borderFarEdgeAlpha,
+                    )
                 } else {
                     Modifier
                 },

@@ -37,7 +37,6 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -72,6 +71,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.DpOffset
@@ -123,56 +123,59 @@ fun ExerciseLibraryScreen(
         }
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            MettleAppHeader(
-                destination = "Library",
-                onOpenSettings = onOpenSettings,
-                onOpenAccount = onOpenAccount,
-            )
-        },
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFF10150F), Color(0xFF132018), Color(0xFF10140F)),
-                    ),
+    val headerFadeHeight = 118.dp
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFF10150F), Color(0xFF132018), Color(0xFF10140F)),
+                ),
+            ),
+    ) {
+        if (state.loading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) { CircularProgressIndicator() }
+        } else {
+            if (state.section == LibrarySection.ROUTINE) {
+                RoutineBoardContent(
+                    state = state,
+                    topContentPadding = headerFadeHeight,
+                    onSectionSelected = viewModel::selectSection,
+                    onBeginEdit = viewModel::beginRoutineEdit,
+                    onCancelEdit = viewModel::cancelRoutineEdit,
+                    onSaveEdit = viewModel::saveRoutineEdit,
+                    onMove = viewModel::moveRoutineSlot,
+                    onPlace = viewModel::placeRoutineSlot,
+                    onAddExercise = viewModel::addExerciseToRoutine,
+                    onDuplicate = viewModel::duplicateRoutineSlot,
+                    onRemove = viewModel::removeRoutineSlot,
+                    onOpenExercise = viewModel::selectExercise,
                 )
-                .padding(innerPadding),
-        ) {
-            if (state.loading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) { CircularProgressIndicator() }
             } else {
-                if (state.section == LibrarySection.ROUTINE) {
-                    RoutineBoardContent(
-                        state = state,
-                        onSectionSelected = viewModel::selectSection,
-                        onBeginEdit = viewModel::beginRoutineEdit,
-                        onCancelEdit = viewModel::cancelRoutineEdit,
-                        onSaveEdit = viewModel::saveRoutineEdit,
-                        onMove = viewModel::moveRoutineSlot,
-                        onPlace = viewModel::placeRoutineSlot,
-                        onAddExercise = viewModel::addExerciseToRoutine,
-                        onDuplicate = viewModel::duplicateRoutineSlot,
-                        onRemove = viewModel::removeRoutineSlot,
-                        onOpenExercise = viewModel::selectExercise,
-                    )
-                } else {
-                    ExerciseCatalogueContent(
-                        state = state,
-                        onSectionSelected = viewModel::selectSection,
-                        onQueryChange = viewModel::setQuery,
-                        onSelect = viewModel::select,
-                    )
-                }
+                ExerciseCatalogueContent(
+                    state = state,
+                    topContentPadding = headerFadeHeight,
+                    onSectionSelected = viewModel::selectSection,
+                    onQueryChange = viewModel::setQuery,
+                    onSelect = viewModel::select,
+                )
             }
         }
+
+        MettleAppHeaderFog(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(headerFadeHeight)
+                .align(Alignment.TopCenter),
+        )
+        MettleAppHeader(
+            destination = "Library",
+            onOpenSettings = onOpenSettings,
+            onOpenAccount = onOpenAccount,
+        )
     }
 
     state.selected?.let { selected ->
@@ -241,13 +244,14 @@ private fun LibrarySectionTabs(
 @Composable
 private fun ExerciseCatalogueContent(
     state: ExerciseLibraryUiState,
+    topContentPadding: Dp,
     onSectionSelected: (LibrarySection) -> Unit,
     onQueryChange: (String) -> Unit,
     onSelect: (Exercise?) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 150.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = topContentPadding, bottom = 150.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
@@ -282,6 +286,7 @@ private fun ExerciseCatalogueContent(
 @Composable
 private fun RoutineBoardContent(
     state: ExerciseLibraryUiState,
+    topContentPadding: Dp,
     onSectionSelected: (LibrarySection) -> Unit,
     onBeginEdit: () -> Unit,
     onCancelEdit: () -> Unit,
@@ -350,7 +355,7 @@ private fun RoutineBoardContent(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 150.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = topContentPadding, bottom = 150.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
