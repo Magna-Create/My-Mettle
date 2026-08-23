@@ -139,9 +139,8 @@ internal fun FigmaDailyUpdateScreen(
     }
     FigmaDailyViewport { metrics ->
         Box(modifier = Modifier.fillMaxSize()) {
-            FigmaDailyAppBar(
-                modifier = Modifier.offset(y = metrics.dp(40)),
-                metrics = metrics,
+            MettleAppHeader(
+                destination = "Daily Update",
                 onOpenSettings = onOpenSettings,
                 onOpenAccount = onOpenAccount,
             )
@@ -224,92 +223,6 @@ private fun FigmaDailyViewport(content: @Composable (FigmaMetrics) -> Unit) {
 }
 
 @Composable
-private fun FigmaDailyAppBar(
-    modifier: Modifier,
-    metrics: FigmaMetrics,
-    onOpenSettings: () -> Unit,
-    onOpenAccount: () -> Unit,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(metrics.dp(70.369))
-            .padding(start = metrics.dp(21), end = metrics.dp(18)),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "My Mettle",
-                color = MettleOnPrimaryContainer,
-                fontSize = metrics.sp(24.2),
-                lineHeight = metrics.sp(31),
-            )
-            Text(
-                text = "Daily Update",
-                color = MettleOnSurfaceVariant,
-                fontSize = metrics.sp(13.2),
-                lineHeight = metrics.sp(18),
-                fontWeight = FontWeight.Medium,
-            )
-        }
-
-        FigmaTintedSurface(
-            modifier = Modifier
-                .offset(y = metrics.dp(-0.685))
-                .width(metrics.dp(96))
-                .height(metrics.dp(52)),
-            shape = CircleShape,
-            fill = MettleOnPrimaryContainer.copy(alpha = 0.30f),
-            shadowElevation = metrics.dp(3.087),
-            shadowAlpha = 0.16f,
-            glassBlurRadius = metrics.dp(3.087),
-            glassRefractionDisplacement = metrics.dp(2.4),
-            glassRefractionStrength = 0.20f,
-            useSharedControlGlass = true,
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                FigmaHeaderIconButton(
-                    imageVector = MettleIcons.Settings,
-                    contentDescription = "Settings",
-                    onClick = onOpenSettings,
-                    metrics = metrics,
-                )
-                FigmaHeaderIconButton(
-                    imageVector = MettleIcons.AccountCircle,
-                    contentDescription = "Account and history",
-                    onClick = onOpenAccount,
-                    metrics = metrics,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FigmaHeaderIconButton(
-    imageVector: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    metrics: FigmaMetrics,
-) {
-    MettleGlassIconTouchTarget(
-        modifier = Modifier
-            .width(metrics.dp(48))
-            .fillMaxHeight(),
-        imageVector = imageVector,
-        contentDescription = contentDescription,
-        onClick = onClick,
-        iconSize = DpSize(metrics.dp(16.3916), metrics.dp(16.3916)),
-        contentAlpha = 0.80f,
-        pressedHaloSize = metrics.dp(36),
-    )
-}
-
-@Composable
 private fun FigmaHeroGreeting(
     modifier: Modifier,
     displaySymbol: String,
@@ -383,33 +296,25 @@ private fun FigmaInsightChips(
             horizontalArrangement = Arrangement.spacedBy(metrics.dp(8)),
         ) {
             chips.forEach { (label, width) ->
-                FigmaTintedSurface(
-                    modifier = Modifier
-                        .width(metrics.dp(width))
-                        .height(metrics.dp(32)),
-                    shape = RoundedCornerShape(metrics.dp(8)),
+                MettleMetadataPill(
+                    label = label,
+                    modifier = Modifier.width(metrics.dp(width)),
+                    height = metrics.dp(32),
+                    cornerRadius = metrics.dp(8),
+                    horizontalPadding = metrics.dp(12),
                     fill = Color.Black.copy(alpha = 0.004f),
-                    shadowElevation = metrics.dp(2),
-                    shadowAlpha = 0.06f,
-                    shadowBlurRadius = metrics.dp(8),
-                    shadowOffsetY = metrics.dp(2),
-                    glassBlurRadius = metrics.dp(24),
-                    glassRefractionDisplacement = metrics.dp(2.5),
-                    glassRefractionStrength = 0.10f,
                     borderWidth = metrics.dp(1),
                     borderColor = MettleOutlineVariant,
-                ) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = label,
-                            color = MettleOnSurfaceVariant,
-                            fontSize = metrics.sp(14),
-                            lineHeight = metrics.sp(20),
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1,
-                        )
-                    }
-                }
+                    textColor = MettleOnSurfaceVariant,
+                    fontSize = metrics.sp(14),
+                    lineHeight = metrics.sp(20),
+                    shadowBlurRadius = metrics.dp(8),
+                    shadowOffsetY = metrics.dp(2),
+                    shadowAlpha = 0.06f,
+                    glassBlurRadius = metrics.dp(24),
+                    refractionDisplacement = metrics.dp(2.5),
+                    refractionStrength = 0.10f,
+                )
             }
         }
     }

@@ -123,16 +123,14 @@ fun ExerciseLibraryScreen(
         }
     }
 
-    val headerFadeHeight = 118.dp
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF10150F), Color(0xFF132018), Color(0xFF10140F)),
-                ),
-            ),
-    ) {
+    MettleHeaderScreen(
+        destination = "Library",
+        onOpenSettings = onOpenSettings,
+        onOpenAccount = onOpenAccount,
+        backgroundBrush = Brush.verticalGradient(
+            listOf(Color(0xFF10150F), Color(0xFF132018), Color(0xFF10140F)),
+        ),
+    ) { headerFadeHeight ->
         if (state.loading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -164,18 +162,6 @@ fun ExerciseLibraryScreen(
                 )
             }
         }
-
-        MettleAppHeaderFog(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(headerFadeHeight)
-                .align(Alignment.TopCenter),
-        )
-        MettleAppHeader(
-            destination = "Library",
-            onOpenSettings = onOpenSettings,
-            onOpenAccount = onOpenAccount,
-        )
     }
 
     state.selected?.let { selected ->

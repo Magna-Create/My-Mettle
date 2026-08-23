@@ -20,7 +20,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,26 +57,25 @@ fun SettingsScreen(
     val state = viewModel.uiState
     var showScreenDiagnostics by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            MettleAppHeader(
-                destination = "Settings",
-                onOpenSettings = {},
-                onOpenAccount = onOpenAccount,
-            )
-        },
-    ) { innerPadding ->
+    MettleHeaderScreen(
+        destination = "Settings",
+        onOpenSettings = {},
+        onOpenAccount = onOpenAccount,
+    ) { headerPadding ->
         if (state.loading) {
             Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                modifier = Modifier.fillMaxSize().padding(top = headerPadding),
                 contentAlignment = Alignment.Center,
             ) { CircularProgressIndicator() }
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = headerPadding + 12.dp,
+                    bottom = 150.dp,
+                ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {

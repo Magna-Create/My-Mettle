@@ -27,7 +27,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -64,31 +63,32 @@ fun HistoryScreen(
     val state = viewModel.uiState
     var selected by remember { mutableStateOf<HistorySession?>(null) }
 
-    Scaffold(
-        topBar = {
-            MettleAppHeader(
-                destination = "Session History",
-                onOpenSettings = onOpenSettings,
-                onOpenAccount = onOpenAccount,
-            )
-        },
-    ) { innerPadding ->
+    MettleHeaderScreen(
+        destination = "Session History",
+        onOpenSettings = onOpenSettings,
+        onOpenAccount = onOpenAccount,
+    ) { headerPadding ->
         when {
             state.loading -> Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                modifier = Modifier.fillMaxSize().padding(top = headerPadding),
                 contentAlignment = Alignment.Center,
             ) { CircularProgressIndicator() }
 
             state.sessions.isEmpty() -> Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding).padding(24.dp),
+                modifier = Modifier.fillMaxSize().padding(top = headerPadding).padding(24.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text("Completed workouts will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             else -> LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = headerPadding + 12.dp,
+                    bottom = 150.dp,
+                ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(state.sessions, key = { it.session.id }) { session ->

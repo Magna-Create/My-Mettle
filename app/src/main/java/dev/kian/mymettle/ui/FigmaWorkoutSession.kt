@@ -154,6 +154,7 @@ internal fun FigmaWorkoutSession(
         ?: workout.exercises.first()
     val listState = rememberLazyListState()
     val viewportHazeState = rememberHazeState()
+    val headerHazeState = rememberHazeState()
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val viewportWidth = minOf(maxWidth, WorkoutReferenceWidth.dp)
@@ -166,58 +167,64 @@ internal fun FigmaWorkoutSession(
                 .align(Alignment.TopCenter)
                 .background(WorkoutInk),
         ) {
-            Box(Modifier.fillMaxSize()) {
-                WorkoutBackdrop(
-                    modifier = Modifier.fillMaxSize().hazeSource(viewportHazeState),
-                    onTap = { focusManager.clearFocus(force = true) },
-                )
-
-                when {
-                    state.swapTarget != null -> WorkoutSubstitutionContent(
-                        current = state.swapTarget,
-                        options = state.swapOptions,
-                        loading = state.loadingSwapOptions,
-                        onDismiss = onDismissSwap,
-                        onSelect = onSelectSwap,
-                        metrics = metrics,
+            // Capture the composited workout and its top fog for header glass. Keeping the header
+            // outside this source prevents recursion while allowing cards to refract through it.
+            Box(Modifier.fillMaxSize().hazeSource(headerHazeState)) {
+                Box(Modifier.fillMaxSize()) {
+                    WorkoutBackdrop(
+                        modifier = Modifier.fillMaxSize().hazeSource(viewportHazeState),
+                        onTap = { focusManager.clearFocus(force = true) },
                     )
 
-                    state.workoutSurface == WorkoutSurface.QUICK_SELECT -> WorkoutQuickSelectContent(
-                        workout = workout,
-                        onSelect = onShowSets,
-                        metrics = metrics,
-                    )
+                    when {
+                        state.swapTarget != null -> WorkoutSubstitutionContent(
+                            current = state.swapTarget,
+                            options = state.swapOptions,
+                            loading = state.loadingSwapOptions,
+                            onDismiss = onDismissSwap,
+                            onSelect = onSelectSwap,
+                            metrics = metrics,
+                        )
 
-                    else -> WorkoutExerciseContent(
-                        workout = workout,
-                        focusedId = focused.entity.id,
-                        setupExerciseId = focused.entity.id.takeIf { state.workoutSurface == WorkoutSurface.SETUP },
-                        drafts = drafts,
-                        loading = state.loading,
-                        listState = listState,
-                        onFocusExercise = onShowSets,
-                        onShowSetup = onShowSetup,
-                        onAddSetupPhoto = onAddSetupPhoto,
-                        onOpenCalculator = onOpenCalculator,
-                        onSaveDraft = onSaveDraft,
-                        onLogSet = onLogSet,
-                        onSwap = onSwapExercise,
-                        onToggleExercise = onToggleExercise,
-                        onRateExercise = onRateExercise,
-                        metrics = metrics,
-                    )
+                        state.workoutSurface == WorkoutSurface.QUICK_SELECT -> WorkoutQuickSelectContent(
+                            workout = workout,
+                            onSelect = onShowSets,
+                            metrics = metrics,
+                        )
+
+                        else -> WorkoutExerciseContent(
+                            workout = workout,
+                            focusedId = focused.entity.id,
+                            setupExerciseId = focused.entity.id.takeIf { state.workoutSurface == WorkoutSurface.SETUP },
+                            drafts = drafts,
+                            loading = state.loading,
+                            listState = listState,
+                            onFocusExercise = onShowSets,
+                            onShowSetup = onShowSetup,
+                            onAddSetupPhoto = onAddSetupPhoto,
+                            onOpenCalculator = onOpenCalculator,
+                            onSaveDraft = onSaveDraft,
+                            onLogSet = onLogSet,
+                            onSwap = onSwapExercise,
+                            onToggleExercise = onToggleExercise,
+                            onRateExercise = onRateExercise,
+                            metrics = metrics,
+                        )
+                    }
                 }
+                WorkoutViewportScrims(metrics)
             }
 
-            CompositionLocalProvider(LocalMettleHazeState provides viewportHazeState) {
-                WorkoutViewportScrims(metrics)
+            CompositionLocalProvider(LocalMettleHazeState provides headerHazeState) {
                 WorkoutHeader(
                     workout = workout,
                     metrics = metrics,
                     onOpenSettings = onOpenSettings,
                     onOpenAccount = onOpenAccount,
                 )
+            }
 
+            CompositionLocalProvider(LocalMettleHazeState provides viewportHazeState) {
                 if (state.workoutSurface == WorkoutSurface.FINISH) {
                     FinishWorkoutGestureOverlay(
                         destructive = false,
@@ -344,18 +351,18 @@ private fun WorkoutHeader(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .height(metrics.dp(70))
-            .padding(horizontal = metrics.dp(20)),
+            .height(metrics.dp(70.369))
+            .padding(start = metrics.dp(21), end = metrics.dp(18)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.width(metrics.dp(125))) {
-            Text("My Mettle", color = WorkoutCyan, fontSize = metrics.sp(24), lineHeight = metrics.sp(27))
-            Text("Workout Session", color = WorkoutPaperMuted, fontSize = metrics.sp(12), lineHeight = metrics.sp(16))
+            Text("My Mettle", color = WorkoutCyan, fontSize = metrics.sp(24.2), lineHeight = metrics.sp(31))
+            Text("Workout Session", color = WorkoutPaperMuted, fontSize = metrics.sp(13.2), lineHeight = metrics.sp(18))
         }
-        WorkoutWaveProgress(workout, Modifier.weight(1f).height(metrics.dp(49)), metrics)
+        WorkoutWaveProgress(workout, Modifier.weight(1f).height(metrics.dp(52)), metrics)
         Spacer(Modifier.width(metrics.dp(18)))
         MettleControlGlassSurface(
-            modifier = Modifier.width(metrics.dp(81)).height(metrics.dp(49)),
+            modifier = Modifier.width(metrics.dp(81)).height(metrics.dp(52)),
             shape = CircleShape,
             tint = Color.White.copy(alpha = .025f),
             shadowElevation = metrics.dp(3),
@@ -366,14 +373,14 @@ private fun WorkoutHeader(
                     imageVector = MettleIcons.Settings,
                     contentDescription = "Workout settings",
                     onClick = onOpenSettings,
-                    iconSize = DpSize(metrics.dp(17), metrics.dp(16)),
+                    iconSize = DpSize(metrics.dp(16.3916), metrics.dp(16.3916)),
                 )
                 MettleGlassIconTouchTarget(
                     modifier = Modifier.weight(1f).fillMaxSize(),
                     imageVector = MettleIcons.AccountCircle,
                     contentDescription = "Account",
                     onClick = onOpenAccount,
-                    iconSize = DpSize(metrics.dp(16), metrics.dp(16)),
+                    iconSize = DpSize(metrics.dp(16.3916), metrics.dp(16.3916)),
                 )
             }
         }
@@ -943,24 +950,24 @@ private fun WorkoutMetricField(
 
 @Composable
 private fun WorkoutChip(text: String, metrics: WorkoutMetrics, success: Boolean = false) {
-    Surface(
-        shape = RoundedCornerShape(metrics.dp(6)),
-        color = Color.Transparent,
-        border = null,
-        modifier = Modifier.mettleDirectionalBorder(
-            width = metrics.dp(.5),
-            color = if (success) WorkoutGreen.copy(alpha = .28f) else WorkoutPaperMuted.copy(alpha = .22f),
-            shape = RoundedCornerShape(metrics.dp(6)),
-        ),
-    ) {
-        Text(
-            text,
-            modifier = Modifier.padding(horizontal = metrics.dp(10), vertical = metrics.dp(5)),
-            color = if (success) WorkoutGreen else WorkoutPaperMuted,
-            fontSize = metrics.sp(12),
-            lineHeight = metrics.sp(15),
-        )
-    }
+    MettleMetadataPill(
+        label = text,
+        height = metrics.dp(32),
+        cornerRadius = metrics.dp(8),
+        horizontalPadding = metrics.dp(12),
+        fill = if (success) WorkoutGreen.copy(alpha = .028f) else WorkoutDarkCyan.copy(alpha = .055f),
+        borderWidth = metrics.dp(1),
+        borderColor = if (success) WorkoutGreen.copy(alpha = .28f) else WorkoutCyan.copy(alpha = .20f),
+        textColor = if (success) WorkoutGreen else WorkoutPaperMuted,
+        fontSize = metrics.sp(14),
+        lineHeight = metrics.sp(20),
+        shadowBlurRadius = metrics.dp(8),
+        shadowOffsetY = metrics.dp(2),
+        shadowAlpha = .06f,
+        glassBlurRadius = metrics.dp(24),
+        refractionDisplacement = metrics.dp(2.5),
+        refractionStrength = .10f,
+    )
 }
 
 @Composable
