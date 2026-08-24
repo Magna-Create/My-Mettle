@@ -27,10 +27,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -55,7 +53,10 @@ import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen() {
+fun HistoryScreen(
+    onOpenSettings: () -> Unit,
+    onOpenAccount: () -> Unit,
+) {
     val context = LocalContext.current
     val viewModel: HistoryViewModel = viewModel(
         factory = remember(context) { HistoryViewModelFactory(context) },
@@ -63,38 +64,32 @@ fun HistoryScreen() {
     val state = viewModel.uiState
     var selected by remember { mutableStateOf<HistorySession?>(null) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("History", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "What actually happened",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-            )
-        },
-    ) { innerPadding ->
+    MettleHeaderScreen(
+        destination = "Session History",
+        onOpenSettings = onOpenSettings,
+        onOpenAccount = onOpenAccount,
+    ) { headerPadding ->
         when {
             state.loading -> Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                modifier = Modifier.fillMaxSize().padding(top = headerPadding),
                 contentAlignment = Alignment.Center,
             ) { CircularProgressIndicator() }
 
             state.sessions.isEmpty() -> Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding).padding(24.dp),
+                modifier = Modifier.fillMaxSize().padding(top = headerPadding).padding(24.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text("Completed workouts will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             else -> LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = headerPadding + 12.dp,
+                    bottom = 150.dp,
+                ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(state.sessions, key = { it.session.id }) { session ->
@@ -167,7 +162,7 @@ private fun HistorySessionCard(session: HistorySession, onClick: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                AssistChip(onClick = onClick, label = { Text(session.achievement.score.toString()) })
+                MettleGlassAssistChip(onClick = onClick, label = { Text(session.achievement.score.toString()) })
             }
             val loggedSets = session.exercises.sumOf { exercise -> exercise.sets.count { it.completedAt != null } }
             Text(
@@ -264,7 +259,7 @@ private fun HistoryDetailSheet(
             title = { Text("Discard this session?") },
             text = { Text("It will disappear from History and be excluded from insights. The stored record is kept as discarded rather than being physically deleted.") },
             confirmButton = {
-                Button(
+                MettleGlassActionButton(
                     onClick = {
                         confirmDiscard = false
                         onDiscard()
@@ -390,7 +385,7 @@ private fun HistorySetEditor(
                 )
             }
         }
-        Button(
+        MettleGlassActionButton(
             onClick = {
                 onSave(
                     set,
@@ -447,7 +442,7 @@ private fun HistoryReviewEditor(
                 minLines = 2,
                 maxLines = 5,
             )
-            Button(
+            MettleGlassActionButton(
                 onClick = {
                     onSave(
                         order.takeIf { it > 0 },
@@ -476,7 +471,7 @@ private fun HistoryRatingRow(title: String, value: Int, onChange: (Int) -> Unit)
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             (1..5).forEach { rating ->
-                FilterChip(
+                MettleGlassChoiceChip(
                     selected = value == rating,
                     onClick = { onChange(if (value == rating) 0 else rating) },
                     label = { Text(rating.toString()) },

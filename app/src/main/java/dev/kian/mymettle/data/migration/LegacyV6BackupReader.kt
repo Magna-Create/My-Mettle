@@ -119,7 +119,7 @@ object LegacyV6BackupReader {
             val executionProfileVersions = mutableListOf<ExecutionProfileVersionEntity>()
             val semanticsByExerciseId = linkedMapOf<String, LegacyExecutionSemantics>()
             val historicalSemantics = linkedMapOf<List<String>, LegacyExecutionSemantics>()
-            val legacyRecruitment = mutableListOf<LegacyRecruitmentAllocation>()
+            val translatedRecruitment = mutableListOf<TranslatedRecruitmentAllocation>()
             val cues = mutableListOf<ExerciseCueEntity>()
             val commonMistakes = mutableListOf<ExerciseCommonMistakeEntity>()
             val substitutions = mutableListOf<ExerciseSubstitutionEntity>()
@@ -196,20 +196,46 @@ object LegacyV6BackupReader {
                     }
                 }
 
-                exercise.objectOrNull("muscleLoadModel")?.let { model ->
-                    requireImport(model.optInt("version", -1) == 1) {
-                        "Exercise $exerciseId has an unsupported muscle-load model version."
+            }
+
+            // Legacy muscleLoadModel.proportion was a conserved load-share model. N-BIO-6
+            // weighting is an independent muscle-local exposure coefficient and therefore cannot
+            // be populated by relabelling that field. Only an explicit, AI-reviewed Native
+            // supplement is eligible to create behaviour-driving recruitment allocations.
+            root.objectOrNull("nativeTranslation")?.let { translation ->
+                requireImport(translation.optInt("version", -1) == 1) {
+                    "Unsupported Native translation supplement version."
+                }
+                requireImport(
+                    translation.optString("recruitmentSemantics") == "independent-muscle-local-exposure-v1",
+                ) { "Native translation uses unsupported recruitment semantics." }
+                val seenExercises = mutableSetOf<String>()
+                translation.arrayRequired("recruitmentProfiles").objects().forEach { profile ->
+                    val exerciseId = profile.stringRequired("exerciseId")
+                    requireImport(seenExercises.add(exerciseId)) {
+                        "Native translation contains more than one recruitment profile for exercise $exerciseId."
                     }
-                    val confidence = model.doubleRequired("confidence")
-                    val basis = model.stringRequired("basis")
-                    model.arrayRequired("allocations").objects().forEach { allocation ->
-                        legacyRecruitment += LegacyRecruitmentAllocation(
+                    val semantics = semanticsByExerciseId[exerciseId]
+                        ?: throw LegacyImportException("Native translation references unknown exercise $exerciseId.")
+                    val modelVersion = profile.stringRequired("modelVersion")
+                    val basis = profile.stringRequired("basis")
+                    val profileConfidence = profile.doubleRequired("confidence")
+                    val allocations = profile.arrayRequired("allocations").objects()
+                    requireImport(allocations.isNotEmpty()) {
+                        "Native translation recruitment profile for $exerciseId has no allocations."
+                    }
+                    allocations.forEach { allocation ->
+                        translatedRecruitment += TranslatedRecruitmentAllocation(
                             recruitmentProfileVersionId = semantics.recruitmentVersion.id,
-                            muscleLabel = allocation.stringRequired("muscle"),
-                            weighting = allocation.doubleRequired("proportion"),
+                            muscleSegmentId = allocation.stringRequired("muscleSegmentId"),
+                            weighting = allocation.doubleRequired("weighting"),
                             role = allocation.stringRequired("role"),
-                            confidence = confidence,
-                            source = basis,
+                            confidence = allocation.doubleOrNull("confidence") ?: profileConfidence,
+                            provenanceReference = basis,
+                            applicableRom = allocation.stringOrNull("applicableRom"),
+                            applicableTechnique = allocation.stringOrNull("applicableTechnique"),
+                            resistanceCurveClass = allocation.stringOrNull("resistanceCurveClass"),
+                            modelVersion = modelVersion,
                         )
                     }
                 }
@@ -570,7 +596,7 @@ object LegacyV6BackupReader {
                 performanceSchemaMetrics = performanceSchemaMetrics,
                 recruitmentProfileVersions = recruitmentProfileVersions,
                 executionProfileVersions = executionProfileVersions,
-                legacyRecruitment = legacyRecruitment,
+                translatedRecruitment = translatedRecruitment,
                 cues = cues,
                 commonMistakes = commonMistakes,
                 substitutions = substitutions,
@@ -627,14 +653,17 @@ object LegacyV6BackupReader {
         requireImport(snapshot.setupPhotos.all { it.width > 0 && it.height > 0 }) {
             "A setup photo has invalid dimensions."
         }
-        requireImport(snapshot.legacyRecruitment.all { it.weighting >= 0.0 && it.weighting <= 1.0 }) {
+        requireImport(snapshot.translatedRecruitment.all { it.weighting >= 0.0 && it.weighting <= 1.0 }) {
             "A recruitment allocation has an invalid weighting."
         }
-        requireImport(snapshot.legacyRecruitment.all { it.confidence >= 0.0 && it.confidence <= 1.0 }) {
+        requireImport(snapshot.translatedRecruitment.all { it.confidence >= 0.0 && it.confidence <= 1.0 }) {
             "A recruitment model has an invalid confidence value."
         }
-        requireImport(snapshot.legacyRecruitment.all { it.role in setOf("prime", "synergist", "stabiliser") }) {
+        requireImport(snapshot.translatedRecruitment.all { it.role in setOf("prime", "synergist", "stabiliser") }) {
             "A recruitment allocation has an invalid role."
+        }
+        requireImport(snapshot.translatedRecruitment.groupBy { it.recruitmentProfileVersionId to it.muscleSegmentId }.values.all { it.size == 1 }) {
+            "A Native translation contains duplicate muscle-segment allocations in one recruitment profile."
         }
     }
 }

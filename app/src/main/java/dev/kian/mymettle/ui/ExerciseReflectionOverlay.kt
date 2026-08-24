@@ -1,17 +1,17 @@
 package dev.kian.mymettle.ui
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -51,7 +51,9 @@ fun ExerciseReflectionOverlay(viewModel: N2WorkoutViewModel) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
+                .navigationBarsPadding()
                 .padding(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -108,7 +110,7 @@ fun ExerciseReflectionOverlay(viewModel: N2WorkoutViewModel) {
                 maxLines = 4,
             )
 
-            Button(
+            MettleGlassActionButton(
                 onClick = {
                     viewModel.saveExerciseReflection(
                         targetMuscleEngagement = engagement.takeIf { it > 0 },
@@ -159,7 +161,7 @@ private fun SevenPointRating(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             (1..7).forEach { rating ->
-                FilterChip(
+                MettleGlassChoiceChip(
                     selected = value == rating,
                     onClick = { onValueChange(if (value == rating) 0 else rating) },
                     label = { Text(rating.toString()) },
@@ -184,7 +186,7 @@ private fun ChoiceRating(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             choices.forEach { (value, label) ->
-                FilterChip(
+                MettleGlassChoiceChip(
                     selected = selected == value,
                     onClick = { onSelected(value) },
                     label = { Text(label) },

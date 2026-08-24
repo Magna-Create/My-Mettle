@@ -25,7 +25,7 @@ for the current N2 workout UI, but no longer contains or supplies a planned load
 
 Lite Legacy had no independent target model. Import therefore performs one explicit compatibility
 projection: PRIME recruitment on pinned routine assignments becomes target intent with source
-`legacy-prime-recruitment-projection-v1`. Desired stimulus remains null. This is migration
+`lite-reviewed-prime-target-compatibility-v2`. Desired stimulus remains null. This is migration
 provenance, not a claim that recruitment and target intent are intrinsically the same.
 
 ## Prescription boundary

@@ -8,7 +8,11 @@ import dev.kian.mymettle.domain.performance.UnitId
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import org.json.JSONArray
+import org.json.JSONObject
 
 class LegacyGenericPerformanceImportTest {
     @Test
@@ -58,4 +62,78 @@ class LegacyGenericPerformanceImportTest {
             snapshot.setObservations.single().executionProfileVersionId,
         )
     }
+
+    @Test
+    fun `legacy conserved muscle proportions do not become N-BIO recruitment`() {
+        val root = fixtureRoot()
+        root.getJSONObject("database").getJSONArray("exercises").getJSONObject(0).put(
+            "muscleLoadModel",
+            JSONObject()
+                .put("version", 1)
+                .put("basis", "Legacy conserved share")
+                .put("confidence", 0.8)
+                .put(
+                    "allocations",
+                    JSONArray().put(
+                        JSONObject()
+                            .put("muscle", "upper chest")
+                            .put("proportion", 1.0)
+                            .put("role", "prime"),
+                    ),
+                ),
+        )
+
+        val snapshot = LegacyV6BackupReader.read(root.toString())
+
+        assertTrue(snapshot.translatedRecruitment.isEmpty())
+        assertFailsWith<LegacyImportException> {
+            LegacyTranslationContract.requireActiveRecruitment(snapshot)
+        }
+    }
+
+    @Test
+    fun `reviewed Native supplement uses independent recruitment coefficients`() {
+        val root = fixtureRoot().put(
+            "nativeTranslation",
+            JSONObject()
+                .put("version", 1)
+                .put("recruitmentSemantics", "independent-muscle-local-exposure-v1")
+                .put(
+                    "recruitmentProfiles",
+                    JSONArray().put(
+                        JSONObject()
+                            .put("exerciseId", "exercise_press")
+                            .put("modelVersion", "reviewed-press-v1")
+                            .put("basis", "Reviewed against the exact execution profile")
+                            .put("confidence", 0.7)
+                            .put(
+                                "allocations",
+                                JSONArray()
+                                    .put(
+                                        JSONObject()
+                                            .put("muscleSegmentId", "pectoralis_major_clavicular_part")
+                                            .put("weighting", 0.85)
+                                            .put("role", "prime"),
+                                    )
+                                    .put(
+                                        JSONObject()
+                                            .put("muscleSegmentId", "triceps_brachii_lateral_head")
+                                            .put("weighting", 0.55)
+                                            .put("role", "synergist"),
+                                    ),
+                            ),
+                    ),
+                ),
+        )
+
+        val snapshot = LegacyV6BackupReader.read(root.toString())
+
+        LegacyTranslationContract.requireActiveRecruitment(snapshot)
+        assertEquals(listOf(0.85, 0.55), snapshot.translatedRecruitment.map { it.weighting })
+        assertEquals("reviewed-press-v1", snapshot.translatedRecruitment.single { it.role == "prime" }.modelVersion)
+    }
+
+    private fun fixtureRoot(): JSONObject = JSONObject(
+        requireNotNull(javaClass.classLoader?.getResource("fixtures/lite-v6-session.json")).readText(),
+    )
 }

@@ -17,7 +17,6 @@ data class SessionAchievement(
     val achievedExercises: Int,
     val targetSets: Int,
     val loggedTargetSets: Int,
-    val repBeats: Int,
     val extraLoggedSets: Int,
 ) {
     val targetComplete: Boolean = targetSets > 0 && loggedTargetSets >= targetSets
@@ -48,18 +47,6 @@ object SessionAchievementScorer {
             exercise.entity.status == "completed" || allSetsLogged
         }
 
-        val repBeats = targets.sumOf { exercise ->
-            val repMaximum = exercise.prescription.repRange?.last
-            exercise.sets.count { set ->
-                val performedReps = set.reps
-                set.completedAt != null &&
-                    set.setIndex < exercise.prescription.sets &&
-                    repMaximum != null &&
-                    performedReps != null &&
-                    performedReps > repMaximum
-            }
-        }
-
         val extraLoggedSets = workout.exercises.sumOf { exercise ->
             exercise.sets.count { set ->
                 set.completedAt != null && (
@@ -73,7 +60,10 @@ object SessionAchievementScorer {
         val setRatio = if (targetSets == 0) 0.0 else (loggedTargetSets.toDouble() / targetSets).coerceIn(0.0, 1.0)
         val exerciseRatio = if (targets.isEmpty()) 0.0 else (achievedExercises.toDouble() / targets.size).coerceIn(0.0, 1.0)
         val baseScore = ((setRatio * 0.85) + (exerciseRatio * 0.15)) * 100.0
-        val bonus = (repBeats * 2 + extraLoggedSets * 3).coerceAtMost(20)
+        // A generic metric target is not inherently "better" when numerically higher: lower
+        // assistance and lower pace can both be improvements. Until direction is explicit in the
+        // metric contract, only unambiguous extra completed bouts contribute a bonus.
+        val bonus = (extraLoggedSets * 3).coerceAtMost(20)
 
         // Missing target work cannot be erased by doing lots of bonus work elsewhere. Bonuses only
         // push beyond 100 after the selected mode's own target is actually complete.
@@ -91,7 +81,6 @@ object SessionAchievementScorer {
             achievedExercises = achievedExercises,
             targetSets = targetSets,
             loggedTargetSets = loggedTargetSets,
-            repBeats = repBeats,
             extraLoggedSets = extraLoggedSets,
         )
     }

@@ -92,12 +92,14 @@ class RestTimerService : Service() {
     private fun startTimer(exerciseName: String, seconds: Int) {
         notifications.cancel(READY_NOTIFICATION_ID)
         val now = SystemClock.elapsedRealtime()
+        val duration = seconds.coerceAtLeast(1) * 1_000L
         val snapshot = RestTimerSnapshot(
             phase = RestTimerPhase.RUNNING,
             exerciseName = exerciseName,
             startedElapsedRealtime = now,
-            endElapsedRealtime = now + seconds.coerceAtLeast(1) * 1_000L,
+            endElapsedRealtime = now + duration,
             pausedRemainingMillis = 0L,
+            totalDurationMillis = duration,
         )
         persistAndPublish(snapshot)
         showForeground(snapshot)
@@ -117,7 +119,10 @@ class RestTimerService : Service() {
                     finishTimer()
                     return
                 }
-                current.copy(endElapsedRealtime = now + remaining)
+                current.copy(
+                    endElapsedRealtime = now + remaining,
+                    totalDurationMillis = (current.totalDurationMillis + deltaMillis).coerceAtLeast(remaining),
+                )
             }
             RestTimerPhase.PAUSED -> {
                 val remaining = (current.pausedRemainingMillis + deltaMillis).coerceAtLeast(0L)
@@ -125,7 +130,10 @@ class RestTimerService : Service() {
                     finishTimer()
                     return
                 }
-                current.copy(pausedRemainingMillis = remaining)
+                current.copy(
+                    pausedRemainingMillis = remaining,
+                    totalDurationMillis = (current.totalDurationMillis + deltaMillis).coerceAtLeast(remaining),
+                )
             }
             else -> return
         }

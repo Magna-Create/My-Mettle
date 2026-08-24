@@ -13,9 +13,31 @@ class ReferenceSeedCallback(context: Context) : RoomDatabase.Callback() {
 
     override fun onCreate(db: SupportSQLiteDatabase) {
         super.onCreate(db)
+        seed(db)
+    }
+
+    override fun onOpen(db: SupportSQLiteDatabase) {
+        super.onOpen(db)
+        seed(db)
+    }
+
+    private fun seed(db: SupportSQLiteDatabase) {
         val dataset = ReferenceAssetLoader.load(appContext.assets)
+        if (db.contains(dataset)) return
+
+        val ownsTransaction = !db.inTransaction()
+        if (ownsTransaction) db.beginTransaction()
+        try {
+            upsert(db, dataset)
+            if (ownsTransaction) db.setTransactionSuccessful()
+        } finally {
+            if (ownsTransaction) db.endTransaction()
+        }
+    }
+
+    private fun upsert(db: SupportSQLiteDatabase, dataset: RuntimeReferenceDataset) {
         dataset.muscles.forEach { muscle ->
-            db.insertOrThrow("muscle", ContentValues().apply {
+            db.upsertOrThrow("muscle", ContentValues().apply {
                 put("id", muscle.id.value)
                 put("name", muscle.name)
                 put("region", muscle.region.name)
@@ -25,7 +47,7 @@ class ReferenceSeedCallback(context: Context) : RoomDatabase.Callback() {
                 put("verificationStatus", muscle.verificationStatus.name)
             })
             muscle.segments.forEach { segment ->
-                db.insertOrThrow("muscle_segment", ContentValues().apply {
+                db.upsertOrThrow("muscle_segment", ContentValues().apply {
                     put("id", segment.id.value)
                     put("muscleId", segment.muscleId.value)
                     put("name", segment.name)
@@ -38,7 +60,7 @@ class ReferenceSeedCallback(context: Context) : RoomDatabase.Callback() {
         }
 
         val profile = dataset.referenceProfile
-        db.insertOrThrow("reference_profile", ContentValues().apply {
+        db.upsertOrThrow("reference_profile", ContentValues().apply {
             put("id", profile.id.value)
             put("version", profile.version)
             put("populationSex", profile.population.sex.name)
@@ -51,7 +73,7 @@ class ReferenceSeedCallback(context: Context) : RoomDatabase.Callback() {
         profile.priors.forEach { prior ->
             val targetKind = if (prior.segmentId == null) "MUSCLE" else "SEGMENT"
             val targetId = prior.segmentId?.value ?: prior.muscleId.value
-            db.insertOrThrow("reference_physiology_prior", ContentValues().apply {
+            db.upsertOrThrow("reference_physiology_prior", ContentValues().apply {
                 put("id", "${profile.id.value}:${targetKind.lowercase()}:$targetId")
                 put("profileId", profile.id.value)
                 put("targetKind", targetKind)
@@ -89,9 +111,59 @@ class ReferenceSeedCallback(context: Context) : RoomDatabase.Callback() {
     }
 }
 
-private fun SupportSQLiteDatabase.insertOrThrow(table: String, values: ContentValues) {
-    check(insert(table, SQLiteDatabase.CONFLICT_ABORT, values) != -1L) {
-        "Failed to seed runtime reference table $table."
+private fun SupportSQLiteDatabase.contains(dataset: RuntimeReferenceDataset): Boolean {
+    val profile = dataset.referenceProfile
+    val profileIsCurrent = query(
+        "SELECT version, datasetVersion, modelVersion FROM reference_profile WHERE id = ? LIMIT 1",
+        arrayOf(profile.id.value),
+    ).use { cursor ->
+        cursor.moveToFirst() &&
+            cursor.getInt(0) == profile.version &&
+            cursor.getString(1) == profile.datasetVersion &&
+            cursor.getString(2) == profile.modelVersion
+    }
+    val expectedMuscleIds = dataset.muscles.map { it.id.value }
+    val expectedSegmentIds = dataset.muscles.flatMap { muscle ->
+        muscle.segments.map { it.id.value }
+    }
+    val expectedPriorIds = profile.priors.map { prior ->
+        val targetKind = if (prior.segmentId == null) "muscle" else "segment"
+        val targetId = prior.segmentId?.value ?: prior.muscleId.value
+        "${profile.id.value}:$targetKind:$targetId"
+    }
+
+    return profileIsCurrent &&
+        containsEveryId("muscle", expectedMuscleIds) &&
+        containsEveryId("muscle_segment", expectedSegmentIds) &&
+        containsEveryId("reference_physiology_prior", expectedPriorIds)
+}
+
+private fun SupportSQLiteDatabase.containsEveryId(table: String, ids: List<String>): Boolean {
+    if (ids.isEmpty()) return true
+    val uniqueIds = ids.distinct()
+    val placeholders = uniqueIds.joinToString(separator = ",") { "?" }
+    return query(
+        "SELECT COUNT(*) FROM $table WHERE id IN ($placeholders)",
+        uniqueIds.toTypedArray(),
+    ).use { cursor ->
+        check(cursor.moveToFirst()) { "Could not inspect runtime reference table $table." }
+        cursor.getInt(0) == uniqueIds.size
+    }
+}
+
+private fun SupportSQLiteDatabase.upsertOrThrow(table: String, values: ContentValues) {
+    val id = checkNotNull(values.getAsString("id")) { "Runtime reference row in $table has no id." }
+    val updated = update(
+        table,
+        SQLiteDatabase.CONFLICT_ABORT,
+        values,
+        "id = ?",
+        arrayOf(id),
+    )
+    if (updated == 0) {
+        check(insert(table, SQLiteDatabase.CONFLICT_ABORT, values) != -1L) {
+            "Failed to seed runtime reference table $table."
+        }
     }
 }
 

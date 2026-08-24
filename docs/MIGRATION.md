@@ -121,15 +121,16 @@ allocations[]:
   role: prime | synergist | stabiliser
 ```
 
-Room v5 translates this through an exercise execution profile into `recruitment_allocation` rows addressed by stable `muscleSegmentId` values. The free-text label exists only inside the transient import snapshot. An explicit versioned alias translator handles known broad Legacy labels; an unknown label fails import rather than becoming new canonical anatomy.
+Room v5 originally translated Legacy free-text muscle shares through an alias table. N-BIO-6 supersedes that behaviour: old conserved proportions remain historical metadata and never populate independent `recruitment_allocation.weighting`. Only the reviewed root `nativeTranslation` supplement may create allocations, using exact stable `muscleSegmentId` values.
 
 Legacy `progressionStep` is translated only into the default execution profile's physical load increment. It no longer represents progression.
 
 Room v6 does not persist `RoutineSlot.plannedLoad`. Historical Legacy session recommendations are
 imported as `SessionExercise.prescribedLoad`; future prescriptions carry forward performed evidence
 through the selected execution profile. Because Legacy had no separate target-intent model, PRIME
-recruitment on pinned routine assignments is projected once into independent programme/session
-targets with explicit `legacy-prime-recruitment-projection-v1` provenance.
+roles from the separately reviewed Native supplement are projected once into independent
+programme/session targets with explicit `lite-reviewed-prime-target-compatibility-v2` provenance.
+Old Lite load-share proportions never drive this projection.
 
 Room v7 adds derived `inference_run`, `stimulus_estimate`, `muscle_state_snapshot` and
 `exercise_translation_state` records. They are not imported from Lite Legacy. They are rebuilt from
@@ -188,7 +189,7 @@ creating a second trace history.
 - Define the canonical My Mettle interchange archive.
 - Build and test a schema-v6 / backup-envelope-v1 Lite Legacy importer.
 - Decode Legacy setup-photo data URLs into native app-private JPEG files.
-- Translate `muscleLoadModel` into execution-profile recruitment without persisting free-text anatomy.
+- Require an AI-reviewed Native supplement for current-routine execution-profile recruitment; do not reinterpret Legacy conserved muscle shares.
 - Preserve stable logical routine-slot identities without collapsing immutable routine-version history.
 - Validate an actual Lite Legacy export by counts, IDs and relationships before cutover.
 
@@ -259,4 +260,4 @@ Lite Legacy remains usable during migration. It is archived only after the nativ
 
 ## AI-assisted Lite backup translation
 
-When a Lite schema-v6 export needs structured recruitment metadata before Native import, follow [the backup translation workflow](agent-workflows/translate-lite-legacy-backup.md). It preserves the export and its immutable workout history; it only adds reviewed missing `muscleLoadModel` objects keyed by exact exercise ID.
+Before Native import, follow [the AI-assisted backup translation workflow](agent-workflows/translate-lite-legacy-backup.md). The original Lite database remains byte-for-byte factual; a root `nativeTranslation` supplement adds separately reviewed, independent muscle-local recruitment coefficients keyed by exact exercise ID. Old `muscleLoadModel.proportion` values are not reinterpreted as N-BIO weighting. The deterministic reader/persister only consumes the reviewed supplement and refuses a cutover import when a current-routine exercise is missing it.

@@ -211,7 +211,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                         }
                         HorizontalDivider()
                         Text(
-                            "Select an actual Lite schema-6 backup to translate, persist and inspect in another isolated Room database. Photo bytes are validated without writing files; app settings are untouched.",
+                            "Select an AI-reviewed Lite schema-6 translation. The original Lite database stays factual; a separate Native supplement must provide independent recruitment profiles for every current-routine exercise. Validation runs in an isolated Room database and does not touch app settings.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         OutlinedButton(
@@ -219,10 +219,10 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                             enabled = !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(if (state.nBio6LiteVerificationRunning) "Validating Lite backup…" else "Validate a real Lite backup")
+                            Text(if (state.nBio6LiteVerificationRunning) "Validating reviewed translation…" else "Validate a reviewed Lite translation")
                         }
                         state.nBio6LiteReport?.let { report ->
-                            DebugLine("Lite backup", if (report.passed) "PASS" else "FAIL")
+                            DebugLine("Lite translation", if (report.passed) "PASS" else "FAIL")
                             DebugLine("File", report.fileName)
                             Text(report.detail, color = if (report.passed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
                             if (report.passed) {

@@ -57,7 +57,7 @@ An optional compile-only check for the instrumentation package is:
    - sampling-gap and sensor-spike preservation;
    - equal-average/different-trace distinction;
    - exact bounds and timing-quality persistence.
-5. Tap **Validate a real Lite backup** and select an unmodified schema-6 JSON backup. Confirm `PASS` and review the translated exercise/session/set/observation/metric counts and evidence samples.
+5. Have the AI-assisted workflow produce a reviewed schema-6 JSON plus root `nativeTranslation` supplement. Tap **Validate a reviewed Lite translation** and select that file. Raw, unmodified Lite exports should fail the recruitment-completeness gate; this is intentional. Review exercise/session/set/observation/metric counts and evidence samples.
 6. Tap **Export N-BIO-6 closure report** and save the JSON file.
 
 The real-backup verifier checks exact factual Room persistence, completion-only/unknown timing,

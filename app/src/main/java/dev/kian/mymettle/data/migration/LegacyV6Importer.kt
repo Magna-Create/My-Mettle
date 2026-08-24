@@ -22,6 +22,7 @@ class LegacyV6Importer(
 ) {
     suspend fun importJson(json: String): LegacyImportReport {
         val snapshot = LegacyV6BackupReader.read(json)
+        LegacyTranslationContract.requireActiveRecruitment(snapshot)
         val dao = database.workoutDao()
         if (dao.profileCount() > 0) {
             throw LegacyImportException(
@@ -29,7 +30,7 @@ class LegacyV6Importer(
             )
         }
 
-        val recruitment = LegacyRecruitmentResolver(database).resolve(snapshot.legacyRecruitment)
+        val recruitment = LegacyRecruitmentResolver(database).resolve(snapshot.translatedRecruitment)
         val targets = LegacyTargetProjector.project(snapshot, recruitment)
         val constraints = LegacyProgrammeConstraintProjector.project(
             routineSlots = snapshot.routineSlots,

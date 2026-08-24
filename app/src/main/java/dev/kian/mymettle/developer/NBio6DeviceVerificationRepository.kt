@@ -19,6 +19,7 @@ import dev.kian.mymettle.data.migration.LegacyRecruitmentResolver
 import dev.kian.mymettle.data.migration.LegacySetupPhotoImporter
 import dev.kian.mymettle.data.migration.LegacySnapshotPersister
 import dev.kian.mymettle.data.migration.LegacyTargetProjector
+import dev.kian.mymettle.data.migration.LegacyTranslationContract
 import dev.kian.mymettle.data.migration.LegacyV6BackupReader
 import dev.kian.mymettle.data.reference.ReferenceSeedCallback
 import dev.kian.mymettle.domain.anatomy.MuscleSegmentId
@@ -163,9 +164,10 @@ class NBio6DeviceVerificationRepository(context: Context) {
         withContext(Dispatchers.IO) {
             runCatching {
                 val snapshot = LegacyV6BackupReader.read(json)
+                LegacyTranslationContract.requireActiveRecruitment(snapshot)
                 LegacySetupPhotoImporter(appContext).validate(snapshot.setupPhotos)
                 withDatabase { database ->
-                    val recruitment = LegacyRecruitmentResolver(database).resolve(snapshot.legacyRecruitment)
+                    val recruitment = LegacyRecruitmentResolver(database).resolve(snapshot.translatedRecruitment)
                     val targets = LegacyTargetProjector.project(snapshot, recruitment)
                     val constraints = LegacyProgrammeConstraintProjector.project(
                         routineSlots = snapshot.routineSlots,
@@ -236,7 +238,7 @@ class NBio6DeviceVerificationRepository(context: Context) {
                         fileName = fileName,
                         completedAt = Instant.now().toString(),
                         passed = true,
-                        detail = "Translated and persisted into isolated Room 12; factual rows, completion-only timing, no invented traces, history, provenance, foreign keys and inference replay verified.",
+                        detail = "AI-reviewed Native supplement and factual Lite rows persisted into isolated Room 12; independent recruitment completeness, completion-only timing, no invented traces, history, provenance, foreign keys and inference replay verified.",
                         exercises = snapshot.exercises.size,
                         sessions = snapshot.sessions.size,
                         sets = snapshot.sets.size,

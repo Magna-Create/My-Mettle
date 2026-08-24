@@ -17,12 +17,12 @@ Code takes priority over this workflow if they differ.
 
 Accept only the Lite envelope `my-mettle-backup`, export version `1`, source `my-mettle-lite-legacy`, and database schema `6`. Duplicate the supplied JSON. Preserve all IDs and all profile, routine, cycle, session, set, reflection, health and setup-photo data unchanged.
 
-The only permissible content change is adding a missing `muscleLoadModel` to an exercise, plus an ignored root-level `nativeTranslation` provenance note.
+Do not edit the Lite `database` object. Add one root-level `nativeTranslation` supplement containing reviewed Native recruitment profiles. The Lite `muscleLoadModel.proportion` field is historical input only: it represented a conserved share and is not N-BIO's independent muscle-local exposure coefficient.
 
 Never:
 
-- infer recruitment from `targetMuscles`, an exercise name, or a broad display label;
-- overwrite an existing model;
+- infer recruitment from `targetMuscles`, an exercise name, a broad display label, or an old conserved `proportion`;
+- overwrite any Lite field;
 - fabricate allocations for unknown or archived exercises;
 - rewrite workout history or programme data.
 
@@ -30,33 +30,44 @@ Never:
 
 Map by the exact exercise ID, never a fuzzy name. Reuse a previous accepted model only when that ID is unchanged. Otherwise research/review it first.
 
-A model requires:
+A translation supplement requires:
 
 ```json
 {
   "version": 1,
-  "basis": "Evidence and any compatibility assumption.",
-  "confidence": 0.6,
-  "allocations": [
+  "recruitmentSemantics": "independent-muscle-local-exposure-v1",
+  "recruitmentProfiles": [
     {
-      "muscle": "stable_segment_id_from_anatomy_v1",
-      "proportion": 0.75,
-      "role": "prime"
+      "exerciseId": "exact_lite_exercise_id",
+      "modelVersion": "reviewed-profile-v1",
+      "basis": "Evidence, execution conditions and uncertainty.",
+      "confidence": 0.6,
+      "allocations": [
+        {
+          "muscleSegmentId": "stable_segment_id_from_anatomy_v1",
+          "weighting": 0.75,
+          "role": "prime",
+          "applicableRom": null,
+          "applicableTechnique": null,
+          "resistanceCurveClass": null
+        }
+      ]
     }
   ]
 }
 ```
 
-Every allocation must use a current stable segment ID, `prime`/`synergist`/`stabiliser` role, a 0–1 proportion, and the allocations must total 1 (allowing normal floating-point tolerance). The `basis` must say whether a split is a compatibility reconstruction rather than a direct measured result.
+Every allocation must use a current stable segment ID, `prime`/`synergist`/`stabiliser` role, and a 0–1 independent weighting. Allocations do not need to sum to 1 and must not be normalised into a conserved pie. The `basis` must identify evidence, uncertainty and execution assumptions. Role remains descriptive metadata; do not apply an automatic stabiliser multiplier.
 
-The importer can expand known broad Legacy aliases for compatibility. New translations should prefer direct stable segment IDs.
+The Native reader rejects aliases and unknown segment IDs in this supplement. Research/review each current-routine exercise against its exact execution conditions.
 
 ## Validate and hand off
 
 1. Run the reusable skill's static preflight and enrichment script against the current anatomy asset.
 2. Read the output through `LegacyV6BackupReader` or the Native import path; static JSON validity alone is insufficient.
-3. Compare source/output counts for exercises, sessions, sets and setup photos.
-4. State the models enriched, deliberately untouched exercises, mapping provenance and reader/import result.
-5. Return the translated file separately from the original Lite export.
+3. Confirm every exercise in the current routine has a reviewed recruitment profile; archived/historical unknowns may remain explicitly unknown.
+4. Compare source/output counts for exercises, sessions, sets and setup photos.
+5. State the models enriched, deliberately untouched exercises, evidence/provenance and reader/import result.
+6. Return the translated file separately from the original Lite export.
 
-The first accepted N-BIO-5.1 translation retained 24 exercises, 8 sessions, 88 sets and 3 setup photos while adding reviewed structured models to 18 active exercises. That is an acceptance reference, not a reason to copy its recruitment allocations to unmatched future exercise IDs.
+The prior N-BIO-5.1 translation is historical context only. Its conserved proportions must not be copied into N-BIO-6 independent weighting fields.

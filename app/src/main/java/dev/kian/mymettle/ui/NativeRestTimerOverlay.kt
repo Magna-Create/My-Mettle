@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,16 +17,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,187 +37,211 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.kian.mymettle.timer.RestTimerController
 import dev.kian.mymettle.timer.RestTimerPhase
 import kotlinx.coroutines.delay
 
-/**
- * Visual surface for the Android-native rest timer.
- *
- * The timer itself lives outside Compose. This layer can therefore be completely redesigned later
- * without changing its foreground-service, persisted target time or notification behaviour.
- */
-@OptIn(ExperimentalMaterial3Api::class)
+/** A tiny app-local bridge lets the timer replace the hotbar's left action while minimised. */
+internal object RestTimerOverlayUi {
+    var expandRequest by mutableIntStateOf(0)
+        private set
+
+    fun expand() {
+        expandRequest += 1
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun NativeRestTimerOverlay() {
     val context = LocalContext.current
     val controller = remember(context) { RestTimerController.get(context) }
     val snapshot by controller.state.collectAsState()
     var expanded by remember { mutableStateOf(false) }
-    var confirmEnd by remember { mutableStateOf(false) }
     var remainingSeconds by remember { mutableIntStateOf(snapshot.remainingSeconds()) }
+    var elapsedFraction by remember { mutableStateOf(snapshot.elapsedFraction()) }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { }
-
-    LaunchedEffect(Unit) {
-        controller.refresh()
+    LaunchedEffect(Unit) { controller.refresh() }
+    LaunchedEffect(RestTimerOverlayUi.expandRequest) {
+        if (snapshot.visible) expanded = true
     }
-
-    // A newly logged set deliberately expands the rest surface, even if the previous timer was
-    // minimised. ±15 and pause/resume do not change this identity and therefore do not reopen it.
     LaunchedEffect(snapshot.startedElapsedRealtime) {
         if (snapshot.startedElapsedRealtime > 0L && snapshot.active) {
             expanded = true
             requestNotificationPermissionOnce(context, permissionLauncher::launch)
         }
     }
-
     LaunchedEffect(snapshot.phase) {
         if (snapshot.phase == RestTimerPhase.READY) expanded = true
-        if (snapshot.phase == RestTimerPhase.IDLE) {
-            expanded = false
-            confirmEnd = false
-        }
+        if (snapshot.phase == RestTimerPhase.IDLE) expanded = false
     }
-
-    // This 1 Hz ticker exists only while the app is rendering the timer. The Android notification
-    // uses the system chronometer, so the service does not wake Kotlin every second in background.
     LaunchedEffect(snapshot.phase, snapshot.endElapsedRealtime, snapshot.pausedRemainingMillis) {
         remainingSeconds = snapshot.remainingSeconds()
+        elapsedFraction = snapshot.elapsedFraction()
         while (snapshot.phase == RestTimerPhase.RUNNING && remainingSeconds > 0) {
-            delay(1_000)
+            delay(250)
             remainingSeconds = snapshot.remainingSeconds()
-        }
-    }
-
-    if (snapshot.visible && !expanded) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .systemBarsPadding()
-                .padding(top = 68.dp, end = 12.dp),
-            contentAlignment = Alignment.TopEnd,
-        ) {
-            AssistChip(
-                onClick = { expanded = true },
-                label = {
-                    Text(
-                        when (snapshot.phase) {
-                            RestTimerPhase.READY -> "Ready"
-                            RestTimerPhase.PAUSED -> "Paused · ${formatTime(remainingSeconds)}"
-                            RestTimerPhase.RUNNING -> "Rest · ${formatTime(remainingSeconds)}"
-                            RestTimerPhase.IDLE -> ""
-                        },
-                    )
-                },
-            )
+            elapsedFraction = snapshot.elapsedFraction()
         }
     }
 
     if (snapshot.visible && expanded) {
-        ModalBottomSheet(onDismissRequest = { expanded = false }) {
+        ModalBottomSheet(
+            onDismissRequest = { expanded = false },
+            containerColor = Color(0xFF11140F),
+            contentColor = Color(0xFFE1E4DA),
+            dragHandle = {
+                Surface(
+                    modifier = Modifier.padding(top = 11.dp).size(width = 42.dp, height = 5.dp),
+                    shape = CircleShape,
+                    color = Color(0xFFE1E4DA).copy(alpha = .28f),
+                ) {}
+            },
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
+                    .height(440.dp)
+                    .padding(horizontal = 34.dp)
                     .padding(bottom = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                Spacer(Modifier.height(16.dp))
+                Text(snapshot.exerciseName, color = Color(0xFFE1E4DA), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    if (snapshot.phase == RestTimerPhase.READY) "Ready" else "Rest",
-                    style = MaterialTheme.typography.labelLarge,
+                    if (snapshot.phase == RestTimerPhase.READY) "Ready" else formatTime(remainingSeconds),
+                    color = Color(0xFFE1E4DA),
+                    fontSize = 60.sp,
+                    lineHeight = 68.sp,
+                    fontWeight = FontWeight.Medium,
                 )
-                Text(snapshot.exerciseName, style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    formatTime(remainingSeconds),
-                    style = MaterialTheme.typography.displayLarge,
-                    fontWeight = FontWeight.SemiBold,
+                Spacer(Modifier.height(8.dp))
+                Slider(
+                    value = elapsedFraction,
+                    onValueChange = {},
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        disabledThumbColor = Color(0xFFBBEBED),
+                        disabledActiveTrackColor = Color(0xFFA0CFD0),
+                        disabledInactiveTrackColor = Color(0xFFE1E4DA).copy(alpha = .32f),
+                    ),
                 )
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(10.dp))
 
-                when (snapshot.phase) {
-                    RestTimerPhase.RUNNING,
-                    RestTimerPhase.PAUSED,
-                    -> {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                if (snapshot.phase == RestTimerPhase.READY) {
+                    MettleGlassActionButton(onClick = { controller.dismissReady() }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Done")
+                    }
+                } else {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        TimerCircle("−15") { controller.adjust(-15) }
+                        TimerCircle(
+                            icon = if (snapshot.phase == RestTimerPhase.RUNNING) MettleIcons.Pause else MettleIcons.PlayArrow,
+                            description = if (snapshot.phase == RestTimerPhase.RUNNING) "Pause timer" else "Resume timer",
                         ) {
-                            FilledTonalButton(
-                                onClick = { controller.adjust(-15) },
-                                modifier = Modifier.weight(1f),
-                            ) { Text("−15") }
-                            Button(
-                                onClick = {
-                                    if (snapshot.phase == RestTimerPhase.RUNNING) controller.pause()
-                                    else controller.resume()
-                                },
-                                modifier = Modifier.weight(1.2f),
-                            ) {
-                                Text(if (snapshot.phase == RestTimerPhase.RUNNING) "Pause" else "Resume")
-                            }
-                            FilledTonalButton(
-                                onClick = { controller.adjust(15) },
-                                modifier = Modifier.weight(1f),
-                            ) { Text("+15") }
+                            if (snapshot.phase == RestTimerPhase.RUNNING) controller.pause() else controller.resume()
                         }
-                        Spacer(Modifier.height(10.dp))
-                        Button(
+                        TimerCircle("+15") { controller.adjust(15) }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        TimerPill(
+                            label = "Hold to cancel",
+                            colour = Color(0xFFFFB4AB),
+                            modifier = Modifier.weight(1f),
+                            onClick = {},
+                            onLongClick = { controller.stop() },
+                        )
+                        TimerPill(
+                            label = "Minimise timer",
+                            colour = Color(0xFFBBEBED),
+                            modifier = Modifier.weight(1f),
                             onClick = { expanded = false },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text("Minimise") }
-                        Spacer(Modifier.height(6.dp))
-                        TextButton(onClick = { confirmEnd = true }) { Text("End timer") }
+                        )
                     }
-
-                    RestTimerPhase.READY -> {
-                        Button(
-                            onClick = { controller.dismissReady() },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text("Done") }
-                    }
-
-                    RestTimerPhase.IDLE -> Unit
                 }
             }
         }
     }
+}
 
-    if (confirmEnd && snapshot.active) {
-        AlertDialog(
-            onDismissRequest = { confirmEnd = false },
-            title = { Text("End rest timer?") },
-            text = { Text("The set you logged is already saved. This only ends the countdown.") },
-            confirmButton = {
-                Button(onClick = {
-                    controller.stop()
-                    confirmEnd = false
-                }) { Text("End timer") }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmEnd = false }) { Text("Keep resting") }
-            },
-        )
+@Composable
+private fun TimerCircle(label: String, onClick: () -> Unit) {
+    MettleControlGlassSurface(
+        modifier = Modifier.size(78.dp),
+        shape = CircleShape,
+        tint = Color(0xFFBBEBED).copy(alpha = .028f),
+        borderColor = Color(0xFFBBEBED).copy(alpha = .36f),
+        shadowElevation = 5.dp,
+        onClick = onClick,
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(label, color = Color(0xFFE1E4DA), fontSize = 21.sp, fontWeight = FontWeight.Medium)
+        }
     }
 }
 
-private fun requestNotificationPermissionOnce(
-    context: Context,
-    launch: (String) -> Unit,
+@Composable
+private fun TimerCircle(icon: ImageVector, description: String, onClick: () -> Unit) {
+    MettleControlGlassSurface(
+        modifier = Modifier.size(78.dp),
+        shape = CircleShape,
+        tint = Color(0xFFBBEBED).copy(alpha = .04f),
+        borderColor = Color(0xFFBBEBED).copy(alpha = .42f),
+        shadowElevation = 5.dp,
+        onClick = onClick,
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = description, tint = Color(0xFFE1E4DA), modifier = Modifier.size(28.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TimerPill(
+    label: String,
+    colour: Color,
+    modifier: Modifier,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
 ) {
+    Box(
+        modifier = modifier
+            .height(50.dp)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+    ) {
+        MettleControlGlassSurface(
+            modifier = Modifier.fillMaxSize(),
+            shape = CircleShape,
+            tint = colour.copy(alpha = .055f),
+            borderColor = colour.copy(alpha = .48f),
+            shadowElevation = 4.dp,
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(label, color = colour, fontSize = 14.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+            }
+        }
+    }
+}
+
+private fun requestNotificationPermissionOnce(context: Context, launch: (String) -> Unit) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
     if (context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
-
     val preferences = context.getSharedPreferences("rest-timer-ui", Context.MODE_PRIVATE)
     if (preferences.getBoolean("notification_permission_requested", false)) return
     preferences.edit().putBoolean("notification_permission_requested", true).apply()
     launch(Manifest.permission.POST_NOTIFICATIONS)
 }
 
-private fun formatTime(seconds: Int): String = "%d:%02d".format(seconds / 60, seconds % 60)
+private fun formatTime(seconds: Int): String = "%02d:%02d".format(seconds / 60, seconds % 60)

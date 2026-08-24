@@ -48,14 +48,18 @@ data class LegacySetupPhotoPayload(
     val sortOrder: Int,
 )
 
-/** Free text exists only inside the transient Legacy translator; it is never persisted. */
-data class LegacyRecruitmentAllocation(
+/** AI-reviewed Native supplement attached to an otherwise immutable Lite backup. */
+data class TranslatedRecruitmentAllocation(
     val recruitmentProfileVersionId: String,
-    val muscleLabel: String,
+    val muscleSegmentId: String,
     val weighting: Double,
     val role: String,
     val confidence: Double,
-    val source: String?,
+    val provenanceReference: String,
+    val applicableRom: String?,
+    val applicableTechnique: String?,
+    val resistanceCurveClass: String?,
+    val modelVersion: String,
 )
 
 /** Per-slot Legacy A/B/C data remains transient input to the programme-level constraint projector. */
@@ -84,7 +88,7 @@ data class LegacyImportSnapshot(
     val performanceSchemaMetrics: List<PerformanceSchemaMetricEntity>,
     val recruitmentProfileVersions: List<RecruitmentProfileVersionEntity>,
     val executionProfileVersions: List<ExecutionProfileVersionEntity>,
-    val legacyRecruitment: List<LegacyRecruitmentAllocation>,
+    val translatedRecruitment: List<TranslatedRecruitmentAllocation>,
     val cues: List<ExerciseCueEntity>,
     val commonMistakes: List<ExerciseCommonMistakeEntity>,
     val substitutions: List<ExerciseSubstitutionEntity>,

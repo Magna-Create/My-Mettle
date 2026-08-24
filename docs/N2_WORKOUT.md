@@ -100,7 +100,7 @@ Imported historical A/B/C sessions are shown using their original stored mode co
 
 N2 is now intended to be exercised on the target Galaxy device before expanding into N3. The first field test should cover:
 
-1. one-time Lite backup import;
+1. AI-reviewed Lite translation validation and one-time cutover import into a fresh database;
 2. A/B/C/D exercise/set counts across ψ/φ/π;
 3. calculator, reps, duration and distance entry;
 4. background/minimised rest timer and notification controls;

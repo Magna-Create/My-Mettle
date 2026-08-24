@@ -25,7 +25,7 @@ data class LegacyTargetProjection(
  * as programme truth.
  */
 object LegacyTargetProjector {
-    const val SOURCE = "legacy-prime-recruitment-projection-v1"
+    const val SOURCE = "lite-reviewed-prime-target-compatibility-v2"
 
     fun project(
         snapshot: LegacyImportSnapshot,

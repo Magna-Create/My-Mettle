@@ -146,6 +146,13 @@ data class ActiveWorkoutExercise(
     val prescription: ExercisePrescription,
     val sets: List<PerformanceSetRecord>,
     val previousCompletedSets: List<PerformanceSetRecord>,
+    val details: WorkoutExerciseDetails = WorkoutExerciseDetails(),
+)
+
+data class WorkoutExerciseDetails(
+    val setupNotes: String = "",
+    val cues: List<String> = emptyList(),
+    val setupMediaPaths: List<String> = emptyList(),
 )
 
 data class ActiveWorkout(
@@ -162,8 +169,11 @@ class RoomWorkoutRepository(
     private val inferenceRepository: RoomInferenceRepository = RoomInferenceRepository(database),
 ) {
     private val dao get() = database.workoutDao()
+    private val libraryDao get() = database.libraryDao()
 
     suspend fun hasImportedProgramme(): Boolean = dao.appState() != null && dao.profileCount() > 0
+
+    suspend fun latestBodyweightKg(): Double? = dao.latestBodyMeasurement()?.weightKg
 
     suspend fun plan(day: String, mode: TrainingMode): NativeWorkoutPlan {
         val state = dao.appState() ?: throw NativeWorkoutException("No native programme has been imported yet.")
@@ -248,6 +258,7 @@ class RoomWorkoutRepository(
             val bundle = bundles.getValue(entity.executionProfileVersionId)
             val prescription = loadPrescription(entity, bundle.schema)
             val setRecords = dao.sets(entity.id)
+            val memory = libraryDao.memory(entity.exerciseId)
             ActiveWorkoutExercise(
                 entity = entity,
                 targetIds = dao.sessionExerciseTargets(entity.id).map { TrainingTargetId(it.sessionTargetId) },
@@ -261,6 +272,11 @@ class RoomWorkoutRepository(
                     dao.latestCompletedSetsForExercise(entity.exerciseId, excludeSessionId = sessionId, limit = 12),
                     prescription = null,
                 ),
+                details = WorkoutExerciseDetails(
+                    setupNotes = memory?.setupNotes.orEmpty(),
+                    cues = libraryDao.cues(entity.exerciseId).map { it.cue },
+                    setupMediaPaths = libraryDao.setupMedia(entity.exerciseId).map { it.relativePath },
+                ),
             )
         }
         return ActiveWorkout(session, targets, exercises)
@@ -272,9 +288,32 @@ class RoomWorkoutRepository(
             ?: throw NativeWorkoutException("Exercise not found.")
         val bundle = loadVersionBundles(listOf(exercise.executionProfileVersionId))
             .getValue(exercise.executionProfileVersionId)
-        return loadPerformanceSets(dao.sets(sessionExerciseId), loadPrescription(exercise, bundle.schema))
+        return loadPerformanceSets(dao.sets(sessionExerciseId), loadPrescriptionOrNull(exercise, bundle.schema))
     }
 
+    suspend fun discardActiveSession(sessionId: String) = database.withTransaction {
+        val session = dao.session(sessionId) ?: throw NativeWorkoutException("Workout not found.")
+        if (session.status != "active") throw NativeWorkoutException("Only an active workout can be discarded.")
+        val state = dao.appState() ?: throw NativeWorkoutException("App state is missing.")
+        val now = timestamp()
+        dao.upsertSessions(
+            listOf(
+                session.copy(
+                    status = "discarded",
+                    discardedAt = now,
+                    editedAt = now,
+                    excludedFromInsights = true,
+                ),
+            ),
+        )
+        dao.upsertAppState(state.copy(activeSessionId = null, updatedAt = now))
+    }
+
+    /**
+     * Re-resolve an active session against the same immutable routine version while preserving
+     * everything already performed. Exercises removed by the new mode remain in the session
+     * snapshot with prescriptionIncluded=false; performed surplus sets become additional sets.
+     */
     suspend fun changeSessionMode(sessionId: String, mode: TrainingMode): ActiveWorkout = database.withTransaction {
         val session = dao.session(sessionId) ?: throw NativeWorkoutException("Workout not found.")
         if (session.status != "active") throw NativeWorkoutException("Only an active workout can change mode.")
@@ -840,6 +879,20 @@ class RoomWorkoutRepository(
             set.metricTargets.map { it.toEntity(prescriptionSetId(sessionExerciseId, set.index)) }
         }
         if (metricRows.isNotEmpty()) dao.upsertSessionMetricTargets(metricRows)
+    }
+
+    /**
+     * Completed Legacy evidence can legitimately predate a Native prescription snapshot. Raw set
+     * and observation history remains readable in that case; absence of a prescription is not
+     * converted into a biologically fictitious empty GeneratedPrescription.
+     */
+    private suspend fun loadPrescriptionOrNull(
+        entity: SessionExerciseEntity,
+        schema: PerformanceSchema,
+    ): ExercisePrescription? = if (dao.sessionSetPrescriptions(entity.id).isEmpty()) {
+        null
+    } else {
+        loadPrescription(entity, schema)
     }
 
     private suspend fun loadPrescription(entity: SessionExerciseEntity, schema: PerformanceSchema): ExercisePrescription {

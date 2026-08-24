@@ -100,7 +100,7 @@ fun SessionOutcomeOverlay(viewModel: N2WorkoutViewModel) {
                     maxLines = 5,
                 )
 
-                Button(
+                MettleGlassActionButton(
                     onClick = {
                         viewModel.saveSessionReview(
                             exerciseOrder = exerciseOrder.takeIf { it > 0 },
@@ -144,13 +144,9 @@ private fun AchievementCard(achievement: SessionAchievement) {
                 "${achievement.loggedTargetSets}/${achievement.targetSets} target sets · ${achievement.achievedExercises}/${achievement.targetExercises} target exercises",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (achievement.repBeats > 0 || achievement.extraLoggedSets > 0) {
+            if (achievement.extraLoggedSets > 0) {
                 Text(
-                    buildString {
-                        if (achievement.repBeats > 0) append("${achievement.repBeats} rep target beat${if (achievement.repBeats == 1) "" else "s"}")
-                        if (achievement.repBeats > 0 && achievement.extraLoggedSets > 0) append(" · ")
-                        if (achievement.extraLoggedSets > 0) append("${achievement.extraLoggedSets} extra logged set${if (achievement.extraLoggedSets == 1) "" else "s"}")
-                    },
+                    "${achievement.extraLoggedSets} extra logged set${if (achievement.extraLoggedSets == 1) "" else "s"}",
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -180,7 +176,7 @@ private fun RatingRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             (1..5).forEach { rating ->
-                FilterChip(
+                MettleGlassChoiceChip(
                     selected = value == rating,
                     onClick = { onValueChange(if (value == rating) 0 else rating) },
                     label = { Text(rating.toString()) },

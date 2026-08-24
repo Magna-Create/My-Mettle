@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-GRADLE_VERSION="8.13"
+GRADLE_VERSION="9.3.1"
 APP_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 CACHE_ROOT="${GRADLE_USER_HOME:-$HOME/.gradle}/my-mettle-bootstrap"
 DIST_DIR="$CACHE_ROOT/gradle-$GRADLE_VERSION"
@@ -40,6 +40,13 @@ if [ ! -x "$GRADLE_BIN" ]; then
 
     rm -rf "$DIST_DIR"
     unzip -q "$ZIP_PATH" -d "$CACHE_ROOT"
+fi
+
+if [ -n "${PREFIX:-}" ] && [ -x "$PREFIX/bin/aapt2" ]; then
+    # Google's Maven AAPT2 binary targets desktop Linux. Termux supplies an
+    # Android-native build, so select it automatically on the phone.
+    exec "$GRADLE_BIN" -p "$APP_HOME" \
+        "-Pandroid.aapt2FromMavenOverride=$PREFIX/bin/aapt2" "$@"
 fi
 
 exec "$GRADLE_BIN" -p "$APP_HOME" "$@"
