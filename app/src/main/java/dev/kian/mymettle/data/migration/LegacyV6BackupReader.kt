@@ -29,6 +29,9 @@ import dev.kian.mymettle.data.local.entity.SetObservationEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.data.local.entity.TrainingCycleEntity
 import dev.kian.mymettle.data.local.entity.UserProfileEntity
+import dev.kian.mymettle.domain.evidence.AcquisitionMethod
+import dev.kian.mymettle.domain.evidence.EvidenceGranularity
+import dev.kian.mymettle.domain.evidence.TimingQuality
 import dev.kian.mymettle.domain.performance.MetricFamily
 import dev.kian.mymettle.domain.performance.PerformanceMetric
 import dev.kian.mymettle.domain.performance.PerformanceMetricValue
@@ -37,9 +40,11 @@ import dev.kian.mymettle.domain.performance.ResistanceSemantics
 import dev.kian.mymettle.domain.performance.TargetKind
 import dev.kian.mymettle.domain.performance.UnitConverter
 import dev.kian.mymettle.domain.performance.UnitId
+import dev.kian.mymettle.domain.performance.defaultSemanticRole
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.time.Instant
 
 class LegacyImportException(message: String, cause: Throwable? = null) : IllegalArgumentException(message, cause)
 
@@ -469,6 +474,7 @@ object LegacyV6BackupReader {
                         )
                         val values = legacySetValues(semantics, set)
                         if (completedAt != null && values.isNotEmpty()) {
+                            val completionInstant = Instant.parse(completedAt)
                             val observationId = "legacy_observation:$setId"
                             setObservations += SetObservationEntity(
                                 id = observationId,
@@ -484,6 +490,12 @@ object LegacyV6BackupReader {
                                     "legacy_session_exercise_snapshot"
                                 },
                                 supersedesObservationId = null,
+                                startedAtEpochSecond = null,
+                                startedAtNano = null,
+                                endedAtEpochSecond = completionInstant.epochSecond,
+                                endedAtNano = completionInstant.nano,
+                                timingQuality = TimingQuality.COMPLETION_ONLY.storageValue,
+                                sourceZoneOffsetMinutes = null,
                             )
                             setMetricValues += values.map { it.toLegacyEntity(observationId) }
                         } else if (completedAt == null && values.isNotEmpty()) {
@@ -825,6 +837,9 @@ private fun PerformanceMetricValue.toLegacyEntity(observationId: String): SetMet
     enteredUnit = entered.unit.storageValue,
     canonicalValue = canonical.value,
     canonicalUnit = canonical.unit.storageValue,
+    acquisitionMethod = AcquisitionMethod.UNKNOWN.storageValue,
+    evidenceGranularity = EvidenceGranularity.SUMMARY.storageValue,
+    semanticRole = metric.defaultSemanticRole().storageValue,
 )
 
 private inline fun requireImport(condition: Boolean, message: () -> String) {

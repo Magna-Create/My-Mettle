@@ -6,6 +6,9 @@ import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
 import dev.kian.mymettle.data.local.entity.SessionReviewEntity
+import dev.kian.mymettle.domain.evidence.AcquisitionMethod
+import dev.kian.mymettle.domain.evidence.EvidenceGranularity
+import dev.kian.mymettle.domain.evidence.EvidenceQuality
 import dev.kian.mymettle.domain.performance.PerformanceMetric
 import dev.kian.mymettle.domain.performance.PerformanceMetricValue
 import dev.kian.mymettle.domain.performance.Quantity
@@ -85,12 +88,12 @@ class HistoryRepository(
             load?.let { entered ->
                 val unit = original.values.firstOrNull { it.metric == metric }?.entered?.unit
                     ?: exercise.schema.metrics.first { it.metric == metric }.defaultUnit
-                values += PerformanceMetricValue(metric, Quantity(entered, unit))
+                values += userCorrection(metric, Quantity(entered, unit))
             }
         }
-        reps?.let { values += PerformanceMetricValue(PerformanceMetric.REPETITIONS, Quantity(it.toDouble(), UnitId.REPETITION)) }
-        durationSeconds?.let { values += PerformanceMetricValue(PerformanceMetric.DURATION, Quantity(it.toDouble(), UnitId.SECOND)) }
-        distanceMetres?.let { values += PerformanceMetricValue(PerformanceMetric.DISTANCE, Quantity(it, UnitId.METRE)) }
+        reps?.let { values += userCorrection(PerformanceMetric.REPETITIONS, Quantity(it.toDouble(), UnitId.REPETITION)) }
+        durationSeconds?.let { values += userCorrection(PerformanceMetric.DURATION, Quantity(it.toDouble(), UnitId.SECOND)) }
+        distanceMetres?.let { values += userCorrection(PerformanceMetric.DISTANCE, Quantity(it, UnitId.METRE)) }
         workoutRepository.saveObservation(
             sessionExerciseId = exercise.entity.id,
             setId = current.id,
@@ -98,11 +101,22 @@ class HistoryRepository(
             values = values,
             source = "native_history_correction",
             bodyMassContextKg = original.bodyMassContextKg,
+            startedAt = original.startedAt,
+            endedAt = original.endedAt,
+            timingQuality = original.timingQuality,
+            sourceZoneOffsetMinutes = original.sourceZoneOffsetMinutes,
+            completedAt = original.completedAt,
         )
         val edited = session.copy(editedAt = Instant.now().toString())
         dao.upsertSession(edited)
         load(edited)
     }
+
+    private fun userCorrection(metric: PerformanceMetric, entered: Quantity) = PerformanceMetricValue(
+        metric = metric,
+        entered = entered,
+        evidenceQuality = EvidenceQuality(EvidenceGranularity.SUMMARY, AcquisitionMethod.USER_REPORTED),
+    )
 
     suspend fun discardSession(sessionId: String) = database.withTransaction {
         val session = completedSession(sessionId)

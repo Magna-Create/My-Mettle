@@ -1,7 +1,11 @@
 package dev.kian.mymettle.data.migration
 
+import dev.kian.mymettle.domain.evidence.AcquisitionMethod
+import dev.kian.mymettle.domain.evidence.EvidenceGranularity
+import dev.kian.mymettle.domain.evidence.TimingQuality
 import dev.kian.mymettle.domain.performance.PerformanceMetric
 import dev.kian.mymettle.domain.performance.UnitId
+import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -17,10 +21,17 @@ class LegacyGenericPerformanceImportTest {
         assertEquals("lite_legacy_v6_import", observation.source)
         assertEquals("unknown", observation.side)
         assertNull(observation.bodyMassContextKg)
+        assertNull(observation.startedAtEpochSecond)
+        assertNull(observation.startedAtNano)
+        assertEquals(TimingQuality.COMPLETION_ONLY.storageValue, observation.timingQuality)
+        assertEquals(Instant.parse(observation.completedAt).epochSecond, observation.endedAtEpochSecond)
+        assertEquals(Instant.parse(observation.completedAt).nano, observation.endedAtNano)
         assertEquals(40.0, values.getValue(PerformanceMetric.EXTERNAL_LOAD).enteredValue)
         assertEquals(UnitId.KILOGRAM.storageValue, values.getValue(PerformanceMetric.EXTERNAL_LOAD).enteredUnit)
         assertEquals(40.0, values.getValue(PerformanceMetric.EXTERNAL_LOAD).canonicalValue)
         assertEquals(9.0, values.getValue(PerformanceMetric.REPETITIONS).canonicalValue)
+        assertEquals(AcquisitionMethod.UNKNOWN.storageValue, values.getValue(PerformanceMetric.REPETITIONS).acquisitionMethod)
+        assertEquals(EvidenceGranularity.SUMMARY.storageValue, values.getValue(PerformanceMetric.REPETITIONS).evidenceGranularity)
         assertEquals(8.0, snapshot.routineMetricTargets.single().lowerCanonical)
         assertEquals(10.0, snapshot.routineMetricTargets.single().upperCanonical)
         assertEquals(3, snapshot.sessionSetPrescriptions.size)

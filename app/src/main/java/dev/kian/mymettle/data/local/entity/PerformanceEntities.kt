@@ -140,7 +140,7 @@ data class SessionMetricTargetEntity(
             entity = SetObservationEntity::class,
             parentColumns = ["id"],
             childColumns = ["supersedesObservationId"],
-            onDelete = ForeignKey.CASCADE,
+            onDelete = ForeignKey.RESTRICT,
         ),
     ],
     indices = [
@@ -164,6 +164,12 @@ data class SetObservationEntity(
     val bodyMassContextKg: Double?,
     val bodyMassContextSource: String?,
     val supersedesObservationId: String?,
+    val startedAtEpochSecond: Long? = null,
+    val startedAtNano: Int? = null,
+    val endedAtEpochSecond: Long? = null,
+    val endedAtNano: Int? = null,
+    val timingQuality: String = "legacy_unknown",
+    val sourceZoneOffsetMinutes: Int? = null,
 )
 
 @Entity(
@@ -186,6 +192,9 @@ data class SetMetricValueEntity(
     val enteredUnit: String,
     val canonicalValue: Double,
     val canonicalUnit: String,
+    val acquisitionMethod: String = "unknown",
+    val evidenceGranularity: String = "summary",
+    val semanticRole: String = "performance_output",
 )
 
 /** Mutable active-workout input buffer. It is not historical performance evidence. */

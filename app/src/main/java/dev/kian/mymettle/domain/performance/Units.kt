@@ -11,6 +11,7 @@ enum class QuantityDimension {
     GRADE,
     POWER,
     RATE,
+    HEART_RATE,
     COUNT,
     ORDINAL,
 }
@@ -38,6 +39,7 @@ enum class UnitId(
     PERCENT("percent", QuantityDimension.GRADE),
     WATT("W", QuantityDimension.POWER, true),
     EVENTS_PER_MINUTE("events/min", QuantityDimension.RATE, true),
+    BEATS_PER_MINUTE("bpm", QuantityDimension.HEART_RATE, true),
     REPETITION("rep", QuantityDimension.COUNT, true),
     STEP("step", QuantityDimension.COUNT, true),
     FLOOR("floor", QuantityDimension.COUNT, true),
@@ -55,6 +57,7 @@ enum class UnitId(
             "kilometres", "kilometer", "kilometers" -> KILOMETRE
             "miles" -> MILE
             "watts", "watt" -> WATT
+            "beat/min", "beats/min", "beats per minute" -> BEATS_PER_MINUTE
             "reps", "repetition", "repetitions" -> REPETITION
             "steps" -> STEP
             "floors" -> FLOOR
@@ -116,6 +119,7 @@ object UnitConverter {
             UnitId.FRACTION,
             UnitId.WATT,
             UnitId.EVENTS_PER_MINUTE,
+            UnitId.BEATS_PER_MINUTE,
             UnitId.REPETITION,
             UnitId.STEP,
             UnitId.FLOOR,
@@ -142,6 +146,7 @@ object UnitConverter {
         UnitId.FRACTION,
         UnitId.WATT,
         UnitId.EVENTS_PER_MINUTE,
+        UnitId.BEATS_PER_MINUTE,
         UnitId.REPETITION,
         UnitId.STEP,
         UnitId.FLOOR,
@@ -166,6 +171,7 @@ object UnitConverter {
         QuantityDimension.GRADE -> UnitId.FRACTION
         QuantityDimension.POWER -> UnitId.WATT
         QuantityDimension.RATE -> UnitId.EVENTS_PER_MINUTE
+        QuantityDimension.HEART_RATE -> UnitId.BEATS_PER_MINUTE
         QuantityDimension.COUNT -> countUnit
         QuantityDimension.ORDINAL -> UnitId.MACHINE_LEVEL
     }

@@ -7,6 +7,11 @@ import dev.kian.mymettle.data.local.entity.SessionMetricTargetEntity
 import dev.kian.mymettle.data.local.entity.SetMetricValueEntity
 import dev.kian.mymettle.data.local.entity.SetObservationEntity
 import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
+import dev.kian.mymettle.domain.evidence.AcquisitionMethod
+import dev.kian.mymettle.domain.evidence.EvidenceGranularity
+import dev.kian.mymettle.domain.evidence.EvidenceQuality
+import dev.kian.mymettle.domain.evidence.EvidenceSemanticRole
+import dev.kian.mymettle.domain.evidence.TimingQuality
 import dev.kian.mymettle.domain.performance.Laterality
 import dev.kian.mymettle.domain.performance.MetricFamily
 import dev.kian.mymettle.domain.performance.MetricTarget
@@ -101,12 +106,21 @@ fun SetObservationEntity.toDomain(values: List<SetMetricValueEntity>): Performan
         bodyMassContextKg = bodyMassContextKg,
         values = values.filter { it.observationId == id }.map { it.toDomain() },
         supersedesObservationId = supersedesObservationId,
+        startedAt = persistedInstant(startedAtEpochSecond, startedAtNano),
+        endedAt = persistedInstant(endedAtEpochSecond, endedAtNano),
+        timingQuality = TimingQuality.fromStorage(timingQuality),
+        sourceZoneOffsetMinutes = sourceZoneOffsetMinutes,
     )
 
 fun SetMetricValueEntity.toDomain(): PerformanceMetricValue = PerformanceMetricValue(
     metric = PerformanceMetric.fromStorage(metric),
     entered = Quantity(enteredValue, UnitId.fromStorage(enteredUnit)),
     canonical = Quantity(canonicalValue, UnitId.fromStorage(canonicalUnit)),
+    evidenceQuality = EvidenceQuality(
+        granularity = EvidenceGranularity.fromStorage(evidenceGranularity),
+        acquisitionMethod = AcquisitionMethod.fromStorage(acquisitionMethod),
+    ),
+    semanticRole = EvidenceSemanticRole.fromStorage(semanticRole),
 )
 
 fun PerformanceMetricValue.toEntity(observationId: String): SetMetricValueEntity = SetMetricValueEntity(
@@ -116,4 +130,13 @@ fun PerformanceMetricValue.toEntity(observationId: String): SetMetricValueEntity
     enteredUnit = entered.unit.storageValue,
     canonicalValue = canonical.value,
     canonicalUnit = canonical.unit.storageValue,
+    acquisitionMethod = evidenceQuality.acquisitionMethod.storageValue,
+    evidenceGranularity = evidenceQuality.granularity.storageValue,
+    semanticRole = semanticRole.storageValue,
 )
+
+private fun persistedInstant(epochSecond: Long?, nano: Int?): Instant? = when {
+    epochSecond == null && nano == null -> null
+    epochSecond == null || nano == null -> error("Persisted timestamp must contain both epoch-second and nano columns.")
+    else -> Instant.ofEpochSecond(epochSecond, nano.toLong())
+}

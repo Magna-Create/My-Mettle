@@ -6,6 +6,7 @@ import dev.kian.mymettle.data.local.dao.HistoryDao
 import dev.kian.mymettle.data.local.dao.InferenceDao
 import dev.kian.mymettle.data.local.dao.LibraryDao
 import dev.kian.mymettle.data.local.dao.ReferenceDao
+import dev.kian.mymettle.data.local.dao.TemporalEvidenceDao
 import dev.kian.mymettle.data.local.dao.WorkoutDao
 import dev.kian.mymettle.data.local.entity.AppStateEntity
 import dev.kian.mymettle.data.local.entity.BodyMeasurementEntity
@@ -21,9 +22,15 @@ import dev.kian.mymettle.data.local.entity.ExerciseSetupMediaEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSubstitutionEntity
 import dev.kian.mymettle.data.local.entity.ExerciseTranslationStateEntity
 import dev.kian.mymettle.data.local.entity.ExerciseTranslationMetricAnchorEntity
+import dev.kian.mymettle.data.local.entity.EvidenceTraceChunkEntity
+import dev.kian.mymettle.data.local.entity.EvidenceTraceEntity
+import dev.kian.mymettle.data.local.entity.EvidenceTraceUiCacheEntity
+import dev.kian.mymettle.data.local.entity.ExternalEvidenceArtifactEntity
 import dev.kian.mymettle.data.local.entity.HealthIntegrationStateEntity
 import dev.kian.mymettle.data.local.entity.HealthObservationEntity
 import dev.kian.mymettle.data.local.entity.InferenceRunEntity
+import dev.kian.mymettle.data.local.entity.DerivedEvidenceSummaryEntity
+import dev.kian.mymettle.data.local.entity.DerivedEvidenceSummaryInputEntity
 import dev.kian.mymettle.data.local.entity.MuscleEntity
 import dev.kian.mymettle.data.local.entity.MuscleSegmentEntity
 import dev.kian.mymettle.data.local.entity.MuscleStateSnapshotEntity
@@ -38,15 +45,19 @@ import dev.kian.mymettle.data.local.entity.ReferenceProfileEntity
 import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.RoutineMetricTargetEntity
 import dev.kian.mymettle.data.local.entity.RoutineVersionEntity
+import dev.kian.mymettle.data.local.entity.ObservationTraceLinkEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
 import dev.kian.mymettle.data.local.entity.SessionConstraintEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseTargetEntity
 import dev.kian.mymettle.data.local.entity.SessionReviewEntity
 import dev.kian.mymettle.data.local.entity.SessionTargetEntity
+import dev.kian.mymettle.data.local.entity.SessionTraceLinkEntity
+import dev.kian.mymettle.data.local.entity.SessionExerciseTraceLinkEntity
 import dev.kian.mymettle.data.local.entity.SessionSetPrescriptionEntity
 import dev.kian.mymettle.data.local.entity.SessionMetricTargetEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
+import dev.kian.mymettle.data.local.entity.SetRecordTraceLinkEntity
 import dev.kian.mymettle.data.local.entity.SetObservationEntity
 import dev.kian.mymettle.data.local.entity.SetMetricValueEntity
 import dev.kian.mymettle.data.local.entity.SetDraftMetricValueEntity
@@ -96,6 +107,16 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         SessionReviewEntity::class,
         HealthObservationEntity::class,
         HealthIntegrationStateEntity::class,
+        ExternalEvidenceArtifactEntity::class,
+        EvidenceTraceEntity::class,
+        EvidenceTraceChunkEntity::class,
+        SessionTraceLinkEntity::class,
+        SessionExerciseTraceLinkEntity::class,
+        SetRecordTraceLinkEntity::class,
+        ObservationTraceLinkEntity::class,
+        DerivedEvidenceSummaryEntity::class,
+        DerivedEvidenceSummaryInputEntity::class,
+        EvidenceTraceUiCacheEntity::class,
         AppStateEntity::class,
         InferenceRunEntity::class,
         MuscleStateSnapshotEntity::class,
@@ -103,7 +124,7 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         ExerciseTranslationStateEntity::class,
         ExerciseTranslationMetricAnchorEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = true,
 )
 abstract class MyMettleDatabase : RoomDatabase() {
@@ -112,4 +133,5 @@ abstract class MyMettleDatabase : RoomDatabase() {
     abstract fun libraryDao(): LibraryDao
     abstract fun referenceDao(): ReferenceDao
     abstract fun inferenceDao(): InferenceDao
+    abstract fun temporalEvidenceDao(): TemporalEvidenceDao
 }

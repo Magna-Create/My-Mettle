@@ -30,6 +30,9 @@ import dev.kian.mymettle.domain.exercise.EntryBasis
 import dev.kian.mymettle.domain.exercise.ExecutionProfileId
 import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
 import dev.kian.mymettle.domain.exercise.ExerciseId
+import dev.kian.mymettle.domain.evidence.AcquisitionMethod
+import dev.kian.mymettle.domain.evidence.EvidenceGranularity
+import dev.kian.mymettle.domain.evidence.EvidenceQuality
 import dev.kian.mymettle.domain.performance.Laterality
 import dev.kian.mymettle.domain.performance.LateralityMode
 import dev.kian.mymettle.domain.performance.MetricFamily
@@ -45,6 +48,7 @@ import dev.kian.mymettle.domain.performance.SchemaMetric
 import dev.kian.mymettle.domain.performance.TargetKind
 import dev.kian.mymettle.domain.performance.UnitConverter
 import dev.kian.mymettle.domain.performance.UnitId
+import dev.kian.mymettle.domain.evidence.TimingQuality
 import dev.kian.mymettle.domain.training.ExercisePrescription
 import dev.kian.mymettle.domain.training.ResolvedTrainingTarget
 import dev.kian.mymettle.domain.training.SessionConstraints
@@ -409,7 +413,9 @@ class RoomWorkoutRepository(
         val values = (
             buildLegacyUiValues(bundle.schema, bundle.resistanceSemantics, load, reps, durationSeconds, distanceMetres) +
                 additionalValues
-            ).associateBy { it.metric }.values.toList()
+            ).associateBy { it.metric }.values.map { value ->
+                value.copy(evidenceQuality = EvidenceQuality(EvidenceGranularity.SUMMARY, AcquisitionMethod.USER_REPORTED))
+            }
         if (!logged) {
             dao.deleteSetDraftMetricValues(setId)
             if (values.isNotEmpty()) {
@@ -427,6 +433,11 @@ class RoomWorkoutRepository(
                 values = values,
                 source = NATIVE_SOURCE,
                 bodyMassContextKg = null,
+                startedAt = null,
+                endedAt = null,
+                timingQuality = TimingQuality.COMPLETION_ONLY,
+                sourceZoneOffsetMinutes = null,
+                completedAt = null,
             )
         }
         loadPerformanceSets(listOf(record), loadPrescription(exercise, bundle.schema)).single()
@@ -440,6 +451,11 @@ class RoomWorkoutRepository(
         values: List<PerformanceMetricValue>,
         source: String = NATIVE_SOURCE,
         bodyMassContextKg: Double? = null,
+        startedAt: Instant? = null,
+        endedAt: Instant? = null,
+        timingQuality: TimingQuality = TimingQuality.COMPLETION_ONLY,
+        sourceZoneOffsetMinutes: Int? = null,
+        completedAt: Instant? = null,
     ): PerformanceObservation = database.withTransaction {
         val exercise = dao.sessionExercise(sessionExerciseId) ?: throw NativeWorkoutException("Exercise not found.")
         val record = dao.sets(sessionExerciseId).firstOrNull { it.id == setId }
@@ -454,6 +470,11 @@ class RoomWorkoutRepository(
             values,
             source,
             bodyMassContextKg,
+            startedAt,
+            endedAt,
+            timingQuality,
+            sourceZoneOffsetMinutes,
+            completedAt,
         )
     }
 
@@ -467,7 +488,8 @@ class RoomWorkoutRepository(
         val now = timestamp()
         current.copy(
             status = if (completed) "completed" else "active",
-            startedAt = current.startedAt ?: now,
+            // No dedicated exercise-start event exists yet; completion must not fabricate one.
+            startedAt = current.startedAt,
             completedAt = if (completed) now else null,
         ).also { dao.upsertSessionExercises(listOf(it)) }
     }
@@ -722,12 +744,26 @@ class RoomWorkoutRepository(
         values: List<PerformanceMetricValue>,
         source: String,
         bodyMassContextKg: Double?,
+        startedAt: Instant?,
+        endedAt: Instant?,
+        timingQuality: TimingQuality,
+        sourceZoneOffsetMinutes: Int?,
+        completedAt: Instant?,
     ): PerformanceObservation {
         schema.validate(values)
         validateObservationLaterality(lateralityMode, laterality)
         if (source.isBlank()) throw NativeWorkoutException("Observation source cannot be blank.")
         if (bodyMassContextKg != null && bodyMassContextKg <= 0.0) {
             throw NativeWorkoutException("Observation body mass must be positive.")
+        }
+        if (startedAt != null && endedAt != null && startedAt.isAfter(endedAt)) {
+            throw NativeWorkoutException("Observation start cannot be after its end.")
+        }
+        if (sourceZoneOffsetMinutes != null && sourceZoneOffsetMinutes !in -18 * 60..18 * 60) {
+            throw NativeWorkoutException("Observation source-zone offset is invalid.")
+        }
+        if (timingQuality == TimingQuality.COMPLETION_ONLY && startedAt != null) {
+            throw NativeWorkoutException("Completion-only timing cannot claim a start bound.")
         }
         val currentForSide = currentObservations(listOf(record.id))
             .filter { it.setRecordId == record.id && it.side == laterality.storageValue }
@@ -736,7 +772,9 @@ class RoomWorkoutRepository(
         }
         val existing = currentForSide.singleOrNull()
         val all = dao.observations(listOf(record.id))
-        val now = timestamp()
+        val recordedAt = Instant.now()
+        val completionEvent = completedAt ?: endedAt ?: recordedAt
+        val observableEnd = endedAt ?: completionEvent
         val observationId = id("observation")
         ObservationSupersedingPolicy.validateAppend(
             newObservationId = observationId,
@@ -752,12 +790,18 @@ class RoomWorkoutRepository(
             executionProfileVersionId = exercise.executionProfileVersionId,
             ordinal = (all.maxOfOrNull { it.ordinal } ?: -1) + 1,
             side = laterality.storageValue,
-            completedAt = now,
-            recordedAt = now,
+            completedAt = completionEvent.toString(),
+            recordedAt = recordedAt.toString(),
             source = source,
             bodyMassContextKg = bodyMassContextKg,
             bodyMassContextSource = bodyMassContextKg?.let { "observation_explicit" },
             supersedesObservationId = existing?.id,
+            startedAtEpochSecond = startedAt?.epochSecond,
+            startedAtNano = startedAt?.nano,
+            endedAtEpochSecond = observableEnd.epochSecond,
+            endedAtNano = observableEnd.nano,
+            timingQuality = timingQuality.storageValue,
+            sourceZoneOffsetMinutes = sourceZoneOffsetMinutes,
         )
         dao.insertSetObservations(listOf(observation))
         dao.insertSetMetricValues(values.map { it.toEntity(observation.id) })
@@ -768,11 +812,15 @@ class RoomWorkoutRepository(
             executionProfileVersionId = ExecutionProfileVersionId(exercise.executionProfileVersionId),
             ordinal = observation.ordinal,
             laterality = laterality,
-            completedAt = Instant.parse(now),
+            completedAt = completionEvent,
             source = source,
             bodyMassContextKg = bodyMassContextKg,
             values = values,
             supersedesObservationId = existing?.id,
+            startedAt = startedAt,
+            endedAt = observableEnd,
+            timingQuality = timingQuality,
+            sourceZoneOffsetMinutes = sourceZoneOffsetMinutes,
         )
     }
 

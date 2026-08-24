@@ -1,6 +1,11 @@
 package dev.kian.mymettle.domain.performance
 
 import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
+import dev.kian.mymettle.domain.evidence.AcquisitionMethod
+import dev.kian.mymettle.domain.evidence.EvidenceGranularity
+import dev.kian.mymettle.domain.evidence.EvidenceQuality
+import dev.kian.mymettle.domain.evidence.EvidenceSemanticRole
+import dev.kian.mymettle.domain.evidence.TimingQuality
 import java.time.Instant
 import kotlin.math.abs
 import kotlin.math.round
@@ -135,11 +140,19 @@ data class PerformanceMetricValue(
     val metric: PerformanceMetric,
     val entered: Quantity,
     val canonical: Quantity = UnitConverter.canonical(entered),
+    val evidenceQuality: EvidenceQuality = EvidenceQuality(EvidenceGranularity.SUMMARY, AcquisitionMethod.UNKNOWN),
+    val semanticRole: EvidenceSemanticRole = metric.defaultSemanticRole(),
 ) {
     init {
         require(entered.unit.dimension == metric.dimension) { "Entered unit does not match ${metric.storageValue}." }
         require(canonical.unit == metric.canonicalUnit) {
             "Canonical ${metric.storageValue} must use ${metric.canonicalUnit.storageValue}."
+        }
+        require(evidenceQuality.granularity == EvidenceGranularity.SUMMARY) {
+            "Scalar performance values must use summary granularity; traces use temporal evidence."
+        }
+        require(semanticRole in setOf(EvidenceSemanticRole.PERFORMANCE_OUTPUT, EvidenceSemanticRole.MOVEMENT_CONTEXT)) {
+            "Scalar performance values cannot masquerade as physiological or environmental evidence."
         }
         val converted = UnitConverter.canonical(entered)
         require(abs(converted.value - canonical.value) <= 1e-9 * maxOf(1.0, abs(converted.value))) {
@@ -166,6 +179,12 @@ data class PerformanceObservation(
     val bodyMassContextKg: Double?,
     val values: List<PerformanceMetricValue>,
     val supersedesObservationId: String? = null,
+    /** Observable physical/app/source bound; null when the source only supplied completion. */
+    val startedAt: Instant? = null,
+    /** Observable end bound. completedAt remains the stable ordering/completion event. */
+    val endedAt: Instant? = completedAt,
+    val timingQuality: TimingQuality = TimingQuality.COMPLETION_ONLY,
+    val sourceZoneOffsetMinutes: Int? = null,
 ) {
     init {
         require(id.isNotBlank() && setRecordId.isNotBlank())
@@ -176,7 +195,16 @@ data class PerformanceObservation(
         require(values.map { it.metric }.distinct().size == values.size) {
             "A performed observation cannot contain duplicate metrics."
         }
+        require(startedAt == null || endedAt == null || !startedAt.isAfter(endedAt))
+        require(timingQuality != TimingQuality.COMPLETION_ONLY || startedAt == null)
+        require(sourceZoneOffsetMinutes == null || sourceZoneOffsetMinutes in -18 * 60..18 * 60)
     }
+}
+
+fun PerformanceMetric.defaultSemanticRole(): EvidenceSemanticRole = when (this) {
+    PerformanceMetric.INCLINE_GRADE,
+    PerformanceMetric.MACHINE_LEVEL -> EvidenceSemanticRole.MOVEMENT_CONTEXT
+    else -> EvidenceSemanticRole.PERFORMANCE_OUTPUT
 }
 
 enum class TargetKind(val storageValue: String) {

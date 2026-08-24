@@ -41,6 +41,11 @@ data class SessionReviewEntity(
     tableName = "health_observation",
     indices = [Index("type"), Index("startTime"), Index(value = ["provider", "sourceRecordId"], unique = true)],
 )
+/**
+ * Pre-temporal scalar Health compatibility row retained for Lite import and future N-BIO-9
+ * reconciliation. It is not the canonical store for traces, chunks, routes, or source revisions;
+ * those belong to the generic temporal-evidence tables and must not be dual-written here.
+ */
 data class HealthObservationEntity(
     @PrimaryKey val id: String,
     val type: String,
