@@ -2,7 +2,7 @@
 
 > **Authority:** This document is the forward implementation contract for N-BIO vNext.
 >
-> Read this first. Use [`RESEARCH_GUIDE.md`](./RESEARCH_GUIDE.md) to locate and interpret the research behind a decision. Consult [`RESEARCH_RAW.md`](./RESEARCH_RAW.md) only for the relevant source section when deeper evidence/wording is needed.
+> Read this first. Use [`RESEARCH_GUIDE.md`](./RESEARCH_GUIDE.md) to locate and evaluate the research behind a decision. Consult [`RESEARCH_RAW.md`](./RESEARCH_RAW.md) only for the relevant source section when deeper evidence, equations, wording or citations are needed.
 >
 > Existing `docs/N_BIO_*.md` files remain historical implementation-stage documentation. Where they conflict with this document for vNext work, this document governs unless the conflict concerns an already-established canonical anatomy/reference-data invariant.
 
@@ -30,7 +30,15 @@
 
 Evolve the current conservative N-BIO scaffold into the production performance, biological inference, translation and programme-resolution system required **before My Mettle Native becomes the authoritative training application**.
 
-The current code intentionally uses defensible placeholders: working sets become recruitment-weighted exposure, muscle development remains neutral, recovery/recent stimulus are unset, and performance translation is same-execution-profile only. Preserve the architecture that made those placeholders safely replaceable:
+The current implementation intentionally uses defensible placeholders:
+
+- performed working sets become recruitment-weighted exposure;
+- muscle development remains a neutral prior;
+- recent stimulus/recovery are not claimed;
+- performance translation is same-execution-profile only;
+- ordinary workout evidence contains no subjective RIR requirement.
+
+Preserve the architecture that made those placeholders safely replaceable:
 
 ```text
 canonical anatomy / reference physiology
@@ -50,30 +58,41 @@ session resolution + prescription
 immutable historical session snapshot
 ```
 
-The final cutover criterion is **not** merely that Native can record workouts. Native becomes authoritative only when N-BIO behaves as intended, heterogeneous performance is represented correctly, prescriptions are uncertainty-aware, import/backup/restore are validated, and the final migration policy is locked.
+The final cutover criterion is **not** merely that Native can record workouts. Native becomes authoritative only when:
 
-`fallbackToDestructiveMigration(true)` remains acceptable throughout this development stage and is removed **last**, during cutover.
+- heterogeneous performance is represented faithfully;
+- N-BIO capability/stimulus/fatigue/development behaviour matches the accepted vNext contract;
+- prescriptions are uncertainty-aware and can legitimately remain blank;
+- programme resolution consumes the new state correctly;
+- the real Lite history can be imported without invented information;
+- full backup/restore/replay has been validated;
+- Health Connect and note-intelligence boundaries are safe;
+- the first authoritative Room schema is selected and migration policy is locked.
+
+`fallbackToDestructiveMigration(true)` remains acceptable throughout development and is removed **last**, during Native cutover.
 
 ---
 
 # 2. Decision labels and authority rules
 
-Use these labels when adding design notes, PR descriptions or new decisions:
+Use these labels when adding design notes, PR descriptions or new model decisions:
 
-- **[STRUCTURAL]** — architecture/data requirement independent of a specific biological equation.
+- **[STRUCTURAL]** — architecture/data requirement independent of a particular biological equation.
 - **[RESEARCH-BACKED]** — direction/relationship sufficiently supported to encode.
 - **[MODELLING-ASSUMPTION]** — useful computational form proposed by the research, not a discovered physiological law; must be versioned and replaceable.
-- **[PRODUCT-POLICY]** — UX/risk threshold selected by My Mettle rather than physiology; must be explicit and configurable/versioned where material.
+- **[PRODUCT-POLICY]** — UX/risk/utility threshold selected by My Mettle rather than physiology; must be explicit and versioned/configurable where material.
 - **[DEFER]** — schema/interface may anticipate it, but do not make it behaviour-driving yet.
 - **[DO-NOT-IMPLEMENT]** — explicitly rejected for v1.
 
 Rules:
 
-1. Do not promote a `[MODELLING-ASSUMPTION]` to scientific fact in code comments, UI or developer diagnostics.
-2. Do not silently invent constants where research gives only directional evidence.
+1. Never promote a `[MODELLING-ASSUMPTION]` to scientific fact in code comments, UI or diagnostics.
+2. Never silently invent constants where research gives only directional evidence.
 3. Scientific/model uncertainty and user-specific posterior uncertainty are separate concepts.
-4. A precise posterior built on a weak scientific relationship is **not** high-confidence biological truth.
+4. A narrow posterior built on a weak scientific relationship is not high-confidence biological truth.
 5. Preserve raw/recomputable values so later model versions can replace assumptions.
+6. When the research is underdetermined, record the decision in model/config provenance rather than hiding it in code.
+7. `null`/unknown is a valid state. Do not force numerical completeness for presentation convenience.
 
 ---
 
@@ -83,62 +102,70 @@ Rules:
 
 **[STRUCTURAL]** Store what happened before interpreting why it happened.
 
-Raw historical evidence must preserve enough context to answer:
+Historical evidence must retain enough information to answer:
 
-- what exercise and execution-profile version was performed;
+- what exercise was performed;
+- which execution-profile **version** was used;
 - which side / entry basis / implement count applied;
-- what physical or ordinal metrics were entered;
-- entered units and canonical units;
-- equipment identity/context;
-- relevant body-mass snapshot where required;
-- what was prescribed and why;
-- which targets were being resolved;
+- which metrics were entered;
+- entered values/units and canonical values/units;
+- equipment identity and relevant execution context;
+- body-mass context where required;
+- what was prescribed and the evidence/model behind it;
+- which training targets the session item was resolving;
 - what the user actually performed;
-- raw user notes.
+- raw user-authored notes;
+- timestamps sufficient for temporal inference.
 
-Derived state may be deleted and rebuilt without changing these records.
+Derived state may be discarded/rebuilt without changing these records.
 
 ## 3.2 Infer the narrowest quantity supported
 
 **[RESEARCH-BACKED]** Evidence strength decreases across inferential boundaries.
 
-A set is strongest evidence about performance on that execution profile, weaker evidence about muscle exposure/stimulus, weaker still about long-term adaptation, and essentially no direct evidence of segmental anatomical volume.
+A performed set is strongest evidence about performance on that execution profile; weaker evidence about muscle exposure/stimulus; weaker still about long-term adaptation; and essentially no direct evidence about segmental anatomical volume.
 
 Posterior uncertainty must widen accordingly.
 
 ## 3.3 No universal muscle-load scalar
 
-**[RESEARCH-BACKED]** Do not collapse kilograms, repetitions, seconds, conditioning capability, fatigue and development into one conserved universal unit.
+**[RESEARCH-BACKED]** Do not collapse kilograms, repetitions, seconds, conditioning capability, fatigue and development into one conserved universal quantity.
 
-Use multiple latents and keep muscle-dose values **muscle-local and model-version-local**. `8` quadriceps dose units are not declared equivalent to `8` forearm dose units.
+Muscle-dose values remain **muscle-local and model-version-local**. `8` quadriceps dose units are not declared biologically equivalent to `8` forearm dose units.
 
 ## 3.4 Capability is not development
 
 **[RESEARCH-BACKED]** Fast task-specific improvement and slow muscle-general adaptation must be separable.
 
-Rapid progression on one unfamiliar exercise should preferentially update execution capability/skill. Persistent improvement across multiple overlapping execution profiles can gradually support a shared muscle-development latent.
+Rapid progression on one unfamiliar exercise should preferentially update execution capability/skill. Persistent improvement across multiple overlapping profiles may gradually support a shared muscle-development latent.
 
 ## 3.5 Unknown effort remains unknown
 
-**[RESEARCH-BACKED]** Do not restore RIR as a required input or derive an integer RIR from load/reps alone.
+**[RESEARCH-BACKED]** Do not restore RIR as a required input and do not derive an integer RIR from load/reps alone.
 
 A completed `80 kg × 8` observation establishes at least eight demonstrated repetitions at that resistance. It does not establish an 8RM or exact proximity to failure.
 
 ## 3.6 Historical semantics are immutable/versioned
 
-**[STRUCTURAL]** Editing an execution profile or recruitment definition must not silently mutate historical meaning.
+**[STRUCTURAL]** Editing an execution profile or recruitment definition must not silently mutate the historical meaning of old work.
 
-Historical replay and current-model reinterpretation must be explicit separate modes.
+Historical-semantics replay and current-model reinterpretation are explicit separate modes.
 
 ## 3.7 Blank is a valid intelligent output
 
-**[PRODUCT-POLICY]** If predictive uncertainty is too large, return no numerical prescription rather than a fabricated conversion.
+**[PRODUCT-POLICY]** If predictive uncertainty is too large, emit no numerical prescription rather than a fabricated conversion.
 
 ## 3.8 AI note interpretation is not N-BIO inference
 
-**[STRUCTURAL]** Gemini Nano/ML Kit may classify allow-listed user-authored notes. It cannot directly mutate workout evidence, recruitment coefficients, biological state or prescriptions.
+**[STRUCTURAL]** Gemini Nano/ML Kit may classify explicitly allow-listed user-authored text. It cannot directly mutate workout evidence, recruitment coefficients, biological state or prescriptions.
 
 Health Connect data must be structurally impossible to pass through the note-interpreter input type.
+
+## 3.9 Development imports are compatibility tools, not ontology owners
+
+**[STRUCTURAL]** Lite migration code must adapt to the vNext schema; the vNext schema must not be distorted to preserve obsolete Lite concepts.
+
+Unknown legacy facts remain unknown rather than being invented to satisfy newer fields.
 
 ---
 
@@ -150,17 +177,19 @@ Adopt the following conceptual decomposition:
 
 | Layer | State | Required behaviour |
 |---|---|---|
-| Raw performance | `PerformanceObservation` | immutable facts in native/canonical units |
-| Profile capability | `CapabilityState_e` | execution-family-specific demonstrated performance posterior |
+| Raw performance | `PerformanceObservation` | immutable facts in entered/canonical units |
+| Profile capability | `CapabilityState_e` | execution-family-specific demonstrated-performance posterior |
 | Profile adaptation | `SkillState_e` | fast task-specific neural/technical/coordination latent |
 | Set demand | `SetDemand_s` | latent uncertainty about closeness to current performance frontier; not RIR |
 | Muscle exposure | `Exposure_sm` | recruitment-weighted conservative set-equivalent exposure |
 | Muscle effective dose | `EffectiveDose_sm` | uncertain exposure adjusted by inferred demand |
-| Acute muscle state | `RecentStimulus_m`, `Fatigue_m` | separate recent-dose and transient suppression states |
-| Readiness | `Recovery_m` | bounded readiness posterior/index; never “% tissue repaired” |
+| Acute muscle state | `RecentStimulus_m`, `Fatigue_m` | separate recent-dose and transient performance-suppression states |
+| Readiness | `Recovery_m` | bounded readiness posterior/index; never literal `% tissue repaired` |
 | Long-term muscle state | `Development_m` | slow user-relative latent, prior near `1.0` |
-| Structural state | `VolumeScale_m`, `StructuralCapacityScale_m` | nullable; remain non-driving until genuinely observed/inferable |
+| Structural state | `VolumeScale_m`, `StructuralCapacityScale_m` | nullable; remain non-driving without genuine user evidence |
 | Conditioning | `ConditioningState_f` | modality/family-specific power/speed/duration capability |
+
+The decomposition is required; the exact mathematical estimator for each state remains versioned where the research identifies modelling rather than physiological law.
 
 ## 4.2 Required pipeline
 
@@ -173,6 +202,7 @@ CAPABILITY FAMILY
   ├─ dynamic load↔rep
   ├─ loaded hold load↔duration
   ├─ duration/context
+  ├─ repeated contraction
   └─ conditioning power/speed↔duration
         ↓
 SET-DEMAND POSTERIOR
@@ -190,18 +220,18 @@ CROSS-PROFILE TRANSLATION
 SESSION PRESCRIPTION OR NULL
 ```
 
-All derived nodes must identify the inference/model versions that produced them.
+All derived nodes must identify the inference/model/config versions that produced them.
 
 ## 4.3 Posterior contract
 
 **[STRUCTURAL]** Replace naked `value + confidence` as the default derived-state representation.
 
-At minimum, important inferred states/predictions must be able to persist:
+Important inferred states/predictions must be able to persist at least:
 
 ```text
-p05 / credibleLower05
-p50 / estimateMedian
-p95 / credibleUpper95
+credibleLower05 / p05
+estimateMedian / p50
+credibleUpper95 / p95
 posteriorVariance
 observationCount
 effectiveIndependentSessionCount
@@ -213,9 +243,11 @@ modelVersion
 referenceProfileVersion
 ```
 
-Use a shared domain type such as `PosteriorSummary<T>` / `EstimateDistribution<T>` rather than duplicating fields across every entity.
+Prefer a shared domain representation such as `PosteriorSummary<T>` / `EstimateDistribution<T>` plus model-specific parameter state.
 
-Scientific evidence quality remains separate metadata on model/recruitment/provenance records.
+Scientific evidence quality remains separate metadata on the model/recruitment/provenance definition.
+
+Do not introduce a heavyweight probabilistic-programming dependency merely to satisfy this contract; first prefer compact deterministic/reproducible implementations suitable for Android.
 
 ---
 
@@ -223,27 +255,28 @@ Scientific evidence quality remains separate metadata on model/recruitment/prove
 
 ## Goal
 
-Make Native capable of faithfully representing every reasonable training/conditioning observation and prescription N-BIO vNext may consume, without encoding the final biological equations yet.
+Make Native capable of faithfully representing every reasonable training/conditioning observation, exercise preference and prescription that N-BIO vNext may consume, **without encoding the final biological equations yet**.
 
-This phase should be completed before implementing the research model deeply, because all later inference depends on its raw evidence quality.
+This phase is the substrate for every later phase. It must remove rep/load assumptions end-to-end, not only from the final `ExercisePrescription` class.
 
 ## 5.1 Create a generic performance domain
 
-**[STRUCTURAL]** Create `domain/performance` containing at least:
+**[STRUCTURAL]** Create/organise a performance domain containing at least the concepts:
 
 ```text
-PerformanceMetric.kt
-MetricFamily.kt
-PerformanceSchema.kt
-PerformanceObservation.kt
-PerformanceTarget.kt
-Quantity.kt
-UnitDefinition.kt
-UnitConverter.kt
-ResistanceModel.kt
-Laterality.kt
-PosteriorSummary.kt     // if shared inference package is not preferable
+PerformanceMetric
+MetricFamily
+PerformanceSchema
+PerformanceObservation
+PerformanceTarget / MetricTarget
+Quantity
+UnitDefinition / UnitId
+UnitConverter
+ResistanceModel
+Laterality
 ```
+
+A shared posterior type may live in `domain/inference` rather than `domain/performance`.
 
 ### Metric families
 
@@ -260,7 +293,7 @@ SPEED_DURATION
 DEVICE_ORDINAL
 ```
 
-An execution profile declares a family; raw storage remains generic enough to preserve all metrics.
+An execution profile/version declares its metric/capability family. Raw storage remains generic enough to preserve all applicable values.
 
 ### Metrics
 
@@ -291,7 +324,7 @@ Do not create combinatorial enums such as `LOAD_REPS_DURATION`.
 
 **[STRUCTURAL]** Persist both user-entered representation and canonical representation.
 
-Recommended canonical units:
+Recommended canonical conventions:
 
 ```text
 mass/load      kg
@@ -309,22 +342,24 @@ Example:
 
 ```text
 enteredValue = 10
-enteredUnit  = mph
+enteredUnit = mph
 canonicalValue = 4.4704
-canonicalUnit  = m/s
+canonicalUnit = m/s
 ```
 
-All N-BIO engines consume canonical values, but the original input basis remains available for history/export/debugging.
+All N-BIO engines consume canonical values where the dimension has a physical canonical unit, while the original input basis remains available for history/export/debugging.
 
-Do not label an uncalibrated machine level as kg. Preserve it as an ordinal device/profile coordinate.
+An uncalibrated machine `level 8` remains an ordinal device/profile coordinate. Never relabel it as kg or another physical quantity.
 
-## 5.3 Move measurement semantics to execution profile/version
+Unit conversion must be deterministic and independently tested.
 
-**[STRUCTURAL]** Generic `Exercise` remains conceptual movement identity.
+## 5.3 Move measurement semantics to execution-profile versions
 
-`ExecutionProfileVersion` owns:
+**[STRUCTURAL]** Generic `Exercise` remains the stable conceptual movement identity.
 
-- metric family;
+`ExecutionProfileVersion` owns the execution-specific semantics, including:
+
+- metric/capability family;
 - performance schema;
 - equipment identity/type;
 - resistance relationship;
@@ -337,13 +372,13 @@ Do not label an uncalibrated machine level as kg. Preserve it as an ordinal devi
 - resistance-curve class;
 - laterality mode;
 - recruitment-profile version;
-- effective/superseded metadata.
+- created/effective/superseded metadata.
 
-This allows one conceptual exercise to have multiple semantically distinct machine/free-weight/bodyweight executions.
+This replaces the current assumption that `ExerciseEntity` itself owns one permanent `trackingMetric`, `loadRelationship`, `entryBasis` and default unit.
 
 ## 5.4 Generalise raw set storage
 
-**[STRUCTURAL]** Replace fixed performance columns as the long-term contract with:
+**[STRUCTURAL]** Replace fixed performance columns as the long-term contract with a flexible observation structure:
 
 ```text
 set_record
@@ -355,7 +390,7 @@ set_metric_value
 
 ### `set_record`
 
-Owns:
+Owns set identity/context:
 
 ```text
 id
@@ -369,7 +404,7 @@ created/completed metadata
 
 ### `set_observation`
 
-Owns:
+Owns one performed observation:
 
 ```text
 id
@@ -378,12 +413,12 @@ ordinal
 bodySide
 completedAt
 source
-bodyMassSnapshotKg? / context reference
+bodyMassContext / snapshot reference or explicit value when required
 ```
 
 ### `set_metric_value`
 
-Owns:
+Owns arbitrary measured dimensions:
 
 ```text
 observationId
@@ -394,11 +429,15 @@ canonicalValue
 canonicalUnit
 ```
 
-One set may contain multiple observations (e.g. left/right) and each observation may contain multiple metrics.
+One set may contain several observations (for example LEFT and RIGHT) and each observation may contain several metrics.
+
+A session-level body-mass snapshot may remain the default context. If an observation stores/references its own body-mass context, precedence must be explicit and historical values must never drift when later body measurements change.
+
+Do not create three silently competing bodyweight values across session, session-exercise and observation layers.
 
 ## 5.5 Laterality
 
-**[STRUCTURAL]** Support:
+**[STRUCTURAL]** Support at least:
 
 ```text
 LEFT
@@ -418,9 +457,9 @@ LEFT  → 20 kg, 39 s
 RIGHT → 20 kg, 35 s
 ```
 
-Derived states may partially pool sides later, but raw evidence remains side-addressed.
+Derived states may partially pool sides later; raw evidence remains side-addressed.
 
-## 5.6 Resistance normalisation metadata
+## 5.6 Resistance semantics and normalisation metadata
 
 **[RESEARCH-BACKED]** Preserve the semantic distinction between:
 
@@ -442,16 +481,16 @@ R = k_bw * bodyMass + k_ext * externalLoad - k_assist * assistance
 
 is a **[MODELLING-ASSUMPTION]** and belongs in a versioned `ResistanceResolver`, not persistence truth.
 
-Hard invariant: with body mass/reps unchanged, decreasing assistance must increase the resolved resistance coordinate for assisted profiles.
+Hard invariant: with body mass and repetitions unchanged, decreasing assistance must increase the resolved resistance coordinate for an assisted profile.
 
 ## 5.7 Preserve entry basis without destructive “totalisation”
 
-**[STRUCTURAL]** Entry-basis conversion may create bookkeeping values but must not destroy semantic meaning.
+**[STRUCTURAL]** Entry-basis conversion may create bookkeeping quantities but must not destroy semantic meaning.
 
-- Pair of `20 kg` dumbbells entered `PER_HAND`: total implement mass can be derived, but `20 kg per hand` remains the performed basis.
-- Unilateral `20 kg` row: do **not** multiply to `40 kg` merely to resemble a bilateral movement.
+- Pair of `20 kg` dumbbells entered `PER_HAND`: total implement mass may be derived, but `20 kg per hand` remains the performed basis.
+- Unilateral `20 kg` row: do not multiply to `40 kg` merely to resemble a bilateral movement.
 
-Side, implement count and entry basis survive normalisation.
+Side, implement count, active-side semantics and entry basis survive normalisation.
 
 ## 5.8 Version execution semantics
 
@@ -469,6 +508,8 @@ Editing semantics creates version N+1.
 
 Historical sessions reference the exact execution-profile version used.
 
+Use referential integrity/soft-archive rules that prevent a historical profile version from being deleted out from under recorded sessions.
+
 ## 5.9 Version recruitment semantics
 
 **[STRUCTURAL]** Introduce:
@@ -478,7 +519,7 @@ recruitment_profile_version
 recruitment_allocation
 ```
 
-Recruitment allocations must persist:
+Recruitment allocations must persist enough metadata for reproducibility:
 
 ```text
 muscleSegmentId
@@ -522,11 +563,11 @@ entry basis
 metric family
 ```
 
-Do not yet hardcode a single similarity score as truth. Translation models consume versioned feature representations.
+Do not hardcode one similarity score as persistence truth. Translation models consume a versioned feature representation.
 
-## 5.11 Generic prescription domain
+## 5.11 Generalise prescriptions
 
-**[STRUCTURAL]** Replace mandatory `repRange + prescribedLoad` with metric-target prescriptions.
+**[STRUCTURAL]** Replace mandatory `sets + repRange + prescribedLoad` with metric-target prescriptions.
 
 Conceptual structure:
 
@@ -547,7 +588,8 @@ SetPrescription
 MetricTarget
   metric
   targetKind = EXACT | RANGE | MINIMUM | MAXIMUM | OPEN
-  values / canonicalUnit
+  canonical value(s)/unit
+  display preference?
   evidence
   predictiveDistribution?
 ```
@@ -568,7 +610,7 @@ Treadmill: 9.5–10 km/h, 3% grade, 20 min
 ```text
 PrescriptionEvidence
   source
-  sourceObservationId / setId
+  sourceObservationId / sourceSetId
   inferenceRunId
   anchor / posterior summary
   modelVersion
@@ -576,9 +618,64 @@ PrescriptionEvidence
 
 Historical prescriptions remain immutable snapshots after model changes.
 
-## 5.13 Phase 6 acceptance cases
+## 5.13 Remove rep-centric assumptions upstream of prescriptions
 
-The domain, Room schema, repositories and workout UI must represent without hacks:
+**[STRUCTURAL]** Generic prescriptions are insufficient if routine/preferences/selection still require repetitions.
+
+The current code contains rep-centric assumptions in at least:
+
+```text
+RoutineSlotEntity.repMin / repMax
+ExerciseSelectionCandidate.repRange
+PrescriptionRequest.repRange
+ExercisePrescription.repRange
+SessionExerciseEntity.repMin / repMax
+```
+
+N-BIO-6 must generalise this entire path.
+
+Required behaviour:
+
+- exercise selection must not require a `repRange` merely for a candidate to exist;
+- routine slots/pinned exercise assignments remain **preferences**, not biological or performance truth;
+- if a user preference includes a preferred prescription shape, represent it as a metric-general template/intention rather than mandatory reps;
+- imported dynamic-resistance `repMin/repMax` may translate to a `REPETITIONS` target for compatibility;
+- duration-only, load-duration and conditioning profiles must pass through routine/preference → candidate → prescription without fake rep fields;
+- the `PrescriptionEngine` receives the execution performance schema plus generic target/template/capability evidence, not a required `IntRange`;
+- N-BIO-8 may later replace compatibility templates with adaptive prescriptions without another ontology rewrite.
+
+Do not keep a hidden `repRange` requirement in `ProgrammeResolver` or `PrescriptionRequest` after the visible domain model has been generalised.
+
+## 5.14 Keep the development Lite import path usable
+
+**[STRUCTURAL]** Destructive Room resets remain enabled during vNext development, so the existing Lite import path must continue to seed/test Native after N-BIO-6 schema changes.
+
+Update the existing `data/migration/*` pipeline as necessary to translate factual legacy data into the new performance substrate:
+
+```text
+legacy load/reps/duration/distance
+→ generic observations + metric values
+
+legacy tracking/load/entry semantics
+→ initial execution-profile version semantics
+
+legacy repMin/repMax
+→ compatibility repetition target/template where applicable
+```
+
+Rules:
+
+- never invent laterality, incline, power, cadence, execution geometry or other facts Lite did not record;
+- unknown values remain null/unknown;
+- imported historical raw evidence remains distinguishable from newly Native-recorded evidence;
+- the development importer may evolve while the schema is disposable;
+- the **final hardened Lite → Native translator and validation pass still occur at cutover** against the settled authoritative schema.
+
+Keep the existing backup-translation workflow/documentation aligned when the import mapping materially changes.
+
+## 5.15 N-BIO-6 acceptance cases
+
+The domain, Room schema, repositories, resolver inputs, prescription engine and workout UI must represent without hacks:
 
 | Case | Required evidence |
 |---|---|
@@ -594,7 +691,16 @@ The domain, Room schema, repositories and workout UI must represent without hack
 | StairMaster | machine level + duration + steps/floors |
 | row/cycle erg | power + duration + distance/cadence where available |
 
-No later phase may require a destructive reinterpretation of these raw records.
+End-to-end acceptance must explicitly prove:
+
+1. a duration-only exercise can exist in routine/preference data, be selected, be prescribed and be recorded **without a fake rep range**;
+2. a load-duration unilateral exercise can record separate left/right observations;
+3. an assisted exercise improves when assistance falls at fixed body mass/reps;
+4. an uncalibrated machine level remains ordinal;
+5. entered units round-trip while canonical units remain stable;
+6. a real Lite load×reps session imports into the generic observation model without changing its factual meaning.
+
+No later phase may require a destructive reinterpretation of these raw evidence semantics.
 
 ---
 
@@ -603,6 +709,8 @@ No later phase may require a destructive reinterpretation of these raw records.
 ## Goal
 
 Replace the current v0 biological placeholders with a versioned probabilistic inference system that learns profile-specific demonstrated capability quickly, preserves unknown effort, models muscle exposure/dose separately from fatigue, and updates general muscle development slowly.
+
+Do not begin by implementing every equation simultaneously. Implement behind the engine boundaries below, keep the current simple same-profile behaviour as a benchmark, and validate each model family before making it prescription-driving.
 
 ## 6.1 Engine boundaries
 
@@ -616,6 +724,7 @@ engine/performance/
   DynamicCapabilityModel
   HoldCapabilityModel
   DurationCapabilityModel
+  RepeatedContractionCapabilityModel
   ConditioningCapabilityModel
 
 engine/stimulus/
@@ -637,13 +746,13 @@ engine/translation/
   TranslationEmissionPolicy
 ```
 
-Repositories orchestrate persistence; they do not own biological equations.
+Repositories orchestrate persistence. They do not own biological equations.
 
 ## 6.2 Dynamic resistance capability
 
-**[RESEARCH-BACKED]** Canonical capability is profile-specific demonstrated performance near the observed rep domain, not generic e1RM.
+**[RESEARCH-BACKED]** Canonical capability is profile-specific demonstrated performance near the observed rep domain, not a generic e1RM.
 
-**[MODELLING-ASSUMPTION]** Implement the research-proposed stochastic frontier family behind a versioned interface:
+**[MODELLING-ASSUMPTION]** Implement the research-proposed stochastic-frontier family behind a versioned interface:
 
 ```text
 ln(R_s) = a_e(t) - b_e ln(reps_s) - u_s + epsilon_s
@@ -657,19 +766,19 @@ Interpretation:
 - `u_s` = latent submaximality slack;
 - `epsilon_s` = robust day/performance noise.
 
-Use robust heavy-tailed observation noise (e.g. Student-t) so one poor session does not catastrophically rewrite state.
+Use heavy-tailed/robust observation noise so one poor session does not catastrophically rewrite state.
 
-Do not treat this equation as a physiological law. It is a compact monotonic performance model over the **observed domain**.
+Do not describe the frontier equation as physiological law. It is a compact monotonic performance model over the observed domain.
 
 Extrapolation beyond observed rep ranges must widen uncertainty sharply.
 
-An e1RM may exist as a secondary diagnostic if evidence supports it; it is never the canonical capability state.
+An e1RM may exist as a secondary diagnostic when evidence supports it; it is never canonical capability.
 
 ## 6.3 Loaded-hold capability
 
-**[RESEARCH-BACKED]** Isometric/load-duration performance requires a separate family.
+**[RESEARCH-BACKED]** Isometric/load-duration performance requires a separate capability family.
 
-**[MODELLING-ASSUMPTION]** Implement a monotonic profile-specific load-duration frontier, e.g. the research proposal:
+**[MODELLING-ASSUMPTION]** Implement a monotonic profile-specific load-duration frontier, for example:
 
 ```text
 ln(load_s) = a_e(t) - b_e ln(duration_s / T0) - u_s + epsilon_s
@@ -687,7 +796,7 @@ Body mass may be a profile/context covariate where meaningful, but no hidden kil
 
 ## 6.5 Repeated-contraction profiles
 
-A continuous hold and repeated grip-roll/cycle movement may be similar but do not share the same capability equation.
+A continuous hold and repeated grip-roll/cycle movement may be related but do not share the same capability equation.
 
 Use a separate measurement family where load + repetitions/cycles + optional cadence/duration are semantically meaningful.
 
@@ -704,7 +813,7 @@ Where appropriate:
 
 Do not convert cardio minutes/watts/km/calories to hypertrophy-set units.
 
-Local skeletal-muscle fatigue/exposure from conditioning remains conservative/uncertain until specifically modelled.
+Local skeletal-muscle fatigue/exposure from conditioning remains conservative/uncertain until specifically modelled and validated.
 
 ## 6.7 Skill state
 
@@ -712,11 +821,11 @@ Local skeletal-muscle fatigue/exposure from conditioning remains conservative/un
 
 First sessions on a new movement may update profile intercept/skill substantially while shared muscle development remains strongly shrunk.
 
-Avoid double-counting: `SkillState`, profile intercept/process drift and noise require explicit identifiability constraints in the model implementation. Document those constraints in the model-version specification.
+Avoid double-counting. `SkillState`, profile intercept/process drift and observation noise require explicit identifiability constraints. Document those constraints in the model-version specification.
 
 ## 6.8 Set-demand posterior
 
-**[RESEARCH-BACKED]** Unknown proximity to frontier is latent, not RIR.
+**[RESEARCH-BACKED]** Unknown proximity to the capability frontier is latent, not RIR.
 
 **[MODELLING-ASSUMPTION]** A statistic such as:
 
@@ -728,7 +837,7 @@ may represent probability that a set lies in a model-defined high-demand band.
 
 `delta_e` is a versioned hyperparameter, not a biological constant.
 
-If history is insufficient, preserve broad uncertainty instead of inventing a precise demand score.
+If history is insufficient, preserve broad uncertainty rather than inventing a precise demand score.
 
 ## 6.9 Preserve Exposure separately from EffectiveDose
 
@@ -740,41 +849,35 @@ Exposure_sm = recruitmentWeight_e,m
 
 for a valid working set under the current conservative convention.
 
-Then derive:
-
-```text
-EffectiveDose_sm = Exposure_sm × uncertain demand component
-```
-
-only when the demand posterior supports doing so.
+Then derive an `EffectiveDose` posterior from exposure plus uncertain demand only when the selected model supports doing so.
 
 When demand is uninformative:
 
 - retain `Exposure`;
-- keep `EffectiveDose` broad/null/unresolved according to model representation;
-- do not manufacture a precise decimal.
+- keep `EffectiveDose` broad/null/unresolved according to the model representation;
+- do not manufacture a precise stimulus decimal.
 
 ## 6.10 Session-dose aggregation
 
 **[RESEARCH-BACKED]** Raw exposure/dose accumulates; later sets plausibly have diminishing marginal benefit.
 
-**[MODELLING-ASSUMPTION]** The research-proposed concave function:
+**[MODELLING-ASSUMPTION]** The research-proposed concave candidate:
 
 ```text
 rawDose X = sum(EffectiveDose)
 concaveDose = tau * ln(1 + X/tau)
 ```
 
-is an acceptable v1 candidate only if:
+is acceptable only if:
 
 - both raw and transformed dose are preserved;
-- `tau` is model-version metadata;
+- `tau` is model/config-version metadata;
 - `tau` begins globally/broadly pooled rather than pretending each muscle has a known personal MRV;
-- validation can replace the function later.
+- validation can replace the transform later.
 
 ## 6.11 Recent stimulus and fatigue are separate states
 
-**[RESEARCH-BACKED]** Acute suppression and long-term adaptation have different time scales.
+**[RESEARCH-BACKED]** Acute performance suppression and long-term adaptation have different time scales.
 
 **[MODELLING-ASSUMPTION]** Exponential kernels may be used as transparent state-estimation kernels:
 
@@ -789,7 +892,7 @@ Initial half-lives should be conservative, pooled/versioned priors. Personalisat
 
 ## 6.12 Fatigue impulse and recovery
 
-**[MODELLING-ASSUMPTION]** A fatigue impulse may use dose plus uncertain demand and set density/rest context. Coefficients remain conservative/versioned.
+**[MODELLING-ASSUMPTION]** A fatigue impulse may use dose plus uncertain demand and set-density/rest context. Coefficients remain conservative/versioned.
 
 `Recovery_m` may be a bounded readiness posterior/index derived from fatigue state.
 
@@ -801,7 +904,7 @@ Health Connect sleep/RHR/HRV, when later available, may only be uncertain covari
 
 **[RESEARCH-BACKED]** Development moves much more slowly than execution capability/skill.
 
-**[MODELLING-ASSUMPTION]** Use a strongly regularised slow latent transition such as the research-proposed state-space form only behind a versioned model.
+**[MODELLING-ASSUMPTION]** Use a strongly regularised slow latent transition only behind a versioned model.
 
 Required behavioural constraints:
 
@@ -830,7 +933,7 @@ Whole-body Health Connect lean mass/body fat cannot populate segmental morpholog
 
 ## 6.15 Cross-profile translation
 
-**[RESEARCH-BACKED]** Translation is hierarchical/uncertainty-aware; never a kg ratio table.
+**[RESEARCH-BACKED]** Translation is hierarchical/uncertainty-aware; never a kg-ratio table.
 
 Use profile feature vectors from N-BIO-6 and partial pooling.
 
@@ -839,7 +942,7 @@ Use profile feature vectors from N-BIO-6 and partial pooling.
 Prediction variance must increase when:
 
 - recruitment similarity is low;
-- mechanical/metric family differs;
+- mechanical or metric family differs;
 - equipment is uncalibrated;
 - recruitment provenance is weak;
 - user history is sparse;
@@ -849,27 +952,27 @@ Prediction variance must increase when:
 
 ```text
 same profile history
-→ highly similar profile family evidence
+→ highly similar profile-family evidence
 → broader user feature/hierarchical prior
 → population/reference prior where defensible
 → unknown / blank
 ```
 
-First direct observations on the new profile should update its intercept quickly; slope remains broad until multiple performance zones exist.
+First direct observations on a new profile should update its profile-specific intercept quickly; slope remains broad until several performance zones exist.
 
 ## 6.16 Translation emission policy
 
 **[PRODUCT-POLICY]** A numerical cross-profile prescription is emitted only when predictive uncertainty is practically useful.
 
-The research suggests a possible starting rule: 90% predictive interval narrower than both approximately 35% of the median and no more than two equipment increments. Treat this as a configurable/versioned candidate, not a hard scientific constant.
+The research suggests a possible starting rule: a 90% predictive interval narrower than both roughly 35% of the median and no more than two equipment increments. Treat this only as a configurable/versioned candidate product threshold.
 
-Validate and tune against retrospective/prospective prediction.
+Validate/tune against retrospective and later prospective prediction.
 
-Otherwise return `null` and preserve the biological target/intention.
+Otherwise return `null` while preserving the biological target/intention.
 
 ## 6.17 Full replay plus incremental inference
 
-Keep full-history recomputation as canonical rebuild.
+Keep full-history recomputation as the canonical rebuild path.
 
 Add incremental inference after completed sessions for product latency.
 
@@ -879,7 +982,7 @@ Regression invariant:
 incremental(all evidence) ≈ fullReplay(all evidence)
 ```
 
-within model-defined tolerance.
+within explicit model-defined tolerance.
 
 No ordinary navigation should silently trigger an expensive full-history replay.
 
@@ -903,7 +1006,7 @@ skillModelVersion
 translationModelVersion
 ```
 
-Model hyperparameters required to reproduce the run must be referenced by immutable model/config version.
+Hyperparameters required to reproduce a run must be referenced by immutable model/config version.
 
 ---
 
@@ -926,11 +1029,13 @@ desiredStimulus
 source
 ```
 
+Routine slots/pins remain exercise preferences, not biological truth.
+
 ## 7.2 Define `desiredStimulus` precisely
 
-**[STRUCTURAL]** Once N-BIO-7 dose semantics exist, document the exact local meaning/time horizon of `desiredStimulus`.
+**[STRUCTURAL]** Once N-BIO-7 dose semantics exist, document the exact muscle-local meaning and time horizon of `desiredStimulus`.
 
-It must be a muscle-local/model-version dose target, not a universal physical quantity.
+It is a model-version-local dose target, not a universal physical quantity.
 
 ## 7.3 Resolve remaining target need
 
@@ -945,7 +1050,7 @@ programme target
 = resolved target need
 ```
 
-`ResolvedTrainingTarget` should expose enough developer data to explain inclusion/priority/remaining dose and uncertainty.
+`ResolvedTrainingTarget` should expose enough developer data to explain inclusion, priority, remaining dose and uncertainty.
 
 ## 7.4 Candidate scoring
 
@@ -966,7 +1071,7 @@ translation/prescription uncertainty
 recent execution exposure
 ```
 
-Keep all candidate scores inspectable in Biological Developer tools.
+Keep candidate scoring inspectable in Biological Developer tools.
 
 Do not hide complex scoring behind opaque “AI”.
 
@@ -1002,7 +1107,7 @@ programme target
 
 ## 7.7 Exercise substitution
 
-Preserve existing safety/integrity behaviour: do not swap an exercise once performed work has been recorded for that session item.
+Preserve existing integrity behaviour: do not swap an exercise once performed work has been recorded for that session item.
 
 Replacement ranking should use target fit + expected dose + mechanical/recruitment similarity + fatigue/time + user preference + prediction uncertainty.
 
@@ -1010,7 +1115,7 @@ A substitution can be valid while its numeric prescription remains blank.
 
 ## 7.8 Dynamic `&`
 
-Resolve optional `&` from outstanding cycle target need rather than a permanently fixed recipe:
+Resolve optional `&` from outstanding cycle target need rather than a permanently fixed exercise recipe:
 
 ```text
 cycle biological targets
@@ -1049,9 +1154,9 @@ Structured follow-up may appear only where ambiguity genuinely matters.
 
 ### 8A.2 Raw note is canonical
 
-Create `exercise_note` with raw text + revision/timestamps.
+Create/evolve a raw `exercise_note` record with text + revision/timestamps.
 
-AI output is derived metadata and never overwrites the raw note.
+AI output is derived metadata and never overwrites the user-authored note.
 
 ### 8A.3 Annotation persistence
 
@@ -1065,7 +1170,7 @@ next_session_cue
 
 Store interpreter provider/model/schema version and note revision hash.
 
-Suggested closed vocabulary may include:
+A versioned closed vocabulary may include:
 
 ```text
 SETUP_ISSUE
@@ -1081,7 +1186,7 @@ PROGRESSION_OPPORTUNITY
 NEXT_SESSION_ACTION
 ```
 
-Vocabulary is versioned; deterministic app code validates outputs.
+Deterministic app code validates outputs.
 
 ### 8A.4 Interpreter abstraction
 
@@ -1120,13 +1225,13 @@ unrelated notes
 
 Prefer a module/package boundary with no dependency on Health Connect DTOs.
 
-### 8A.6 Foreground-only inference
+### 8A.6 Foreground-only / capability-gated inference
 
-Current ML Kit Prompt API availability/behaviour is time-sensitive. At the researched August 2026 state, Prompt inference is foreground-only and device-dependent.
+ML Kit Prompt API availability/behaviour is time-sensitive. At the research snapshot, inference is foreground-only and device-dependent.
 
-Interpret the note interactively after submission when available; do not rely on deferred WorkManager/background inference.
+Interpret the note interactively after submission when available; do not rely on deferred background inference.
 
-Reverify API/device support at implementation time.
+Reverify official current API/device support at implementation time.
 
 ### 8A.7 LLM confidence is not N-BIO confidence
 
@@ -1134,9 +1239,23 @@ Never feed model self-reported confidence into biological posterior confidence.
 
 ## 8B. Health Connect
 
-### 8B.1 New subsystem
+### 8B.1 Evolve the existing placeholders; do not create a competing health store
 
-Create a dedicated integration boundary:
+The current repository already contains generic persistence placeholders:
+
+```text
+HealthObservationEntity
+HealthIntegrationStateEntity
+BodyMeasurementEntity source/sourceRecordId fields
+SessionEntity.healthExportState
+SessionEntity.healthClientRecordId
+```
+
+It does **not** yet contain the full Health Connect SDK integration/provenance/synchronisation model required here.
+
+Treat these records as a starting point to evolve, replace or split during the still-destructive development stage. Do not leave them in place and create a second competing canonical Health Connect mirror alongside them.
+
+Create a dedicated integration boundary such as:
 
 ```text
 health/
@@ -1148,7 +1267,7 @@ health/
   HealthCapabilities
 ```
 
-Reverify current SDK surface before implementation. Research snapshot: `connect-client 1.1.0` stable, `1.2.0-alpha05` current alpha on 2026-08-24.
+Reverify the current SDK before implementation. Research snapshot: `connect-client 1.1.0` stable and `1.2.0-alpha05` current alpha on 2026-08-24.
 
 Stable and alpha capabilities must be feature/version-gated.
 
@@ -1183,7 +1302,7 @@ Not every available record automatically becomes an N-BIO input.
 
 ### 8B.3 Explicit N-BIO covariate declaration
 
-Each model version declares which external health signals it consumes.
+Each N-BIO model version declares which external health signals it consumes.
 
 Example:
 
@@ -1196,9 +1315,9 @@ usesHrv = false
 
 Availability does not imply causal use.
 
-### 8B.4 Provenance and mirroring
+### 8B.4 External mirror provenance
 
-For external records retain:
+For external records retain enough identity to update/delete rather than append duplicates:
 
 ```text
 recordType
@@ -1209,13 +1328,34 @@ canonical payload/value
 importedAt
 ```
 
-Use separate Changes tokens for independently consumed record types.
+The current `HealthObservationEntity` fields are insufficient as the final contract because origin/last-modified semantics and type-scoped sync behaviour must be explicit.
+
+Use a durable uniqueness rule that includes the Health Connect identity/record semantics rather than assuming the old `provider + sourceRecordId` shape is sufficient.
+
+For records also projected into app-friendly tables such as body measurements, define one canonical external mirror/provenance source and make the projection relationship explicit. Do not create two independent immutable copies that can drift.
+
+### 8B.5 Sync state is per consumed record family
+
+The current single `HealthIntegrationStateEntity(id = primary)` shape is not sufficient for robust Changes-token consumption.
+
+Persist independently where required:
+
+```text
+record family/type
+permission/feature state
+changes token
+last successful sync
+last full resync
+last error
+```
+
+Use separate Changes tokens for independently consumed record types/families so permission revocation or token failure does not poison unrelated syncs.
 
 On token expiry, re-read + deduplicate; never blindly append.
 
 Use Health Connect aggregation for cumulative data where origins may overlap.
 
-### 8B.5 Idempotent Native export
+### 8B.6 Idempotent Native export linkage
 
 For My Mettle-originated records:
 
@@ -1224,11 +1364,23 @@ clientRecordId      = stable Native UUID
 clientRecordVersion = monotonic Native export revision
 ```
 
-Persist returned HC identity/export state.
+Persist the returned Health Connect identity and export state.
+
+The existing `SessionEntity.healthExportState` + `healthClientRecordId` fields do not by themselves satisfy the final contract. Evolve them or introduce an explicit export-link record capable of retaining at least:
+
+```text
+native source id/type
+clientRecordId
+clientRecordVersion
+healthConnectId
+last exported revision/time
+export state
+user-deleted/suppressed state where required
+```
 
 Do not fabricate optional RPE/RIR fields.
 
-### 8B.6 Deletion semantics
+### 8B.7 Deletion semantics
 
 ```text
 External HC record deleted
@@ -1245,6 +1397,8 @@ Workout deleted in My Mettle
 → delete/suppress corresponding HC export where appropriate
 ```
 
+Health Connect is an integration surface; Native raw workout evidence remains authoritative for Native-recorded sessions.
+
 ## 8C. Backup, analysis export and diagnostics
 
 Maintain three distinct products.
@@ -1253,7 +1407,7 @@ Maintain three distinct products.
 
 Purpose: exact restoration.
 
-Include canonical user data, exercise/execution/recruitment versions, programmes, sessions, prescriptions, performance observations, raw notes, annotations, settings, media manifest and necessary provenance.
+Include canonical user data, exercise/execution/recruitment versions, programmes/preferences, sessions, historical prescriptions, performance observations, raw notes, annotations, settings, media manifest, health-integration metadata needed for safe restoration and necessary provenance.
 
 Derived inference may be included for inspection/cache but is always marked recomputable.
 
@@ -1268,7 +1422,7 @@ app/schema/reference versions
 exercise + execution semantics
 metric schemas
 recruitment definitions
-programme targets/constraints
+programme targets/constraints/preferences
 session chronology
 prescription distributions + evidence
 performed observations + units + laterality
@@ -1305,6 +1459,8 @@ Delete setup media
 Development reset
 ```
 
+Deleting a derived/health mirror must not silently delete unrelated canonical workout history.
+
 ---
 
 # 9. Native Cutover
@@ -1315,7 +1471,7 @@ Make Native authoritative only after N-BIO-6 through N-BIO-9 meet their acceptan
 
 ## 9.1 Keep destructive migration until this phase
 
-Do **not** spend development effort preserving disposable intermediate schemas.
+Do **not** spend development effort preserving disposable intermediate Native schemas.
 
 Only now choose the first canonical production Room schema.
 
@@ -1325,9 +1481,9 @@ Remove `fallbackToDestructiveMigration(true)` from the authoritative/release dat
 
 - final schema is selected;
 - full backup/restore works;
-- Lite import works against that schema;
+- final Lite import works against that schema;
 - N-BIO replay passes;
-- real data validation passes.
+- real-data validation passes.
 
 A debug-only destructive reset may remain.
 
@@ -1344,11 +1500,13 @@ explicit Room migration
 
 ## 9.4 Final Lite → Native translator
 
-Update the existing translation workflow only against the settled schema.
+Harden the existing translation workflow against the settled schema.
 
 Translate factual legacy data; preserve unknowns as unknown.
 
 Never invent laterality, execution conditions or metrics Lite never recorded.
+
+The final translator should be a deliberate one-off compatibility boundary, not a reason to retain obsolete ontology in Native.
 
 ## 9.5 Recompute from imported raw history
 
@@ -1379,7 +1537,22 @@ fresh install
 → compare canonical raw state
 ```
 
-## 9.7 Final cutover declaration
+## 9.7 Final analysis-export validation
+
+Generate an analysis export after restore and verify an external analysis process can determine without hidden app-local knowledge:
+
+- exercise + execution-profile version;
+- side/entry basis;
+- all entered/canonical metrics;
+- relevant body-mass context;
+- historical prescription and provenance;
+- targets being resolved;
+- actual performed work;
+- raw notes and derived note annotations;
+- N-BIO state/posterior/model versions;
+- explicitly included health summaries and provenance.
+
+## 9.8 Final cutover declaration
 
 Only after all gates pass:
 
@@ -1396,7 +1569,7 @@ My Mettle Native = authoritative workout application
 
 Raw/user-authored/history tables must never depend on the current inference formula.
 
-Derived tables must reference immutable inference/model versions and may be discarded/rebuilt.
+Derived tables reference immutable inference/model versions and may be discarded/rebuilt.
 
 ## 10.2 Historical versus current-model replay
 
@@ -1414,9 +1587,9 @@ Do not conflate these outputs.
 
 ## 10.3 Model registry
 
-Create/maintain an immutable registry/config identity for every behaviour-driving model version and its important hyperparameters.
+Create/maintain immutable identities for every behaviour-driving model/config version and its important hyperparameters.
 
-No inference output should be impossible to trace to its model configuration.
+No inference output should be impossible to trace to the configuration that produced it.
 
 ## 10.4 Session independence
 
@@ -1426,11 +1599,25 @@ Persist/derive `effectiveIndependentSessionCount`; do not claim five same-sessio
 
 ## 10.5 Correlated muscle uncertainty
 
-A multi-muscle compound exercise does not independently prove equal development changes in every recruited muscle.
+A compound exercise does not independently prove equal development changes in every recruited muscle.
 
-Do not blindly update segment development as independent scalars. Use shared/hierarchical latent uncertainty or an explicit approximation that preserves this ambiguity.
+Do not blindly update segment development as independent scalars. Use shared/hierarchical latent uncertainty or an explicit approximation preserving this ambiguity.
 
-A dense full covariance matrix is not mandated if impractical; the approximation and its limitations must be documented/versioned.
+A dense full covariance matrix is not mandated if impractical; the approximation and limitations must be documented/versioned.
+
+## 10.6 Historical prescriptions and current recommendations are different records
+
+Never recompute a historical session's recorded prescription in place because a new model now recommends something else.
+
+Preserve:
+
+```text
+what was prescribed then
+what was performed then
+what current N-BIO would infer now
+```
+
+as distinguishable facts/derived outputs.
 
 ---
 
@@ -1446,7 +1633,7 @@ train/recompute using evidence <= k-1
 → compare prediction distribution with observed k
 ```
 
-Compare vNext against the current simple same-profile anchor. Added sophistication is justified only when it improves held-out predictive accuracy/calibration or meaningfully improves uncertainty/blank behaviour.
+Compare vNext against the current simple same-profile anchor. Added sophistication is justified only when it improves held-out predictive accuracy/calibration or materially improves uncertainty/blank behaviour.
 
 ## 11.2 Required predictive metrics
 
@@ -1479,34 +1666,68 @@ Automate at least:
 9. Dead hang → loaded grip hold: target intent transfers; numeric load may remain null.
 10. One poor `75×5` after normal `80×5`: robust noise/fatigue first, not instant permanent regression.
 11. Beginner `40×8 → 55×8`: large profile skill/capability change; small/broad muscle development unless corroborated.
-12. Ten same-muscle sets: raw exposure additive; marginal session-dose contribution decreases only through versioned model with uncertainty.
+12. Ten same-muscle sets: raw exposure additive; marginal session-dose contribution decreases only through the versioned model with uncertainty.
 13. Three-week absence: fatigue disappears; development does not collapse on a 48–72 h clock.
 
 ## 11.4 Performance-substrate tests
 
-Cover unit conversions, per-hand/per-side semantics, bodyweight/assistance monotonicity, ordinal device metrics, multi-dimensional cardio and round-trip entered-unit preservation.
+Cover:
 
-## 11.5 Historical-version tests
+- kg↔lb and speed unit conversions;
+- canonical/entered-unit round trip;
+- per-hand/per-side semantics;
+- bodyweight/assistance monotonicity;
+- ordinal device metrics;
+- multi-dimensional cardio;
+- side-resolved observations;
+- duration-only end-to-end flow without reps;
+- load-duration end-to-end flow;
+- legacy import into generic observations.
+
+## 11.5 Programme/preference/prescription tests
+
+Verify:
+
+- a routine/pinned preference can reference a duration-only execution without `repRange`;
+- selector candidates do not require reps;
+- generic `PrescriptionRequest`/engine can generate duration/load-duration targets;
+- dynamic-resistance legacy rep preferences still translate correctly;
+- metric-specific prescription provenance survives session snapshotting.
+
+## 11.6 Historical-version tests
 
 Verify profile/recruitment edits create new versions and old sessions remain exactly interpretable.
 
-## 11.6 Replay tests
+Explicitly test historical-semantics replay versus current-model reinterpretation.
+
+## 11.7 Replay tests
 
 Full replay and incremental inference must agree within explicit tolerance.
 
 Deleting derived inference must not alter raw evidence.
 
-## 11.7 Nano privacy tests
+## 11.8 Nano privacy tests
 
-At compile/API architecture level, prove Health Connect DTOs cannot enter `NoteInterpreterInput`.
+At API/type architecture level, prove Health Connect DTOs and health-context fields cannot enter `NoteInterpreterInput`.
 
 Annotation failure must never block saving a workout/note.
 
-## 11.8 Health Connect tests
+## 11.9 Health Connect tests
 
-Cover permission grant/revoke, history/background feature availability, change-token expiry, duplicate avoidance, external deletion, exported-record deletion and Native-source-of-truth preservation.
+Cover:
 
-## 11.9 Export tests
+- permission grant/revoke;
+- history/background feature availability;
+- independent change tokens;
+- token expiry/resync;
+- duplicate avoidance;
+- provenance/origin preservation;
+- external record update/deletion;
+- Native-export update revision;
+- HC deletion of a Native export without Native-data loss or silent recreation;
+- disconnect without deleting native workout truth.
+
+## 11.10 Export tests
 
 - Full backup round-trip restores canonical raw state.
 - Analysis export contains sufficient semantics/provenance for independent longitudinal analysis.
@@ -1516,7 +1737,7 @@ Cover permission grant/revoke, history/background feature availability, change-t
 
 # 12. Expected package/file work
 
-Exact names may evolve, but preserve domain boundaries.
+Exact names may evolve. Preserve the domain boundaries and current-code touchpoints rather than mechanically creating every suggested file.
 
 ## Create / expand
 
@@ -1547,6 +1768,7 @@ engine/performance/
   DynamicCapabilityModel.kt
   HoldCapabilityModel.kt
   DurationCapabilityModel.kt
+  RepeatedContractionCapabilityModel.kt
   ConditioningCapabilityModel.kt
 
 engine/stimulus/
@@ -1586,7 +1808,7 @@ backup/
   AnalysisExportRepository.kt
 ```
 
-## Heavily modify
+## Heavily modify / explicitly audit
 
 ```text
 domain/exercise/ExerciseModels.kt
@@ -1594,26 +1816,45 @@ domain/training/TrainingModels.kt
 domain/inference/InferenceModels.kt
 
 data/local/entity/CoreEntities.kt
+  - ExerciseEntity tracking fields
+  - RoutineSlotEntity repMin/repMax
+  - SessionExerciseEntity snapshots/prescription fields
+  - SetRecordEntity fixed metrics
+
 data/local/entity/BiologyEntities.kt
+  - execution-profile versioning
+  - recruitment-profile versioning/provenance
 data/local/entity/InferenceEntities.kt
-training entities/DAOs
+data/local/entity/TrainingEntities.kt
+data/local/entity/ExtendedEntities.kt
+  - existing HealthObservationEntity
+  - existing HealthIntegrationStateEntity
 
 data/local/MyMettleDatabase.kt
 data/local/Migrations.kt
 data/local/DatabaseProvider.kt
 
+engine/targeting/ProgrammeResolver.kt
+  - ExerciseSelectionCandidate.repRange
+engine/prescription/PrescriptionEngine.kt
+  - PrescriptionRequest.repRange/load-only evidence
 engine/inference/InferenceEngines.kt
-engine/prescription/*
-engine/targeting/*
-
 inference/RoomInferenceRepository.kt
 workout/RoomWorkoutRepository.kt
 library repositories
 
+data/migration/LegacyV6BackupReader.kt
+data/migration/LegacyV6Importer.kt
+data/migration/LegacyImportSnapshot.kt
+data/migration/LegacyProgrammeConstraintProjector.kt
+data/migration/LegacyTargetProjector.kt
+data/migration/LegacyRecruitmentResolver.kt
+and any migration/seed loader that writes execution/recruitment semantics
+
 Workout / Library / History / Settings / Biological Developer UI + ViewModels
 ```
 
-Do not treat this list as permission to create needless abstractions. Prefer a smaller coherent implementation where boundaries remain explicit.
+Do not treat this list as permission to create needless abstractions. Prefer a smaller coherent implementation where the required boundaries remain explicit.
 
 ---
 
@@ -1667,7 +1908,7 @@ Similarity informs priors and uncertainty only.
 
 ## [DO-NOT-IMPLEMENT] Development from one exercise progression
 
-Shared development must remain strongly shrunk until multiple overlapping evidence sources support it.
+Shared development remains strongly shrunk until multiple overlapping evidence sources support it.
 
 ## [DO-NOT-IMPLEMENT] Segmental volume from whole-body Health Connect composition
 
@@ -1694,13 +1935,16 @@ For every implementation task:
 1. Read the relevant section of this `PLAN.md`.
 2. Open the corresponding topic in `RESEARCH_GUIDE.md`.
 3. Read only the linked/identified section of `RESEARCH_RAW.md` when the scientific/model detail is required.
-4. Inspect the current `main` implementation before editing; do not rely on historical docs alone.
+4. Inspect the **current `main` code** before editing; do not rely on historical docs alone.
 5. Identify whether each behaviour is structural, research-backed, modelling assumption or product policy.
 6. Keep modelling constants/config versions explicit.
 7. Add/modify tests before declaring a phase item complete.
 8. Update Biological Developer diagnostics when new state becomes behaviour-driving.
-9. Update this plan only when the architectural contract genuinely changes; implementation notes belong in phase-specific docs/PRs.
-10. Never silently resolve a research ambiguity in code. Record it as a versioned assumption or leave it unresolved.
+9. Keep the development Lite import path working whenever a destructive schema reset would otherwise make the current app impossible to test.
+10. Do not remove destructive migration until the cutover phase.
+11. Update this plan only when the architectural contract genuinely changes; implementation notes belong in phase-specific docs/PRs.
+12. Never silently resolve a research ambiguity in code. Record it as a versioned assumption or leave it unresolved.
+13. If current source contradicts an assumption in this plan, stop and reconcile the discrepancy explicitly rather than coding around it.
 
 For token efficiency, normal agents should not load the full raw research report unless their task requires it.
 
@@ -1712,22 +1956,27 @@ N-BIO vNext is ready for Native cutover only when all of the following are true:
 
 - Heterogeneous performance metrics are first-class and unit-safe.
 - Laterality, assistance/bodyweight and entry-basis semantics survive raw storage.
+- Session/observation body-mass context has one explicit historical precedence rule.
 - Execution/recruitment semantics are immutable/versioned historically.
+- Routine/preferences and resolver candidates no longer require a rep range.
 - Prescriptions are metric-general and preserve per-metric provenance.
+- Duration-only and load-duration exercises work end-to-end without compatibility hacks.
 - Dynamic resistance, holds/duration and conditioning use appropriate separate capability families.
 - Profile capability/skill changes quickly; shared muscle development changes slowly and remains uncertainty-aware.
 - Unknown set effort remains latent rather than fabricated as RIR.
 - Exposure, effective dose, recent stimulus and fatigue are separate concepts.
-- Recovery is a readiness posterior/index, not a literal tissue-repair percentage.
+- Recovery is a readiness posterior/index, not literal tissue-repair percentage.
 - Cross-profile translation uses similarity/partial pooling without unit copying and can return null.
 - Programme resolution consumes real biological need/capability rather than only static set budgets.
 - `&` can resolve from remaining target need.
 - Raw notes are canonical; Nano annotations are derived and privacy-isolated.
-- Health Connect is provenance-safe, permission-aware and does not overwrite Native truth.
+- Health Connect evolves the existing generic persistence rather than creating competing stores.
+- Health sync is origin/version/change-token/deletion safe.
 - Full backup, analysis export and biology diagnostic have separate validated contracts.
-- Retrospective predictive calibration is at least competitive with the current same-profile baseline.
+- Retrospective predictive calibration is at least competitive with the current same-profile baseline and uncertainty is calibrated.
 - Full replay and incremental inference agree within tolerance.
-- Real Lite history imports without invented information.
+- The development Lite importer remains usable through disposable-schema work.
+- Real Lite history imports into the final schema without invented information.
 - Backup → wipe → restore → replay preserves canonical history.
 - Only then is destructive production migration removed and Native declared authoritative.
 
