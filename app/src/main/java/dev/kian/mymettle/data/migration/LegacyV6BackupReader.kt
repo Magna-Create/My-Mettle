@@ -818,4 +818,67 @@ private fun legacySetValues(
     }
 }
 
-private fun PerformanceMetricValue.toLegacyEntity(observationId: String): S
+private fun PerformanceMetricValue.toLegacyEntity(observationId: String): SetMetricValueEntity = SetMetricValueEntity(
+    observationId = observationId,
+    metric = metric.storageValue,
+    enteredValue = entered.value,
+    enteredUnit = entered.unit.storageValue,
+    canonicalValue = canonical.value,
+    canonicalUnit = canonical.unit.storageValue,
+)
+
+private inline fun requireImport(condition: Boolean, message: () -> String) {
+    if (!condition) throw LegacyImportException(message())
+}
+
+private fun JSONObject.objectRequired(name: String): JSONObject =
+    optJSONObject(name) ?: throw LegacyImportException("Backup field '$name' is missing or is not an object.")
+
+private fun JSONObject.objectOrNull(name: String): JSONObject? =
+    if (!has(name) || isNull(name)) null else optJSONObject(name)
+
+private fun JSONObject.arrayRequired(name: String): JSONArray =
+    optJSONArray(name) ?: throw LegacyImportException("Backup field '$name' is missing or is not an array.")
+
+private fun JSONObject.arrayOrEmpty(name: String): JSONArray = optJSONArray(name) ?: JSONArray()
+
+private fun JSONObject.stringRequired(name: String): String {
+    if (!has(name) || isNull(name)) throw LegacyImportException("Backup field '$name' is missing.")
+    return getString(name)
+}
+
+private fun JSONObject.intRequired(name: String): Int {
+    if (!has(name) || isNull(name)) throw LegacyImportException("Backup field '$name' is missing.")
+    return getInt(name)
+}
+
+private fun JSONObject.doubleRequired(name: String): Double {
+    if (!has(name) || isNull(name)) throw LegacyImportException("Backup field '$name' is missing.")
+    return getDouble(name)
+}
+
+private fun JSONObject.stringOrNull(name: String): String? =
+    if (!has(name) || isNull(name)) null else getString(name)
+
+private fun JSONObject.intOrNull(name: String): Int? =
+    if (!has(name) || isNull(name)) null else getInt(name)
+
+private fun JSONObject.doubleOrNull(name: String): Double? =
+    if (!has(name) || isNull(name)) null else getDouble(name)
+
+private fun JSONObject.stringArray(name: String): List<String> =
+    arrayOrEmpty(name).let { array -> List(array.length()) { index -> array.getString(index) } }
+
+private fun JSONObject.scalarString(name: String): String {
+    if (!has(name) || isNull(name)) throw LegacyImportException("Backup field '$name' is missing.")
+    return when (val value = get(name)) {
+        is Number -> value.toString()
+        is String -> value
+        else -> throw LegacyImportException("Backup field '$name' is not a supported scalar value.")
+    }
+}
+
+private fun JSONArray.objects(): List<JSONObject> =
+    List(length()) { index ->
+        optJSONObject(index) ?: throw LegacyImportException("Backup array item $index is not an object.")
+    }
