@@ -159,6 +159,17 @@ incline, power, cadence, execution geometry or machine calibration, so the impor
 facts unknown rather than manufacturing them. The session bodyweight snapshot is the default;
 only a differing legacy session-exercise snapshot becomes an observation override.
 
+Room v12 adds the generic temporal-evidence half of N-BIO-6. Canonical point, interval and
+spatial-route-compatible traces are stored once in versioned binary chunks, with explicit
+foreign-key links to sessions, session exercises, sets and observations. External source records
+become immutable revision snapshots; deletion and permission states do not erase prior Native
+evidence. Exact source timestamps use epoch-second plus nanosecond columns, while imported Lite
+observations keep completion-only timing and never acquire fabricated starts or traces. Scalar
+metric values now carry independent acquisition, granularity and semantic-role metadata without
+changing their factual values. `health_observation` remains a pre-temporal scalar compatibility
+table only; N-BIO-9 must map future integrations into the generic temporal store instead of
+creating a second trace history.
+
 ## Native rollout
 
 ### N0 — foundation

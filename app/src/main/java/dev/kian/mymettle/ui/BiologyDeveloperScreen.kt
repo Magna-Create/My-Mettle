@@ -199,8 +199,15 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                         state.nBio6DeviceReport?.let { report ->
                             HorizontalDivider()
                             DebugLine("Automated result", if (report.passed) "PASS" else "FAIL")
-                            DebugLine("Checks", "${report.checks.count { it.passed }}/${report.checks.size} passed")
+                            DebugLine("Scalar checks", "${report.checks.count { it.passed }}/${report.checks.size} passed")
                             report.checks.forEach { VerificationCheckResult(it) }
+                            HorizontalDivider()
+                            Text("Temporal evidence", fontWeight = FontWeight.SemiBold)
+                            DebugLine(
+                                "Temporal checks",
+                                "${report.temporalChecks.count { it.passed }}/${report.temporalChecks.size} passed",
+                            )
+                            report.temporalChecks.forEach { VerificationCheckResult(it) }
                         }
                         HorizontalDivider()
                         Text(

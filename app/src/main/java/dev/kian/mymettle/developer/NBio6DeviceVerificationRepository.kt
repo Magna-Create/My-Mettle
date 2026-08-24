@@ -73,8 +73,10 @@ data class NBio6DeviceVerificationReport(
     val startedAt: String,
     val completedAt: String,
     val checks: List<NBio6VerificationCheck>,
+    val temporalChecks: List<NBio6VerificationCheck> = emptyList(),
 ) {
-    val passed: Boolean get() = checks.isNotEmpty() && checks.all { it.passed }
+    val allChecks: List<NBio6VerificationCheck> get() = checks + temporalChecks
+    val passed: Boolean get() = allChecks.isNotEmpty() && allChecks.all { it.passed }
 
     fun toJson(): JSONObject = JSONObject()
         .put("kind", "n-bio-6-device-verification")
@@ -82,8 +84,13 @@ data class NBio6DeviceVerificationReport(
         .put("startedAt", startedAt)
         .put("completedAt", completedAt)
         .put("passed", passed)
-        .put("checks", JSONArray().apply {
-            checks.forEach { check ->
+        .put("schemaVersion", 12)
+        .put("codecVersion", dev.kian.mymettle.domain.evidence.TemporalEvidenceCodec.ENCODING_VERSION)
+        .put("checks", checks.toJson())
+        .put("temporalChecks", temporalChecks.toJson())
+
+    private fun List<NBio6VerificationCheck>.toJson(): JSONArray = JSONArray().apply {
+            forEach { check ->
                 put(
                     JSONObject()
                         .put("id", check.id)
@@ -93,10 +100,10 @@ data class NBio6DeviceVerificationReport(
                         .put("durationMillis", check.durationMillis),
                 )
             }
-        })
+        }
 
     companion object {
-        const val CONTRACT_VERSION = "n-bio-6-device-verifier-v1"
+        const val CONTRACT_VERSION = "n-bio-6-device-verifier-v2"
     }
 }
 
@@ -140,7 +147,7 @@ class NBio6DeviceVerificationRepository(context: Context) {
     suspend fun runAutomatedChecks(): NBio6DeviceVerificationReport = withContext(Dispatchers.IO) {
         val startedAt = Instant.now().toString()
         val checks = listOf(
-            runCheck("room-11", "Room 11 schema and foreign keys", ::verifyRoomContract),
+            runCheck("room-12", "Room 12 schema and foreign keys", ::verifyRoomContract),
             runCheck("dead-hang", "Dead hang: rep-free end to end", ::verifyDeadHang),
             runCheck("grip-replay", "Grip hold: sides, correction and replay", ::verifyGripAndReplay),
             runCheck("assistance", "Assistance directionality", ::verifyAssistanceDirection),
@@ -148,7 +155,8 @@ class NBio6DeviceVerificationRepository(context: Context) {
             runCheck("stair-machine", "Stair-machine ordinal evidence", ::verifyStairMachine),
             runCheck("power-duration", "Power-duration separation", ::verifyPowerDuration),
         )
-        NBio6DeviceVerificationReport(startedAt, Instant.now().toString(), checks)
+        val temporalChecks = TemporalEvidenceDeviceVerifier(appContext).runChecks()
+        NBio6DeviceVerificationReport(startedAt, Instant.now().toString(), checks, temporalChecks)
     }
 
     suspend fun verifyLiteBackup(fileName: String, json: String): NBio6LiteBackupVerificationReport =
@@ -198,6 +206,13 @@ class NBio6DeviceVerificationRepository(context: Context) {
                     expect(storedObservations.all { it.source == "lite_legacy_v6_import" }) {
                         "Lite evidence lost its import provenance."
                     }
+                    expect(storedObservations.all {
+                        it.startedAtEpochSecond == null && it.startedAtNano == null &&
+                            it.timingQuality == dev.kian.mymettle.domain.evidence.TimingQuality.COMPLETION_ONLY.storageValue
+                    }) { "Lite evidence acquired an invented start bound or timing precision." }
+                    expect(database.temporalEvidenceDao().allTraces().isEmpty()) {
+                        "Lite import invented temporal traces that did not exist in schema 6."
+                    }
                     expect(foreignKeyFailures(database).isEmpty()) {
                         "Imported database has foreign-key violations: ${foreignKeyFailures(database).joinToString()}"
                     }
@@ -221,7 +236,7 @@ class NBio6DeviceVerificationRepository(context: Context) {
                         fileName = fileName,
                         completedAt = Instant.now().toString(),
                         passed = true,
-                        detail = "Translated and persisted into isolated Room 11; factual rows, history, provenance, foreign keys and inference replay verified.",
+                        detail = "Translated and persisted into isolated Room 12; factual rows, completion-only timing, no invented traces, history, provenance, foreign keys and inference replay verified.",
                         exercises = snapshot.exercises.size,
                         sessions = snapshot.sessions.size,
                         sets = snapshot.sets.size,
@@ -286,7 +301,7 @@ class NBio6DeviceVerificationRepository(context: Context) {
             expect(cursor.moveToFirst()) { "PRAGMA user_version returned no row." }
             cursor.getInt(0)
         }
-        expect(userVersion == 11) { "Room opened schema $userVersion instead of schema 11." }
+        expect(userVersion == 12) { "Room opened schema $userVersion instead of schema 12." }
         val tables = sqlite.query("SELECT name FROM sqlite_master WHERE type = 'table'").use { cursor ->
             buildSet {
                 while (cursor.moveToNext()) add(cursor.getString(0))
@@ -305,6 +320,16 @@ class NBio6DeviceVerificationRepository(context: Context) {
             "stimulus_estimate",
             "exercise_translation_state",
             "exercise_translation_metric_anchor",
+            "external_evidence_artifact",
+            "evidence_trace",
+            "evidence_trace_chunk",
+            "session_trace_link",
+            "session_exercise_trace_link",
+            "set_record_trace_link",
+            "observation_trace_link",
+            "derived_evidence_summary",
+            "derived_evidence_summary_input",
+            "evidence_trace_ui_cache",
         )
         expect(required.all { it in tables }) { "Missing Room tables: ${(required - tables).sorted().joinToString()}." }
         expect(foreignKeyFailures(database).isEmpty()) { "Fresh Room schema failed PRAGMA foreign_key_check." }

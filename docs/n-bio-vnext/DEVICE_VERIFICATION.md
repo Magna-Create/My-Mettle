@@ -12,8 +12,8 @@ pkg install -y git openjdk-17 curl unzip
 termux-setup-storage
 
 git fetch origin
-git switch agent/n-bio-vnext-foundation
-git pull --ff-only origin agent/n-bio-vnext-foundation
+git switch agent/n-bio-vnext-temporal-foundation
+git pull --ff-only origin agent/n-bio-vnext-temporal-foundation
 
 ./gradlew --stop
 ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --no-daemon \
@@ -38,18 +38,31 @@ An optional compile-only check for the instrumentation package is:
 
 1. Open **Settings → Developer → Biological developer tools**.
 2. Under **N-BIO-6 device acceptance**, tap **Run automated Room and flow checks**.
-3. Confirm that all seven checks report `PASS`:
-   - Room 11 schema and foreign keys;
+3. Confirm that all seven scalar checks report `PASS`:
+   - Room 12 schema and foreign keys;
    - dead hang, rep-free end to end;
    - grip hold sides, correction, raw immutability and inference replay;
    - assistance directionality;
    - treadmill physical-unit round trip;
    - stair-machine ordinal evidence;
    - power-duration separation.
-4. Tap **Validate a real Lite backup** and select an unmodified schema-6 JSON backup. Confirm `PASS` and review the translated exercise/session/set/observation/metric counts and evidence samples.
-5. Tap **Export N-BIO-6 closure report** and save the JSON file.
+4. Confirm that all ten temporal-evidence checks report `PASS`:
+   - point-series persistence and codec;
+   - interval-series value semantics;
+   - one session HR trace linked to multiple sets;
+   - manual summaries and imported trace coexistence;
+   - immutable external revision supersession;
+   - deleted-source snapshot retention;
+   - raw trace survival after derived-state deletion;
+   - sampling-gap and sensor-spike preservation;
+   - equal-average/different-trace distinction;
+   - exact bounds and timing-quality persistence.
+5. Tap **Validate a real Lite backup** and select an unmodified schema-6 JSON backup. Confirm `PASS` and review the translated exercise/session/set/observation/metric counts and evidence samples.
+6. Tap **Export N-BIO-6 closure report** and save the JSON file.
 
-The real-backup verifier checks exact factual Room persistence, unknown laterality, import provenance, foreign keys, History projection and conservative inference replay. It does not invent a backup when none is available.
+The real-backup verifier checks exact factual Room persistence, completion-only/unknown timing,
+absence of invented temporal traces, unknown laterality, import provenance, foreign keys, History
+projection and conservative inference replay. It does not invent a backup when none is available.
 
 ## Report a failure
 
