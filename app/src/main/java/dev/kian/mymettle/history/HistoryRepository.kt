@@ -88,7 +88,7 @@ class HistoryRepository(
                 values += PerformanceMetricValue(metric, Quantity(entered, unit))
             }
         }
-        reps?.let { values += PerformanceMetricValue(PerformanceMetric.REPETITIONS, Quantity(it.toDouble(), UnitId.REP)) }
+        reps?.let { values += PerformanceMetricValue(PerformanceMetric.REPETITIONS, Quantity(it.toDouble(), UnitId.REPETITION)) }
         durationSeconds?.let { values += PerformanceMetricValue(PerformanceMetric.DURATION, Quantity(it.toDouble(), UnitId.SECOND)) }
         distanceMetres?.let { values += PerformanceMetricValue(PerformanceMetric.DISTANCE, Quantity(it, UnitId.METRE)) }
         workoutRepository.saveObservation(

@@ -51,11 +51,12 @@ object SessionAchievementScorer {
         val repBeats = targets.sumOf { exercise ->
             val repMaximum = exercise.prescription.repRange?.last
             exercise.sets.count { set ->
+                val performedReps = set.reps
                 set.completedAt != null &&
                     set.setIndex < exercise.prescription.sets &&
                     repMaximum != null &&
-                    set.reps != null &&
-                    set.reps > repMaximum
+                    performedReps != null &&
+                    performedReps > repMaximum
             }
         }
 
