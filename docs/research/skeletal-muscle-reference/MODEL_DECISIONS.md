@@ -203,7 +203,9 @@ User muscle state + goals + recovery
 
 ## 14. Raw workout evidence remains authoritative
 
-Sets, reps, load, RIR/reflection data and session context should remain durable raw evidence.
+Sets, reps, load, reflection data and session context should remain durable raw evidence. Native v0
+deliberately excludes RIR/subjective reserve ratings: their expected value does not justify the
+noise they add to the evidence model.
 
 Derived stimulus and muscle-state estimates must be versioned/recomputable. If the progression model changes later, historical sessions should be capable of being reinterpreted rather than permanently encoding an early formula.
 

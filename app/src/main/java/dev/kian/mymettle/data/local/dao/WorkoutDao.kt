@@ -130,8 +130,14 @@ interface WorkoutDao {
     @Query("SELECT * FROM exercise WHERE id IN (:exerciseIds)")
     suspend fun exercises(exerciseIds: List<String>): List<ExerciseEntity>
 
+    @Query("SELECT * FROM exercise WHERE archived = 0 ORDER BY name COLLATE NOCASE")
+    suspend fun allActiveExercises(): List<ExerciseEntity>
+
     @Query("SELECT * FROM exercise_execution_profile WHERE exerciseId IN (:exerciseIds) ORDER BY exerciseId, isDefault DESC, id")
     suspend fun executionProfiles(exerciseIds: List<String>): List<ExerciseExecutionProfileEntity>
+
+    @Query("SELECT * FROM exercise_execution_profile WHERE id IN (:profileIds) ORDER BY id")
+    suspend fun executionProfilesById(profileIds: List<String>): List<ExerciseExecutionProfileEntity>
 
     @Query("SELECT * FROM recruitment_allocation WHERE executionProfileId IN (:executionProfileIds)")
     suspend fun recruitmentAllocations(executionProfileIds: List<String>): List<RecruitmentAllocationEntity>
@@ -144,6 +150,9 @@ interface WorkoutDao {
         """,
     )
     suspend fun routineSlots(routineVersionId: String, daySymbol: String): List<RoutineSlotEntity>
+
+    @Query("SELECT daySymbol FROM routine_slot WHERE routineVersionId = :routineVersionId GROUP BY daySymbol ORDER BY MIN(position)")
+    suspend fun routineDays(routineVersionId: String): List<String>
 
     @Query(
         """
@@ -182,6 +191,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM session_exercise WHERE sessionId = :sessionId ORDER BY position")
     suspend fun sessionExercises(sessionId: String): List<SessionExerciseEntity>
 
+    @Query("SELECT * FROM session_exercise WHERE id = :sessionExerciseId LIMIT 1")
+    suspend fun sessionExercise(sessionExerciseId: String): SessionExerciseEntity?
+
     @Query("SELECT * FROM session_target WHERE sessionId = :sessionId ORDER BY priority DESC, id")
     suspend fun sessionTargets(sessionId: String): List<SessionTargetEntity>
 
@@ -193,6 +205,9 @@ interface WorkoutDao {
 
     @Query("DELETE FROM session_exercise_target WHERE sessionExerciseId = :sessionExerciseId")
     suspend fun deleteSessionExerciseTargets(sessionExerciseId: String)
+
+    @Query("DELETE FROM set_record WHERE sessionExerciseId = :sessionExerciseId")
+    suspend fun deleteSets(sessionExerciseId: String)
 
     @Query("UPDATE session_exercise SET position = position + 10000 WHERE sessionId = :sessionId")
     suspend fun offsetSessionExercisePositions(sessionId: String)

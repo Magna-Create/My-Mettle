@@ -164,7 +164,6 @@ data class ExerciseTranslationStateEntity(
     val observedDurationUncertainty: Double?,
     val observedDistanceMetresAnchor: Double?,
     val observedDistanceUncertainty: Double?,
-    val observedRirAnchor: Double?,
     val observedAnchorSetRecordId: String?,
     val sampleCount: Int,
     val updatedAt: String,

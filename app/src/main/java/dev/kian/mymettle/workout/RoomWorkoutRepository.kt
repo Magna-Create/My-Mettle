@@ -22,6 +22,7 @@ import dev.kian.mymettle.domain.exercise.ExecutionProfileId
 import dev.kian.mymettle.domain.exercise.ExerciseId
 import dev.kian.mymettle.domain.exercise.LoadResolution
 import dev.kian.mymettle.domain.training.ExercisePrescription
+import dev.kian.mymettle.domain.training.PrescriptionLoadEvidence
 import dev.kian.mymettle.domain.training.ResolvedTrainingTarget
 import dev.kian.mymettle.domain.training.SessionConstraints
 import dev.kian.mymettle.domain.training.TargetSource
@@ -30,6 +31,7 @@ import dev.kian.mymettle.domain.training.TrainingTargetId
 import dev.kian.mymettle.engine.prescription.HistoryBackedPrescriptionEngine
 import dev.kian.mymettle.engine.prescription.PrescriptionEngine
 import dev.kian.mymettle.engine.prescription.PrescriptionRequest
+import dev.kian.mymettle.engine.prescription.SameProfileLoadEvidenceResolver
 import dev.kian.mymettle.engine.targeting.BudgetedTargetExerciseSelector
 import dev.kian.mymettle.engine.targeting.ConstraintTargetResolver
 import dev.kian.mymettle.engine.targeting.ExerciseSelectionCandidate
@@ -58,6 +60,19 @@ data class PlannedWorkoutExercise(
     val estimatedDurationSeconds: Int,
 )
 
+data class WorkoutCandidateDecision(
+    val slotId: String,
+    val exerciseId: String,
+    val exerciseName: String,
+    val executionProfileId: String,
+    val executionProfileName: String,
+    val preferencePriority: Double,
+    val targetCoverage: Map<String, Double>,
+    val selected: Boolean,
+    val selectedSets: Int?,
+    val decisionReason: String,
+)
+
 data class NativeWorkoutPlan(
     val routineVersionId: String,
     val day: String,
@@ -65,11 +80,26 @@ data class NativeWorkoutPlan(
     val constraints: SessionConstraints,
     val targetResolutions: List<ResolvedTrainingTarget>,
     val exercises: List<PlannedWorkoutExercise>,
+    val candidateDecisions: List<WorkoutCandidateDecision>,
 ) {
     val targets: List<TrainingTarget> get() = targetResolutions.filter { it.included }.map { it.target }
     val workingSetCount: Int get() = exercises.sumOf { it.prescription.sets }
     val estimatedDurationSeconds: Int get() = exercises.sumOf { it.estimatedDurationSeconds }
 }
+
+data class ExerciseSwapOption(
+    val exerciseId: String,
+    val exerciseName: String,
+    val executionProfileId: String,
+    val executionProfileName: String,
+    val trackingMetric: String,
+    val loadRelationship: String,
+    val entryBasis: String,
+    val defaultUnit: String,
+    val matchedTargetIds: List<TrainingTargetId>,
+    val targetCoverageScore: Double,
+    val prescription: ExercisePrescription,
+)
 
 data class ActiveWorkoutExercise(
     val entity: SessionExerciseEntity,
@@ -272,35 +302,62 @@ class RoomWorkoutRepository(
                     indices = 0 until planned.prescription.sets,
                 )
             } else {
+                val substituted = current.substitutedFromExerciseId != null
+                val retainedTargetIds = if (substituted) {
+                    dao.sessionExerciseTargets(current.id).map { TrainingTargetId(it.sessionTargetId) }
+                } else {
+                    emptyList()
+                }
+                val effectivePrescription = if (substituted) {
+                    current.toPrescription(retainedTargetIds).copy(sets = planned.prescription.sets)
+                } else {
+                    planned.prescription
+                }
                 updatedExercises += current.copy(
                     position = position,
                     importanceSnapshot = planned.importance.name.lowercase(),
-                    executionProfileId = planned.prescription.executionProfileId.value,
-                    executionProfileNameSnapshot = planned.executionProfileName,
-                    prescribedLoad = planned.prescription.prescribedLoad,
+                    executionProfileId = effectivePrescription.executionProfileId.value,
+                    executionProfileNameSnapshot = if (substituted) current.executionProfileNameSnapshot else planned.executionProfileName,
+                    prescribedLoad = effectivePrescription.prescribedLoad,
+                    prescribedLoadEvidenceSource = effectivePrescription.loadEvidence?.source,
+                    prescribedLoadEvidenceSetId = effectivePrescription.loadEvidence?.sourceSetRecordId,
+                    prescribedLoadInferenceRunId = effectivePrescription.loadEvidence?.inferenceRunId,
+                    prescribedLoadAnchor = effectivePrescription.loadEvidence?.anchorLoad,
                     prescriptionMode = mode.code,
                     prescriptionIncluded = true,
-                    prescribedSets = planned.prescription.sets,
-                    repMin = planned.prescription.repRange.first,
-                    repMax = planned.prescription.repRange.last,
-                    targetRir = planned.prescription.targetRir,
-                    restSeconds = planned.prescription.restSeconds,
-                    generatedByModelVersion = planned.prescription.generatedByModelVersion,
+                    prescribedSets = effectivePrescription.sets,
+                    repMin = effectivePrescription.repRange.first,
+                    repMax = effectivePrescription.repRange.last,
+                    restSeconds = effectivePrescription.restSeconds,
+                    generatedByModelVersion = effectivePrescription.generatedByModelVersion,
                     deferToAnd = false,
-                    movementReason = planned.movementReason,
+                    movementReason = if (substituted) USER_SUBSTITUTION_REASON else planned.movementReason,
                 )
-                dao.deleteSessionExerciseTargets(current.id)
-                updatedExerciseTargets += planned.toSessionExerciseTargets(
-                    current.id,
-                    sessionTargetByProgrammeId,
-                )
+                if (!substituted) {
+                    dao.deleteSessionExerciseTargets(current.id)
+                    updatedExerciseTargets += planned.toSessionExerciseTargets(
+                        current.id,
+                        sessionTargetByProgrammeId,
+                    )
+                }
 
                 val currentSets = dao.sets(current.id)
                 val currentIndices = currentSets.mapTo(mutableSetOf()) { it.setIndex }
-                val missingIndices = (0 until planned.prescription.sets).filterNot { it in currentIndices }
-                updatedSets += prescribedSets(current.id, planned, missingIndices)
+                val missingIndices = (0 until effectivePrescription.sets).filterNot { it in currentIndices }
+                updatedSets += if (substituted) {
+                    prescribedSets(
+                        sessionExerciseId = current.id,
+                        trackingMetric = current.trackingMetricSnapshot,
+                        loadRelationship = current.loadRelationshipSnapshot,
+                        defaultUnit = currentSets.firstOrNull()?.unit ?: "kg",
+                        prescription = effectivePrescription,
+                        indices = missingIndices,
+                    )
+                } else {
+                    prescribedSets(current.id, planned, missingIndices)
+                }
                 updatedSets += currentSets
-                    .filter { it.setIndex >= planned.prescription.sets && it.completedAt != null && it.kind == "prescribed" }
+                    .filter { it.setIndex >= effectivePrescription.sets && it.completedAt != null && it.kind == "prescribed" }
                     .map { it.copy(kind = "additional") }
             }
         }
@@ -325,6 +382,159 @@ class RoomWorkoutRepository(
         activeWorkout(sessionId)
     }
 
+    /**
+     * Resolve replacements against the current movement's session targets. Load suggestions are
+     * generated from the replacement execution profile only; the outgoing exercise contributes no
+     * load evidence.
+     */
+    suspend fun swapOptions(sessionExerciseId: String): List<ExerciseSwapOption> =
+        buildSwapOptions(sessionExerciseId)
+
+    suspend fun swapExercise(
+        sessionExerciseId: String,
+        replacementExecutionProfileId: String,
+    ): ActiveWorkout = database.withTransaction {
+        val current = dao.sessionExercise(sessionExerciseId)
+            ?: throw NativeWorkoutException("Exercise not found in the workout.")
+        val session = dao.session(current.sessionId) ?: throw NativeWorkoutException("Workout not found.")
+        if (session.status != "active") throw NativeWorkoutException("Only an active workout can change exercises.")
+        if (current.status == "completed" || dao.sets(current.id).any { it.completedAt != null }) {
+            throw NativeWorkoutException("An exercise cannot be swapped after one of its sets has been logged.")
+        }
+
+        val replacement = buildSwapOptions(current.id)
+            .firstOrNull { it.executionProfileId == replacementExecutionProfileId }
+            ?: throw NativeWorkoutException("That replacement is no longer compatible with this session target.")
+        val prescription = replacement.prescription
+        val updated = current.copy(
+            exerciseId = replacement.exerciseId,
+            exerciseNameSnapshot = replacement.exerciseName,
+            trackingMetricSnapshot = replacement.trackingMetric,
+            loadRelationshipSnapshot = replacement.loadRelationship,
+            entryBasisSnapshot = replacement.entryBasis,
+            executionProfileId = replacement.executionProfileId,
+            executionProfileNameSnapshot = replacement.executionProfileName,
+            prescribedLoad = prescription.prescribedLoad,
+            prescribedLoadEvidenceSource = prescription.loadEvidence?.source,
+            prescribedLoadEvidenceSetId = prescription.loadEvidence?.sourceSetRecordId,
+            prescribedLoadInferenceRunId = prescription.loadEvidence?.inferenceRunId,
+            prescribedLoadAnchor = prescription.loadEvidence?.anchorLoad,
+            prescribedSets = prescription.sets,
+            repMin = prescription.repRange.first,
+            repMax = prescription.repRange.last,
+            restSeconds = prescription.restSeconds,
+            generatedByModelVersion = prescription.generatedByModelVersion,
+            status = "planned",
+            startedAt = null,
+            completedAt = null,
+            movementReason = USER_SUBSTITUTION_REASON,
+            substitutedFromExerciseId = current.substitutedFromExerciseId ?: current.exerciseId,
+        )
+
+        dao.deleteSessionExerciseTargets(current.id)
+        dao.deleteSets(current.id)
+        dao.upsertSessionExercises(listOf(updated))
+        if (replacement.matchedTargetIds.isNotEmpty()) {
+            dao.upsertSessionExerciseTargets(
+                replacement.matchedTargetIds.map { targetId ->
+                    SessionExerciseTargetEntity(current.id, targetId.value)
+                },
+            )
+        }
+        dao.upsertSets(
+            prescribedSets(
+                sessionExerciseId = current.id,
+                trackingMetric = replacement.trackingMetric,
+                loadRelationship = replacement.loadRelationship,
+                defaultUnit = replacement.defaultUnit,
+                prescription = prescription,
+                indices = 0 until prescription.sets,
+            ),
+        )
+        dao.upsertSessions(listOf(session.copy(editedAt = timestamp())))
+        activeWorkout(session.id)
+    }
+
+    private suspend fun buildSwapOptions(sessionExerciseId: String): List<ExerciseSwapOption> {
+        val current = dao.sessionExercise(sessionExerciseId)
+            ?: throw NativeWorkoutException("Exercise not found in the workout.")
+        val session = dao.session(current.sessionId) ?: throw NativeWorkoutException("Workout not found.")
+        if (session.status != "active") return emptyList()
+        if (current.status == "completed" || dao.sets(current.id).any { it.completedAt != null }) return emptyList()
+
+        val sessionTargets = dao.sessionTargets(session.id).associateBy { it.id }
+        val currentTargetIds = dao.sessionExerciseTargets(current.id).map { it.sessionTargetId }
+        val currentTargets = currentTargetIds.mapNotNull(sessionTargets::get)
+        val targetBySegment = currentTargets.associateBy { it.muscleSegmentId }
+        val exercises = dao.allActiveExercises().filterNot { it.id == current.exerciseId }
+        if (exercises.isEmpty()) return emptyList()
+        val defaultProfiles = dao.executionProfiles(exercises.map { it.id })
+            .groupBy { it.exerciseId }
+            .mapNotNull { (_, profiles) -> profiles.singleOrNull { it.isDefault } }
+        val recruitmentByProfile = dao.recruitmentAllocations(defaultProfiles.map { it.id })
+            .groupBy { it.executionProfileId }
+        val exerciseById = exercises.associateBy { it.id }
+        val inferenceSnapshot = inferenceRepository.latestSnapshot()
+        val translationByProfile = inferenceSnapshot?.exerciseTranslationStates.orEmpty()
+            .associateBy { it.executionProfileId.value }
+
+        return defaultProfiles.mapNotNull { profile ->
+            val exercise = exerciseById[profile.exerciseId] ?: return@mapNotNull null
+            val matchedCoverage = matchedSwapTargetCoverage(
+                targetsBySegment = targetBySegment,
+                recruitment = recruitmentByProfile[profile.id].orEmpty(),
+            )
+            if (currentTargets.isNotEmpty() && matchedCoverage.isEmpty()) return@mapNotNull null
+
+            val translation = translationByProfile[profile.id]
+            val rawAnchor = if (translation?.observedLoadAnchor == null) {
+                dao.latestCompletedLoadForExecutionProfile(profile.id, excludeSessionId = session.id)
+            } else {
+                null
+            }
+            val loadEvidence = SameProfileLoadEvidenceResolver.resolve(
+                inferredLoad = translation?.observedLoadAnchor?.value,
+                inferredSetRecordId = translation?.observedLoadAnchor?.sourceId,
+                inferenceRunId = inferenceSnapshot?.run?.id?.value,
+                rawLoad = rawAnchor?.load,
+                rawSetRecordId = rawAnchor?.id,
+            )
+            val prescription = prescriptionEngine.generate(
+                PrescriptionRequest(
+                    exerciseId = ExerciseId(exercise.id),
+                    executionProfileId = ExecutionProfileId(profile.id),
+                    targetIds = matchedCoverage.keys.sortedBy { it.value },
+                    sets = current.prescribedSets.coerceAtLeast(1),
+                    repRange = current.repMin..current.repMax,
+                    loadEvidence = loadEvidence,
+                    permitsExternalLoad = exercise.trackingMetric == "load_reps" &&
+                        exercise.loadRelationship !in setOf("bodyweight", "none"),
+                    loadResolution = profile.toLoadResolution(),
+                    restSeconds = current.restSeconds,
+                ),
+            )
+            ExerciseSwapOption(
+                exerciseId = exercise.id,
+                exerciseName = exercise.name,
+                executionProfileId = profile.id,
+                executionProfileName = profile.name,
+                trackingMetric = exercise.trackingMetric,
+                loadRelationship = exercise.loadRelationship,
+                entryBasis = exercise.entryBasis,
+                defaultUnit = exercise.defaultUnit,
+                matchedTargetIds = prescription.targetIds,
+                targetCoverageScore = matchedCoverage.entries.sumOf { (targetId, coverage) ->
+                    (sessionTargets[targetId.value]?.resolvedPriority ?: 0.0) * coverage
+                },
+                prescription = prescription,
+            )
+        }.sortedWith(
+            compareByDescending<ExerciseSwapOption> { it.targetCoverageScore }
+                .thenBy { it.exerciseName.lowercase() }
+                .thenBy { it.executionProfileName.lowercase() },
+        )
+    }
+
     suspend fun saveSet(
         sessionExerciseId: String,
         setId: String,
@@ -333,12 +543,7 @@ class RoomWorkoutRepository(
         durationSeconds: Int? = null,
         distanceMetres: Double? = null,
         logged: Boolean,
-        rir: Double? = null,
-        effortSource: String? = null,
     ): SetRecordEntity = database.withTransaction {
-        if (rir != null && rir !in 0.0..10.0) {
-            throw NativeWorkoutException("RIR must be between 0 and 10.")
-        }
         val current = dao.sets(sessionExerciseId).firstOrNull { it.id == setId }
             ?: throw NativeWorkoutException("Set not found.")
         val next = current.copy(
@@ -347,8 +552,6 @@ class RoomWorkoutRepository(
             durationSeconds = durationSeconds,
             distanceMetres = distanceMetres,
             completedAt = if (logged) current.completedAt ?: timestamp() else null,
-            rir = rir,
-            effortSource = effortSource,
         )
         dao.upsertSets(listOf(next))
         next
@@ -431,6 +634,7 @@ class RoomWorkoutRepository(
             constraints = constraints,
             targetResolutions = targetResolutions,
             exercises = emptyList(),
+            candidateDecisions = emptyList(),
         )
 
         val exerciseById = dao.exercises(slots.map { it.exerciseId }.distinct()).associateBy { it.id }
@@ -475,24 +679,57 @@ class RoomWorkoutRepository(
                 preferencePriority = slot.importance.toTargetPriority(),
                 preferredSetCap = slot.preferredSets,
                 repRange = slot.repMin..slot.repMax,
-                targetRir = null,
                 restSeconds = slot.restSeconds,
                 targetCoverage = targetCoverage,
             )
         }
 
         val selections = exerciseSelector.select(targetResolutions, candidates, constraints)
-        val translationByProfile = inferenceRepository.latestSnapshot()
+        val selectedByPreferenceId = selections.associateBy { it.candidate.preferenceId }
+        val includedTargetIds = targetResolutions.filter { it.included }.mapTo(hashSetOf()) { it.target.id }
+        val candidateDecisions = candidates.map { candidate ->
+            val source = sourceByPreferenceId.getValue(candidate.preferenceId)
+            val selection = selectedByPreferenceId[candidate.preferenceId]
+            val coversIncludedTarget = candidate.targetCoverage.keys.any { it in includedTargetIds }
+            WorkoutCandidateDecision(
+                slotId = source.slot.id,
+                exerciseId = source.exercise.id,
+                exerciseName = source.exercise.name,
+                executionProfileId = source.executionProfile.id,
+                executionProfileName = source.executionProfile.name,
+                preferencePriority = candidate.preferencePriority,
+                targetCoverage = candidate.targetCoverage.mapKeys { it.key.value },
+                selected = selection != null,
+                selectedSets = selection?.sets,
+                decisionReason = selection?.reason ?: when {
+                    !coversIncludedTarget && candidate.targetCoverage.isNotEmpty() -> "no_included_target_coverage"
+                    candidate.targetCoverage.isEmpty() && candidate.preferencePriority < constraints.targetPriorityFloor ->
+                        "below_target_priority_floor"
+                    else -> "not_selected_within_budget"
+                },
+            )
+        }
+        val inferenceSnapshot = inferenceRepository.latestSnapshot()
+        val translationByProfile = inferenceSnapshot
             ?.exerciseTranslationStates
             .orEmpty()
             .associateBy { it.executionProfileId.value }
         val planned = selections.map { selection ->
             val candidate = selection.candidate
             val source = sourceByPreferenceId.getValue(candidate.preferenceId)
-            val observedLoadAnchor = translationByProfile[source.executionProfile.id]
-                ?.observedLoadAnchor
-                ?.value
-                ?: dao.latestCompletedLoadForExecutionProfile(source.executionProfile.id)?.load
+            val translation = translationByProfile[source.executionProfile.id]
+            val rawAnchor = if (translation?.observedLoadAnchor == null) {
+                dao.latestCompletedLoadForExecutionProfile(source.executionProfile.id)
+            } else {
+                null
+            }
+            val loadEvidence = SameProfileLoadEvidenceResolver.resolve(
+                inferredLoad = translation?.observedLoadAnchor?.value,
+                inferredSetRecordId = translation?.observedLoadAnchor?.sourceId,
+                inferenceRunId = inferenceSnapshot?.run?.id?.value,
+                rawLoad = rawAnchor?.load,
+                rawSetRecordId = rawAnchor?.id,
+            )
             val generated = prescriptionEngine.generate(
                 PrescriptionRequest(
                     exerciseId = ExerciseId(source.exercise.id),
@@ -500,8 +737,7 @@ class RoomWorkoutRepository(
                     targetIds = selection.targetIds,
                     sets = selection.sets,
                     repRange = candidate.repRange,
-                    targetRir = candidate.targetRir,
-                    previousPerformedLoad = observedLoadAnchor,
+                    loadEvidence = loadEvidence,
                     permitsExternalLoad = source.exercise.trackingMetric == "load_reps" &&
                         source.exercise.loadRelationship !in setOf("bodyweight", "none"),
                     loadResolution = source.executionProfile.toLoadResolution(),
@@ -530,6 +766,7 @@ class RoomWorkoutRepository(
             constraints = constraints,
             targetResolutions = targetResolutions,
             exercises = planned,
+            candidateDecisions = candidateDecisions,
         )
     }
 
@@ -555,12 +792,15 @@ class RoomWorkoutRepository(
         executionProfileId = prescription.executionProfileId.value,
         executionProfileNameSnapshot = executionProfileName,
         prescribedLoad = prescription.prescribedLoad,
+        prescribedLoadEvidenceSource = prescription.loadEvidence?.source,
+        prescribedLoadEvidenceSetId = prescription.loadEvidence?.sourceSetRecordId,
+        prescribedLoadInferenceRunId = prescription.loadEvidence?.inferenceRunId,
+        prescribedLoadAnchor = prescription.loadEvidence?.anchorLoad,
         prescriptionMode = mode.code,
         prescriptionIncluded = true,
         prescribedSets = prescription.sets,
         repMin = prescription.repRange.first,
         repMax = prescription.repRange.last,
-        targetRir = prescription.targetRir,
         restSeconds = prescription.restSeconds,
         generatedByModelVersion = prescription.generatedByModelVersion,
         deferToAnd = false,
@@ -569,30 +809,49 @@ class RoomWorkoutRepository(
         startedAt = null,
         completedAt = null,
         movementReason = movementReason,
+        substitutedFromExerciseId = null,
     )
 
     private fun prescribedSets(
         sessionExerciseId: String,
         planned: PlannedWorkoutExercise,
         indices: Iterable<Int>,
+    ): List<SetRecordEntity> = prescribedSets(
+        sessionExerciseId = sessionExerciseId,
+        trackingMetric = planned.trackingMetric,
+        loadRelationship = planned.loadRelationship,
+        defaultUnit = planned.defaultUnit,
+        prescription = planned.prescription,
+        indices = indices,
+    )
+
+    private fun prescribedSets(
+        sessionExerciseId: String,
+        trackingMetric: String,
+        loadRelationship: String,
+        defaultUnit: String,
+        prescription: ExercisePrescription,
+        indices: Iterable<Int>,
     ): List<SetRecordEntity> = indices.map { setIndex ->
-        val startsWithLoad = planned.trackingMetric == "load_reps" && planned.loadRelationship != "bodyweight"
+        val startsWithLoad = trackingMetric == "load_reps" && loadRelationship != "bodyweight"
         SetRecordEntity(
             id = id("set"),
             sessionExerciseId = sessionExerciseId,
             setIndex = setIndex,
-            load = if (startsWithLoad) planned.prescription.prescribedLoad else null,
+            load = if (startsWithLoad) prescription.prescribedLoad else null,
             reps = null,
             durationSeconds = null,
             distanceMetres = null,
-            unit = planned.defaultUnit,
+            unit = defaultUnit,
             completedAt = null,
             note = null,
-            rir = null,
-            effortSource = null,
             warmUp = false,
             kind = "prescribed",
         )
+    }
+
+    private companion object {
+        const val USER_SUBSTITUTION_REASON = "user_substitution"
     }
 }
 
@@ -602,6 +861,22 @@ private data class SourceExercise(
     val executionProfile: ExerciseExecutionProfileEntity,
     val recruitment: List<RecruitmentAllocationEntity>,
 )
+
+internal fun matchedSwapTargetCoverage(
+    targetsBySegment: Map<String, SessionTargetEntity>,
+    recruitment: List<RecruitmentAllocationEntity>,
+): Map<TrainingTargetId, Double> {
+    val matched = linkedMapOf<TrainingTargetId, Double>()
+    recruitment
+        .filter { it.weighting > 0.0 && !it.role.equals("stabiliser", ignoreCase = true) }
+        .forEach { allocation ->
+            val target = targetsBySegment[allocation.muscleSegmentId] ?: return@forEach
+            val targetId = TrainingTargetId(target.id)
+            val coverage = allocation.weighting * allocation.confidence
+            matched[targetId] = maxOf(matched[targetId] ?: 0.0, coverage)
+        }
+    return matched
+}
 
 private fun ProgrammeTargetEntity.toDomain(): TrainingTarget = TrainingTarget(
     id = TrainingTargetId(id),
@@ -664,6 +939,29 @@ private fun PlannedWorkoutExercise.toSessionExerciseTargets(
         ?: throw NativeWorkoutException("Prescription references missing target ${targetId.value}.")
     SessionExerciseTargetEntity(sessionExerciseId, sessionTarget.id)
 }
+
+private fun SessionExerciseEntity.toPrescription(
+    targetIds: List<TrainingTargetId>,
+): ExercisePrescription = ExercisePrescription(
+    exerciseId = ExerciseId(exerciseId),
+    executionProfileId = ExecutionProfileId(executionProfileId),
+    targetIds = targetIds.distinct(),
+    sets = prescribedSets,
+    repRange = repMin..repMax,
+    prescribedLoad = prescribedLoad,
+    loadEvidence = prescribedLoadEvidenceSource?.let { source ->
+        prescribedLoadAnchor?.let { anchor ->
+            PrescriptionLoadEvidence(
+                source = source,
+                anchorLoad = anchor,
+                sourceSetRecordId = prescribedLoadEvidenceSetId,
+                inferenceRunId = prescribedLoadInferenceRunId,
+            )
+        }
+    },
+    restSeconds = restSeconds,
+    generatedByModelVersion = generatedByModelVersion,
+)
 
 private fun ExerciseExecutionProfileEntity.toLoadResolution(): LoadResolution? {
     val allowedValues = allowedLoadsJson?.let { encoded ->

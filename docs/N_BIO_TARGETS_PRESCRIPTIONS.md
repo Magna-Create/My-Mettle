@@ -34,7 +34,7 @@ provenance, not a claim that recruitment and target intent are intrinsically the
 
 - an exercise and execution profile;
 - the independent target IDs it is resolving;
-- sets, rep range, target RIR, load and rest;
+- sets, rep range, load and rest;
 - the model version that produced the recommendation.
 
 The N-BIO-3 implementation is deliberately conservative. It carries forward the latest performed
@@ -43,14 +43,13 @@ does not perform progression or muscle-state inference. With no prior evidence, 
 null rather than restored from a routine slot or invented.
 
 `SessionExerciseEntity` now snapshots `executionProfileId`, execution-profile name,
-`prescribedLoad`, target RIR and prescription-model version. Completed sessions therefore keep the
+`prescribedLoad` and prescription-model version. Completed sessions therefore keep the
 recommendation actually made at that time even after later model changes.
 
 ## Raw performance evidence
 
-`SetRecordEntity` now has nullable `rir` and `effortSource` fields alongside the existing performed
-load, reps, duration, distance, set kind, completion time and notes. N-BIO-3 only makes the evidence
-RIR-ready; capture UX and interpretation follow separately.
+`SetRecordEntity` records performed load, reps, duration, distance, set kind, completion time and
+notes. The Native v0 model deliberately excludes subjective effort/rating fields.
 
 ## Deliberate limits
 

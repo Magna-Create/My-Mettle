@@ -279,12 +279,15 @@ data class SessionExerciseEntity(
     val executionProfileId: String,
     val executionProfileNameSnapshot: String,
     val prescribedLoad: Double?,
+    val prescribedLoadEvidenceSource: String?,
+    val prescribedLoadEvidenceSetId: String?,
+    val prescribedLoadInferenceRunId: String?,
+    val prescribedLoadAnchor: Double?,
     val prescriptionMode: String,
     val prescriptionIncluded: Boolean,
     val prescribedSets: Int,
     val repMin: Int,
     val repMax: Int,
-    val targetRir: Double?,
     val restSeconds: Int,
     val generatedByModelVersion: String,
     val deferToAnd: Boolean,
@@ -293,6 +296,7 @@ data class SessionExerciseEntity(
     val startedAt: String?,
     val completedAt: String?,
     val movementReason: String,
+    val substitutedFromExerciseId: String?,
 )
 
 @Entity(
@@ -321,8 +325,6 @@ data class SetRecordEntity(
     val unit: String,
     val completedAt: String?,
     val note: String?,
-    val rir: Double?,
-    val effortSource: String?,
     val warmUp: Boolean,
     val kind: String,
 )
