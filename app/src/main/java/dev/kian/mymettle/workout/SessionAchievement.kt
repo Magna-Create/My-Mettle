@@ -26,7 +26,7 @@ data class SessionAchievement(
 /**
  * Scores what happened against the prescription snapshot stored on this specific session.
  *
- * It never asks the current WorkoutModePolicy what A/B/C/D means. That keeps historical scores
+ * It never asks the current mode-resolution policy what A/B/C/D means. That keeps historical scores
  * stable even when mode definitions are tuned later and lets a fully completed D session earn the
  * same 100-point completion as a fully completed A session.
  */

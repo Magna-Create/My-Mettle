@@ -96,6 +96,9 @@ class PerformanceFoundationTest {
 
         assertEquals(UnitId.MACHINE_LEVEL, level.canonical.unit)
         assertFailsWith<IllegalArgumentException> { UnitConverter.convert(level.entered, UnitId.KILOGRAM) }
+        assertFailsWith<IllegalArgumentException> {
+            UnitConverter.convert(Quantity(8.0, UnitId.REPETITION), UnitId.STEP)
+        }
     }
 
     @Test

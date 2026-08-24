@@ -2,8 +2,10 @@ package dev.kian.mymettle.domain.inference
 
 import dev.kian.mymettle.domain.anatomy.MuscleSegmentId
 import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
+import dev.kian.mymettle.domain.exercise.RecruitmentProfileVersionId
 import dev.kian.mymettle.domain.exercise.RecruitmentRole
 import dev.kian.mymettle.domain.performance.Laterality
+import dev.kian.mymettle.domain.performance.MetricFamily
 import dev.kian.mymettle.domain.performance.PerformanceMetric
 import dev.kian.mymettle.domain.performance.PerformanceMetricValue
 import dev.kian.mymettle.domain.physiology.Estimate
@@ -59,6 +61,7 @@ data class CompletedSetEvidence(
     val observationId: String,
     val sessionExerciseId: String,
     val executionProfileVersionId: ExecutionProfileVersionId,
+    val metricFamily: MetricFamily,
     val laterality: Laterality,
     val completedAt: Instant,
     val metricValues: List<PerformanceMetricValue>,
@@ -82,6 +85,7 @@ data class CompletedSetEvidence(
 }
 
 data class RecruitmentEvidence(
+    val recruitmentProfileVersionId: RecruitmentProfileVersionId,
     val segmentId: MuscleSegmentId,
     val role: RecruitmentRole,
     val weighting: Double,
@@ -97,6 +101,8 @@ data class StimulusEstimate(
     val setRecordId: String,
     val observationId: String,
     val sessionExerciseId: String,
+    val executionProfileVersionId: ExecutionProfileVersionId,
+    val recruitmentProfileVersionId: RecruitmentProfileVersionId,
     val segmentId: MuscleSegmentId,
     val side: BodySide,
     val role: RecruitmentRole,
@@ -142,6 +148,7 @@ data class PerformanceAnchor(
 
 data class ExerciseTranslationState(
     val executionProfileVersionId: ExecutionProfileVersionId,
+    val laterality: Laterality,
     val anchors: List<PerformanceAnchor>,
     val sampleCount: Int,
     val updatedAt: Instant,

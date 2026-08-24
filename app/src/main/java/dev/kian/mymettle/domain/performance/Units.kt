@@ -89,6 +89,9 @@ object UnitConverter {
         if (quantity.unit.dimension == QuantityDimension.ORDINAL) {
             throw IllegalArgumentException("Ordinal machine levels are profile-local and cannot be converted.")
         }
+        if (quantity.unit.dimension == QuantityDimension.COUNT) {
+            throw IllegalArgumentException("Count units are metric-specific and cannot be converted.")
+        }
         val canonical = toCanonical(quantity)
         return Quantity(fromCanonical(canonical.value, to), to)
     }

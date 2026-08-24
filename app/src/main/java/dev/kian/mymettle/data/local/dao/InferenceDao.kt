@@ -19,6 +19,7 @@ data class CompletedSetEvidenceRow(
     val observationId: String,
     val sessionExerciseId: String,
     val executionProfileVersionId: String,
+    val metricFamily: String,
     val side: String,
     val completedAt: String,
     val observationBodyMassContextKg: Double?,
@@ -39,6 +40,7 @@ interface InferenceDao {
             so.id AS observationId,
             sr.sessionExerciseId AS sessionExerciseId,
             so.executionProfileVersionId AS executionProfileVersionId,
+            epv.metricFamily AS metricFamily,
             so.side AS side,
             so.completedAt AS completedAt,
             so.bodyMassContextKg AS observationBodyMassContextKg,
@@ -49,6 +51,7 @@ interface InferenceDao {
         INNER JOIN session_exercise AS se ON se.id = sr.sessionExerciseId
         INNER JOIN session AS s ON s.id = se.sessionId
         INNER JOIN set_observation AS so ON so.setRecordId = sr.id
+        INNER JOIN execution_profile_version AS epv ON epv.id = so.executionProfileVersionId
         WHERE s.status = 'completed'
           AND s.excludedFromInsights = 0
           AND NOT EXISTS (SELECT 1 FROM set_observation newer WHERE newer.supersedesObservationId = so.id)
@@ -98,10 +101,10 @@ interface InferenceDao {
     @Query("SELECT * FROM stimulus_estimate WHERE inferenceRunId = :inferenceRunId ORDER BY setRecordId, muscleSegmentId, side")
     suspend fun stimulusEstimates(inferenceRunId: String): List<StimulusEstimateEntity>
 
-    @Query("SELECT * FROM exercise_translation_state WHERE inferenceRunId = :inferenceRunId ORDER BY executionProfileVersionId")
+    @Query("SELECT * FROM exercise_translation_state WHERE inferenceRunId = :inferenceRunId ORDER BY executionProfileVersionId, side")
     suspend fun exerciseTranslationStates(inferenceRunId: String): List<ExerciseTranslationStateEntity>
 
-    @Query("SELECT * FROM exercise_translation_metric_anchor WHERE inferenceRunId = :inferenceRunId ORDER BY executionProfileVersionId, metric")
+    @Query("SELECT * FROM exercise_translation_metric_anchor WHERE inferenceRunId = :inferenceRunId ORDER BY executionProfileVersionId, side, metric")
     suspend fun exerciseTranslationMetricAnchors(inferenceRunId: String): List<ExerciseTranslationMetricAnchorEntity>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)

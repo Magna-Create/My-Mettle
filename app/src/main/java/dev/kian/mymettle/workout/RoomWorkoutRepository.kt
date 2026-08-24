@@ -422,6 +422,7 @@ class RoomWorkoutRepository(
                 record = record,
                 exercise = exercise,
                 schema = bundle.schema,
+                lateralityMode = bundle.lateralityMode,
                 laterality = laterality ?: bundle.defaultObservationLaterality(),
                 values = values,
                 source = NATIVE_SOURCE,
@@ -444,7 +445,16 @@ class RoomWorkoutRepository(
         val record = dao.sets(sessionExerciseId).firstOrNull { it.id == setId }
             ?: throw NativeWorkoutException("Set not found.")
         val bundle = loadVersionBundles(listOf(exercise.executionProfileVersionId)).getValue(exercise.executionProfileVersionId)
-        saveObservationInternal(record, exercise, bundle.schema, laterality, values, source, bodyMassContextKg)
+        saveObservationInternal(
+            record,
+            exercise,
+            bundle.schema,
+            bundle.lateralityMode,
+            laterality,
+            values,
+            source,
+            bodyMassContextKg,
+        )
     }
 
     suspend fun setExerciseCompleted(
@@ -502,7 +512,8 @@ class RoomWorkoutRepository(
             .groupBy { it.recruitmentProfileVersionId }
         val exerciseById = exercises.associateBy { it.id }
         val snapshot = inferenceRepository.latestSnapshot()
-        val translation = snapshot?.exerciseTranslationStates.orEmpty().associateBy { it.executionProfileVersionId.value }
+        val translation = snapshot?.exerciseTranslationStates.orEmpty()
+            .associateBy { it.executionProfileVersionId.value to it.laterality }
         val currentBundle = loadVersionBundles(listOf(current.executionProfileVersionId)).getValue(current.executionProfileVersionId)
         val currentPrescription = loadPrescription(current, currentBundle.schema)
 
@@ -512,7 +523,15 @@ class RoomWorkoutRepository(
             val bundle = bundles.getValue(version.id)
             val coverage = matchedSwapTargetCoverage(targetBySegment, recruitment[version.recruitmentProfileVersionId].orEmpty())
             if (currentTargets.isNotEmpty() && coverage.isEmpty()) return@mapNotNull null
-            val evidence = evidenceForSchema(bundle.schema, version.id, translation[version.id], snapshot?.run?.id?.value, session.id)
+            val prescriptionLaterality = bundle.defaultPrescriptionLaterality()
+            val evidence = evidenceForSchema(
+                bundle.schema,
+                version.id,
+                prescriptionLaterality,
+                translation[version.id to prescriptionLaterality],
+                snapshot?.run?.id?.value,
+                session.id,
+            )
             val prescription = prescriptionEngine.generate(
                 PrescriptionRequest(
                     exerciseId = ExerciseId(exercise.id),
@@ -523,7 +542,7 @@ class RoomWorkoutRepository(
                     schema = bundle.schema,
                     preferredTemplate = PerformanceTargetTemplate(emptyList()),
                     evidenceByMetric = evidence,
-                    laterality = bundle.defaultPrescriptionLaterality(),
+                    laterality = prescriptionLaterality,
                     restSeconds = current.restSeconds,
                 ),
             )
@@ -623,13 +642,16 @@ class RoomWorkoutRepository(
             )
         }
         val snapshot = inferenceRepository.latestSnapshot()
-        val translation = snapshot?.exerciseTranslationStates.orEmpty().associateBy { it.executionProfileVersionId.value }
+        val translation = snapshot?.exerciseTranslationStates.orEmpty()
+            .associateBy { it.executionProfileVersionId.value to it.laterality }
         val planned = selections.map { selection ->
             val source = sourceById.getValue(selection.candidate.preferenceId)
+            val prescriptionLaterality = source.bundle.defaultPrescriptionLaterality()
             val evidence = evidenceForSchema(
                 source.bundle.schema,
                 source.version.id,
-                translation[source.version.id],
+                prescriptionLaterality,
+                translation[source.version.id to prescriptionLaterality],
                 snapshot?.run?.id?.value,
                 excludeSessionId = null,
             )
@@ -643,7 +665,7 @@ class RoomWorkoutRepository(
                     schema = source.bundle.schema,
                     preferredTemplate = selection.candidate.preferredTemplate,
                     evidenceByMetric = evidence,
-                    laterality = source.bundle.defaultPrescriptionLaterality(),
+                    laterality = prescriptionLaterality,
                     restSeconds = selection.candidate.restSeconds,
                 ),
             )
@@ -666,13 +688,19 @@ class RoomWorkoutRepository(
     private suspend fun evidenceForSchema(
         schema: PerformanceSchema,
         profileVersionId: String,
+        laterality: Laterality,
         translation: dev.kian.mymettle.domain.inference.ExerciseTranslationState?,
         inferenceRunId: String?,
         excludeSessionId: String?,
     ) = schema.metrics.mapNotNull { definition ->
         val inferred = translation?.anchor(definition.metric)
         val raw = if (inferred == null) {
-            dao.latestCompletedMetricForExecutionProfileVersion(profileVersionId, definition.metric.storageValue, excludeSessionId)
+            dao.latestCompletedMetricForExecutionProfileVersion(
+                profileVersionId,
+                definition.metric.storageValue,
+                laterality.storageValue,
+                excludeSessionId,
+            )
         } else null
         SameProfileMetricEvidenceResolver.resolve(
             inferredCanonical = inferred?.estimate?.value,
@@ -689,18 +717,37 @@ class RoomWorkoutRepository(
         record: SetRecordEntity,
         exercise: SessionExerciseEntity,
         schema: PerformanceSchema,
+        lateralityMode: LateralityMode,
         laterality: Laterality,
         values: List<PerformanceMetricValue>,
         source: String,
         bodyMassContextKg: Double?,
     ): PerformanceObservation {
         schema.validate(values)
-        val existing = currentObservations(listOf(record.id)).filter { it.setRecordId == record.id && it.side == laterality.storageValue }
-            .maxByOrNull { it.completedAt }
+        validateObservationLaterality(lateralityMode, laterality)
+        if (source.isBlank()) throw NativeWorkoutException("Observation source cannot be blank.")
+        if (bodyMassContextKg != null && bodyMassContextKg <= 0.0) {
+            throw NativeWorkoutException("Observation body mass must be positive.")
+        }
+        val currentForSide = currentObservations(listOf(record.id))
+            .filter { it.setRecordId == record.id && it.side == laterality.storageValue }
+        if (currentForSide.size > 1) {
+            throw NativeWorkoutException("Set ${record.id} has ambiguous current evidence for ${laterality.storageValue}.")
+        }
+        val existing = currentForSide.singleOrNull()
         val all = dao.observations(listOf(record.id))
         val now = timestamp()
+        val observationId = id("observation")
+        ObservationSupersedingPolicy.validateAppend(
+            newObservationId = observationId,
+            predecessor = existing,
+            existing = all,
+            setRecordId = record.id,
+            executionProfileVersionId = exercise.executionProfileVersionId,
+            side = laterality.storageValue,
+        )
         val observation = SetObservationEntity(
-            id = id("observation"),
+            id = observationId,
             setRecordId = record.id,
             executionProfileVersionId = exercise.executionProfileVersionId,
             ordinal = (all.maxOfOrNull { it.ordinal } ?: -1) + 1,
@@ -712,8 +759,8 @@ class RoomWorkoutRepository(
             bodyMassContextSource = bodyMassContextKg?.let { "observation_explicit" },
             supersedesObservationId = existing?.id,
         )
-        dao.upsertSetObservations(listOf(observation))
-        dao.upsertSetMetricValues(values.map { it.toEntity(observation.id) })
+        dao.insertSetObservations(listOf(observation))
+        dao.insertSetMetricValues(values.map { it.toEntity(observation.id) })
         dao.deleteSetDraftMetricValues(record.id)
         return PerformanceObservation(
             id = observation.id,
@@ -796,9 +843,7 @@ class RoomWorkoutRepository(
 
     private suspend fun currentObservations(setRecordIds: List<String>): List<SetObservationEntity> {
         if (setRecordIds.isEmpty()) return emptyList()
-        val all = dao.observations(setRecordIds)
-        val superseded = all.mapNotNullTo(hashSetOf()) { it.supersedesObservationId }
-        return all.filterNot { it.id in superseded }
+        return ObservationSupersedingPolicy.current(dao.observations(setRecordIds))
     }
 
     private suspend fun hasCurrentObservations(records: List<SetRecordEntity>): Boolean =
@@ -1023,6 +1068,85 @@ private fun String.toTargetPriority(): Double = when (lowercase()) {
     "core" -> 0.7
     "accessory" -> 0.4
     else -> 0.7
+}
+
+private fun validateObservationLaterality(mode: LateralityMode, laterality: Laterality) {
+    val allowed = when (mode) {
+        LateralityMode.BILATERAL_ONLY -> setOf(Laterality.BILATERAL)
+        LateralityMode.UNILATERAL -> setOf(Laterality.LEFT, Laterality.RIGHT)
+        LateralityMode.ALTERNATING_ALLOWED -> setOf(Laterality.LEFT, Laterality.RIGHT, Laterality.ALTERNATING)
+        LateralityMode.NOT_APPLICABLE -> setOf(Laterality.NOT_APPLICABLE)
+        LateralityMode.UNKNOWN -> Laterality.entries.toSet()
+    }
+    if (laterality !in allowed) {
+        throw NativeWorkoutException("${laterality.storageValue} is not valid for ${mode.storageValue}.")
+    }
+}
+
+/** Enforces append-only, single-successor correction chains before Room's unique index is reached. */
+internal object ObservationSupersedingPolicy {
+    fun current(existing: List<SetObservationEntity>): List<SetObservationEntity> {
+        validateExisting(existing)
+        val superseded = existing.mapNotNullTo(hashSetOf()) { it.supersedesObservationId }
+        return existing.filterNot { it.id in superseded }
+    }
+
+    fun validateAppend(
+        newObservationId: String,
+        predecessor: SetObservationEntity?,
+        existing: List<SetObservationEntity>,
+        setRecordId: String,
+        executionProfileVersionId: String,
+        side: String,
+    ) {
+        validateExisting(existing)
+        if (existing.any { it.id == newObservationId }) {
+            throw NativeWorkoutException("Observation ids are immutable and must be unique.")
+        }
+        if (predecessor == null) return
+        if (predecessor !in existing) {
+            throw NativeWorkoutException("A correction must supersede an observation stored on the same set.")
+        }
+        if (
+            predecessor.setRecordId != setRecordId ||
+            predecessor.executionProfileVersionId != executionProfileVersionId ||
+            predecessor.side != side
+        ) {
+            throw NativeWorkoutException("A correction cannot change set, profile version, or side semantics.")
+        }
+        if (existing.any { it.supersedesObservationId == predecessor.id }) {
+            throw NativeWorkoutException("An observation can have only one direct correction.")
+        }
+    }
+
+    private fun validateExisting(existing: List<SetObservationEntity>) {
+        val byId = existing.associateBy { it.id }
+        if (byId.size != existing.size) throw NativeWorkoutException("Observation ids must be unique.")
+        val successors = existing.mapNotNull { it.supersedesObservationId }
+        if (successors.size != successors.distinct().size) {
+            throw NativeWorkoutException("An observation cannot have multiple direct corrections.")
+        }
+        existing.forEach { start ->
+            val visited = hashSetOf<String>()
+            var cursor: SetObservationEntity? = start
+            while (cursor != null) {
+                if (!visited.add(cursor.id)) {
+                    throw NativeWorkoutException("Observation correction chains cannot contain cycles.")
+                }
+                val parentId = cursor.supersedesObservationId ?: break
+                val parent = byId[parentId]
+                    ?: throw NativeWorkoutException("Observation ${cursor.id} supersedes a missing observation.")
+                if (
+                    parent.setRecordId != cursor.setRecordId ||
+                    parent.executionProfileVersionId != cursor.executionProfileVersionId ||
+                    parent.side != cursor.side
+                ) {
+                    throw NativeWorkoutException("Correction chains must preserve set, profile version, and side.")
+                }
+                cursor = parent
+            }
+        }
+    }
 }
 
 private fun prescriptionSetId(sessionExerciseId: String, setIndex: Int): String =

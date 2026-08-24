@@ -136,6 +136,12 @@ data class SessionMetricTargetEntity(
             childColumns = ["executionProfileVersionId"],
             onDelete = ForeignKey.RESTRICT,
         ),
+        ForeignKey(
+            entity = SetObservationEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["supersedesObservationId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
     indices = [
         Index("setRecordId"),

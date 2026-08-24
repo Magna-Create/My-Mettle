@@ -10,6 +10,7 @@ import dev.kian.mymettle.data.local.entity.MuscleStateSnapshotEntity
 import dev.kian.mymettle.data.local.entity.StimulusEstimateEntity
 import dev.kian.mymettle.domain.anatomy.MuscleSegmentId
 import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
+import dev.kian.mymettle.domain.exercise.RecruitmentProfileVersionId
 import dev.kian.mymettle.domain.exercise.RecruitmentRole
 import dev.kian.mymettle.domain.inference.BodySide
 import dev.kian.mymettle.domain.inference.CompletedSetEvidence
@@ -25,6 +26,7 @@ import dev.kian.mymettle.domain.physiology.Estimate
 import dev.kian.mymettle.domain.physiology.EstimateSourceKind
 import dev.kian.mymettle.domain.physiology.ReferenceProfileId
 import dev.kian.mymettle.domain.performance.Laterality
+import dev.kian.mymettle.domain.performance.MetricFamily
 import dev.kian.mymettle.domain.performance.PerformanceMetric
 import dev.kian.mymettle.domain.performance.PerformanceMetricValue
 import dev.kian.mymettle.domain.performance.Quantity
@@ -89,6 +91,7 @@ class RoomInferenceRepository(
         val stimuli = evidence.flatMap { set ->
             val recruitment = recruitmentByProfile[set.executionProfileVersionId.value].orEmpty().map { allocation ->
                 RecruitmentEvidence(
+                    recruitmentProfileVersionId = RecruitmentProfileVersionId(allocation.recruitmentProfileVersionId),
                     segmentId = MuscleSegmentId(allocation.muscleSegmentId),
                     role = RecruitmentRole.fromStorage(allocation.role),
                     weighting = allocation.weighting,
@@ -132,7 +135,9 @@ class RoomInferenceRepository(
         if (translationStates.isNotEmpty()) {
             dao.insertExerciseTranslationStates(translationStates.map { it.toEntity(runId) })
             dao.insertExerciseTranslationMetricAnchors(
-                translationStates.flatMap { state -> state.anchors.map { it.toEntity(runId, state.executionProfileVersionId) } },
+                translationStates.flatMap { state ->
+                    state.anchors.map { it.toEntity(runId, state.executionProfileVersionId, state.laterality) }
+                },
             )
         }
 
@@ -145,13 +150,15 @@ class RoomInferenceRepository(
         val runEntity = dao.latestInferenceRun(resolveUserProfileId(userProfileId)) ?: return null
         val run = runEntity.toDomain()
         val translationEntities = dao.exerciseTranslationStates(runEntity.id)
-        val anchorsByVersion = dao.exerciseTranslationMetricAnchors(runEntity.id)
-            .groupBy { it.executionProfileVersionId }
+        val anchorsByVersionAndSide = dao.exerciseTranslationMetricAnchors(runEntity.id)
+            .groupBy { it.executionProfileVersionId to it.side }
         return UserInferenceSnapshot(
             run = run,
             muscleStates = dao.muscleStateSnapshots(runEntity.id).map { it.toDomain() },
             stimulusEstimates = dao.stimulusEstimates(runEntity.id).map { it.toDomain() },
-            exerciseTranslationStates = translationEntities.map { it.toDomain(anchorsByVersion[it.executionProfileVersionId].orEmpty()) },
+            exerciseTranslationStates = translationEntities.map {
+                it.toDomain(anchorsByVersionAndSide[it.executionProfileVersionId to it.side].orEmpty())
+            },
         )
     }
 
@@ -184,6 +191,7 @@ private fun CompletedSetEvidenceRow.toDomain(values: List<PerformanceMetricValue
     observationId = observationId,
     sessionExerciseId = sessionExerciseId,
     executionProfileVersionId = ExecutionProfileVersionId(executionProfileVersionId),
+    metricFamily = MetricFamily.fromStorage(metricFamily),
     laterality = Laterality.fromStorage(side),
     completedAt = Instant.parse(completedAt),
     metricValues = values,
@@ -230,6 +238,8 @@ private fun StimulusEstimate.toEntity(runId: InferenceRunId): StimulusEstimateEn
     sessionExerciseId = sessionExerciseId,
     setRecordId = setRecordId,
     setObservationId = observationId,
+    executionProfileVersionId = executionProfileVersionId.value,
+    recruitmentProfileVersionId = recruitmentProfileVersionId.value,
     muscleSegmentId = segmentId.value,
     side = side.storageValue,
     role = role.storageValue,
@@ -243,6 +253,8 @@ private fun StimulusEstimateEntity.toDomain(): StimulusEstimate = StimulusEstima
     setRecordId = setRecordId,
     observationId = setObservationId,
     sessionExerciseId = sessionExerciseId,
+    executionProfileVersionId = ExecutionProfileVersionId(executionProfileVersionId),
+    recruitmentProfileVersionId = RecruitmentProfileVersionId(recruitmentProfileVersionId),
     segmentId = MuscleSegmentId(muscleSegmentId),
     side = BodySide.fromStorage(side),
     role = RecruitmentRole.fromStorage(role),
@@ -300,6 +312,7 @@ private fun ExerciseTranslationState.toEntity(runId: InferenceRunId): ExerciseTr
     ExerciseTranslationStateEntity(
         inferenceRunId = runId.value,
         executionProfileVersionId = executionProfileVersionId.value,
+        side = laterality.storageValue,
         sampleCount = sampleCount,
         updatedAt = updatedAt.toString(),
         modelVersion = modelVersion,
@@ -309,6 +322,7 @@ private fun ExerciseTranslationStateEntity.toDomain(
     anchors: List<ExerciseTranslationMetricAnchorEntity>,
 ): ExerciseTranslationState = ExerciseTranslationState(
     executionProfileVersionId = ExecutionProfileVersionId(executionProfileVersionId),
+    laterality = Laterality.fromStorage(side),
     anchors = anchors.map { anchor ->
         PerformanceAnchor(
             metric = PerformanceMetric.fromStorage(anchor.metric),
@@ -326,9 +340,11 @@ private fun ExerciseTranslationStateEntity.toDomain(
 private fun PerformanceAnchor.toEntity(
     runId: InferenceRunId,
     profileVersionId: ExecutionProfileVersionId,
+    laterality: Laterality,
 ): ExerciseTranslationMetricAnchorEntity = ExerciseTranslationMetricAnchorEntity(
     inferenceRunId = runId.value,
     executionProfileVersionId = profileVersionId.value,
+    side = laterality.storageValue,
     metric = metric.storageValue,
     canonicalValue = estimate.value,
     canonicalUnit = canonicalUnit,

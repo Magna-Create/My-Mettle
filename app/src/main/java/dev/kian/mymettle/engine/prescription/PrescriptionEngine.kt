@@ -85,8 +85,14 @@ class HistoryBackedPrescriptionEngine : PrescriptionEngine {
     }
 
     private fun dev.kian.mymettle.domain.performance.SchemaMetric.conform(value: Double): Double {
+        val implicitMinimum = if (metric == PerformanceMetric.INCLINE_GRADE) {
+            Double.NEGATIVE_INFINITY
+        } else {
+            0.0
+        }
+        val lowerBound = minimumCanonical ?: implicitMinimum
         val constrained = value
-            .coerceAtLeast(minimumCanonical ?: 0.0)
+            .coerceAtLeast(lowerBound)
             .let { candidate -> maximumCanonical?.let { minOf(candidate, it) } ?: candidate }
         if (allowedCanonicalValues.isNotEmpty()) {
             return allowedCanonicalValues.minWith(compareBy<Double> { abs(it - constrained) }.thenBy { it })
@@ -94,7 +100,7 @@ class HistoryBackedPrescriptionEngine : PrescriptionEngine {
         val step = incrementCanonical?.takeIf { it > 0.0 } ?: return constrained
         val origin = minimumCanonical ?: 0.0
         return (origin + round((constrained - origin) / step) * step)
-            .coerceAtLeast(minimumCanonical ?: 0.0)
+            .coerceAtLeast(lowerBound)
             .let { candidate -> maximumCanonical?.let { minOf(candidate, it) } ?: candidate }
     }
 

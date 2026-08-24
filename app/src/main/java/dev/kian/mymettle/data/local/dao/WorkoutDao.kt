@@ -65,16 +65,16 @@ interface WorkoutDao {
     suspend fun upsertExecutionProfiles(values: List<ExerciseExecutionProfileEntity>)
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun upsertPerformanceSchemas(values: List<PerformanceSchemaEntity>)
+    suspend fun insertPerformanceSchemas(values: List<PerformanceSchemaEntity>)
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun upsertPerformanceSchemaMetrics(values: List<PerformanceSchemaMetricEntity>)
+    suspend fun insertPerformanceSchemaMetrics(values: List<PerformanceSchemaMetricEntity>)
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun upsertRecruitmentProfileVersions(values: List<RecruitmentProfileVersionEntity>)
+    suspend fun insertRecruitmentProfileVersions(values: List<RecruitmentProfileVersionEntity>)
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun upsertExecutionProfileVersions(values: List<ExecutionProfileVersionEntity>)
+    suspend fun insertExecutionProfileVersions(values: List<ExecutionProfileVersionEntity>)
 
     @Upsert
     suspend fun upsertCues(values: List<ExerciseCueEntity>)
@@ -89,7 +89,7 @@ interface WorkoutDao {
     suspend fun upsertSetupMedia(values: List<ExerciseSetupMediaEntity>)
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun upsertRecruitmentAllocations(values: List<RecruitmentAllocationEntity>)
+    suspend fun insertRecruitmentAllocations(values: List<RecruitmentAllocationEntity>)
 
     @Upsert
     suspend fun upsertRoutineVersions(values: List<RoutineVersionEntity>)
@@ -137,10 +137,10 @@ interface WorkoutDao {
     suspend fun upsertSets(values: List<SetRecordEntity>)
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun upsertSetObservations(values: List<SetObservationEntity>)
+    suspend fun insertSetObservations(values: List<SetObservationEntity>)
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun upsertSetMetricValues(values: List<SetMetricValueEntity>)
+    suspend fun insertSetMetricValues(values: List<SetMetricValueEntity>)
 
     @Upsert
     suspend fun upsertSetDraftMetricValues(values: List<SetDraftMetricValueEntity>)
@@ -181,11 +181,20 @@ interface WorkoutDao {
     @Query("SELECT * FROM exercise_execution_profile WHERE id IN (:profileIds) ORDER BY id")
     suspend fun executionProfilesById(profileIds: List<String>): List<ExerciseExecutionProfileEntity>
 
+    @Query("SELECT * FROM exercise_execution_profile WHERE id = :profileId LIMIT 1")
+    suspend fun executionProfile(profileId: String): ExerciseExecutionProfileEntity?
+
     @Query("SELECT * FROM execution_profile_version WHERE executionProfileId IN (:profileIds) ORDER BY executionProfileId, version")
     suspend fun executionProfileVersions(profileIds: List<String>): List<ExecutionProfileVersionEntity>
 
     @Query("SELECT * FROM execution_profile_version WHERE id IN (:versionIds) ORDER BY id")
     suspend fun executionProfileVersionsById(versionIds: List<String>): List<ExecutionProfileVersionEntity>
+
+    @Query("UPDATE execution_profile_version SET supersededAt = :supersededAt WHERE id = :versionId AND supersededAt IS NULL")
+    suspend fun supersedeExecutionProfileVersion(versionId: String, supersededAt: String): Int
+
+    @Query("UPDATE recruitment_profile_version SET supersededAt = :supersededAt WHERE id = :versionId AND supersededAt IS NULL")
+    suspend fun supersedeRecruitmentProfileVersion(versionId: String, supersededAt: String): Int
 
     @Query("SELECT * FROM performance_schema WHERE id IN (:schemaIds)")
     suspend fun performanceSchemas(schemaIds: List<String>): List<PerformanceSchemaEntity>
@@ -287,6 +296,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM set_observation WHERE setRecordId IN (:setRecordIds) ORDER BY setRecordId, ordinal")
     suspend fun observations(setRecordIds: List<String>): List<SetObservationEntity>
 
+    @Query("SELECT * FROM set_observation WHERE id = :observationId LIMIT 1")
+    suspend fun observation(observationId: String): SetObservationEntity?
+
     @Query("SELECT * FROM set_metric_value WHERE observationId IN (:observationIds) ORDER BY observationId, metric")
     suspend fun metricValues(observationIds: List<String>): List<SetMetricValueEntity>
 
@@ -333,6 +345,7 @@ interface WorkoutDao {
         INNER JOIN session s ON s.id = se.sessionId
         WHERE se.executionProfileVersionId = :executionProfileVersionId
           AND smv.metric = :metric
+          AND so.side = :side
           AND s.status = 'completed'
           AND sr.warmUp = 0
           AND (:excludeSessionId IS NULL OR s.id != :excludeSessionId)
@@ -344,6 +357,7 @@ interface WorkoutDao {
     suspend fun latestCompletedMetricForExecutionProfileVersion(
         executionProfileVersionId: String,
         metric: String,
+        side: String,
         excludeSessionId: String? = null,
     ): MetricEvidenceRow?
 }

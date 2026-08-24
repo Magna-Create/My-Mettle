@@ -2,6 +2,7 @@ package dev.kian.mymettle.engine.inference
 
 import dev.kian.mymettle.domain.anatomy.MuscleSegmentId
 import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
+import dev.kian.mymettle.domain.exercise.RecruitmentProfileVersionId
 import dev.kian.mymettle.domain.exercise.RecruitmentRole
 import dev.kian.mymettle.domain.inference.BodySide
 import dev.kian.mymettle.domain.inference.CompletedSetEvidence
@@ -9,6 +10,7 @@ import dev.kian.mymettle.domain.inference.InferenceRunId
 import dev.kian.mymettle.domain.inference.RecruitmentEvidence
 import dev.kian.mymettle.domain.inference.StimulusEstimate
 import dev.kian.mymettle.domain.performance.Laterality
+import dev.kian.mymettle.domain.performance.MetricFamily
 import dev.kian.mymettle.domain.performance.PerformanceMetric
 import dev.kian.mymettle.domain.performance.PerformanceMetricValue
 import dev.kian.mymettle.domain.performance.Quantity
@@ -24,6 +26,7 @@ class InferenceEnginesTest {
     fun `stimulus v0 projects weighted working-set evidence without inventing an effort curve`() {
         val estimator = WeightedWorkingSetStimulusEstimator()
         val allocation = RecruitmentEvidence(
+            recruitmentProfileVersionId = RecruitmentProfileVersionId("recruitment_1:v1"),
             segmentId = MuscleSegmentId("pectoralis_major_clavicular_part"),
             role = RecruitmentRole.PRIME,
             weighting = 0.7,
@@ -35,6 +38,7 @@ class InferenceEnginesTest {
         assertEquals(0.7, estimate.estimatedStimulus)
         assertEquals(0.32, estimate.confidence, absoluteTolerance = 0.000001)
         assertTrue(estimator.estimate(set(warmUp = true), listOf(allocation)).isEmpty())
+        assertTrue(estimator.estimate(set(metricFamily = MetricFamily.POWER_DURATION), listOf(allocation)).isEmpty())
     }
 
     @Test
@@ -90,18 +94,37 @@ class InferenceEnginesTest {
         assertEquals(2, state.sampleCount)
     }
 
+    @Test
+    fun `same profile translation anchors remain side resolved`() {
+        val states = ObservedPerformanceTranslationModel().infer(
+            listOf(
+                set(id = "left", load = 20.0, reps = null, laterality = Laterality.LEFT),
+                set(id = "right", load = 17.5, reps = null, laterality = Laterality.RIGHT),
+            ),
+        )
+
+        assertEquals(listOf(Laterality.LEFT, Laterality.RIGHT), states.map { it.laterality })
+        assertEquals(
+            listOf(20.0, 17.5),
+            states.map { it.anchor(PerformanceMetric.EXTERNAL_LOAD)?.estimate?.value },
+        )
+    }
+
     private fun set(
         id: String = "set_1",
         completedAt: String = "2026-08-11T10:00:00Z",
         load: Double? = 70.0,
         reps: Int? = 8,
         warmUp: Boolean = false,
+        laterality: Laterality = Laterality.BILATERAL,
+        metricFamily: MetricFamily = MetricFamily.DYNAMIC_RESISTANCE,
     ): CompletedSetEvidence = CompletedSetEvidence(
         setRecordId = id,
         observationId = "observation_$id",
         sessionExerciseId = "session_exercise_1",
         executionProfileVersionId = ExecutionProfileVersionId("execution_profile_1:v1"),
-        laterality = Laterality.BILATERAL,
+        metricFamily = metricFamily,
+        laterality = laterality,
         completedAt = Instant.parse(completedAt),
         metricValues = listOfNotNull(
             load?.let { PerformanceMetricValue(PerformanceMetric.EXTERNAL_LOAD, Quantity(it, UnitId.KILOGRAM)) },
@@ -121,6 +144,8 @@ class InferenceEnginesTest {
         setRecordId = setId,
         observationId = "observation_$setId",
         sessionExerciseId = "session_exercise_1",
+        executionProfileVersionId = ExecutionProfileVersionId("execution_profile_1:v1"),
+        recruitmentProfileVersionId = RecruitmentProfileVersionId("recruitment_1:v1"),
         segmentId = segmentId,
         side = BodySide.BILATERAL,
         role = RecruitmentRole.PRIME,

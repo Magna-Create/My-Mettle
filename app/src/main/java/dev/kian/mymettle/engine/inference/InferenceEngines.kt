@@ -12,6 +12,7 @@ import dev.kian.mymettle.domain.inference.UserMuscleState
 import dev.kian.mymettle.domain.physiology.Estimate
 import dev.kian.mymettle.domain.physiology.EstimateSourceKind
 import dev.kian.mymettle.domain.performance.Laterality
+import dev.kian.mymettle.domain.performance.MetricFamily
 import java.time.Instant
 
 interface StimulusEstimator {
@@ -37,7 +38,9 @@ class WeightedWorkingSetStimulusEstimator : StimulusEstimator {
         set: CompletedSetEvidence,
         recruitment: List<RecruitmentEvidence>,
     ): List<StimulusEstimate> {
-        if (set.warmUp || !set.hasPerformedWork) return emptyList()
+        if (set.warmUp || !set.hasPerformedWork || set.metricFamily !in RESISTANCE_EXPOSURE_FAMILIES) {
+            return emptyList()
+        }
 
         return recruitment
             .filter { it.weighting > 0.0 }
@@ -46,6 +49,8 @@ class WeightedWorkingSetStimulusEstimator : StimulusEstimator {
                     setRecordId = set.setRecordId,
                     observationId = set.observationId,
                     sessionExerciseId = set.sessionExerciseId,
+                    executionProfileVersionId = set.executionProfileVersionId,
+                    recruitmentProfileVersionId = allocation.recruitmentProfileVersionId,
                     segmentId = allocation.segmentId,
                     side = set.laterality.toBodySide(),
                     role = allocation.role,
@@ -60,6 +65,13 @@ class WeightedWorkingSetStimulusEstimator : StimulusEstimator {
     companion object {
         const val MODEL_VERSION = "n-bio-4-weighted-working-set-v0"
         private const val WORKING_SET_CONFIDENCE = 0.40
+        private val RESISTANCE_EXPOSURE_FAMILIES = setOf(
+            MetricFamily.DYNAMIC_RESISTANCE,
+            MetricFamily.BODYWEIGHT_RESISTANCE,
+            MetricFamily.LOADED_HOLD,
+            MetricFamily.DURATION_ONLY,
+            MetricFamily.REPEATED_CONTRACTION,
+        )
     }
 }
 
@@ -130,11 +142,13 @@ class ObservedPerformanceTranslationModel : ExerciseTranslationModel {
 
     override fun infer(evidence: List<CompletedSetEvidence>): List<ExerciseTranslationState> = evidence
         .filter { !it.warmUp && it.hasPerformedWork }
-        .groupBy { it.executionProfileVersionId }
-        .map { (profileVersionId, samples) ->
+        .groupBy { it.executionProfileVersionId to it.laterality }
+        .map { (profileAndSide, samples) ->
+            val (profileVersionId, laterality) = profileAndSide
             val normalisedUncertainty = 1.0
             ExerciseTranslationState(
                 executionProfileVersionId = profileVersionId,
+                laterality = laterality,
                 anchors = samples.flatMap { sample -> sample.metricValues.map { it.metric } }
                     .distinct()
                     .mapNotNull { metric ->
@@ -156,7 +170,7 @@ class ObservedPerformanceTranslationModel : ExerciseTranslationModel {
                 modelVersion = modelVersion,
             )
         }
-        .sortedBy { it.executionProfileVersionId.value }
+        .sortedWith(compareBy({ it.executionProfileVersionId.value }, { it.laterality.storageValue }))
 
     private fun estimate(value: Double, uncertainty: Double, sourceId: String): Estimate<Double> = Estimate(
         value = value,

@@ -145,7 +145,9 @@ data class PerformanceMetricValue(
         require(abs(converted.value - canonical.value) <= 1e-9 * maxOf(1.0, abs(converted.value))) {
             "Canonical ${metric.storageValue} does not match deterministic conversion of entered value."
         }
-        require(canonical.value >= 0.0) { "Performance values cannot be negative." }
+        require(metric == PerformanceMetric.INCLINE_GRADE || canonical.value >= 0.0) {
+            "Performance values other than incline/decline grade cannot be negative."
+        }
         if (metric.dimension in setOf(QuantityDimension.COUNT, QuantityDimension.ORDINAL)) {
             require(canonical.value % 1.0 == 0.0) { "${metric.storageValue} must be integral." }
         }
@@ -218,8 +220,8 @@ data class MetricTarget(
             TargetKind.MAXIMUM -> require(lowerCanonical == null && upperCanonical != null)
             TargetKind.OPEN -> require(lowerCanonical == null && upperCanonical == null)
         }
-        require(lowerCanonical == null || lowerCanonical >= 0.0)
-        require(upperCanonical == null || upperCanonical >= 0.0)
+        require(metric == PerformanceMetric.INCLINE_GRADE || lowerCanonical == null || lowerCanonical >= 0.0)
+        require(metric == PerformanceMetric.INCLINE_GRADE || upperCanonical == null || upperCanonical >= 0.0)
     }
 
     val exactOrLower: Double? get() = lowerCanonical

@@ -94,6 +94,23 @@ class HistoryBackedPrescriptionEngineTest {
     }
 
     @Test
+    fun `decline grade evidence is not silently clamped to level`() {
+        val result = engine.generate(
+            request(
+                schema = schema(
+                    MetricFamily.SPEED_DURATION,
+                    SchemaMetric(PerformanceMetric.INCLINE_GRADE, required = true),
+                ),
+                evidenceByMetric = mapOf(
+                    PerformanceMetric.INCLINE_GRADE to evidence(-0.03, "observation_decline", "set_decline"),
+                ),
+            ),
+        )
+
+        assertEquals(-0.03, result.setPrescriptions.single().metricTargets.single().lowerCanonical)
+    }
+
+    @Test
     fun `same-profile evidence resolver prefers inference then raw observation`() {
         val inferred = SameProfileMetricEvidenceResolver.resolve(
             inferredCanonical = 72.5,
@@ -124,6 +141,7 @@ class HistoryBackedPrescriptionEngineTest {
         schema: PerformanceSchema,
         preferred: MetricTarget? = null,
         evidence: Pair<PerformanceMetric, PrescriptionEvidence>? = null,
+        evidenceByMetric: Map<PerformanceMetric, PrescriptionEvidence> = emptyMap(),
     ) = PrescriptionRequest(
         exerciseId = ExerciseId("exercise_press"),
         executionProfileId = ExecutionProfileId("execution_press_default"),
@@ -132,7 +150,7 @@ class HistoryBackedPrescriptionEngineTest {
         sets = 3,
         schema = schema,
         preferredTemplate = PerformanceTargetTemplate(listOfNotNull(preferred)),
-        evidenceByMetric = evidence?.let { mapOf(it) }.orEmpty(),
+        evidenceByMetric = evidenceByMetric + evidence?.let { mapOf(it) }.orEmpty(),
         laterality = Laterality.BILATERAL,
         restSeconds = 120,
     )
@@ -145,10 +163,14 @@ class HistoryBackedPrescriptionEngineTest {
         provenance = "test",
     )
 
-    private fun evidence(value: Double) = PrescriptionEvidence(
+    private fun evidence(
+        value: Double,
+        observationId: String = "observation_anchor",
+        setRecordId: String = "set_anchor",
+    ) = PrescriptionEvidence(
         source = "test_same_profile",
-        sourceObservationId = "observation_anchor",
-        sourceSetRecordId = "set_anchor",
+        sourceObservationId = observationId,
+        sourceSetRecordId = setRecordId,
         inferenceRunId = "run_1",
         anchorCanonical = value,
         modelVersion = "test-v1",
