@@ -142,23 +142,106 @@ data class ExerciseExecutionProfileEntity(
     @PrimaryKey val id: String,
     val exerciseId: String,
     val name: String,
-    val equipment: String,
-    val minimumLoad: Double?,
-    val maximumLoad: Double?,
-    val loadIncrement: Double?,
-    val allowedLoadsJson: String?,
     val isDefault: Boolean,
+    val archived: Boolean,
 )
 
 @Entity(
-    tableName = "recruitment_allocation",
-    primaryKeys = ["executionProfileId", "muscleSegmentId"],
+    tableName = "recruitment_profile_version",
     foreignKeys = [
         ForeignKey(
             entity = ExerciseExecutionProfileEntity::class,
             parentColumns = ["id"],
             childColumns = ["executionProfileId"],
-            onDelete = ForeignKey.CASCADE,
+            onDelete = ForeignKey.RESTRICT,
+        ),
+    ],
+    indices = [
+        Index("executionProfileId"),
+        Index(value = ["executionProfileId", "version"], unique = true),
+    ],
+)
+data class RecruitmentProfileVersionEntity(
+    @PrimaryKey val id: String,
+    val executionProfileId: String,
+    val version: Int,
+    val createdAt: String,
+    val effectiveAt: String,
+    val supersededAt: String?,
+    val provenance: String,
+    val modelVersion: String,
+)
+
+@Entity(
+    tableName = "execution_profile_version",
+    foreignKeys = [
+        ForeignKey(
+            entity = ExerciseExecutionProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["executionProfileId"],
+            onDelete = ForeignKey.RESTRICT,
+        ),
+        ForeignKey(
+            entity = PerformanceSchemaEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["performanceSchemaId"],
+            onDelete = ForeignKey.RESTRICT,
+        ),
+        ForeignKey(
+            entity = RecruitmentProfileVersionEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["recruitmentProfileVersionId"],
+            onDelete = ForeignKey.RESTRICT,
+        ),
+    ],
+    indices = [
+        Index("executionProfileId"),
+        Index("performanceSchemaId"),
+        Index("recruitmentProfileVersionId"),
+        Index(value = ["executionProfileId", "version"], unique = true),
+    ],
+)
+data class ExecutionProfileVersionEntity(
+    @PrimaryKey val id: String,
+    val executionProfileId: String,
+    val version: Int,
+    val metricFamily: String,
+    val performanceSchemaId: String,
+    val equipmentIdentity: String?,
+    val equipmentType: String?,
+    val resistanceSemantics: String,
+    val resistanceModelVersion: String,
+    val bodyweightCoefficient: Double,
+    val externalLoadCoefficient: Double,
+    val assistanceCoefficient: Double,
+    val entryBasis: String,
+    val implementCount: Int?,
+    val lateralityMode: String,
+    val romClass: String?,
+    val techniqueClass: String?,
+    val resistanceCurveClass: String?,
+    val movementPattern: String?,
+    val jointActionsJson: String?,
+    val kineticChain: String?,
+    val contractionType: String?,
+    val gripSupportConstraintsJson: String?,
+    val recruitmentProfileVersionId: String,
+    val createdAt: String,
+    val effectiveAt: String,
+    val supersededAt: String?,
+    val provenance: String,
+    val modelVersion: String,
+)
+
+@Entity(
+    tableName = "recruitment_allocation",
+    primaryKeys = ["recruitmentProfileVersionId", "muscleSegmentId"],
+    foreignKeys = [
+        ForeignKey(
+            entity = RecruitmentProfileVersionEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["recruitmentProfileVersionId"],
+            onDelete = ForeignKey.RESTRICT,
         ),
         ForeignKey(
             entity = MuscleSegmentEntity::class,
@@ -166,13 +249,18 @@ data class ExerciseExecutionProfileEntity(
             childColumns = ["muscleSegmentId"],
         ),
     ],
-    indices = [Index("executionProfileId"), Index("muscleSegmentId")],
+    indices = [Index("recruitmentProfileVersionId"), Index("muscleSegmentId")],
 )
 data class RecruitmentAllocationEntity(
-    val executionProfileId: String,
+    val recruitmentProfileVersionId: String,
     val muscleSegmentId: String,
     val role: String,
     val weighting: Double,
     val confidence: Double,
-    val source: String?,
+    val provenanceType: String,
+    val provenanceReference: String?,
+    val applicableRom: String?,
+    val applicableTechnique: String?,
+    val resistanceCurveClass: String?,
+    val modelVersion: String,
 )

@@ -299,14 +299,14 @@ private fun ExerciseDetailSheet(
                     }
                     val increment = item.executionProfiles.firstOrNull { it.isDefault }?.loadResolution?.increment
                     DetailTextBlock("Tracking", buildString {
-                        append(item.tracking.metric.storageValue.replace('_', ' '))
+                        append(item.tracking.metricFamily.storageValue.replace('_', ' '))
                         append(" · ")
-                        append(item.tracking.defaultUnit)
+                        append(item.tracking.defaultUnit.storageValue)
                         increment?.let {
                             append(" · ")
                             append(formatLibraryNumber(it))
                             append(' ')
-                            append(item.tracking.defaultUnit)
+                            append(item.tracking.defaultUnit.storageValue)
                             append(" load increment")
                         }
                     })

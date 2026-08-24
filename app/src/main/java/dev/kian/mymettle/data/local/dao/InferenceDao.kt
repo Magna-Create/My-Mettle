@@ -5,23 +5,24 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import dev.kian.mymettle.data.local.entity.ExerciseTranslationStateEntity
+import dev.kian.mymettle.data.local.entity.ExerciseTranslationMetricAnchorEntity
 import dev.kian.mymettle.data.local.entity.InferenceRunEntity
 import dev.kian.mymettle.data.local.entity.MuscleSegmentEntity
 import dev.kian.mymettle.data.local.entity.MuscleStateSnapshotEntity
 import dev.kian.mymettle.data.local.entity.RecruitmentAllocationEntity
 import dev.kian.mymettle.data.local.entity.ReferenceProfileEntity
 import dev.kian.mymettle.data.local.entity.StimulusEstimateEntity
+import dev.kian.mymettle.data.local.entity.SetMetricValueEntity
 
 data class CompletedSetEvidenceRow(
     val setRecordId: String,
+    val observationId: String,
     val sessionExerciseId: String,
-    val executionProfileId: String,
+    val executionProfileVersionId: String,
+    val side: String,
     val completedAt: String,
-    val load: Double?,
-    val reps: Int?,
-    val durationSeconds: Int?,
-    val distanceMetres: Double?,
-    val unit: String,
+    val observationBodyMassContextKg: Double?,
+    val sessionBodyMassSnapshotKg: Double?,
     val warmUp: Boolean,
     val kind: String,
 )
@@ -35,31 +36,45 @@ interface InferenceDao {
         """
         SELECT
             sr.id AS setRecordId,
+            so.id AS observationId,
             sr.sessionExerciseId AS sessionExerciseId,
-            se.executionProfileId AS executionProfileId,
-            sr.completedAt AS completedAt,
-            sr.load AS load,
-            sr.reps AS reps,
-            sr.durationSeconds AS durationSeconds,
-            sr.distanceMetres AS distanceMetres,
-            sr.unit AS unit,
+            so.executionProfileVersionId AS executionProfileVersionId,
+            so.side AS side,
+            so.completedAt AS completedAt,
+            so.bodyMassContextKg AS observationBodyMassContextKg,
+            s.bodyweightSnapshotKg AS sessionBodyMassSnapshotKg,
             sr.warmUp AS warmUp,
             sr.kind AS kind
         FROM set_record AS sr
         INNER JOIN session_exercise AS se ON se.id = sr.sessionExerciseId
         INNER JOIN session AS s ON s.id = se.sessionId
+        INNER JOIN set_observation AS so ON so.setRecordId = sr.id
         WHERE s.status = 'completed'
           AND s.excludedFromInsights = 0
-          AND sr.completedAt IS NOT NULL
-        ORDER BY sr.completedAt, sr.id
+          AND NOT EXISTS (SELECT 1 FROM set_observation newer WHERE newer.supersedesObservationId = so.id)
+        ORDER BY so.completedAt, sr.id, so.ordinal
         """,
     )
     suspend fun completedSetEvidence(): List<CompletedSetEvidenceRow>
 
-    @Query("SELECT * FROM recruitment_allocation WHERE executionProfileId IN (:executionProfileIds)")
+    @Query("SELECT * FROM set_metric_value WHERE observationId IN (:observationIds) ORDER BY observationId, metric")
+    suspend fun completedMetricValues(observationIds: List<String>): List<SetMetricValueEntity>
+
+    @Query(
+        """
+        SELECT epv.id AS executionProfileVersionId,
+               ra.recruitmentProfileVersionId AS recruitmentProfileVersionId,
+               ra.muscleSegmentId AS muscleSegmentId,
+               ra.role AS role, ra.weighting AS weighting, ra.confidence AS confidence
+        FROM execution_profile_version epv
+        INNER JOIN recruitment_allocation ra
+          ON ra.recruitmentProfileVersionId = epv.recruitmentProfileVersionId
+        WHERE epv.id IN (:executionProfileVersionIds)
+        """,
+    )
     suspend fun recruitmentAllocations(
-        executionProfileIds: List<String>,
-    ): List<RecruitmentAllocationEntity>
+        executionProfileVersionIds: List<String>,
+    ): List<RecruitmentEvidenceRow>
 
     @Query("SELECT * FROM muscle_segment WHERE statePolicy != 'SHARED_PARENT' ORDER BY id")
     suspend fun independentlyTrackedSegments(): List<MuscleSegmentEntity>
@@ -83,8 +98,11 @@ interface InferenceDao {
     @Query("SELECT * FROM stimulus_estimate WHERE inferenceRunId = :inferenceRunId ORDER BY setRecordId, muscleSegmentId, side")
     suspend fun stimulusEstimates(inferenceRunId: String): List<StimulusEstimateEntity>
 
-    @Query("SELECT * FROM exercise_translation_state WHERE inferenceRunId = :inferenceRunId ORDER BY executionProfileId")
+    @Query("SELECT * FROM exercise_translation_state WHERE inferenceRunId = :inferenceRunId ORDER BY executionProfileVersionId")
     suspend fun exerciseTranslationStates(inferenceRunId: String): List<ExerciseTranslationStateEntity>
+
+    @Query("SELECT * FROM exercise_translation_metric_anchor WHERE inferenceRunId = :inferenceRunId ORDER BY executionProfileVersionId, metric")
+    suspend fun exerciseTranslationMetricAnchors(inferenceRunId: String): List<ExerciseTranslationMetricAnchorEntity>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertInferenceRun(value: InferenceRunEntity)
@@ -98,6 +116,18 @@ interface InferenceDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertExerciseTranslationStates(values: List<ExerciseTranslationStateEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertExerciseTranslationMetricAnchors(values: List<ExerciseTranslationMetricAnchorEntity>)
+
     @Query("DELETE FROM inference_run WHERE userProfileId = :userProfileId")
     suspend fun deleteDerivedState(userProfileId: String)
 }
+
+data class RecruitmentEvidenceRow(
+    val executionProfileVersionId: String,
+    val recruitmentProfileVersionId: String,
+    val muscleSegmentId: String,
+    val role: String,
+    val weighting: Double,
+    val confidence: Double,
+)

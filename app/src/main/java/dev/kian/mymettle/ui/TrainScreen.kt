@@ -57,28 +57,52 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
-import dev.kian.mymettle.data.local.entity.SetRecordEntity
+import dev.kian.mymettle.domain.performance.PerformanceMetric
+import dev.kian.mymettle.domain.performance.PerformanceMetricValue
+import dev.kian.mymettle.domain.performance.Quantity
+import dev.kian.mymettle.domain.performance.Laterality
+import dev.kian.mymettle.domain.performance.LateralityMode
+import dev.kian.mymettle.domain.performance.QuantityDimension
+import dev.kian.mymettle.domain.performance.ResistanceSemantics
 import dev.kian.mymettle.workout.ActiveWorkout
 import dev.kian.mymettle.workout.ActiveWorkoutExercise
 import dev.kian.mymettle.workout.ExerciseSwapOption
 import dev.kian.mymettle.workout.NativeWorkoutPlan
+import dev.kian.mymettle.workout.PerformanceSetRecord
 import dev.kian.mymettle.workout.TrainingMode
 import dev.kian.mymettle.workout.evaluateLoadExpression
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private class TrainSetDraft(set: SetRecordEntity) {
+private val LEGACY_UI_METRICS = setOf(
+    PerformanceMetric.EXTERNAL_LOAD,
+    PerformanceMetric.ASSISTANCE,
+    PerformanceMetric.REPETITIONS,
+    PerformanceMetric.DURATION,
+    PerformanceMetric.DISTANCE,
+)
+
+private class TrainSetDraft(set: PerformanceSetRecord, exercise: ActiveWorkoutExercise) {
     var load by mutableStateOf(set.load?.let(::formatDecimal).orEmpty())
     var reps by mutableStateOf(set.reps?.toString().orEmpty())
     var durationSeconds by mutableStateOf(set.durationSeconds?.toString().orEmpty())
     var distanceMetres by mutableStateOf(set.distanceMetres?.let(::formatDecimal).orEmpty())
+    var laterality by mutableStateOf(
+        set.observations.maxByOrNull { it.completedAt }?.laterality
+            ?: exercise.prescription.setPrescriptions.firstOrNull { it.index == set.setIndex }?.laterality
+            ?: Laterality.UNKNOWN,
+    )
+    val additional = mutableStateMapOf<PerformanceMetric, String>().apply {
+        exercise.schema.metrics.filterNot { it.metric in LEGACY_UI_METRICS }.forEach { definition ->
+            this[definition.metric] = set.enteredValue(definition.metric)?.let(::formatDecimal).orEmpty()
+        }
+    }
 }
 
 private data class LoadCalculatorTarget(
     val exercise: ActiveWorkoutExercise,
-    val set: SetRecordEntity,
+    val set: PerformanceSetRecord,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -194,7 +218,7 @@ fun TrainScreen(viewModel: N2WorkoutViewModel) {
 private fun persistDraft(
     viewModel: N2WorkoutViewModel,
     exercise: ActiveWorkoutExercise,
-    set: SetRecordEntity,
+    set: PerformanceSetRecord,
     draft: TrainSetDraft,
     logged: Boolean,
 ) {
@@ -206,6 +230,12 @@ private fun persistDraft(
         reps = draft.reps.toIntOrNull(),
         durationSeconds = draft.durationSeconds.toIntOrNull(),
         distanceMetres = draft.distanceMetres.toDoubleOrNull(),
+        additionalValues = exercise.schema.metrics.filterNot { it.metric in LEGACY_UI_METRICS }.mapNotNull { definition ->
+            draft.additional[definition.metric]?.toDoubleOrNull()?.let { entered ->
+                PerformanceMetricValue(definition.metric, Quantity(entered, definition.defaultUnit))
+            }
+        },
+        laterality = draft.laterality,
         logged = logged,
     )
 }
@@ -349,9 +379,9 @@ private fun ActiveTrainState(
     loading: Boolean,
     drafts: MutableMap<String, TrainSetDraft>,
     onModeSelected: (TrainingMode) -> Unit,
-    onOpenCalculator: (ActiveWorkoutExercise, SetRecordEntity) -> Unit,
-    onSaveDraft: (ActiveWorkoutExercise, SetRecordEntity, TrainSetDraft) -> Unit,
-    onLogSet: (ActiveWorkoutExercise, SetRecordEntity, TrainSetDraft) -> Unit,
+    onOpenCalculator: (ActiveWorkoutExercise, PerformanceSetRecord) -> Unit,
+    onSaveDraft: (ActiveWorkoutExercise, PerformanceSetRecord, TrainSetDraft) -> Unit,
+    onLogSet: (ActiveWorkoutExercise, PerformanceSetRecord, TrainSetDraft) -> Unit,
     onSwapExercise: (ActiveWorkoutExercise) -> Unit,
     onToggleExercise: (ActiveWorkoutExercise) -> Unit,
     onCompleteSession: () -> Unit,
@@ -428,15 +458,15 @@ private fun TrainExerciseCard(
     exercise: ActiveWorkoutExercise,
     drafts: MutableMap<String, TrainSetDraft>,
     sessionActive: Boolean,
-    onOpenCalculator: (SetRecordEntity) -> Unit,
-    onSaveDraft: (SetRecordEntity, TrainSetDraft) -> Unit,
-    onLogSet: (SetRecordEntity, TrainSetDraft) -> Unit,
+    onOpenCalculator: (PerformanceSetRecord) -> Unit,
+    onSaveDraft: (PerformanceSetRecord, TrainSetDraft) -> Unit,
+    onLogSet: (PerformanceSetRecord, TrainSetDraft) -> Unit,
     onSwap: () -> Unit,
     onToggleComplete: () -> Unit,
 ) {
     val entity = exercise.entity
     val sets = exercise.sets
-        .filter { it.setIndex < entity.prescribedSets || it.completedAt != null }
+        .filter { it.setIndex < exercise.prescription.sets || it.completedAt != null }
         .sortedBy { it.setIndex }
     val previous = exercise.previousCompletedSets.firstOrNull()
     val completed = entity.status == "completed"
@@ -472,9 +502,9 @@ private fun TrainExerciseCard(
                 )
             }
             Spacer(Modifier.height(8.dp))
-            Text(prescriptionSummary(entity), style = MaterialTheme.typography.titleSmall)
+            Text(prescriptionSummary(exercise), style = MaterialTheme.typography.titleSmall)
             Text(
-                loadEvidenceSummary(entity),
+                metricEvidenceSummary(exercise),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -493,10 +523,10 @@ private fun TrainExerciseCard(
                 Spacer(Modifier.height(12.dp))
 
                 sets.forEachIndexed { index, set ->
-                    val draft = drafts.getOrPut(set.id) { TrainSetDraft(set) }
+                    val draft = drafts.getOrPut(set.id) { TrainSetDraft(set, exercise) }
                     MetricSetRow(
                         displayIndex = index + 1,
-                        entity = entity,
+                        exercise = exercise,
                         set = set,
                         draft = draft,
                         enabled = sessionActive && !completed,
@@ -527,8 +557,8 @@ private fun TrainExerciseCard(
 @Composable
 private fun MetricSetRow(
     displayIndex: Int,
-    entity: SessionExerciseEntity,
-    set: SetRecordEntity,
+    exercise: ActiveWorkoutExercise,
+    set: PerformanceSetRecord,
     draft: TrainSetDraft,
     enabled: Boolean,
     onOpenCalculator: () -> Unit,
@@ -536,17 +566,21 @@ private fun MetricSetRow(
     onLogSet: () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
-    val metric = entity.trackingMetricSnapshot
-    val needsExternalLoad = metric == "load_reps" && entity.loadRelationshipSnapshot != "bodyweight"
-    val needsReps = metric == "load_reps" || metric == "reps"
-    val needsDuration = metric == "duration"
-    val needsDistance = metric == "distance"
+    val metrics = exercise.schema.metrics.mapTo(hashSetOf()) { it.metric }
+    val needsExternalLoad = PerformanceMetric.EXTERNAL_LOAD in metrics || PerformanceMetric.ASSISTANCE in metrics
+    val needsReps = PerformanceMetric.REPETITIONS in metrics
+    val needsDuration = PerformanceMetric.DURATION in metrics
+    val needsDistance = PerformanceMetric.DISTANCE in metrics
+    val requiredAdditionalReady = exercise.schema.metrics
+        .filter { it.required && it.metric !in LEGACY_UI_METRICS }
+        .all { draft.additional[it.metric]?.toDoubleOrNull() != null }
+    val lateralityReady = exercise.lateralityMode != LateralityMode.UNILATERAL || draft.laterality in setOf(Laterality.LEFT, Laterality.RIGHT)
     val ready = when {
         needsExternalLoad && draft.load.toDoubleOrNull() == null -> false
         needsReps && draft.reps.toIntOrNull() == null -> false
         needsDuration && draft.durationSeconds.toIntOrNull()?.let { it > 0 } != true -> false
         needsDistance && draft.distanceMetres.toDoubleOrNull()?.let { it > 0.0 } != true -> false
-        else -> true
+        else -> requiredAdditionalReady && lateralityReady
     }
 
     Surface(
@@ -555,6 +589,23 @@ private fun MetricSetRow(
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Text("Set $displayIndex${if (set.kind == "additional") " · additional" else ""}", style = MaterialTheme.typography.labelLarge)
+            if (exercise.lateralityMode in setOf(LateralityMode.UNILATERAL, LateralityMode.ALTERNATING_ALLOWED)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    val choices = if (exercise.lateralityMode == LateralityMode.UNILATERAL) {
+                        listOf(Laterality.LEFT, Laterality.RIGHT)
+                    } else {
+                        listOf(Laterality.LEFT, Laterality.RIGHT, Laterality.ALTERNATING)
+                    }
+                    choices.forEach { side ->
+                        FilterChip(
+                            selected = draft.laterality == side,
+                            onClick = { draft.laterality = side },
+                            enabled = enabled,
+                            label = { Text(side.storageValue.replace('_', ' ').replaceFirstChar { it.uppercase() }) },
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(8.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -596,6 +647,24 @@ private fun MetricSetRow(
                         onDone = { focusManager.clearFocus(); onSaveDraft() },
                     )
                 }
+            }
+
+            exercise.schema.metrics.filterNot { it.metric in LEGACY_UI_METRICS }.forEach { definition ->
+                Spacer(Modifier.height(8.dp))
+                MetricNumberField(
+                    value = draft.additional[definition.metric].orEmpty(),
+                    onValueChange = { value ->
+                        draft.additional[definition.metric] = if (
+                            definition.metric.dimension in setOf(QuantityDimension.COUNT, QuantityDimension.ORDINAL)
+                        ) value.filter(Char::isDigit).take(7) else decimalInput(value, 9)
+                        onSaveDraft()
+                    },
+                    label = "${definition.metric.storageValue.replace('_', ' ').replaceFirstChar { it.uppercase() }} (${definition.defaultUnit.storageValue})",
+                    enabled = enabled,
+                    decimal = definition.metric.dimension !in setOf(QuantityDimension.COUNT, QuantityDimension.ORDINAL),
+                    modifier = Modifier.fillMaxWidth(),
+                    onDone = { focusManager.clearFocus(); onSaveDraft() },
+                )
             }
 
             Spacer(Modifier.height(8.dp))
@@ -752,23 +821,31 @@ private fun LoadCalculatorDialog(
     )
 }
 
-private fun prescriptionSummary(entity: SessionExerciseEntity): String = when (entity.trackingMetricSnapshot) {
-    "load_reps", "reps" -> "${entity.prescribedSets} × ${entity.repMin}–${entity.repMax} reps · ${entity.restSeconds}s rest"
-    "duration" -> "${entity.prescribedSets} timed set${if (entity.prescribedSets == 1) "" else "s"} · ${entity.restSeconds}s rest"
-    "distance" -> "${entity.prescribedSets} distance set${if (entity.prescribedSets == 1) "" else "s"} · ${entity.restSeconds}s rest"
-    else -> "${entity.prescribedSets} set${if (entity.prescribedSets == 1) "" else "s"} · ${entity.restSeconds}s rest"
+private fun prescriptionSummary(exercise: ActiveWorkoutExercise): String {
+    val prescription = exercise.prescription
+    val targets = prescription.setPrescriptions.firstOrNull()?.metricTargets.orEmpty().joinToString(" · ") { target ->
+        val value = when (target.kind) {
+            dev.kian.mymettle.domain.performance.TargetKind.EXACT -> target.lowerCanonical?.let(::formatDecimal) ?: "open"
+            dev.kian.mymettle.domain.performance.TargetKind.RANGE -> "${target.lowerCanonical?.let(::formatDecimal) ?: "?"}–${target.upperCanonical?.let(::formatDecimal) ?: "?"}"
+            dev.kian.mymettle.domain.performance.TargetKind.MINIMUM -> "≥${target.lowerCanonical?.let(::formatDecimal) ?: "?"}"
+            dev.kian.mymettle.domain.performance.TargetKind.MAXIMUM -> "≤${target.upperCanonical?.let(::formatDecimal) ?: "?"}"
+            dev.kian.mymettle.domain.performance.TargetKind.OPEN -> "open"
+        }
+        "$value ${target.displayUnit.storageValue} ${target.metric.storageValue.replace('_', ' ')}"
+    }
+    return "${prescription.sets} set${if (prescription.sets == 1) "" else "s"}${targets.takeIf { it.isNotEmpty() }?.let { " · $it" }.orEmpty()} · ${prescription.restSeconds}s rest"
 }
 
-private fun loadEvidenceSummary(entity: SessionExerciseEntity): String = when {
-    entity.loadRelationshipSnapshot in setOf("bodyweight", "none") -> "Load suggestion: not applicable"
-    entity.prescribedLoad == null && entity.trackingMetricSnapshot == "load_reps" ->
-        "Load suggestion: none — no same-profile evidence"
-    entity.prescribedLoad == null -> "Load suggestion: not applicable"
-    entity.prescribedLoadEvidenceSource == "inference_same_profile_anchor" ->
-        "Load evidence: inference ${entity.prescribedLoadInferenceRunId?.takeLast(8) ?: "run"} · set ${entity.prescribedLoadEvidenceSetId?.takeLast(8) ?: "unknown"}"
-    entity.prescribedLoadEvidenceSource == "raw_same_profile_history" ->
-        "Load evidence: latest same-profile set ${entity.prescribedLoadEvidenceSetId?.takeLast(8) ?: "unknown"}"
-    else -> "Load evidence: ${entity.prescribedLoadEvidenceSource ?: "not recorded"}"
+private fun metricEvidenceSummary(exercise: ActiveWorkoutExercise): String {
+    val target = exercise.prescription.setPrescriptions.firstOrNull()?.metricTargets
+        ?.firstOrNull { it.evidence != null }
+        ?: return if (exercise.resistanceSemantics in setOf(ResistanceSemantics.BODYWEIGHT, ResistanceSemantics.NONE)) {
+            "External-load suggestion: not applicable"
+        } else {
+            "No same-profile metric evidence yet"
+        }
+    val evidence = target.evidence ?: return "No metric evidence"
+    return "${target.metric.storageValue.replace('_', ' ')} evidence: ${evidence.source} · set ${evidence.sourceSetRecordId?.takeLast(8) ?: "unknown"}"
 }
 
 private fun swapLoadSuggestion(option: ExerciseSwapOption): String {
@@ -786,14 +863,14 @@ private fun swapLoadSuggestion(option: ExerciseSwapOption): String {
     return "Suggested ${formatDecimal(load)} ${option.defaultUnit} · $source ${evidence?.sourceSetRecordId?.takeLast(8).orEmpty()}".trim()
 }
 
-private fun setSummary(set: SetRecordEntity): String = buildString {
-    if (set.load != null) append("${formatDecimal(set.load)} ${set.unit}")
-    if (set.load != null && set.reps != null) append(" × ")
-    if (set.reps != null) append("${set.reps} reps")
-    if (set.durationSeconds != null) append("${set.durationSeconds}s")
-    if (set.distanceMetres != null) append("${formatDecimal(set.distanceMetres)} m")
-    if (isEmpty()) append("—")
-}
+private fun setSummary(set: PerformanceSetRecord): String = set.observations
+    .sortedWith(compareBy({ it.ordinal }, { it.laterality.storageValue }))
+    .joinToString(" | ") { observation ->
+        val side = if (observation.laterality == Laterality.NOT_APPLICABLE) "" else "${observation.laterality.storageValue}: "
+        side + observation.values.joinToString(" · ") { value ->
+            "${formatDecimal(value.entered.value)} ${value.entered.unit.storageValue} ${value.metric.storageValue.replace('_', ' ')}"
+        }
+    }.ifEmpty { "—" }
 
 private fun decimalInput(value: String, maxLength: Int): String {
     val filtered = value.filter { it.isDigit() || it == '.' }.take(maxLength)

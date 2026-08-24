@@ -56,15 +56,19 @@ class BiologyDeveloperRepository(
         val inference = runCatching {
             dev.kian.mymettle.inference.RoomInferenceRepository(database).latestSnapshot()
         }.getOrNull()
-        val profileIds = inference?.exerciseTranslationStates.orEmpty()
-            .map { it.executionProfileId.value }
+        val versionIds = inference?.exerciseTranslationStates.orEmpty()
+            .map { it.executionProfileVersionId.value }
             .distinct()
+        val versions = if (versionIds.isEmpty()) emptyList() else workoutDao.executionProfileVersionsById(versionIds)
+        val profileIds = versions.map { it.executionProfileId }.distinct()
         val profileEntities = if (profileIds.isEmpty()) emptyList() else workoutDao.executionProfilesById(profileIds)
         val exerciseNames = if (profileEntities.isEmpty()) emptyMap() else {
             workoutDao.exercises(profileEntities.map { it.exerciseId }.distinct()).associate { it.id to it.name }
         }
-        val profileLabels = profileEntities.associate { profile ->
-            profile.id to "${exerciseNames[profile.exerciseId] ?: profile.exerciseId} — ${profile.name}"
+        val profilesById = profileEntities.associateBy { it.id }
+        val profileLabels = versions.associate { version ->
+            val profile = profilesById.getValue(version.executionProfileId)
+            version.id to "${exerciseNames[profile.exerciseId] ?: profile.exerciseId} — ${profile.name} · v${version.version}"
         }
 
         return BiologyDeveloperSnapshot(
@@ -93,7 +97,7 @@ class BiologyDeveloperRepository(
         .toString(2)
 
     private companion object {
-        const val SCHEMA_VERSION = 9
+        const val SCHEMA_VERSION = 11
     }
 }
 
@@ -136,6 +140,7 @@ private fun NativeWorkoutPlan.toJson(): JSONObject = JSONObject()
             .put("exerciseId", candidate.exerciseId)
             .put("exerciseName", candidate.exerciseName)
             .put("executionProfileId", candidate.executionProfileId)
+            .put("executionProfileVersionId", candidate.executionProfileVersionId)
             .put("executionProfileName", candidate.executionProfileName)
             .put("preferencePriority", candidate.preferencePriority)
             .put("selected", candidate.selected)
@@ -144,21 +149,33 @@ private fun NativeWorkoutPlan.toJson(): JSONObject = JSONObject()
             .put("targetCoverage", JSONObject(candidate.targetCoverage))
     }))
     .put("prescriptions", JSONArray(exercises.map { planned ->
-        val evidence = planned.prescription.loadEvidence
         JSONObject()
             .put("exerciseId", planned.prescription.exerciseId.value)
             .put("exerciseName", planned.name)
             .put("executionProfileId", planned.prescription.executionProfileId.value)
+            .put("executionProfileVersionId", planned.prescription.executionProfileVersionId.value)
             .put("sets", planned.prescription.sets)
-            .put("repMin", planned.prescription.repRange.first)
-            .put("repMax", planned.prescription.repRange.last)
-            .put("prescribedLoad", planned.prescription.prescribedLoad ?: JSONObject.NULL)
-            .put("loadEvidence", evidence?.let { value -> JSONObject()
-                .put("source", value.source)
-                .put("anchorLoad", value.anchorLoad)
-                .put("sourceSetRecordId", value.sourceSetRecordId ?: JSONObject.NULL)
-                .put("inferenceRunId", value.inferenceRunId ?: JSONObject.NULL)
-            } ?: JSONObject.NULL)
+            .put("metricFamily", planned.schema.family.storageValue)
+            .put("setPrescriptions", JSONArray(planned.prescription.setPrescriptions.map { set -> JSONObject()
+                .put("index", set.index)
+                .put("laterality", set.laterality.storageValue)
+                .put("metricTargets", JSONArray(set.metricTargets.map { target -> JSONObject()
+                    .put("metric", target.metric.storageValue)
+                    .put("kind", target.kind.storageValue)
+                    .put("lowerCanonical", target.lowerCanonical ?: JSONObject.NULL)
+                    .put("upperCanonical", target.upperCanonical ?: JSONObject.NULL)
+                    .put("canonicalUnit", target.canonicalUnit.storageValue)
+                    .put("displayUnit", target.displayUnit.storageValue)
+                    .put("evidence", target.evidence?.let { value -> JSONObject()
+                        .put("source", value.source)
+                        .put("anchorCanonical", value.anchorCanonical ?: JSONObject.NULL)
+                        .put("sourceObservationId", value.sourceObservationId ?: JSONObject.NULL)
+                        .put("sourceSetRecordId", value.sourceSetRecordId ?: JSONObject.NULL)
+                        .put("inferenceRunId", value.inferenceRunId ?: JSONObject.NULL)
+                        .put("modelVersion", value.modelVersion)
+                    } ?: JSONObject.NULL)
+                }))
+            }))
             .put("movementReason", planned.movementReason)
             .put("modelVersion", planned.prescription.generatedByModelVersion)
     }))
@@ -189,6 +206,7 @@ private fun UserInferenceSnapshot.toJson(profileLabels: Map<String, String>): JS
     }))
     .put("stimulusEstimates", JSONArray(stimulusEstimates.map { estimate -> JSONObject()
         .put("setRecordId", estimate.setRecordId)
+        .put("observationId", estimate.observationId)
         .put("sessionExerciseId", estimate.sessionExerciseId)
         .put("segmentId", estimate.segmentId.value)
         .put("side", estimate.side.storageValue)
@@ -199,12 +217,16 @@ private fun UserInferenceSnapshot.toJson(profileLabels: Map<String, String>): JS
         .put("modelVersion", estimate.modelVersion)
     }))
     .put("exerciseTranslationStates", JSONArray(exerciseTranslationStates.map { state -> JSONObject()
-        .put("executionProfileId", state.executionProfileId.value)
-        .put("label", profileLabels[state.executionProfileId.value] ?: JSONObject.NULL)
-        .put("observedLoadAnchor", state.observedLoadAnchor?.value ?: JSONObject.NULL)
-        .put("observedLoadUnit", state.observedLoadUnit ?: JSONObject.NULL)
-        .put("observedLoadSourceSetId", state.observedLoadAnchor?.sourceId ?: JSONObject.NULL)
-        .put("observedRepAnchor", state.observedRepAnchor?.value ?: JSONObject.NULL)
+        .put("executionProfileVersionId", state.executionProfileVersionId.value)
+        .put("label", profileLabels[state.executionProfileVersionId.value] ?: JSONObject.NULL)
+        .put("anchors", JSONArray(state.anchors.map { anchor -> JSONObject()
+            .put("metric", anchor.metric.storageValue)
+            .put("value", anchor.estimate.value)
+            .put("uncertainty", anchor.estimate.uncertainty ?: JSONObject.NULL)
+            .put("canonicalUnit", anchor.canonicalUnit)
+            .put("sourceObservationId", anchor.sourceObservationId)
+            .put("sourceSetRecordId", anchor.sourceSetRecordId)
+        }))
         .put("sampleCount", state.sampleCount)
         .put("modelVersion", state.modelVersion)
     }))

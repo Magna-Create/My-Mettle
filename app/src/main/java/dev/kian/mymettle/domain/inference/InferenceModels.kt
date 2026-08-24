@@ -1,8 +1,11 @@
 package dev.kian.mymettle.domain.inference
 
 import dev.kian.mymettle.domain.anatomy.MuscleSegmentId
-import dev.kian.mymettle.domain.exercise.ExecutionProfileId
+import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
 import dev.kian.mymettle.domain.exercise.RecruitmentRole
+import dev.kian.mymettle.domain.performance.Laterality
+import dev.kian.mymettle.domain.performance.PerformanceMetric
+import dev.kian.mymettle.domain.performance.PerformanceMetricValue
 import dev.kian.mymettle.domain.physiology.Estimate
 import dev.kian.mymettle.domain.physiology.ReferenceProfileId
 import java.time.Instant
@@ -17,7 +20,10 @@ value class InferenceRunId(val value: String) {
 enum class BodySide(val storageValue: String) {
     LEFT("left"),
     RIGHT("right"),
-    BILATERAL("bilateral");
+    BILATERAL("bilateral"),
+    ALTERNATING("alternating"),
+    NOT_APPLICABLE("not_applicable"),
+    UNKNOWN("unknown");
 
     companion object {
         fun fromStorage(value: String): BodySide = entries.firstOrNull { it.storageValue == value }
@@ -50,29 +56,29 @@ data class InferenceRun(
 
 data class CompletedSetEvidence(
     val setRecordId: String,
+    val observationId: String,
     val sessionExerciseId: String,
-    val executionProfileId: ExecutionProfileId,
+    val executionProfileVersionId: ExecutionProfileVersionId,
+    val laterality: Laterality,
     val completedAt: Instant,
-    val load: Double?,
-    val reps: Int?,
-    val durationSeconds: Int?,
-    val distanceMetres: Double?,
-    val unit: String,
+    val metricValues: List<PerformanceMetricValue>,
+    val bodyMassContextKg: Double?,
     val warmUp: Boolean,
     val kind: String,
 ) {
     init {
         require(setRecordId.isNotBlank()) { "Set evidence needs an id." }
+        require(observationId.isNotBlank()) { "Set evidence needs an observation id." }
         require(sessionExerciseId.isNotBlank()) { "Set evidence needs a session-exercise id." }
-        require(unit.isNotBlank()) { "Set evidence needs a stored unit." }
-        require(load == null || load >= 0.0) { "Performed load cannot be negative." }
-        require(reps == null || reps >= 0) { "Performed reps cannot be negative." }
-        require(durationSeconds == null || durationSeconds >= 0) { "Duration cannot be negative." }
-        require(distanceMetres == null || distanceMetres >= 0.0) { "Distance cannot be negative." }
+        require(metricValues.isNotEmpty()) { "Set evidence needs performed metric values." }
+        require(metricValues.map { it.metric }.distinct().size == metricValues.size)
+        require(bodyMassContextKg == null || bodyMassContextKg > 0.0)
     }
 
     val hasPerformedWork: Boolean
-        get() = (reps ?: 0) > 0 || (durationSeconds ?: 0) > 0 || (distanceMetres ?: 0.0) > 0.0
+        get() = metricValues.any { it.canonical.value > 0.0 }
+
+    fun metric(metric: PerformanceMetric): PerformanceMetricValue? = metricValues.firstOrNull { it.metric == metric }
 }
 
 data class RecruitmentEvidence(
@@ -89,6 +95,7 @@ data class RecruitmentEvidence(
 
 data class StimulusEstimate(
     val setRecordId: String,
+    val observationId: String,
     val sessionExerciseId: String,
     val segmentId: MuscleSegmentId,
     val side: BodySide,
@@ -99,6 +106,7 @@ data class StimulusEstimate(
     val modelVersion: String,
 ) {
     init {
+        require(observationId.isNotBlank()) { "Stimulus estimate requires an observation id." }
         require(recruitmentWeighting >= 0.0) { "Recruitment weighting cannot be negative." }
         require(estimatedStimulus >= 0.0) { "Estimated stimulus cannot be negative." }
         require(confidence in 0.0..1.0) { "Stimulus confidence must be between 0 and 1." }
@@ -124,24 +132,28 @@ data class UserMuscleState(
     }
 }
 
+data class PerformanceAnchor(
+    val metric: PerformanceMetric,
+    val estimate: Estimate<Double>,
+    val canonicalUnit: String,
+    val sourceObservationId: String,
+    val sourceSetRecordId: String,
+)
+
 data class ExerciseTranslationState(
-    val executionProfileId: ExecutionProfileId,
-    val observedLoadAnchor: Estimate<Double>?,
-    val observedLoadUnit: String?,
-    val observedRepAnchor: Estimate<Double>?,
-    val observedDurationSecondsAnchor: Estimate<Double>?,
-    val observedDistanceMetresAnchor: Estimate<Double>?,
+    val executionProfileVersionId: ExecutionProfileVersionId,
+    val anchors: List<PerformanceAnchor>,
     val sampleCount: Int,
     val updatedAt: Instant,
     val modelVersion: String,
 ) {
     init {
         require(sampleCount > 0) { "Exercise translation requires performed evidence." }
-        require(observedLoadAnchor == null || !observedLoadUnit.isNullOrBlank()) {
-            "A load anchor requires its stored unit."
-        }
+        require(anchors.map { it.metric }.distinct().size == anchors.size)
         require(modelVersion.isNotBlank()) { "Translation model version cannot be blank." }
     }
+
+    fun anchor(metric: PerformanceMetric): PerformanceAnchor? = anchors.firstOrNull { it.metric == metric }
 }
 
 data class UserInferenceSnapshot(

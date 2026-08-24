@@ -7,18 +7,36 @@ import dev.kian.mymettle.data.local.entity.ExerciseCommonMistakeEntity
 import dev.kian.mymettle.data.local.entity.ExerciseCueEntity
 import dev.kian.mymettle.data.local.entity.ExerciseEntity
 import dev.kian.mymettle.data.local.entity.ExerciseExecutionProfileEntity
+import dev.kian.mymettle.data.local.entity.ExecutionProfileVersionEntity
 import dev.kian.mymettle.data.local.entity.ExerciseMemoryEntity
 import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSubstitutionEntity
 import dev.kian.mymettle.data.local.entity.HealthIntegrationStateEntity
 import dev.kian.mymettle.data.local.entity.HealthObservationEntity
+import dev.kian.mymettle.data.local.entity.PerformanceSchemaEntity
+import dev.kian.mymettle.data.local.entity.PerformanceSchemaMetricEntity
+import dev.kian.mymettle.data.local.entity.RecruitmentProfileVersionEntity
+import dev.kian.mymettle.data.local.entity.RoutineMetricTargetEntity
 import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.RoutineVersionEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
+import dev.kian.mymettle.data.local.entity.SessionMetricTargetEntity
+import dev.kian.mymettle.data.local.entity.SessionSetPrescriptionEntity
+import dev.kian.mymettle.data.local.entity.SetDraftMetricValueEntity
+import dev.kian.mymettle.data.local.entity.SetMetricValueEntity
+import dev.kian.mymettle.data.local.entity.SetObservationEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.data.local.entity.TrainingCycleEntity
 import dev.kian.mymettle.data.local.entity.UserProfileEntity
+import dev.kian.mymettle.domain.performance.MetricFamily
+import dev.kian.mymettle.domain.performance.PerformanceMetric
+import dev.kian.mymettle.domain.performance.PerformanceMetricValue
+import dev.kian.mymettle.domain.performance.Quantity
+import dev.kian.mymettle.domain.performance.ResistanceSemantics
+import dev.kian.mymettle.domain.performance.TargetKind
+import dev.kian.mymettle.domain.performance.UnitConverter
+import dev.kian.mymettle.domain.performance.UnitId
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -90,6 +108,12 @@ object LegacyV6BackupReader {
             val exercises = mutableListOf<ExerciseEntity>()
             val exerciseMemory = mutableListOf<ExerciseMemoryEntity>()
             val executionProfiles = mutableListOf<ExerciseExecutionProfileEntity>()
+            val performanceSchemas = mutableListOf<PerformanceSchemaEntity>()
+            val performanceSchemaMetrics = mutableListOf<PerformanceSchemaMetricEntity>()
+            val recruitmentProfileVersions = mutableListOf<RecruitmentProfileVersionEntity>()
+            val executionProfileVersions = mutableListOf<ExecutionProfileVersionEntity>()
+            val semanticsByExerciseId = linkedMapOf<String, LegacyExecutionSemantics>()
+            val historicalSemantics = linkedMapOf<List<String>, LegacyExecutionSemantics>()
             val legacyRecruitment = mutableListOf<LegacyRecruitmentAllocation>()
             val cues = mutableListOf<ExerciseCueEntity>()
             val commonMistakes = mutableListOf<ExerciseCommonMistakeEntity>()
@@ -102,29 +126,37 @@ object LegacyV6BackupReader {
                 val tracking = exercise.objectRequired("tracking")
                 val memory = exercise.objectOrNull("memory")
                 val legacyIncrement = exercise.optDouble("progressionStep", 0.0).takeIf { it > 0.0 }
+                val createdAt = exercise.stringRequired("createdAt")
+                val semantics = legacyExecutionSemantics(
+                    exerciseId = exerciseId,
+                    trackingMetric = tracking.stringRequired("metric"),
+                    loadRelationship = tracking.stringRequired("loadRelationship"),
+                    entryBasis = tracking.stringRequired("entryBasis"),
+                    defaultUnit = exercise.optString("defaultUnit", profile.units),
+                    legacyIncrement = legacyIncrement,
+                    equipment = memory?.optString("equipment", "")?.takeIf { it.isNotBlank() },
+                    createdAt = createdAt,
+                )
+                semanticsByExerciseId[exerciseId] = semantics
                 exercises += ExerciseEntity(
                     id = exerciseId,
                     name = exercise.stringRequired("name"),
                     archived = exercise.optBoolean("archived", false),
-                    defaultUnit = exercise.optString("defaultUnit", profile.units),
-                    trackingMetric = tracking.stringRequired("metric"),
-                    loadRelationship = tracking.stringRequired("loadRelationship"),
-                    entryBasis = tracking.stringRequired("entryBasis"),
                     essentialCue = exercise.stringOrNull("essentialCue"),
-                    createdAt = exercise.stringRequired("createdAt"),
+                    createdAt = createdAt,
                     updatedAt = exercise.stringRequired("updatedAt"),
                 )
                 executionProfiles += ExerciseExecutionProfileEntity(
                     id = executionProfileId,
                     exerciseId = exerciseId,
                     name = "Default",
-                    equipment = memory?.optString("equipment", "").orEmpty(),
-                    minimumLoad = legacyIncrement?.let { 0.0 },
-                    maximumLoad = null,
-                    loadIncrement = legacyIncrement,
-                    allowedLoadsJson = null,
                     isDefault = true,
+                    archived = false,
                 )
+                performanceSchemas += semantics.schema
+                performanceSchemaMetrics += semantics.schemaMetrics
+                recruitmentProfileVersions += semantics.recruitmentVersion
+                executionProfileVersions += semantics.executionVersion
 
                 memory?.let {
                     exerciseMemory += ExerciseMemoryEntity(
@@ -167,7 +199,7 @@ object LegacyV6BackupReader {
                     val basis = model.stringRequired("basis")
                     model.arrayRequired("allocations").objects().forEach { allocation ->
                         legacyRecruitment += LegacyRecruitmentAllocation(
-                            executionProfileId = executionProfileId,
+                            recruitmentProfileVersionId = semantics.recruitmentVersion.id,
                             muscleLabel = allocation.stringRequired("muscle"),
                             weighting = allocation.doubleRequired("proportion"),
                             role = allocation.stringRequired("role"),
@@ -180,6 +212,7 @@ object LegacyV6BackupReader {
 
             val routineVersions = mutableListOf<RoutineVersionEntity>()
             val routineSlots = mutableListOf<RoutineSlotEntity>()
+            val routineMetricTargets = mutableListOf<RoutineMetricTargetEntity>()
             val modePrescriptions = mutableListOf<LegacyModePrescription>()
 
             database.arrayRequired("routineVersions").objects().forEach { version ->
@@ -230,10 +263,25 @@ object LegacyV6BackupReader {
                             importance = slot.stringRequired("importance"),
                             lockedToDay = slot.optBoolean("lockedToDay", false),
                             preferredSets = preferredSets,
-                            repMin = full.repMin,
-                            repMax = full.repMax,
                             restSeconds = full.restSeconds,
                         )
+                        val exerciseId = slot.stringRequired("exerciseId")
+                        val semantics = semanticsByExerciseId[exerciseId]
+                            ?: throw LegacyImportException("Routine slot $slotId references a missing exercise.")
+                        if (semantics.metrics.contains(PerformanceMetric.REPETITIONS)) {
+                            routineMetricTargets += RoutineMetricTargetEntity(
+                                routineVersionId = versionId,
+                                slotId = slotId,
+                                metric = PerformanceMetric.REPETITIONS.storageValue,
+                                targetKind = TargetKind.RANGE.storageValue,
+                                lowerCanonical = full.repMin.toDouble(),
+                                upperCanonical = full.repMax.toDouble(),
+                                canonicalUnit = UnitId.REPETITION.storageValue,
+                                displayUnit = UnitId.REPETITION.storageValue,
+                                source = "legacy-v6-repetition-preference",
+                                modelVersion = "legacy-preference-translation-v1",
+                            )
+                        }
                         modePrescriptions += slotPrescriptions
                     }
                 }
@@ -257,11 +305,18 @@ object LegacyV6BackupReader {
 
             val sessions = mutableListOf<SessionEntity>()
             val sessionExercises = mutableListOf<SessionExerciseEntity>()
+            val sessionSetPrescriptions = mutableListOf<SessionSetPrescriptionEntity>()
+            val sessionMetricTargets = mutableListOf<SessionMetricTargetEntity>()
             val sets = mutableListOf<SetRecordEntity>()
+            val setObservations = mutableListOf<SetObservationEntity>()
+            val setMetricValues = mutableListOf<SetMetricValueEntity>()
+            val setDraftMetricValues = mutableListOf<SetDraftMetricValueEntity>()
             val reflections = mutableListOf<ExerciseReflectionEntity>()
 
             database.arrayRequired("sessions").objects().forEach { session ->
                 val sessionId = session.stringRequired("id")
+                val sessionStartedAt = session.stringRequired("startedAt")
+                val sessionBodyweight = session.doubleOrNull("bodyweightSnapshotKg")
                 sessions += SessionEntity(
                     id = sessionId,
                     cycleId = session.stringRequired("cycleId"),
@@ -269,12 +324,12 @@ object LegacyV6BackupReader {
                     mode = session.stringRequired("mode"),
                     routineVersionId = session.stringRequired("routineVersionId"),
                     status = session.stringRequired("status"),
-                    startedAt = session.stringRequired("startedAt"),
+                    startedAt = sessionStartedAt,
                     completedAt = session.stringOrNull("completedAt"),
                     editedAt = session.stringOrNull("editedAt"),
                     discardedAt = session.stringOrNull("discardedAt"),
                     excludedFromInsights = session.optBoolean("excludedFromInsights", false),
-                    bodyweightSnapshotKg = session.doubleOrNull("bodyweightSnapshotKg"),
+                    bodyweightSnapshotKg = sessionBodyweight,
                     healthExportState = session.stringOrNull("healthExportState") ?: "not_requested",
                     healthClientRecordId = session.stringOrNull("healthClientRecordId"),
                 )
@@ -285,6 +340,42 @@ object LegacyV6BackupReader {
                     val tracking = sessionExercise.objectRequired("trackingSnapshot")
                     val prescription = sessionExercise.objectRequired("prescription")
                     val prescribedSetCount = prescription.intRequired("sets")
+                    val currentSemantics = semanticsByExerciseId[exerciseId]
+                        ?: throw LegacyImportException("Session exercise $sessionExerciseId references missing semantics.")
+                    val trackingMetric = tracking.stringRequired("metric")
+                    val loadRelationship = tracking.stringRequired("loadRelationship")
+                    val entryBasis = tracking.stringRequired("entryBasis")
+                    val semantics = if (
+                        trackingMetric == currentSemantics.legacyTrackingMetric &&
+                        loadRelationship == currentSemantics.legacyLoadRelationship &&
+                        entryBasis == currentSemantics.legacyEntryBasis
+                    ) {
+                        currentSemantics
+                    } else {
+                        val key = listOf(exerciseId, trackingMetric, loadRelationship, entryBasis)
+                        historicalSemantics.getOrPut(key) {
+                            val version = executionProfileVersions.count { it.executionProfileId == currentSemantics.executionVersion.executionProfileId } + 1
+                            legacyExecutionSemantics(
+                                exerciseId = exerciseId,
+                                trackingMetric = trackingMetric,
+                                loadRelationship = loadRelationship,
+                                entryBasis = entryBasis,
+                                defaultUnit = currentSemantics.defaultUnit.storageValue,
+                                legacyIncrement = null,
+                                equipment = currentSemantics.executionVersion.equipmentIdentity,
+                                createdAt = sessionStartedAt,
+                                version = version,
+                                recruitmentProfileVersionId = currentSemantics.recruitmentVersion.id,
+                                supersededAt = exportedAt ?: sessionStartedAt,
+                                provenance = "lite-legacy-v6-historical-tracking-snapshot",
+                            ).also { historical ->
+                                performanceSchemas += historical.schema
+                                performanceSchemaMetrics += historical.schemaMetrics
+                                executionProfileVersions += historical.executionVersion
+                            }
+                        }
+                    }
+                    val legacyExerciseBodyweight = sessionExercise.doubleOrNull("bodyweightSnapshotKg")
                     sessionExercises += SessionExerciseEntity(
                         id = sessionExerciseId,
                         sessionId = sessionId,
@@ -293,22 +384,11 @@ object LegacyV6BackupReader {
                         slotId = sessionExercise.stringRequired("slotId"),
                         exerciseNameSnapshot = sessionExercise.stringRequired("exerciseNameSnapshot"),
                         importanceSnapshot = sessionExercise.stringRequired("importanceSnapshot"),
-                        trackingMetricSnapshot = tracking.stringRequired("metric"),
-                        loadRelationshipSnapshot = tracking.stringRequired("loadRelationship"),
-                        entryBasisSnapshot = tracking.stringRequired("entryBasis"),
-                        bodyweightSnapshotKg = sessionExercise.doubleOrNull("bodyweightSnapshotKg"),
                         executionProfileId = "execution_${exerciseId}_default",
+                        executionProfileVersionId = semantics.executionVersion.id,
                         executionProfileNameSnapshot = "Default",
-                        prescribedLoad = sessionExercise.doubleRequired("plannedLoad"),
-                        prescribedLoadEvidenceSource = "legacy_session_snapshot",
-                        prescribedLoadEvidenceSetId = null,
-                        prescribedLoadInferenceRunId = null,
-                        prescribedLoadAnchor = sessionExercise.doubleRequired("plannedLoad"),
                         prescriptionMode = prescription.stringRequired("mode"),
                         prescriptionIncluded = prescription.optBoolean("included", true),
-                        prescribedSets = prescribedSetCount,
-                        repMin = prescription.intRequired("repMin"),
-                        repMax = prescription.intRequired("repMax"),
                         restSeconds = prescription.intRequired("restSeconds"),
                         generatedByModelVersion = "legacy-v6-session-snapshot-v1",
                         deferToAnd = prescription.optBoolean("deferToAnd", false),
@@ -320,25 +400,103 @@ object LegacyV6BackupReader {
                         substitutedFromExerciseId = null,
                     )
 
+                    val prescribedTargets = mutableListOf<LegacyTargetValue>()
+                    val plannedLoad = sessionExercise.doubleRequired("plannedLoad")
+                    semantics.loadMetric?.let { metric ->
+                        val value = semantics.metricValue(metric, plannedLoad)
+                        prescribedTargets += LegacyTargetValue(
+                            metric = metric,
+                            kind = TargetKind.EXACT,
+                            lowerCanonical = value.canonical.value,
+                            upperCanonical = null,
+                            displayUnit = value.entered.unit,
+                            anchorCanonical = value.canonical.value,
+                        )
+                    }
+                    if (PerformanceMetric.REPETITIONS in semantics.metrics) {
+                        prescribedTargets += LegacyTargetValue(
+                            metric = PerformanceMetric.REPETITIONS,
+                            kind = TargetKind.RANGE,
+                            lowerCanonical = prescription.intRequired("repMin").toDouble(),
+                            upperCanonical = prescription.intRequired("repMax").toDouble(),
+                            displayUnit = UnitId.REPETITION,
+                            anchorCanonical = null,
+                        )
+                    }
+                    repeat(prescribedSetCount) { setIndex ->
+                        val setPrescriptionId = "$sessionExerciseId:prescription:set:$setIndex"
+                        sessionSetPrescriptions += SessionSetPrescriptionEntity(
+                            id = setPrescriptionId,
+                            sessionExerciseId = sessionExerciseId,
+                            setIndex = setIndex,
+                            kind = "prescribed",
+                            laterality = "unknown",
+                        )
+                        sessionMetricTargets += prescribedTargets.map { target ->
+                            SessionMetricTargetEntity(
+                                sessionSetPrescriptionId = setPrescriptionId,
+                                metric = target.metric.storageValue,
+                                targetKind = target.kind.storageValue,
+                                lowerCanonical = target.lowerCanonical,
+                                upperCanonical = target.upperCanonical,
+                                canonicalUnit = target.metric.canonicalUnit.storageValue,
+                                displayUnit = target.displayUnit.storageValue,
+                                evidenceSource = "legacy_session_snapshot",
+                                sourceObservationId = null,
+                                sourceSetRecordId = null,
+                                inferenceRunId = null,
+                                evidenceAnchorCanonical = target.anchorCanonical,
+                                evidenceModelVersion = "legacy-v6-session-snapshot-v2",
+                            )
+                        }
+                    }
+
                     sessionExercise.arrayRequired("sets").objects().forEachIndexed { fallbackSetIndex, set ->
                         val setIndex = if (set.has("setIndex")) set.intRequired("setIndex") else fallbackSetIndex
                         val warmUp = set.optBoolean("warmUp", false)
                         val kind = set.stringOrNull("kind")
                             ?: if (warmUp) "warm_up" else if (setIndex < prescribedSetCount) "prescribed" else "additional"
+                        val setId = set.stringRequired("id")
+                        val completedAt = set.stringOrNull("completedAt")
                         sets += SetRecordEntity(
-                            id = set.stringRequired("id"),
+                            id = setId,
                             sessionExerciseId = sessionExerciseId,
                             setIndex = setIndex,
-                            load = set.doubleOrNull("load"),
-                            reps = set.intOrNull("reps"),
-                            durationSeconds = set.intOrNull("durationSeconds"),
-                            distanceMetres = set.doubleOrNull("distanceMetres"),
-                            unit = set.stringRequired("unit"),
-                            completedAt = set.stringOrNull("completedAt"),
                             note = set.stringOrNull("note"),
                             warmUp = warmUp,
                             kind = kind,
+                            createdAt = completedAt ?: sessionStartedAt,
                         )
+                        val values = legacySetValues(semantics, set)
+                        if (completedAt != null && values.isNotEmpty()) {
+                            val observationId = "legacy_observation:$setId"
+                            setObservations += SetObservationEntity(
+                                id = observationId,
+                                setRecordId = setId,
+                                executionProfileVersionId = semantics.executionVersion.id,
+                                ordinal = 0,
+                                side = "unknown",
+                                completedAt = completedAt,
+                                recordedAt = exportedAt ?: completedAt,
+                                source = "lite_legacy_v6_import",
+                                bodyMassContextKg = legacyExerciseBodyweight.takeIf { it != sessionBodyweight },
+                                bodyMassContextSource = legacyExerciseBodyweight.takeIf { it != sessionBodyweight }?.let {
+                                    "legacy_session_exercise_snapshot"
+                                },
+                                supersedesObservationId = null,
+                            )
+                            setMetricValues += values.map { it.toLegacyEntity(observationId) }
+                        } else if (completedAt == null && values.isNotEmpty()) {
+                            setDraftMetricValues += values.map { value ->
+                                SetDraftMetricValueEntity(
+                                    setRecordId = setId,
+                                    metric = value.metric.storageValue,
+                                    enteredValue = value.entered.value,
+                                    enteredUnit = value.entered.unit.storageValue,
+                                    updatedAt = exportedAt ?: sessionStartedAt,
+                                )
+                            }
+                        }
                     }
 
                     sessionExercise.objectOrNull("reflection")?.let { reflection ->
@@ -396,6 +554,10 @@ object LegacyV6BackupReader {
                 exercises = exercises,
                 exerciseMemory = exerciseMemory,
                 executionProfiles = executionProfiles,
+                performanceSchemas = performanceSchemas,
+                performanceSchemaMetrics = performanceSchemaMetrics,
+                recruitmentProfileVersions = recruitmentProfileVersions,
+                executionProfileVersions = executionProfileVersions,
                 legacyRecruitment = legacyRecruitment,
                 cues = cues,
                 commonMistakes = commonMistakes,
@@ -403,12 +565,18 @@ object LegacyV6BackupReader {
                 setupPhotos = setupPhotos,
                 routineVersions = routineVersions,
                 routineSlots = routineSlots,
+                routineMetricTargets = routineMetricTargets,
                 modePrescriptions = modePrescriptions,
                 trainingCycles = trainingCycles,
                 completedDays = completedDays,
                 sessions = sessions,
                 sessionExercises = sessionExercises,
+                sessionSetPrescriptions = sessionSetPrescriptions,
+                sessionMetricTargets = sessionMetricTargets,
                 sets = sets,
+                setObservations = setObservations,
+                setMetricValues = setMetricValues,
+                setDraftMetricValues = setDraftMetricValues,
                 reflections = reflections,
                 healthObservations = healthObservations,
                 healthIntegration = healthIntegration,
@@ -459,58 +627,195 @@ object LegacyV6BackupReader {
     }
 }
 
-private inline fun requireImport(condition: Boolean, message: () -> String) {
-    if (!condition) throw LegacyImportException(message())
-}
-
-private fun JSONObject.objectRequired(name: String): JSONObject =
-    optJSONObject(name) ?: throw LegacyImportException("Backup field '$name' is missing or is not an object.")
-
-private fun JSONObject.objectOrNull(name: String): JSONObject? =
-    if (!has(name) || isNull(name)) null else optJSONObject(name)
-
-private fun JSONObject.arrayRequired(name: String): JSONArray =
-    optJSONArray(name) ?: throw LegacyImportException("Backup field '$name' is missing or is not an array.")
-
-private fun JSONObject.arrayOrEmpty(name: String): JSONArray = optJSONArray(name) ?: JSONArray()
-
-private fun JSONObject.stringRequired(name: String): String {
-    if (!has(name) || isNull(name)) throw LegacyImportException("Backup field '$name' is missing.")
-    return getString(name)
-}
-
-private fun JSONObject.intRequired(name: String): Int {
-    if (!has(name) || isNull(name)) throw LegacyImportException("Backup field '$name' is missing.")
-    return getInt(name)
-}
-
-private fun JSONObject.doubleRequired(name: String): Double {
-    if (!has(name) || isNull(name)) throw LegacyImportException("Backup field '$name' is missing.")
-    return getDouble(name)
-}
-
-private fun JSONObject.stringOrNull(name: String): String? =
-    if (!has(name) || isNull(name)) null else getString(name)
-
-private fun JSONObject.intOrNull(name: String): Int? =
-    if (!has(name) || isNull(name)) null else getInt(name)
-
-private fun JSONObject.doubleOrNull(name: String): Double? =
-    if (!has(name) || isNull(name)) null else getDouble(name)
-
-private fun JSONObject.stringArray(name: String): List<String> =
-    arrayOrEmpty(name).let { array -> List(array.length()) { index -> array.getString(index) } }
-
-private fun JSONObject.scalarString(name: String): String {
-    if (!has(name) || isNull(name)) throw LegacyImportException("Backup field '$name' is missing.")
-    return when (val value = get(name)) {
-        is Number -> value.toString()
-        is String -> value
-        else -> throw LegacyImportException("Backup field '$name' is not a supported scalar value.")
+private data class LegacyExecutionSemantics(
+    val legacyTrackingMetric: String,
+    val legacyLoadRelationship: String,
+    val legacyEntryBasis: String,
+    val defaultUnit: UnitId,
+    val metrics: Set<PerformanceMetric>,
+    val loadMetric: PerformanceMetric?,
+    val schema: PerformanceSchemaEntity,
+    val schemaMetrics: List<PerformanceSchemaMetricEntity>,
+    val recruitmentVersion: RecruitmentProfileVersionEntity,
+    val executionVersion: ExecutionProfileVersionEntity,
+) {
+    fun metricValue(metric: PerformanceMetric, enteredValue: Double, enteredUnit: UnitId? = null): PerformanceMetricValue {
+        val unit = enteredUnit ?: schemaMetrics.first { it.metric == metric.storageValue }.defaultUnit.let(UnitId::fromStorage)
+        return PerformanceMetricValue(metric, Quantity(enteredValue, unit))
     }
 }
 
-private fun JSONArray.objects(): List<JSONObject> =
-    List(length()) { index ->
-        optJSONObject(index) ?: throw LegacyImportException("Backup array item $index is not an object.")
+private data class LegacyTargetValue(
+    val metric: PerformanceMetric,
+    val kind: TargetKind,
+    val lowerCanonical: Double?,
+    val upperCanonical: Double?,
+    val displayUnit: UnitId,
+    val anchorCanonical: Double?,
+)
+
+private fun legacyExecutionSemantics(
+    exerciseId: String,
+    trackingMetric: String,
+    loadRelationship: String,
+    entryBasis: String,
+    defaultUnit: String,
+    legacyIncrement: Double?,
+    equipment: String?,
+    createdAt: String,
+    version: Int = 1,
+    recruitmentProfileVersionId: String? = null,
+    supersededAt: String? = null,
+    provenance: String = "lite-legacy-v6-execution-translation-v1",
+): LegacyExecutionSemantics {
+    val relationship = when (loadRelationship) {
+        "external" -> ResistanceSemantics.EXTERNAL
+        "assistance" -> ResistanceSemantics.ASSISTANCE
+        "bodyweight" -> ResistanceSemantics.BODYWEIGHT
+        "bodyweight_plus_external" -> ResistanceSemantics.BODYWEIGHT_PLUS_EXTERNAL
+        "none" -> ResistanceSemantics.NONE
+        else -> throw LegacyImportException("Exercise $exerciseId has unsupported load relationship '$loadRelationship'.")
     }
+    val loadMetric = when (relationship) {
+        ResistanceSemantics.ASSISTANCE -> PerformanceMetric.ASSISTANCE
+        ResistanceSemantics.EXTERNAL, ResistanceSemantics.BODYWEIGHT_PLUS_EXTERNAL -> PerformanceMetric.EXTERNAL_LOAD
+        else -> null
+    }
+    val metrics = linkedSetOf<PerformanceMetric>()
+    when (trackingMetric) {
+        "load_reps" -> {
+            loadMetric?.let(metrics::add)
+            metrics += PerformanceMetric.REPETITIONS
+        }
+        "reps" -> metrics += PerformanceMetric.REPETITIONS
+        "duration" -> {
+            loadMetric?.let(metrics::add)
+            metrics += PerformanceMetric.DURATION
+        }
+        "distance" -> metrics += PerformanceMetric.DISTANCE
+        else -> throw LegacyImportException("Exercise $exerciseId has unsupported tracking metric '$trackingMetric'.")
+    }
+    val family = when {
+        trackingMetric == "duration" && loadMetric != null -> MetricFamily.LOADED_HOLD
+        trackingMetric == "duration" -> MetricFamily.DURATION_ONLY
+        trackingMetric == "distance" -> MetricFamily.SPEED_DURATION
+        relationship in setOf(ResistanceSemantics.BODYWEIGHT, ResistanceSemantics.BODYWEIGHT_PLUS_EXTERNAL, ResistanceSemantics.ASSISTANCE) ->
+            MetricFamily.BODYWEIGHT_RESISTANCE
+        trackingMetric == "reps" -> MetricFamily.REPEATED_CONTRACTION
+        else -> MetricFamily.DYNAMIC_RESISTANCE
+    }
+    val parsedDefault = runCatching { UnitId.fromStorage(defaultUnit) }.getOrNull()
+    val loadUnit = parsedDefault?.takeIf { it.dimension == dev.kian.mymettle.domain.performance.QuantityDimension.MASS }
+        ?: UnitId.KILOGRAM
+    val schemaId = "performance_schema_${exerciseId}_v$version"
+    val schemaRows = metrics.map { metric ->
+        val unit = when (metric) {
+            PerformanceMetric.EXTERNAL_LOAD, PerformanceMetric.ASSISTANCE -> loadUnit
+            else -> metric.canonicalUnit
+        }
+        val incrementCanonical = if (metric == loadMetric && legacyIncrement != null) {
+            UnitConverter.canonical(Quantity(legacyIncrement, unit)).value
+        } else null
+        PerformanceSchemaMetricEntity(
+            performanceSchemaId = schemaId,
+            metric = metric.storageValue,
+            required = true,
+            targetable = true,
+            defaultUnit = unit.storageValue,
+            minimumCanonical = if (metric == loadMetric && legacyIncrement != null) 0.0 else null,
+            maximumCanonical = null,
+            incrementCanonical = incrementCanonical,
+            allowedCanonicalValuesJson = null,
+        )
+    }
+    val profileId = "execution_${exerciseId}_default"
+    val recruitmentId = recruitmentProfileVersionId ?: "recruitment_${profileId}_v1"
+    val versionId = "${profileId}_v$version"
+    val coefficients = when (relationship) {
+        ResistanceSemantics.EXTERNAL -> Triple(0.0, 1.0, 0.0)
+        ResistanceSemantics.ASSISTANCE -> Triple(1.0, 0.0, 1.0)
+        ResistanceSemantics.BODYWEIGHT -> Triple(1.0, 0.0, 0.0)
+        ResistanceSemantics.BODYWEIGHT_PLUS_EXTERNAL -> Triple(1.0, 1.0, 0.0)
+        ResistanceSemantics.NONE, ResistanceSemantics.DEVICE_ORDINAL -> Triple(0.0, 0.0, 0.0)
+    }
+    return LegacyExecutionSemantics(
+        legacyTrackingMetric = trackingMetric,
+        legacyLoadRelationship = loadRelationship,
+        legacyEntryBasis = entryBasis,
+        defaultUnit = parsedDefault ?: schemaRows.first().defaultUnit.let(UnitId::fromStorage),
+        metrics = metrics,
+        loadMetric = loadMetric,
+        schema = PerformanceSchemaEntity(
+            id = schemaId,
+            version = version,
+            metricFamily = family.storageValue,
+            createdAt = createdAt,
+            provenance = "lite-legacy-v6-tracking-translation-v1",
+        ),
+        schemaMetrics = schemaRows,
+        recruitmentVersion = RecruitmentProfileVersionEntity(
+            id = recruitmentId,
+            executionProfileId = profileId,
+            version = 1,
+            createdAt = createdAt,
+            effectiveAt = createdAt,
+            supersededAt = null,
+            provenance = "lite-legacy-v6-muscle-load-model",
+            modelVersion = "legacy-recruitment-projection-v2",
+        ),
+        executionVersion = ExecutionProfileVersionEntity(
+            id = versionId,
+            executionProfileId = profileId,
+            version = version,
+            metricFamily = family.storageValue,
+            performanceSchemaId = schemaId,
+            equipmentIdentity = equipment,
+            equipmentType = equipment,
+            resistanceSemantics = relationship.storageValue,
+            resistanceModelVersion = "legacy-resistance-coordinate-assumption-v1",
+            bodyweightCoefficient = coefficients.first,
+            externalLoadCoefficient = coefficients.second,
+            assistanceCoefficient = coefficients.third,
+            entryBasis = entryBasis,
+            implementCount = null,
+            lateralityMode = "unknown",
+            romClass = null,
+            techniqueClass = null,
+            resistanceCurveClass = null,
+            movementPattern = null,
+            jointActionsJson = null,
+            kineticChain = null,
+            contractionType = null,
+            gripSupportConstraintsJson = null,
+            recruitmentProfileVersionId = recruitmentId,
+            createdAt = createdAt,
+            effectiveAt = createdAt,
+            supersededAt = supersededAt,
+            provenance = provenance,
+            modelVersion = "n-bio-6-execution-semantics-v1",
+        ),
+    )
+}
+
+private fun legacySetValues(
+    semantics: LegacyExecutionSemantics,
+    set: JSONObject,
+): List<PerformanceMetricValue> = buildList {
+    semantics.loadMetric?.let { metric ->
+        set.doubleOrNull("load")?.let { load ->
+            val enteredUnit = runCatching { UnitId.fromStorage(set.stringRequired("unit")) }.getOrNull()
+                ?.takeIf { it.dimension == dev.kian.mymettle.domain.performance.QuantityDimension.MASS }
+                ?: semantics.defaultUnit
+            add(semantics.metricValue(metric, load, enteredUnit))
+        }
+    }
+    set.intOrNull("reps")?.let { if (PerformanceMetric.REPETITIONS in semantics.metrics) add(semantics.metricValue(PerformanceMetric.REPETITIONS, it.toDouble())) }
+    set.intOrNull("durationSeconds")?.let {
+        if (PerformanceMetric.DURATION in semantics.metrics) add(PerformanceMetricValue(PerformanceMetric.DURATION, Quantity(it.toDouble(), UnitId.SECOND)))
+    }
+    set.doubleOrNull("distanceMetres")?.let {
+        if (PerformanceMetric.DISTANCE in semantics.metrics) add(PerformanceMetricValue(PerformanceMetric.DISTANCE, Quantity(it, UnitId.METRE)))
+    }
+}
+
+private fun PerformanceMetricValue.toLegacyEntity(observationId: String): S

@@ -59,7 +59,7 @@ class LegacyRecruitmentResolver(private val database: MyMettleDatabase) {
             val targetIds = labels.getValue(normalise(value.muscleLabel))
             val dividedWeighting = value.weighting / targetIds.size
             targetIds.forEach { segmentId ->
-                val key = value.executionProfileId to segmentId
+                val key = value.recruitmentProfileVersionId to segmentId
                 val provenance = buildString {
                     value.source?.takeIf { it.isNotBlank() }?.let(::append)
                     if (targetIds.size > 1) {
@@ -88,12 +88,17 @@ class LegacyRecruitmentResolver(private val database: MyMettleDatabase) {
 
         return accumulated.map { (key, value) ->
             RecruitmentAllocationEntity(
-                executionProfileId = key.first,
+                recruitmentProfileVersionId = key.first,
                 muscleSegmentId = key.second,
                 role = value.role,
                 weighting = value.weighting,
                 confidence = value.confidence,
-                source = value.sources.takeIf { it.isNotEmpty() }?.joinToString(" | "),
+                provenanceType = "legacy_import",
+                provenanceReference = value.sources.takeIf { it.isNotEmpty() }?.joinToString(" | "),
+                applicableRom = null,
+                applicableTechnique = null,
+                resistanceCurveClass = null,
+                modelVersion = "legacy-recruitment-projection-v2",
             )
         }
     }

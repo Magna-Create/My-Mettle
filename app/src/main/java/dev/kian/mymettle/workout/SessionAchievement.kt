@@ -33,15 +33,15 @@ data class SessionAchievement(
 object SessionAchievementScorer {
     fun score(workout: ActiveWorkout): SessionAchievement {
         val targets = workout.exercises.filter { it.entity.prescriptionIncluded }
-        val targetSets = targets.sumOf { it.entity.prescribedSets.coerceAtLeast(0) }
+        val targetSets = targets.sumOf { it.prescription.sets }
         val loggedTargetSets = targets.sumOf { exercise ->
             exercise.sets.count { set ->
-                set.setIndex < exercise.entity.prescribedSets && set.completedAt != null
+                set.setIndex < exercise.prescription.sets && set.completedAt != null
             }
         }
 
         val achievedExercises = targets.count { exercise ->
-            val prescribedSetCount = exercise.entity.prescribedSets.coerceAtLeast(0)
+            val prescribedSetCount = exercise.prescription.sets
             val allSetsLogged = prescribedSetCount > 0 && exercise.sets.count { set ->
                 set.setIndex < prescribedSetCount && set.completedAt != null
             } >= prescribedSetCount
@@ -49,11 +49,13 @@ object SessionAchievementScorer {
         }
 
         val repBeats = targets.sumOf { exercise ->
+            val repMaximum = exercise.prescription.repRange?.last
             exercise.sets.count { set ->
                 set.completedAt != null &&
-                    set.setIndex < exercise.entity.prescribedSets &&
+                    set.setIndex < exercise.prescription.sets &&
+                    repMaximum != null &&
                     set.reps != null &&
-                    set.reps > exercise.entity.repMax
+                    set.reps > repMaximum
             }
         }
 
@@ -62,7 +64,7 @@ object SessionAchievementScorer {
                 set.completedAt != null && (
                     !exercise.entity.prescriptionIncluded ||
                         set.kind == "additional" ||
-                        set.setIndex >= exercise.entity.prescribedSets
+                        set.setIndex >= exercise.prescription.sets
                     )
             }
         }

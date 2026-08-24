@@ -3,16 +3,18 @@ package dev.kian.mymettle.inference
 import androidx.room.withTransaction
 import dev.kian.mymettle.data.local.MyMettleDatabase
 import dev.kian.mymettle.data.local.dao.CompletedSetEvidenceRow
+import dev.kian.mymettle.data.local.entity.ExerciseTranslationMetricAnchorEntity
 import dev.kian.mymettle.data.local.entity.ExerciseTranslationStateEntity
 import dev.kian.mymettle.data.local.entity.InferenceRunEntity
 import dev.kian.mymettle.data.local.entity.MuscleStateSnapshotEntity
 import dev.kian.mymettle.data.local.entity.StimulusEstimateEntity
 import dev.kian.mymettle.domain.anatomy.MuscleSegmentId
-import dev.kian.mymettle.domain.exercise.ExecutionProfileId
+import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
 import dev.kian.mymettle.domain.exercise.RecruitmentRole
 import dev.kian.mymettle.domain.inference.BodySide
 import dev.kian.mymettle.domain.inference.CompletedSetEvidence
 import dev.kian.mymettle.domain.inference.ExerciseTranslationState
+import dev.kian.mymettle.domain.inference.PerformanceAnchor
 import dev.kian.mymettle.domain.inference.InferenceRun
 import dev.kian.mymettle.domain.inference.InferenceRunId
 import dev.kian.mymettle.domain.inference.RecruitmentEvidence
@@ -22,6 +24,11 @@ import dev.kian.mymettle.domain.inference.UserMuscleState
 import dev.kian.mymettle.domain.physiology.Estimate
 import dev.kian.mymettle.domain.physiology.EstimateSourceKind
 import dev.kian.mymettle.domain.physiology.ReferenceProfileId
+import dev.kian.mymettle.domain.performance.Laterality
+import dev.kian.mymettle.domain.performance.PerformanceMetric
+import dev.kian.mymettle.domain.performance.PerformanceMetricValue
+import dev.kian.mymettle.domain.performance.Quantity
+import dev.kian.mymettle.domain.performance.UnitId
 import dev.kian.mymettle.engine.inference.ExerciseTranslationModel
 import dev.kian.mymettle.engine.inference.MuscleStateUpdateRequest
 import dev.kian.mymettle.engine.inference.MuscleStateUpdater
@@ -57,17 +64,30 @@ class RoomInferenceRepository(
         val resolvedUserProfileId = resolveUserProfileId(userProfileId)
         val referenceProfile = dao.latestReferenceProfile()
             ?: throw InferenceException("Runtime reference profile has not been seeded.")
-        val evidence = dao.completedSetEvidence().map(CompletedSetEvidenceRow::toDomain)
+        val evidenceRows = dao.completedSetEvidence()
+        val metricValuesByObservation = if (evidenceRows.isEmpty()) emptyMap() else {
+            dao.completedMetricValues(evidenceRows.map { it.observationId })
+                .groupBy { it.observationId }
+        }
+        val evidence = evidenceRows.map { row ->
+            row.toDomain(metricValuesByObservation[row.observationId].orEmpty().map { value ->
+                PerformanceMetricValue(
+                    metric = PerformanceMetric.fromStorage(value.metric),
+                    entered = Quantity(value.enteredValue, UnitId.fromStorage(value.enteredUnit)),
+                    canonical = Quantity(value.canonicalValue, UnitId.fromStorage(value.canonicalUnit)),
+                )
+            })
+        }
         val recruitmentByProfile = if (evidence.isEmpty()) {
             emptyMap()
         } else {
-            dao.recruitmentAllocations(evidence.map { it.executionProfileId.value }.distinct())
-                .groupBy { it.executionProfileId }
+            dao.recruitmentAllocations(evidence.map { it.executionProfileVersionId.value }.distinct())
+                .groupBy { it.executionProfileVersionId }
         }
         val calculatedAt = clock()
         val runId = InferenceRunId(idFactory())
         val stimuli = evidence.flatMap { set ->
-            val recruitment = recruitmentByProfile[set.executionProfileId.value].orEmpty().map { allocation ->
+            val recruitment = recruitmentByProfile[set.executionProfileVersionId.value].orEmpty().map { allocation ->
                 RecruitmentEvidence(
                     segmentId = MuscleSegmentId(allocation.muscleSegmentId),
                     role = RecruitmentRole.fromStorage(allocation.role),
@@ -99,7 +119,7 @@ class RoomInferenceRepository(
             exerciseTranslationModelVersion = exerciseTranslationModel.modelVersion,
             calculatedAt = calculatedAt,
             evidenceThrough = evidence.maxOfOrNull { it.completedAt },
-            evidenceSetCount = evidence.size,
+            evidenceSetCount = evidence.map { it.setRecordId }.distinct().size,
         )
 
         dao.insertInferenceRun(run.toEntity())
@@ -111,6 +131,9 @@ class RoomInferenceRepository(
         }
         if (translationStates.isNotEmpty()) {
             dao.insertExerciseTranslationStates(translationStates.map { it.toEntity(runId) })
+            dao.insertExerciseTranslationMetricAnchors(
+                translationStates.flatMap { state -> state.anchors.map { it.toEntity(runId, state.executionProfileVersionId) } },
+            )
         }
 
         UserInferenceSnapshot(run, muscleStates, stimuli, translationStates)
@@ -121,11 +144,14 @@ class RoomInferenceRepository(
     ): UserInferenceSnapshot? {
         val runEntity = dao.latestInferenceRun(resolveUserProfileId(userProfileId)) ?: return null
         val run = runEntity.toDomain()
+        val translationEntities = dao.exerciseTranslationStates(runEntity.id)
+        val anchorsByVersion = dao.exerciseTranslationMetricAnchors(runEntity.id)
+            .groupBy { it.executionProfileVersionId }
         return UserInferenceSnapshot(
             run = run,
             muscleStates = dao.muscleStateSnapshots(runEntity.id).map { it.toDomain() },
             stimulusEstimates = dao.stimulusEstimates(runEntity.id).map { it.toDomain() },
-            exerciseTranslationStates = dao.exerciseTranslationStates(runEntity.id).map { it.toDomain() },
+            exerciseTranslationStates = translationEntities.map { it.toDomain(anchorsByVersion[it.executionProfileVersionId].orEmpty()) },
         )
     }
 
@@ -148,21 +174,20 @@ class RoomInferenceRepository(
     }
 
     companion object {
-        const val MODEL_VERSION = "n-bio-4-inference-scaffold-v0"
-        const val RECRUITMENT_MODEL_VERSION = "n-bio-2-execution-recruitment-v1"
+        const val MODEL_VERSION = "n-bio-6-generic-evidence-adapter-v1"
+        const val RECRUITMENT_MODEL_VERSION = "n-bio-6-versioned-execution-recruitment-v1"
     }
 }
 
-private fun CompletedSetEvidenceRow.toDomain(): CompletedSetEvidence = CompletedSetEvidence(
+private fun CompletedSetEvidenceRow.toDomain(values: List<PerformanceMetricValue>): CompletedSetEvidence = CompletedSetEvidence(
     setRecordId = setRecordId,
+    observationId = observationId,
     sessionExerciseId = sessionExerciseId,
-    executionProfileId = ExecutionProfileId(executionProfileId),
+    executionProfileVersionId = ExecutionProfileVersionId(executionProfileVersionId),
+    laterality = Laterality.fromStorage(side),
     completedAt = Instant.parse(completedAt),
-    load = load,
-    reps = reps,
-    durationSeconds = durationSeconds,
-    distanceMetres = distanceMetres,
-    unit = unit,
+    metricValues = values,
+    bodyMassContextKg = observationBodyMassContextKg ?: sessionBodyMassSnapshotKg,
     warmUp = warmUp,
     kind = kind,
 )
@@ -200,10 +225,11 @@ private fun InferenceRunEntity.toDomain(): InferenceRun = InferenceRun(
 )
 
 private fun StimulusEstimate.toEntity(runId: InferenceRunId): StimulusEstimateEntity = StimulusEstimateEntity(
-    id = "${runId.value}:stimulus:$setRecordId:${segmentId.value}:${side.storageValue}",
+    id = "${runId.value}:stimulus:$observationId:${segmentId.value}:${side.storageValue}",
     inferenceRunId = runId.value,
     sessionExerciseId = sessionExerciseId,
     setRecordId = setRecordId,
+    setObservationId = observationId,
     muscleSegmentId = segmentId.value,
     side = side.storageValue,
     role = role.storageValue,
@@ -215,6 +241,7 @@ private fun StimulusEstimate.toEntity(runId: InferenceRunId): StimulusEstimateEn
 
 private fun StimulusEstimateEntity.toDomain(): StimulusEstimate = StimulusEstimate(
     setRecordId = setRecordId,
+    observationId = setObservationId,
     sessionExerciseId = sessionExerciseId,
     segmentId = MuscleSegmentId(muscleSegmentId),
     side = BodySide.fromStorage(side),
@@ -272,55 +299,42 @@ private fun MuscleStateSnapshotEntity.toDomain(): UserMuscleState = UserMuscleSt
 private fun ExerciseTranslationState.toEntity(runId: InferenceRunId): ExerciseTranslationStateEntity =
     ExerciseTranslationStateEntity(
         inferenceRunId = runId.value,
-        executionProfileId = executionProfileId.value,
-        observedLoadAnchor = observedLoadAnchor?.value,
-        observedLoadUnit = observedLoadUnit,
-        observedLoadUncertainty = observedLoadAnchor?.uncertainty,
-        observedRepAnchor = observedRepAnchor?.value,
-        observedRepUncertainty = observedRepAnchor?.uncertainty,
-        observedDurationSecondsAnchor = observedDurationSecondsAnchor?.value,
-        observedDurationUncertainty = observedDurationSecondsAnchor?.uncertainty,
-        observedDistanceMetresAnchor = observedDistanceMetresAnchor?.value,
-        observedDistanceUncertainty = observedDistanceMetresAnchor?.uncertainty,
-        observedAnchorSetRecordId = observedLoadAnchor?.sourceId
-            ?: observedRepAnchor?.sourceId
-            ?: observedDurationSecondsAnchor?.sourceId
-            ?: observedDistanceMetresAnchor?.sourceId,
+        executionProfileVersionId = executionProfileVersionId.value,
         sampleCount = sampleCount,
         updatedAt = updatedAt.toString(),
         modelVersion = modelVersion,
     )
 
-private fun ExerciseTranslationStateEntity.toDomain(): ExerciseTranslationState = ExerciseTranslationState(
-    executionProfileId = ExecutionProfileId(executionProfileId),
-    observedLoadAnchor = estimate(
-        observedLoadAnchor,
-        observedLoadUncertainty,
-        observedAnchorSetRecordId,
-        modelVersion,
-    ),
-    observedLoadUnit = observedLoadUnit,
-    observedRepAnchor = estimate(
-        observedRepAnchor,
-        observedRepUncertainty,
-        observedAnchorSetRecordId,
-        modelVersion,
-    ),
-    observedDurationSecondsAnchor = estimate(
-        observedDurationSecondsAnchor,
-        observedDurationUncertainty,
-        observedAnchorSetRecordId,
-        modelVersion,
-    ),
-    observedDistanceMetresAnchor = estimate(
-        observedDistanceMetresAnchor,
-        observedDistanceUncertainty,
-        observedAnchorSetRecordId,
-        modelVersion,
-    ),
+private fun ExerciseTranslationStateEntity.toDomain(
+    anchors: List<ExerciseTranslationMetricAnchorEntity>,
+): ExerciseTranslationState = ExerciseTranslationState(
+    executionProfileVersionId = ExecutionProfileVersionId(executionProfileVersionId),
+    anchors = anchors.map { anchor ->
+        PerformanceAnchor(
+            metric = PerformanceMetric.fromStorage(anchor.metric),
+            estimate = requireNotNull(estimate(anchor.canonicalValue, anchor.uncertainty, anchor.sourceObservationId, modelVersion)),
+            canonicalUnit = anchor.canonicalUnit,
+            sourceObservationId = anchor.sourceObservationId,
+            sourceSetRecordId = anchor.sourceSetRecordId,
+        )
+    },
     sampleCount = sampleCount,
     updatedAt = Instant.parse(updatedAt),
     modelVersion = modelVersion,
+)
+
+private fun PerformanceAnchor.toEntity(
+    runId: InferenceRunId,
+    profileVersionId: ExecutionProfileVersionId,
+): ExerciseTranslationMetricAnchorEntity = ExerciseTranslationMetricAnchorEntity(
+    inferenceRunId = runId.value,
+    executionProfileVersionId = profileVersionId.value,
+    metric = metric.storageValue,
+    canonicalValue = estimate.value,
+    canonicalUnit = canonicalUnit,
+    uncertainty = estimate.uncertainty,
+    sourceObservationId = sourceObservationId,
+    sourceSetRecordId = sourceSetRecordId,
 )
 
 private fun estimate(

@@ -6,17 +6,24 @@ import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
 import dev.kian.mymettle.data.local.entity.SessionReviewEntity
-import dev.kian.mymettle.data.local.entity.SetRecordEntity
-import dev.kian.mymettle.workout.ActiveWorkout
-import dev.kian.mymettle.workout.ActiveWorkoutExercise
+import dev.kian.mymettle.domain.performance.PerformanceMetric
+import dev.kian.mymettle.domain.performance.PerformanceMetricValue
+import dev.kian.mymettle.domain.performance.Quantity
+import dev.kian.mymettle.domain.performance.PerformanceSchema
+import dev.kian.mymettle.domain.performance.ResistanceSemantics
+import dev.kian.mymettle.domain.performance.UnitId
 import dev.kian.mymettle.workout.NativeWorkoutException
+import dev.kian.mymettle.workout.PerformanceSetRecord
+import dev.kian.mymettle.workout.RoomWorkoutRepository
 import dev.kian.mymettle.workout.SessionAchievement
 import dev.kian.mymettle.workout.SessionAchievementScorer
 import java.time.Instant
 
 data class HistoryExercise(
     val exercise: SessionExerciseEntity,
-    val sets: List<SetRecordEntity>,
+    val schema: PerformanceSchema,
+    val resistanceSemantics: ResistanceSemantics,
+    val sets: List<PerformanceSetRecord>,
     val reflection: ExerciseReflectionEntity?,
 )
 
@@ -31,6 +38,7 @@ class HistoryRepository(
     private val database: MyMettleDatabase,
 ) {
     private val dao get() = database.historyDao()
+    private val workoutRepository = RoomWorkoutRepository(database)
 
     suspend fun recent(limit: Int = 100): List<HistorySession> =
         dao.recentCompletedSessions(limit).map { load(it) }
@@ -45,9 +53,9 @@ class HistoryRepository(
         distanceMetres: Double?,
     ): HistorySession = database.withTransaction {
         val session = completedSession(sessionId)
-        val exercise = dao.sessionExercises(sessionId).firstOrNull { it.id == sessionExerciseId }
+        val exercise = workoutRepository.activeWorkout(sessionId).exercises.firstOrNull { it.entity.id == sessionExerciseId }
             ?: throw NativeWorkoutException("Exercise not found in this session.")
-        val current = dao.sets(exercise.id).firstOrNull { it.id == setId }
+        val current = exercise.sets.firstOrNull { it.id == setId }
             ?: throw NativeWorkoutException("Set not found in this exercise.")
         if (current.completedAt == null) {
             throw NativeWorkoutException("Only logged historical sets can be edited.")
@@ -56,13 +64,40 @@ class HistoryRepository(
         if (durationSeconds != null && durationSeconds < 0) throw NativeWorkoutException("Duration cannot be negative.")
         if (distanceMetres != null && distanceMetres < 0.0) throw NativeWorkoutException("Distance cannot be negative.")
 
-        dao.upsertSet(
-            current.copy(
-                load = load,
-                reps = reps,
-                durationSeconds = durationSeconds,
-                distanceMetres = distanceMetres,
-            ),
+        if (current.observations.size != 1) {
+            throw NativeWorkoutException("Side-resolved history must be corrected one observation at a time.")
+        }
+        val original = current.observations.single()
+        val editableMetrics = setOf(
+            PerformanceMetric.EXTERNAL_LOAD,
+            PerformanceMetric.ASSISTANCE,
+            PerformanceMetric.REPETITIONS,
+            PerformanceMetric.DURATION,
+            PerformanceMetric.DISTANCE,
+        )
+        val values = original.values.filterNot { it.metric in editableMetrics }.toMutableList()
+        val loadMetric = when {
+            exercise.schema.metrics.any { it.metric == PerformanceMetric.ASSISTANCE } -> PerformanceMetric.ASSISTANCE
+            exercise.schema.metrics.any { it.metric == PerformanceMetric.EXTERNAL_LOAD } -> PerformanceMetric.EXTERNAL_LOAD
+            else -> null
+        }
+        loadMetric?.let { metric ->
+            load?.let { entered ->
+                val unit = original.values.firstOrNull { it.metric == metric }?.entered?.unit
+                    ?: exercise.schema.metrics.first { it.metric == metric }.defaultUnit
+                values += PerformanceMetricValue(metric, Quantity(entered, unit))
+            }
+        }
+        reps?.let { values += PerformanceMetricValue(PerformanceMetric.REPETITIONS, Quantity(it.toDouble(), UnitId.REP)) }
+        durationSeconds?.let { values += PerformanceMetricValue(PerformanceMetric.DURATION, Quantity(it.toDouble(), UnitId.SECOND)) }
+        distanceMetres?.let { values += PerformanceMetricValue(PerformanceMetric.DISTANCE, Quantity(it, UnitId.METRE)) }
+        workoutRepository.saveObservation(
+            sessionExerciseId = exercise.entity.id,
+            setId = current.id,
+            laterality = original.laterality,
+            values = values,
+            source = "native_history_correction",
+            bodyMassContextKg = original.bodyMassContextKg,
         )
         val edited = session.copy(editedAt = Instant.now().toString())
         dao.upsertSession(edited)
@@ -168,30 +203,21 @@ class HistoryRepository(
     }
 
     private suspend fun load(session: SessionEntity): HistorySession {
-        val exercises = dao.sessionExercises(session.id).map { exercise ->
+        val workout = workoutRepository.activeWorkout(session.id)
+        val exercises = workout.exercises.map { exercise ->
             HistoryExercise(
-                exercise = exercise,
-                sets = dao.sets(exercise.id),
-                reflection = dao.reflection(exercise.id),
+                exercise = exercise.entity,
+                schema = exercise.schema,
+                resistanceSemantics = exercise.resistanceSemantics,
+                sets = exercise.sets,
+                reflection = dao.reflection(exercise.entity.id),
             )
         }
-        val activeShape = ActiveWorkout(
-            session = session,
-            targets = emptyList(),
-            exercises = exercises.map { item ->
-                ActiveWorkoutExercise(
-                    entity = item.exercise,
-                    targetIds = emptyList(),
-                    sets = item.sets,
-                    previousCompletedSets = emptyList(),
-                )
-            },
-        )
         return HistorySession(
             session = session,
             exercises = exercises,
             review = dao.sessionReview(session.id),
-            achievement = SessionAchievementScorer.score(activeShape),
+            achievement = SessionAchievementScorer.score(workout),
         )
     }
 }

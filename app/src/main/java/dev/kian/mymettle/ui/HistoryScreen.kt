@@ -45,9 +45,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.kian.mymettle.data.local.entity.SessionReviewEntity
-import dev.kian.mymettle.data.local.entity.SetRecordEntity
+import dev.kian.mymettle.domain.performance.PerformanceMetric
 import dev.kian.mymettle.history.HistoryExercise
 import dev.kian.mymettle.history.HistorySession
+import dev.kian.mymettle.workout.PerformanceSetRecord
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -186,7 +187,7 @@ private fun HistoryDetailSheet(
     session: HistorySession,
     saving: Boolean,
     onDismiss: () -> Unit,
-    onSaveSet: (HistoryExercise, SetRecordEntity, Double?, Int?, Int?, Double?) -> Unit,
+    onSaveSet: (HistoryExercise, PerformanceSetRecord, Double?, Int?, Int?, Double?) -> Unit,
     onSaveReview: (Int?, Int?, Int?, Int?, String?) -> Unit,
     onDiscard: () -> Unit,
 ) {
@@ -281,7 +282,7 @@ private fun HistoryExerciseCard(
     exercise: HistoryExercise,
     editing: Boolean,
     saving: Boolean,
-    onSaveSet: (SetRecordEntity, Double?, Int?, Int?, Double?) -> Unit,
+    onSaveSet: (PerformanceSetRecord, Double?, Int?, Int?, Double?) -> Unit,
 ) {
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -322,15 +323,15 @@ private fun HistoryExerciseCard(
 private fun HistorySetEditor(
     displayIndex: Int,
     exercise: HistoryExercise,
-    set: SetRecordEntity,
+    set: PerformanceSetRecord,
     saving: Boolean,
-    onSave: (SetRecordEntity, Double?, Int?, Int?, Double?) -> Unit,
+    onSave: (PerformanceSetRecord, Double?, Int?, Int?, Double?) -> Unit,
 ) {
-    val metric = exercise.exercise.trackingMetricSnapshot
-    val needsLoad = metric == "load_reps" && exercise.exercise.loadRelationshipSnapshot != "bodyweight"
-    val needsReps = metric == "load_reps" || metric == "reps"
-    val needsDuration = metric == "duration"
-    val needsDistance = metric == "distance"
+    val metrics = exercise.schema.metrics.mapTo(hashSetOf()) { it.metric }
+    val needsLoad = PerformanceMetric.EXTERNAL_LOAD in metrics || PerformanceMetric.ASSISTANCE in metrics
+    val needsReps = PerformanceMetric.REPETITIONS in metrics
+    val needsDuration = PerformanceMetric.DURATION in metrics
+    val needsDistance = PerformanceMetric.DISTANCE in metrics
 
     var load by remember(set.id, set.load) { mutableStateOf(set.load?.let(::formatHistoryLoad).orEmpty()) }
     var reps by remember(set.id, set.reps) { mutableStateOf(set.reps?.toString().orEmpty()) }
@@ -485,14 +486,18 @@ private fun HistoryRatingRow(title: String, value: Int, onChange: (Int) -> Unit)
     }
 }
 
-private fun historySetSummary(set: SetRecordEntity): String = buildString {
-    if (set.load != null) append("${formatHistoryLoad(set.load)} ${set.unit}")
-    if (set.load != null && set.reps != null) append(" × ")
-    if (set.reps != null) append("${set.reps} reps")
-    if (set.durationSeconds != null) append("${set.durationSeconds}s")
-    if (set.distanceMetres != null) append("${formatHistoryLoad(set.distanceMetres)} m")
-    if (isEmpty()) append("—")
-}
+private fun historySetSummary(set: PerformanceSetRecord): String = set.observations
+    .sortedWith(compareBy({ it.ordinal }, { it.laterality.storageValue }))
+    .joinToString(" | ") { observation ->
+        val side = if (observation.laterality == dev.kian.mymettle.domain.performance.Laterality.NOT_APPLICABLE) {
+            ""
+        } else {
+            "${observation.laterality.storageValue}: "
+        }
+        side + observation.values.joinToString(" · ") { value ->
+            "${formatHistoryLoad(value.entered.value)} ${value.entered.unit.storageValue} ${value.metric.storageValue.replace('_', ' ')}"
+        }
+    }.ifEmpty { "—" }
 
 private fun decimalHistoryInput(value: String): String {
     val filtered = value.filter { it.isDigit() || it == '.' }.take(8)

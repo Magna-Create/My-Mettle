@@ -58,10 +58,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import dev.kian.mymettle.data.local.entity.SetRecordEntity
+import dev.kian.mymettle.domain.performance.PerformanceMetric
 import dev.kian.mymettle.workout.ActiveWorkout
 import dev.kian.mymettle.workout.ActiveWorkoutExercise
 import dev.kian.mymettle.workout.NativeWorkoutPlan
+import dev.kian.mymettle.workout.PerformanceSetRecord
 import dev.kian.mymettle.workout.TrainingMode
 import dev.kian.mymettle.workout.evaluateLoadExpression
 import kotlinx.coroutines.Dispatchers
@@ -70,14 +71,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.max
 
-private class RoomSetDraft(set: SetRecordEntity) {
+private class RoomSetDraft(set: PerformanceSetRecord) {
     var load by mutableStateOf(set.load?.let(::formatLoad).orEmpty())
     var reps by mutableStateOf(set.reps?.toString().orEmpty())
 }
 
 private data class CalculatorTarget(
     val exercise: ActiveWorkoutExercise,
-    val set: SetRecordEntity,
+    val set: PerformanceSetRecord,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -432,9 +433,9 @@ private fun ActiveRoomWorkoutScreen(
     sessionCompleted: Boolean,
     drafts: MutableMap<String, RoomSetDraft>,
     onModeSelected: (TrainingMode) -> Unit,
-    onOpenCalculator: (ActiveWorkoutExercise, SetRecordEntity) -> Unit,
-    onPersistDraft: (ActiveWorkoutExercise, SetRecordEntity, RoomSetDraft) -> Unit,
-    onLogSet: (ActiveWorkoutExercise, SetRecordEntity, RoomSetDraft) -> Unit,
+    onOpenCalculator: (ActiveWorkoutExercise, PerformanceSetRecord) -> Unit,
+    onPersistDraft: (ActiveWorkoutExercise, PerformanceSetRecord, RoomSetDraft) -> Unit,
+    onLogSet: (ActiveWorkoutExercise, PerformanceSetRecord, RoomSetDraft) -> Unit,
     onToggleExercise: (ActiveWorkoutExercise) -> Unit,
     onCompleteSession: () -> Unit,
     onLeaveCompleted: () -> Unit,
@@ -514,14 +515,14 @@ private fun RoomExerciseCard(
     exercise: ActiveWorkoutExercise,
     drafts: MutableMap<String, RoomSetDraft>,
     sessionActive: Boolean,
-    onOpenCalculator: (SetRecordEntity) -> Unit,
-    onPersistDraft: (SetRecordEntity, RoomSetDraft) -> Unit,
-    onLogSet: (SetRecordEntity, RoomSetDraft) -> Unit,
+    onOpenCalculator: (PerformanceSetRecord) -> Unit,
+    onPersistDraft: (PerformanceSetRecord, RoomSetDraft) -> Unit,
+    onLogSet: (PerformanceSetRecord, RoomSetDraft) -> Unit,
     onToggleComplete: () -> Unit,
 ) {
     val entity = exercise.entity
     val prescribed = exercise.sets
-        .filter { it.setIndex < entity.prescribedSets || it.completedAt != null }
+        .filter { it.setIndex < exercise.prescription.sets || it.completedAt != null }
         .sortedBy { it.setIndex }
     val previous = exercise.previousCompletedSets.firstOrNull()
     val completed = entity.status == "completed"
@@ -545,7 +546,7 @@ private fun RoomExerciseCard(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                "${entity.prescribedSets} × ${entity.repMin}–${entity.repMax} reps · ${entity.restSeconds}s rest",
+                "${exercise.prescription.sets} set${if (exercise.prescription.sets == 1) "" else "s"}${exercise.prescription.repRange?.let { " × ${it.first}–${it.last} reps" }.orEmpty()} · ${entity.restSeconds}s rest",
                 style = MaterialTheme.typography.titleSmall,
             )
             previous?.let {
@@ -564,7 +565,7 @@ private fun RoomExerciseCard(
                 val draft = drafts.getOrPut(set.id) { RoomSetDraft(set) }
                 RoomSetEntryRow(
                     displayIndex = index + 1,
-                    entity = entity,
+                    exercise = exercise,
                     set = set,
                     draft = draft,
                     enabled = sessionActive,
@@ -586,8 +587,8 @@ private fun RoomExerciseCard(
 @Composable
 private fun RoomSetEntryRow(
     displayIndex: Int,
-    entity: dev.kian.mymettle.data.local.entity.SessionExerciseEntity,
-    set: SetRecordEntity,
+    exercise: ActiveWorkoutExercise,
+    set: PerformanceSetRecord,
     draft: RoomSetDraft,
     enabled: Boolean,
     onOpenCalculator: () -> Unit,
@@ -595,8 +596,9 @@ private fun RoomSetEntryRow(
     onLogSet: () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
-    val needsExternalLoad = entity.trackingMetricSnapshot == "load_reps" && entity.loadRelationshipSnapshot != "bodyweight"
-    val supportsReps = entity.trackingMetricSnapshot == "load_reps" || entity.trackingMetricSnapshot == "reps"
+    val metrics = exercise.schema.metrics.mapTo(hashSetOf()) { it.metric }
+    val needsExternalLoad = PerformanceMetric.EXTERNAL_LOAD in metrics || PerformanceMetric.ASSISTANCE in metrics
+    val supportsReps = PerformanceMetric.REPETITIONS in metrics
     val ready = (!needsExternalLoad || draft.load.toDoubleOrNull() != null) && (!supportsReps || draft.reps.toIntOrNull() != null)
 
     Surface(
@@ -634,7 +636,7 @@ private fun RoomSetEntryRow(
             if (!supportsReps) {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "${entity.trackingMetricSnapshot.replace('_', ' ')} entry is preserved in the data model; its specialised input UI comes next.",
+                    "${exercise.schema.family.storageValue.replace('_', ' ')} entry is preserved in the generic performance model.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )

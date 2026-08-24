@@ -12,6 +12,8 @@ import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
 import dev.kian.mymettle.data.local.entity.SessionReviewEntity
 import dev.kian.mymettle.data.migration.LegacyImportReport
 import dev.kian.mymettle.data.migration.LegacyV6Importer
+import dev.kian.mymettle.domain.performance.Laterality
+import dev.kian.mymettle.domain.performance.PerformanceMetricValue
 import dev.kian.mymettle.history.HistoryRepository
 import dev.kian.mymettle.timer.RestTimerController
 import dev.kian.mymettle.workout.ActiveWorkout
@@ -160,6 +162,8 @@ class N2WorkoutViewModel(
         reps: Int?,
         durationSeconds: Int? = null,
         distanceMetres: Double? = null,
+        additionalValues: List<PerformanceMetricValue> = emptyList(),
+        laterality: Laterality? = null,
         logged: Boolean,
         onSaved: (() -> Unit)? = null,
     ) {
@@ -173,6 +177,8 @@ class N2WorkoutViewModel(
                     reps = reps,
                     durationSeconds = durationSeconds,
                     distanceMetres = distanceMetres,
+                    additionalValues = additionalValues,
+                    laterality = laterality,
                     logged = logged,
                 )
                 repository.activeWorkout(sessionId)

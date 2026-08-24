@@ -2,7 +2,13 @@ package dev.kian.mymettle.domain.training
 
 import dev.kian.mymettle.domain.anatomy.MuscleSegmentId
 import dev.kian.mymettle.domain.exercise.ExecutionProfileId
+import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
 import dev.kian.mymettle.domain.exercise.ExerciseId
+import dev.kian.mymettle.domain.performance.Laterality
+import dev.kian.mymettle.domain.performance.MetricTarget
+import dev.kian.mymettle.domain.performance.PerformanceMetric
+import dev.kian.mymettle.domain.performance.PrescriptionEvidence
+import dev.kian.mymettle.domain.performance.TargetKind
 
 @JvmInline
 value class TrainingTargetId(val value: String) {
@@ -74,16 +80,18 @@ data class ResolvedTrainingTarget(
     }
 }
 
-/** The same-execution-profile evidence that justified a generated load suggestion. */
-data class PrescriptionLoadEvidence(
-    val source: String,
-    val anchorLoad: Double,
-    val sourceSetRecordId: String?,
-    val inferenceRunId: String?,
+data class SetPrescription(
+    val index: Int,
+    val kind: String,
+    val laterality: Laterality,
+    val metricTargets: List<MetricTarget>,
 ) {
     init {
-        require(source.isNotBlank()) { "Prescription load-evidence source cannot be blank." }
-        require(anchorLoad >= 0.0) { "Prescription load-evidence anchor cannot be negative." }
+        require(index >= 0) { "Prescription set index cannot be negative." }
+        require(kind.isNotBlank()) { "Prescription set kind cannot be blank." }
+        require(metricTargets.map { it.metric }.distinct().size == metricTargets.size) {
+            "A set prescription cannot target the same metric more than once."
+        }
     }
 }
 
@@ -91,22 +99,16 @@ data class PrescriptionLoadEvidence(
 data class ExercisePrescription(
     val exerciseId: ExerciseId,
     val executionProfileId: ExecutionProfileId,
+    val executionProfileVersionId: ExecutionProfileVersionId,
     val targetIds: List<TrainingTargetId>,
-    val sets: Int,
-    val repRange: IntRange,
-    val prescribedLoad: Double?,
-    val loadEvidence: PrescriptionLoadEvidence?,
+    val setPrescriptions: List<SetPrescription>,
     val restSeconds: Int,
     val generatedByModelVersion: String,
 ) {
     init {
-        require(sets > 0) { "A generated prescription must contain at least one set." }
-        require(repRange.first > 0 && repRange.last >= repRange.first) {
-            "A generated prescription must contain a valid positive rep range."
-        }
-        require(prescribedLoad == null || prescribedLoad >= 0.0) { "Prescribed load cannot be negative." }
-        require(prescribedLoad != null || loadEvidence == null) {
-            "A prescription cannot retain load evidence when it has no prescribed load."
+        require(setPrescriptions.isNotEmpty()) { "A generated prescription must contain at least one set." }
+        require(setPrescriptions.map { it.index }.sorted() == setPrescriptions.indices.toList()) {
+            "Set prescriptions must be contiguous and zero-based."
         }
         require(restSeconds >= 0) { "Rest time cannot be negative." }
         require(generatedByModelVersion.isNotBlank()) { "Prescription model version cannot be blank." }
@@ -114,4 +116,30 @@ data class ExercisePrescription(
             "A prescription cannot reference the same target more than once."
         }
     }
+
+    val sets: Int get() = setPrescriptions.size
+
+    /** Compatibility read model for the existing dynamic-resistance UI; never required. */
+    val repRange: IntRange?
+        get() = setPrescriptions.firstOrNull()?.metricTargets
+            ?.firstOrNull { it.metric == PerformanceMetric.REPETITIONS }
+            ?.let { target ->
+                when (target.kind) {
+                    TargetKind.EXACT -> target.lowerCanonical?.toInt()?.let { it..it }
+                    TargetKind.RANGE -> target.lowerCanonical?.toInt()?.let { first ->
+                        target.upperCanonical?.toInt()?.let { last -> first..last }
+                    }
+                    else -> null
+                }
+            }
+
+    val prescribedLoad: Double?
+        get() = setPrescriptions.firstOrNull()?.metricTargets
+            ?.firstOrNull { it.metric in setOf(PerformanceMetric.EXTERNAL_LOAD, PerformanceMetric.ASSISTANCE) }
+            ?.exactOrLower
+
+    val loadEvidence: PrescriptionEvidence?
+        get() = setPrescriptions.firstOrNull()?.metricTargets
+            ?.firstOrNull { it.metric in setOf(PerformanceMetric.EXTERNAL_LOAD, PerformanceMetric.ASSISTANCE) }
+            ?.evidence
 }

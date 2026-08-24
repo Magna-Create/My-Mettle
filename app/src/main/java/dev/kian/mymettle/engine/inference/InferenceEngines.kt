@@ -6,10 +6,12 @@ import dev.kian.mymettle.domain.inference.CompletedSetEvidence
 import dev.kian.mymettle.domain.inference.ExerciseTranslationState
 import dev.kian.mymettle.domain.inference.InferenceRunId
 import dev.kian.mymettle.domain.inference.RecruitmentEvidence
+import dev.kian.mymettle.domain.inference.PerformanceAnchor
 import dev.kian.mymettle.domain.inference.StimulusEstimate
 import dev.kian.mymettle.domain.inference.UserMuscleState
 import dev.kian.mymettle.domain.physiology.Estimate
 import dev.kian.mymettle.domain.physiology.EstimateSourceKind
+import dev.kian.mymettle.domain.performance.Laterality
 import java.time.Instant
 
 interface StimulusEstimator {
@@ -42,9 +44,10 @@ class WeightedWorkingSetStimulusEstimator : StimulusEstimator {
             .map { allocation ->
                 StimulusEstimate(
                     setRecordId = set.setRecordId,
+                    observationId = set.observationId,
                     sessionExerciseId = set.sessionExerciseId,
                     segmentId = allocation.segmentId,
-                    side = BodySide.BILATERAL,
+                    side = set.laterality.toBodySide(),
                     role = allocation.role,
                     recruitmentWeighting = allocation.weighting,
                     estimatedStimulus = allocation.weighting,
@@ -127,31 +130,33 @@ class ObservedPerformanceTranslationModel : ExerciseTranslationModel {
 
     override fun infer(evidence: List<CompletedSetEvidence>): List<ExerciseTranslationState> = evidence
         .filter { !it.warmUp && it.hasPerformedWork }
-        .groupBy { it.executionProfileId }
-        .map { (profileId, samples) ->
-            val latest = samples.maxWith(compareBy<CompletedSetEvidence> { it.completedAt }.thenBy { it.setRecordId })
+        .groupBy { it.executionProfileVersionId }
+        .map { (profileVersionId, samples) ->
             val normalisedUncertainty = 1.0
             ExerciseTranslationState(
-                executionProfileId = profileId,
-                observedLoadAnchor = latest.load?.let { value ->
-                    estimate(value, normalisedUncertainty, latest.setRecordId)
-                },
-                observedLoadUnit = latest.load?.let { latest.unit },
-                observedRepAnchor = latest.reps?.toDouble()?.let { value ->
-                    estimate(value, normalisedUncertainty, latest.setRecordId)
-                },
-                observedDurationSecondsAnchor = latest.durationSeconds?.toDouble()?.let { value ->
-                    estimate(value, normalisedUncertainty, latest.setRecordId)
-                },
-                observedDistanceMetresAnchor = latest.distanceMetres?.let { value ->
-                    estimate(value, normalisedUncertainty, latest.setRecordId)
-                },
+                executionProfileVersionId = profileVersionId,
+                anchors = samples.flatMap { sample -> sample.metricValues.map { it.metric } }
+                    .distinct()
+                    .mapNotNull { metric ->
+                        val latest = samples
+                            .filter { it.metric(metric) != null }
+                            .maxWithOrNull(compareBy<CompletedSetEvidence> { it.completedAt }.thenBy { it.observationId })
+                            ?: return@mapNotNull null
+                        val value = requireNotNull(latest.metric(metric))
+                        PerformanceAnchor(
+                            metric = metric,
+                            estimate = estimate(value.canonical.value, normalisedUncertainty, latest.observationId),
+                            canonicalUnit = value.canonical.unit.storageValue,
+                            sourceObservationId = latest.observationId,
+                            sourceSetRecordId = latest.setRecordId,
+                        )
+                    },
                 sampleCount = samples.map { it.setRecordId }.distinct().size,
-                updatedAt = latest.completedAt,
+                updatedAt = samples.maxOf { it.completedAt },
                 modelVersion = modelVersion,
             )
         }
-        .sortedBy { it.executionProfileId.value }
+        .sortedBy { it.executionProfileVersionId.value }
 
     private fun estimate(value: Double, uncertainty: Double, sourceId: String): Estimate<Double> = Estimate(
         value = value,
@@ -164,4 +169,13 @@ class ObservedPerformanceTranslationModel : ExerciseTranslationModel {
     companion object {
         const val MODEL_VERSION = "n-bio-4-observed-performance-anchor-v0"
     }
+}
+
+private fun Laterality.toBodySide(): BodySide = when (this) {
+    Laterality.LEFT -> BodySide.LEFT
+    Laterality.RIGHT -> BodySide.RIGHT
+    Laterality.BILATERAL -> BodySide.BILATERAL
+    Laterality.ALTERNATING -> BodySide.ALTERNATING
+    Laterality.NOT_APPLICABLE -> BodySide.NOT_APPLICABLE
+    Laterality.UNKNOWN -> BodySide.UNKNOWN
 }

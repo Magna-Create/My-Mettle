@@ -205,16 +205,14 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                             DebugLine("Performance anchors", inference.exerciseTranslationStates.size.toString())
                             HorizontalDivider()
                             Text("Performance anchors", style = MaterialTheme.typography.titleSmall)
-                            inference.exerciseTranslationStates.take(40).forEach { anchor ->
-                                val label = snapshot.executionProfileLabels[anchor.executionProfileId.value]
-                                    ?: anchor.executionProfileId.value
+                            inference.exerciseTranslationStates.take(40).forEach { state ->
+                                val label = snapshot.executionProfileLabels[state.executionProfileVersionId.value]
+                                    ?: state.executionProfileVersionId.value
                                 Text(label, fontWeight = FontWeight.Medium)
                                 Text(
-                                    buildString {
-                                        append(anchor.observedLoadAnchor?.value?.let { "${formatDebug(it)} ${anchor.observedLoadUnit}" } ?: "no load")
-                                        append(" · ${anchor.sampleCount} samples")
-                                        anchor.observedLoadAnchor?.sourceId?.let { append(" · set ${it.takeLast(8)}") }
-                                    },
+                                    state.anchors.joinToString(" · ") { anchor ->
+                                        "${anchor.metric.storageValue}: ${formatDebug(anchor.estimate.value)} ${anchor.canonicalUnit} · set ${anchor.sourceSetRecordId.takeLast(8)}"
+                                    }.ifEmpty { "no metric anchors" } + " · ${state.sampleCount} samples",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -316,14 +314,13 @@ private fun PlanDebug(plan: NativeWorkoutPlan) {
     Text("Selected prescriptions", style = MaterialTheme.typography.titleSmall)
     plan.exercises.forEach { exercise ->
         Text("${exercise.name} · ${exercise.prescription.sets} sets", fontWeight = FontWeight.Medium)
-        val evidence = exercise.prescription.loadEvidence
+        val targets = exercise.prescription.setPrescriptions.firstOrNull()?.metricTargets.orEmpty()
         Text(
-            if (exercise.prescription.prescribedLoad == null) {
-                "No same-profile load suggestion · ${exercise.movementReason}"
-            } else {
-                "${formatDebug(exercise.prescription.prescribedLoad)} ${exercise.defaultUnit} · " +
-                    "${evidence?.source ?: "no provenance"} · set ${evidence?.sourceSetRecordId?.takeLast(8) ?: "unknown"}"
-            },
+            targets.joinToString(" · ") { target ->
+                val range = listOfNotNull(target.lowerCanonical, target.upperCanonical).joinToString("–", transform = ::formatDebug)
+                    .ifEmpty { "open" }
+                "$range ${target.displayUnit.storageValue} ${target.metric.storageValue} (${target.evidence?.source ?: "preference/open"})"
+            }.ifEmpty { "Open metric prescription" } + " · ${exercise.movementReason}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

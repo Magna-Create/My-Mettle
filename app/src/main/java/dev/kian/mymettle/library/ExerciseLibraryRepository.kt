@@ -6,6 +6,7 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import androidx.room.withTransaction
 import dev.kian.mymettle.data.local.MyMettleDatabase
+import dev.kian.mymettle.data.local.toDomain
 import dev.kian.mymettle.data.local.entity.ExerciseEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSetupMediaEntity
 import dev.kian.mymettle.domain.anatomy.MuscleSegmentId
@@ -15,16 +16,20 @@ import dev.kian.mymettle.domain.exercise.Exercise
 import dev.kian.mymettle.domain.exercise.ExerciseId
 import dev.kian.mymettle.domain.exercise.ExerciseMemory
 import dev.kian.mymettle.domain.exercise.ExerciseSetupMedia
-import dev.kian.mymettle.domain.exercise.ExerciseTracking
 import dev.kian.mymettle.domain.exercise.ExecutionProfile
 import dev.kian.mymettle.domain.exercise.ExecutionProfileId
-import dev.kian.mymettle.domain.exercise.LoadRelationship
+import dev.kian.mymettle.domain.exercise.ExecutionProfileVersion
+import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
 import dev.kian.mymettle.domain.exercise.LoadResolution
 import dev.kian.mymettle.domain.exercise.RecruitmentAllocation
 import dev.kian.mymettle.domain.exercise.RecruitmentProfile
+import dev.kian.mymettle.domain.exercise.RecruitmentProfileVersionId
 import dev.kian.mymettle.domain.exercise.RecruitmentRole
 import dev.kian.mymettle.domain.exercise.RecruitmentSource
-import dev.kian.mymettle.domain.exercise.TrackingMetric
+import dev.kian.mymettle.domain.performance.LateralityMode
+import dev.kian.mymettle.domain.performance.MetricFamily
+import dev.kian.mymettle.domain.performance.ResistanceModel
+import dev.kian.mymettle.domain.performance.ResistanceSemantics
 import dev.kian.mymettle.workout.NativeWorkoutException
 import java.io.File
 import java.io.FileOutputStream
@@ -117,27 +122,25 @@ class ExerciseLibraryRepository(
     private suspend fun load(entity: ExerciseEntity): Exercise {
         val memoryEntity = dao.memory(entity.id)
         val executionEntities = dao.executionProfiles(entity.id)
-        val allocationEntities = if (executionEntities.isEmpty()) {
-            emptyList()
-        } else {
-            dao.recruitmentAllocations(executionEntities.map { it.id })
-        }
+        val versionEntities = dao.executionProfileVersions(executionEntities.map { it.id })
+        val schemaEntities = dao.performanceSchemas(versionEntities.map { it.performanceSchemaId }.distinct())
+        val schemaMetrics = dao.performanceSchemaMetrics(schemaEntities.map { it.id })
+        val recruitmentVersions = dao.recruitmentProfileVersions(versionEntities.map { it.recruitmentProfileVersionId }.distinct())
+        val allocationEntities = dao.recruitmentAllocations(recruitmentVersions.map { it.id })
         val segmentIds = allocationEntities.map { it.muscleSegmentId }.distinct()
         val segments = if (segmentIds.isEmpty()) emptyList() else database.referenceDao().segments(segmentIds)
         val segmentById = segments.associateBy { it.id }
         val muscleNameById = if (segments.isEmpty()) emptyMap() else muscleNames()
-        val allocationsByProfile = allocationEntities.groupBy { it.executionProfileId }
+        val allocationsByRecruitmentVersion = allocationEntities.groupBy { it.recruitmentProfileVersionId }
+        val versionsByProfile = versionEntities.groupBy { it.executionProfileId }
+        val schemaById = schemaEntities.associateBy { it.id }
+        val schemaMetricsById = schemaMetrics.groupBy { it.performanceSchemaId }
+        val recruitmentVersionById = recruitmentVersions.associateBy { it.id }
 
         return Exercise(
             id = ExerciseId(entity.id),
             name = entity.name,
             archived = entity.archived,
-            tracking = ExerciseTracking(
-                defaultUnit = entity.defaultUnit,
-                metric = TrackingMetric.fromStorage(entity.trackingMetric),
-                loadRelationship = LoadRelationship.fromStorage(entity.loadRelationship),
-                entryBasis = EntryBasis.fromStorage(entity.entryBasis),
-            ),
             essentialCue = entity.essentialCue,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
@@ -168,48 +171,72 @@ class ExerciseLibraryRepository(
                 )
             },
             executionProfiles = executionEntities.map { execution ->
-                val allowedValues = execution.allowedLoadsJson?.let { encoded ->
-                    JSONArray(encoded).let { array -> List(array.length()) { array.getDouble(it) } }
-                }.orEmpty()
                 ExecutionProfile(
                     id = ExecutionProfileId(execution.id),
                     exerciseId = ExerciseId(execution.exerciseId),
                     name = execution.name,
-                    equipment = EquipmentProfile(execution.equipment),
-                    loadResolution = if (
-                        execution.minimumLoad != null || execution.maximumLoad != null ||
-                        execution.loadIncrement != null || allowedValues.isNotEmpty()
-                    ) {
-                        LoadResolution(
-                            minimumLoad = execution.minimumLoad,
-                            maximumLoad = execution.maximumLoad,
-                            increment = execution.loadIncrement,
-                            allowedValues = allowedValues,
-                        )
-                    } else {
-                        null
-                    },
-                    recruitment = RecruitmentProfile(
-                        allocations = allocationsByProfile[execution.id].orEmpty().map { allocation ->
-                            val segment = requireNotNull(segmentById[allocation.muscleSegmentId]) {
-                                "Recruitment references missing segment ${allocation.muscleSegmentId}."
-                            }
-                            val muscleName = muscleNameById[segment.muscleId].orEmpty()
-                            RecruitmentAllocation(
-                                segmentId = MuscleSegmentId(segment.id),
-                                segmentName = if (segment.segmentType == "WHOLE_MUSCLE") {
-                                    muscleName
-                                } else {
-                                    "$muscleName — ${segment.name}"
-                                },
-                                role = RecruitmentRole.fromStorage(allocation.role),
-                                weighting = allocation.weighting,
-                                confidence = allocation.confidence,
-                                source = allocation.source?.let(::RecruitmentSource),
-                            )
-                        },
-                    ),
                     isDefault = execution.isDefault,
+                    archived = execution.archived,
+                    versions = versionsByProfile[execution.id].orEmpty().map { version ->
+                        val schemaEntity = requireNotNull(schemaById[version.performanceSchemaId])
+                        val recruitmentVersion = requireNotNull(recruitmentVersionById[version.recruitmentProfileVersionId])
+                        ExecutionProfileVersion(
+                            id = ExecutionProfileVersionId(version.id),
+                            executionProfileId = ExecutionProfileId(execution.id),
+                            version = version.version,
+                            metricFamily = MetricFamily.fromStorage(version.metricFamily),
+                            schema = schemaEntity.toDomain(schemaMetricsById[schemaEntity.id].orEmpty()),
+                            equipment = EquipmentProfile(version.equipmentIdentity, version.equipmentType),
+                            resistanceModel = ResistanceModel(
+                                modelVersion = version.resistanceModelVersion,
+                                semantics = ResistanceSemantics.entries.first { it.storageValue == version.resistanceSemantics },
+                                bodyweightCoefficient = version.bodyweightCoefficient,
+                                externalLoadCoefficient = version.externalLoadCoefficient,
+                                assistanceCoefficient = version.assistanceCoefficient,
+                            ),
+                            entryBasis = EntryBasis.fromStorage(version.entryBasis),
+                            implementCount = version.implementCount,
+                            lateralityMode = LateralityMode.entries.first { it.storageValue == version.lateralityMode },
+                            romClass = version.romClass,
+                            techniqueClass = version.techniqueClass,
+                            resistanceCurveClass = version.resistanceCurveClass,
+                            movementPattern = version.movementPattern,
+                            jointActions = version.jointActionsJson.jsonStrings(),
+                            kineticChain = version.kineticChain,
+                            contractionType = version.contractionType,
+                            gripSupportConstraints = version.gripSupportConstraintsJson.jsonStrings(),
+                            recruitment = RecruitmentProfile(
+                                id = RecruitmentProfileVersionId(recruitmentVersion.id),
+                                version = recruitmentVersion.version,
+                                allocations = allocationsByRecruitmentVersion[recruitmentVersion.id].orEmpty().map { allocation ->
+                                    val segment = requireNotNull(segmentById[allocation.muscleSegmentId])
+                                    val muscleName = muscleNameById[segment.muscleId].orEmpty()
+                                    RecruitmentAllocation(
+                                        segmentId = MuscleSegmentId(segment.id),
+                                        segmentName = if (segment.segmentType == "WHOLE_MUSCLE") muscleName else "$muscleName — ${segment.name}",
+                                        role = RecruitmentRole.fromStorage(allocation.role),
+                                        weighting = allocation.weighting,
+                                        confidence = allocation.confidence,
+                                        source = RecruitmentSource(allocation.provenanceType, allocation.provenanceReference),
+                                        applicableRom = allocation.applicableRom,
+                                        applicableTechnique = allocation.applicableTechnique,
+                                        resistanceCurveClass = allocation.resistanceCurveClass,
+                                        modelVersion = allocation.modelVersion,
+                                    )
+                                },
+                                createdAt = recruitmentVersion.createdAt,
+                                effectiveAt = recruitmentVersion.effectiveAt,
+                                supersededAt = recruitmentVersion.supersededAt,
+                                provenance = recruitmentVersion.provenance,
+                                modelVersion = recruitmentVersion.modelVersion,
+                            ),
+                            createdAt = version.createdAt,
+                            effectiveAt = version.effectiveAt,
+                            supersededAt = version.supersededAt,
+                            provenance = version.provenance,
+                            modelVersion = version.modelVersion,
+                        )
+                    },
                 )
             },
         )
@@ -282,3 +309,7 @@ class ExerciseLibraryRepository(
         const val JPEG_QUALITY = 72
     }
 }
+
+private fun String?.jsonStrings(): List<String> = this?.let { encoded ->
+    JSONArray(encoded).let { array -> List(array.length()) { index -> array.getString(index) } }
+}.orEmpty()

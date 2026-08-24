@@ -1,7 +1,9 @@
 package dev.kian.mymettle.engine.targeting
 
 import dev.kian.mymettle.domain.exercise.ExecutionProfileId
+import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
 import dev.kian.mymettle.domain.exercise.ExerciseId
+import dev.kian.mymettle.domain.performance.PerformanceTargetTemplate
 import dev.kian.mymettle.domain.training.ResolvedTrainingTarget
 import dev.kian.mymettle.domain.training.SessionConstraints
 import dev.kian.mymettle.domain.training.TrainingTarget
@@ -58,10 +60,11 @@ data class ExerciseSelectionCandidate(
     val preferenceId: String,
     val exerciseId: ExerciseId,
     val executionProfileId: ExecutionProfileId,
+    val executionProfileVersionId: ExecutionProfileVersionId,
     val ordinal: Int,
     val preferencePriority: Double,
     val preferredSetCap: Int,
-    val repRange: IntRange,
+    val preferredTemplate: PerformanceTargetTemplate,
     val restSeconds: Int,
     /** Confidence-weighted recruitment coverage by independent target identity. */
     val targetCoverage: Map<TrainingTargetId, Double>,
@@ -71,7 +74,6 @@ data class ExerciseSelectionCandidate(
         require(ordinal >= 0) { "Exercise-preference ordinal cannot be negative." }
         require(preferencePriority in 0.0..1.0) { "Exercise-preference priority must be between 0 and 1." }
         require(preferredSetCap > 0) { "Exercise-preference set cap must be positive." }
-        require(repRange.first > 0 && repRange.last >= repRange.first) { "Rep range must be positive and ordered." }
         require(restSeconds >= 0) { "Rest time cannot be negative." }
         require(targetCoverage.values.all { it >= 0.0 }) { "Target coverage cannot be negative." }
     }
