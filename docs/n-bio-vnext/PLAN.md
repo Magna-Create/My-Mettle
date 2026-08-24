@@ -433,6 +433,13 @@ One set may contain several observations (for example LEFT and RIGHT) and each o
 
 A session-level body-mass snapshot may remain the default context. If an observation stores/references its own body-mass context, precedence must be explicit and historical values must never drift when later body measurements change.
 
+**[PRODUCT / PERSISTENCE]** Active-workout save-on-keystroke state is not performed evidence. If
+draft entry must survive navigation or process recreation, store it in an explicitly non-historical
+draft buffer keyed by set and metric. Logging appends an immutable `set_observation` plus its metric
+values, then clears the draft. Corrections append a superseding observation; they do not update the
+original observation or metric rows in place. Inference, history evidence and export must ignore the
+draft buffer.
+
 Do not create three silently competing bodyweight values across session, session-exercise and observation layers.
 
 ## 5.5 Laterality

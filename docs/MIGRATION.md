@@ -149,6 +149,16 @@ session intervention and never rewrites completed set evidence.
 
 The importer must also accept exports where this optional model is absent. `ExerciseMemory.targetMuscles` is not silently promoted into recruitment.
 
+Room v11 replaces the fixed set performance columns with `set_observation` and
+`set_metric_value`. Imported entered units and canonical physical units are both retained; completed
+Lite sets become immutable observations with `lite_legacy_v6_import` provenance. Incomplete values
+remain non-historical draft input. Exercise tracking/load/entry semantics become execution-profile
+version 1, recruitment becomes an immutable profile version, and legacy dynamic-resistance
+`repMin`/`repMax` preferences become `REPETITIONS` metric targets. Lite never supplied side,
+incline, power, cadence, execution geometry or machine calibration, so the importer leaves those
+facts unknown rather than manufacturing them. The session bodyweight snapshot is the default;
+only a differing legacy session-exercise snapshot becomes an observation override.
+
 ## Native rollout
 
 ### N0 — foundation

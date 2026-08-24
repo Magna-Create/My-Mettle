@@ -1,0 +1,152 @@
+{
+  "format": "my-mettle-backup",
+  "exportVersion": 1,
+  "source": "my-mettle-lite-legacy",
+  "exportedAt": "2026-08-20T12:00:00Z",
+  "database": {
+    "schemaVersion": 6,
+    "profile": {
+      "id": "user_1",
+      "displayName": "Fixture User",
+      "units": "kg",
+      "dietaryPreference": "vegetarian",
+      "cycleStartDay": 1,
+      "createdAt": "2026-08-01T00:00:00Z",
+      "updatedAt": "2026-08-20T12:00:00Z"
+    },
+    "settings": {
+      "restTimer": {
+        "autoStart": true,
+        "vibrationEnabled": true,
+        "vibrationStrength": "strong",
+        "chimeEnabled": false,
+        "backgroundNotificationEnabled": true
+      }
+    },
+    "bodyMeasurements": [
+      {
+        "id": "measurement_1",
+        "recordedAt": "2026-08-20T08:00:00Z",
+        "weightKg": 80.0,
+        "heightCm": 180.0,
+        "source": "manual"
+      }
+    ],
+    "exercises": [
+      {
+        "id": "exercise_press",
+        "name": "Chest Press",
+        "defaultUnit": "kg",
+        "progressionStep": 2.5,
+        "archived": false,
+        "createdAt": "2026-08-01T00:00:00Z",
+        "updatedAt": "2026-08-20T12:00:00Z",
+        "tracking": {
+          "metric": "load_reps",
+          "loadRelationship": "external",
+          "entryBasis": "total"
+        }
+      }
+    ],
+    "routineVersions": [
+      {
+        "id": "routine_v1",
+        "version": 1,
+        "createdAt": "2026-08-01T00:00:00Z",
+        "effectiveAt": "2026-08-01T00:00:00Z",
+        "source": "user",
+        "changeReason": "fixture",
+        "days": [
+          {
+            "symbol": "psi",
+            "slots": [
+              {
+                "id": "slot_press",
+                "exerciseId": "exercise_press",
+                "position": 0,
+                "importance": "principal",
+                "lockedToDay": false,
+                "plannedLoad": 40.0,
+                "prescriptions": {
+                  "A": { "included": true, "sets": 3, "repMin": 8, "repMax": 10, "restSeconds": 120 },
+                  "B": { "included": true, "sets": 2, "repMin": 8, "repMax": 10, "restSeconds": 120 },
+                  "C": { "included": true, "sets": 1, "repMin": 8, "repMax": 10, "restSeconds": 120 }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "cycles": [
+      {
+        "id": "cycle_1",
+        "startedAt": "2026-08-01T00:00:00Z",
+        "status": "active",
+        "andCompleted": false,
+        "completedCoreDays": ["psi"]
+      }
+    ],
+    "sessions": [
+      {
+        "id": "session_1",
+        "cycleId": "cycle_1",
+        "day": "psi",
+        "mode": "A",
+        "routineVersionId": "routine_v1",
+        "status": "completed",
+        "startedAt": "2026-08-20T10:00:00Z",
+        "completedAt": "2026-08-20T10:30:00Z",
+        "bodyweightSnapshotKg": 80.0,
+        "excludedFromInsights": false,
+        "exercises": [
+          {
+            "id": "session_exercise_1",
+            "exerciseId": "exercise_press",
+            "slotId": "slot_press",
+            "exerciseNameSnapshot": "Chest Press",
+            "importanceSnapshot": "principal",
+            "plannedLoad": 40.0,
+            "bodyweightSnapshotKg": 80.0,
+            "trackingSnapshot": {
+              "metric": "load_reps",
+              "loadRelationship": "external",
+              "entryBasis": "total"
+            },
+            "prescription": {
+              "mode": "A",
+              "included": true,
+              "sets": 3,
+              "repMin": 8,
+              "repMax": 10,
+              "restSeconds": 120
+            },
+            "status": "completed",
+            "startedAt": "2026-08-20T10:02:00Z",
+            "completedAt": "2026-08-20T10:20:00Z",
+            "sets": [
+              {
+                "id": "set_1",
+                "setIndex": 0,
+                "load": 40.0,
+                "unit": "kg",
+                "reps": 9,
+                "warmUp": false,
+                "kind": "prescribed",
+                "completedAt": "2026-08-20T10:05:00Z"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "healthIntegration": {
+      "provider": "none",
+      "permissionState": "not_requested"
+    },
+    "currentRoutineVersionId": "routine_v1",
+    "currentCycleId": "cycle_1",
+    "createdAt": "2026-08-01T00:00:00Z",
+    "updatedAt": "2026-08-20T12:00:00Z"
+  }
+}

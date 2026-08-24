@@ -1,13 +1,18 @@
 package dev.kian.mymettle.engine.inference
 
 import dev.kian.mymettle.domain.anatomy.MuscleSegmentId
-import dev.kian.mymettle.domain.exercise.ExecutionProfileId
+import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
 import dev.kian.mymettle.domain.exercise.RecruitmentRole
 import dev.kian.mymettle.domain.inference.BodySide
 import dev.kian.mymettle.domain.inference.CompletedSetEvidence
 import dev.kian.mymettle.domain.inference.InferenceRunId
 import dev.kian.mymettle.domain.inference.RecruitmentEvidence
 import dev.kian.mymettle.domain.inference.StimulusEstimate
+import dev.kian.mymettle.domain.performance.Laterality
+import dev.kian.mymettle.domain.performance.PerformanceMetric
+import dev.kian.mymettle.domain.performance.PerformanceMetricValue
+import dev.kian.mymettle.domain.performance.Quantity
+import dev.kian.mymettle.domain.performance.UnitId
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -75,11 +80,13 @@ class InferenceEnginesTest {
         )
 
         val state = states.single()
-        assertEquals(70.0, state.observedLoadAnchor?.value)
-        assertEquals("kg", state.observedLoadUnit)
-        assertEquals(8.0, state.observedRepAnchor?.value)
-        assertEquals(1.0, state.observedLoadAnchor?.uncertainty)
-        assertEquals("set_2", state.observedLoadAnchor?.sourceId)
+        val load = state.anchor(PerformanceMetric.EXTERNAL_LOAD)
+        val reps = state.anchor(PerformanceMetric.REPETITIONS)
+        assertEquals(70.0, load?.estimate?.value)
+        assertEquals("kg", load?.canonicalUnit)
+        assertEquals(8.0, reps?.estimate?.value)
+        assertEquals(1.0, load?.estimate?.uncertainty)
+        assertEquals("observation_set_2", load?.sourceObservationId)
         assertEquals(2, state.sampleCount)
     }
 
@@ -91,14 +98,16 @@ class InferenceEnginesTest {
         warmUp: Boolean = false,
     ): CompletedSetEvidence = CompletedSetEvidence(
         setRecordId = id,
+        observationId = "observation_$id",
         sessionExerciseId = "session_exercise_1",
-        executionProfileId = ExecutionProfileId("execution_profile_1"),
+        executionProfileVersionId = ExecutionProfileVersionId("execution_profile_1:v1"),
+        laterality = Laterality.BILATERAL,
         completedAt = Instant.parse(completedAt),
-        load = load,
-        reps = reps,
-        durationSeconds = null,
-        distanceMetres = null,
-        unit = "kg",
+        metricValues = listOfNotNull(
+            load?.let { PerformanceMetricValue(PerformanceMetric.EXTERNAL_LOAD, Quantity(it, UnitId.KILOGRAM)) },
+            reps?.let { PerformanceMetricValue(PerformanceMetric.REPETITIONS, Quantity(it.toDouble(), UnitId.REPETITION)) },
+        ),
+        bodyMassContextKg = null,
         warmUp = warmUp,
         kind = if (warmUp) "warm_up" else "prescribed",
     )
@@ -110,6 +119,7 @@ class InferenceEnginesTest {
         confidence: Double,
     ): StimulusEstimate = StimulusEstimate(
         setRecordId = setId,
+        observationId = "observation_$setId",
         sessionExerciseId = "session_exercise_1",
         segmentId = segmentId,
         side = BodySide.BILATERAL,

@@ -46,11 +46,16 @@ class ExerciseSwapTargetMatcherTest {
         weighting: Double,
         confidence: Double,
     ) = RecruitmentAllocationEntity(
-        executionProfileId = profileId,
+        recruitmentProfileVersionId = profileId,
         muscleSegmentId = segmentId,
         role = role,
         weighting = weighting,
         confidence = confidence,
-        source = "test",
+        provenanceType = "test",
+        provenanceReference = null,
+        applicableRom = null,
+        applicableTechnique = null,
+        resistanceCurveClass = null,
+        modelVersion = "test-v1",
     )
 }

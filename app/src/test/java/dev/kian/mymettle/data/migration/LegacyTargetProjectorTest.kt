@@ -1,6 +1,7 @@
 package dev.kian.mymettle.data.migration
 
 import dev.kian.mymettle.data.local.entity.ExerciseExecutionProfileEntity
+import dev.kian.mymettle.data.local.entity.ExecutionProfileVersionEntity
 import dev.kian.mymettle.data.local.entity.RecruitmentAllocationEntity
 import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
@@ -18,6 +19,7 @@ class LegacyTargetProjectorTest {
                 routineSlot(id = "slot_press_repeat", position = 1, importance = "accessory"),
             ),
             executionProfiles = listOf(defaultProfile()),
+            executionProfileVersions = listOf(executionVersion()),
             sessions = listOf(session()),
             sessionExercises = listOf(sessionExercise(included = true)),
             recruitment = listOf(
@@ -44,6 +46,7 @@ class LegacyTargetProjectorTest {
         val projection = LegacyTargetProjector.project(
             routineSlots = listOf(routineSlot("slot_press", 0, "principal")),
             executionProfiles = listOf(defaultProfile()),
+            executionProfileVersions = listOf(executionVersion()),
             sessions = listOf(session()),
             sessionExercises = listOf(sessionExercise(included = false)),
             recruitment = listOf(allocation("pectoralis_major_clavicular_part", "prime")),
@@ -62,8 +65,6 @@ class LegacyTargetProjectorTest {
         importance = importance,
         lockedToDay = false,
         preferredSets = 3,
-        repMin = 8,
-        repMax = 12,
         restSeconds = 120,
     )
 
@@ -71,21 +72,54 @@ class LegacyTargetProjectorTest {
         id = "execution_press_default",
         exerciseId = "exercise_press",
         name = "Default",
-        equipment = "Cable",
-        minimumLoad = 0.0,
-        maximumLoad = null,
-        loadIncrement = 2.5,
-        allowedLoadsJson = null,
         isDefault = true,
+        archived = false,
+    )
+
+    private fun executionVersion() = ExecutionProfileVersionEntity(
+        id = "execution_press_default:v1",
+        executionProfileId = "execution_press_default",
+        version = 1,
+        metricFamily = "dynamic_resistance",
+        performanceSchemaId = "schema_press:v1",
+        equipmentIdentity = "Cable",
+        equipmentType = "cable",
+        resistanceSemantics = "external",
+        resistanceModelVersion = "legacy-v1",
+        bodyweightCoefficient = 0.0,
+        externalLoadCoefficient = 1.0,
+        assistanceCoefficient = 0.0,
+        entryBasis = "total",
+        implementCount = null,
+        lateralityMode = "unknown",
+        romClass = null,
+        techniqueClass = null,
+        resistanceCurveClass = null,
+        movementPattern = null,
+        jointActionsJson = null,
+        kineticChain = null,
+        contractionType = null,
+        gripSupportConstraintsJson = null,
+        recruitmentProfileVersionId = "recruitment_press:v1",
+        createdAt = "2026-08-10T00:00:00Z",
+        effectiveAt = "2026-08-10T00:00:00Z",
+        supersededAt = null,
+        provenance = "test",
+        modelVersion = "test-v1",
     )
 
     private fun allocation(segmentId: String, role: String) = RecruitmentAllocationEntity(
-        executionProfileId = "execution_press_default",
+        recruitmentProfileVersionId = "recruitment_press:v1",
         muscleSegmentId = segmentId,
         role = role,
         weighting = 1.0,
         confidence = 0.8,
-        source = "test",
+        provenanceType = "test",
+        provenanceReference = null,
+        applicableRom = null,
+        applicableTechnique = null,
+        resistanceCurveClass = null,
+        modelVersion = "test-v1",
     )
 
     private fun session() = SessionEntity(
@@ -113,22 +147,11 @@ class LegacyTargetProjectorTest {
         slotId = "slot_press",
         exerciseNameSnapshot = "Press",
         importanceSnapshot = "principal",
-        trackingMetricSnapshot = "load_reps",
-        loadRelationshipSnapshot = "external",
-        entryBasisSnapshot = "total",
-        bodyweightSnapshotKg = null,
         executionProfileId = "execution_press_default",
+        executionProfileVersionId = "execution_press_default:v1",
         executionProfileNameSnapshot = "Default",
-        prescribedLoad = 20.0,
-        prescribedLoadEvidenceSource = "legacy_session_snapshot",
-        prescribedLoadEvidenceSetId = null,
-        prescribedLoadInferenceRunId = null,
-        prescribedLoadAnchor = 20.0,
         prescriptionMode = "A",
         prescriptionIncluded = included,
-        prescribedSets = 3,
-        repMin = 8,
-        repMax = 12,
         restSeconds = 120,
         generatedByModelVersion = "legacy-v6-session-snapshot-v1",
         deferToAnd = false,

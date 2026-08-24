@@ -2,7 +2,9 @@ package dev.kian.mymettle.engine.targeting
 
 import dev.kian.mymettle.domain.anatomy.MuscleSegmentId
 import dev.kian.mymettle.domain.exercise.ExecutionProfileId
+import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
 import dev.kian.mymettle.domain.exercise.ExerciseId
+import dev.kian.mymettle.domain.performance.PerformanceTargetTemplate
 import dev.kian.mymettle.domain.training.SessionConstraints
 import dev.kian.mymettle.domain.training.TargetSource
 import dev.kian.mymettle.domain.training.TrainingTarget
@@ -118,10 +120,11 @@ class ProgrammeResolverTest {
         preferenceId = name,
         exerciseId = ExerciseId("exercise_$name"),
         executionProfileId = ExecutionProfileId("execution_$name"),
+        executionProfileVersionId = ExecutionProfileVersionId("execution_$name:v1"),
         ordinal = ordinal,
         preferencePriority = priority,
         preferredSetCap = 3,
-        repRange = 8..12,
+        preferredTemplate = PerformanceTargetTemplate(emptyList()),
         restSeconds = 120,
         targetCoverage = targetNames.associate { TrainingTargetId("target_$it") to 1.0 },
     )

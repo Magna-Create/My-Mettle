@@ -55,8 +55,6 @@ class LegacyProgrammeConstraintProjectorTest {
         importance = if (index == 0) "principal" else "core",
         lockedToDay = false,
         preferredSets = 3,
-        repMin = 8,
-        repMax = 12,
         restSeconds = 120,
     )
 
