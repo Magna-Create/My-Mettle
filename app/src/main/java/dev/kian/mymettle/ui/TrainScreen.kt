@@ -192,7 +192,7 @@ fun TrainScreen(viewModel: N2WorkoutViewModel) {
     }
 
     calculatorTarget?.let { target ->
-        val draft = drafts.getOrPut(target.set.id) { TrainSetDraft(target.set) }
+        val draft = drafts.getOrPut(target.set.id) { TrainSetDraft(target.set, target.exercise) }
         LoadCalculatorDialog(
             initialExpression = draft.load,
             onDismiss = { calculatorTarget = null },

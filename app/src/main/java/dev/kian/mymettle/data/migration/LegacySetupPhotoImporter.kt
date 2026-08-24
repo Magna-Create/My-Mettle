@@ -62,6 +62,11 @@ class LegacySetupPhotoImporter(private val context: Context) {
         }
     }
 
+    /** Validates backup photo payloads without creating files. Used by isolated acceptance checks. */
+    fun validate(photos: List<LegacySetupPhotoPayload>) {
+        photos.forEach { decodeJpeg(it.dataUrl) }
+    }
+
     private fun decodeJpeg(dataUrl: String): ByteArray {
         val prefix = "data:image/jpeg;base64,"
         if (!dataUrl.startsWith(prefix)) {

@@ -14,6 +14,9 @@ import dev.kian.mymettle.developer.BiologyDeveloperSnapshot
 import dev.kian.mymettle.developer.BiologyTaskController
 import dev.kian.mymettle.developer.BiologyTaskPhase
 import dev.kian.mymettle.developer.BiologyTaskState
+import dev.kian.mymettle.developer.NBio6DeviceVerificationReport
+import dev.kian.mymettle.developer.NBio6DeviceVerificationRepository
+import dev.kian.mymettle.developer.NBio6LiteBackupVerificationReport
 import dev.kian.mymettle.workout.TrainingMode
 import kotlinx.coroutines.launch
 
@@ -23,6 +26,10 @@ data class BiologyDeveloperUiState(
     val selectedDay: String? = null,
     val selectedMode: TrainingMode = TrainingMode.B,
     val task: BiologyTaskState = BiologyTaskState(),
+    val nBio6VerificationRunning: Boolean = false,
+    val nBio6DeviceReport: NBio6DeviceVerificationReport? = null,
+    val nBio6LiteVerificationRunning: Boolean = false,
+    val nBio6LiteReport: NBio6LiteBackupVerificationReport? = null,
     val resetComplete: Boolean = false,
     val message: String? = null,
     val error: String? = null,
@@ -32,6 +39,7 @@ class BiologyDeveloperViewModel(
     private val appContext: Context,
     private val database: MyMettleDatabase,
     private val repository: BiologyDeveloperRepository,
+    private val nBio6Verifier: NBio6DeviceVerificationRepository,
 ) : ViewModel() {
     var uiState by mutableStateOf(BiologyDeveloperUiState())
         private set
@@ -91,6 +99,47 @@ class BiologyDeveloperViewModel(
         uiState = uiState.copy(message = "Diagnostic JSON exported.")
     }
 
+    fun runNBio6DeviceVerification() {
+        if (uiState.nBio6VerificationRunning || uiState.nBio6LiteVerificationRunning) return
+        viewModelScope.launch {
+            uiState = uiState.copy(nBio6VerificationRunning = true, error = null)
+            runCatching { nBio6Verifier.runAutomatedChecks() }
+                .onSuccess { report ->
+                    uiState = uiState.copy(nBio6VerificationRunning = false, nBio6DeviceReport = report)
+                }
+                .onFailure { error ->
+                    uiState = uiState.copy(nBio6VerificationRunning = false)
+                    showError(error)
+                }
+        }
+    }
+
+    fun verifyLiteBackup(fileName: String, json: String) {
+        if (uiState.nBio6VerificationRunning || uiState.nBio6LiteVerificationRunning) return
+        viewModelScope.launch {
+            uiState = uiState.copy(nBio6LiteVerificationRunning = true, error = null)
+            runCatching { nBio6Verifier.verifyLiteBackup(fileName, json) }
+                .onSuccess { report ->
+                    uiState = uiState.copy(nBio6LiteVerificationRunning = false, nBio6LiteReport = report)
+                }
+                .onFailure { error ->
+                    uiState = uiState.copy(nBio6LiteVerificationRunning = false)
+                    showError(error)
+                }
+        }
+    }
+
+    fun nBio6ClosureJson(): String {
+        check(uiState.nBio6DeviceReport != null || uiState.nBio6LiteReport != null) {
+            "Run at least one N-BIO-6 closure check before exporting."
+        }
+        return nBio6Verifier.combinedJson(uiState.nBio6DeviceReport, uiState.nBio6LiteReport)
+    }
+
+    fun markNBio6Exported() {
+        uiState = uiState.copy(message = "N-BIO-6 closure report exported.")
+    }
+
     fun resetDatabase() {
         if (uiState.task.phase == BiologyTaskPhase.RUNNING) return
         viewModelScope.launch {
@@ -130,6 +179,7 @@ class BiologyDeveloperViewModelFactory(context: Context) : ViewModelProvider.Fac
             appContext = appContext,
             database = database,
             repository = BiologyDeveloperRepository(database),
+            nBio6Verifier = NBio6DeviceVerificationRepository(appContext),
         ) as T
     }
 }

@@ -1,7 +1,6 @@
 package dev.kian.mymettle.data.migration
 
 import android.content.Context
-import androidx.room.withTransaction
 import dev.kian.mymettle.data.local.MyMettleDatabase
 import dev.kian.mymettle.data.settings.SettingsStore
 
@@ -39,43 +38,16 @@ class LegacyV6Importer(
         val decodedPhotos = photoImporter.import(snapshot.setupPhotos)
         try {
             settingsStore.importLegacyRestTimer(snapshot.restTimerSettings)
-            database.withTransaction {
-                dao.upsertProfile(snapshot.profile)
-                dao.upsertBodyMeasurements(snapshot.bodyMeasurements)
-                dao.upsertExercises(snapshot.exercises)
-                dao.upsertExerciseMemory(snapshot.exerciseMemory)
-                dao.upsertExecutionProfiles(snapshot.executionProfiles)
-                dao.insertPerformanceSchemas(snapshot.performanceSchemas)
-                dao.insertPerformanceSchemaMetrics(snapshot.performanceSchemaMetrics)
-                dao.insertRecruitmentProfileVersions(snapshot.recruitmentProfileVersions)
-                dao.insertExecutionProfileVersions(snapshot.executionProfileVersions)
-                dao.upsertCues(snapshot.cues)
-                dao.upsertCommonMistakes(snapshot.commonMistakes)
-                dao.upsertSubstitutions(snapshot.substitutions)
-                dao.insertRecruitmentAllocations(recruitment)
-                dao.upsertSetupMedia(decodedPhotos.media)
-                dao.upsertRoutineVersions(snapshot.routineVersions)
-                dao.upsertRoutineSlots(snapshot.routineSlots)
-                dao.upsertRoutineMetricTargets(snapshot.routineMetricTargets)
-                dao.upsertProgrammeTargets(targets.programmeTargets)
-                dao.upsertProgrammeModeConstraints(constraints)
-                dao.upsertTrainingCycles(snapshot.trainingCycles)
-                dao.upsertCompletedDays(snapshot.completedDays)
-                dao.upsertSessions(snapshot.sessions)
-                dao.upsertSessionTargets(targets.sessionTargets)
-                dao.upsertSessionExercises(snapshot.sessionExercises)
-                dao.upsertSessionExerciseTargets(targets.sessionExerciseTargets)
-                dao.upsertSessionSetPrescriptions(snapshot.sessionSetPrescriptions)
-                dao.upsertSessionMetricTargets(snapshot.sessionMetricTargets)
-                dao.upsertSets(snapshot.sets)
-                dao.insertSetObservations(snapshot.setObservations)
-                dao.insertSetMetricValues(snapshot.setMetricValues)
-                dao.upsertSetDraftMetricValues(snapshot.setDraftMetricValues)
-                dao.upsertReflections(snapshot.reflections)
-                dao.upsertHealthObservations(snapshot.healthObservations)
-                dao.upsertHealthIntegrationState(snapshot.healthIntegration)
-                dao.upsertAppState(snapshot.appState)
-            }
+            LegacySnapshotPersister.persist(
+                database = database,
+                snapshot = snapshot,
+                recruitment = recruitment,
+                programmeTargets = targets.programmeTargets,
+                programmeConstraints = constraints,
+                sessionTargets = targets.sessionTargets,
+                sessionExerciseTargets = targets.sessionExerciseTargets,
+                setupMedia = decodedPhotos.media,
+            )
         } catch (error: Throwable) {
             photoImporter.cleanup(decodedPhotos.createdFiles)
             throw error

@@ -107,7 +107,7 @@ class HistoryBackedPrescriptionEngineTest {
             ),
         )
 
-        assertEquals(-0.03, result.setPrescriptions.single().metricTargets.single().lowerCanonical)
+        assertEquals(-0.03, result.setPrescriptions.first().metricTargets.single().lowerCanonical)
     }
 
     @Test

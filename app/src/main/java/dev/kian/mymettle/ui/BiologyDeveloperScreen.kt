@@ -1,6 +1,8 @@
 package dev.kian.mymettle.ui
 
 import android.app.Activity
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
@@ -43,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.kian.mymettle.developer.BiologyTaskPhase
+import dev.kian.mymettle.developer.NBio6VerificationCheck
 import dev.kian.mymettle.workout.NativeWorkoutPlan
 import dev.kian.mymettle.workout.TrainingMode
 import java.time.Instant
@@ -60,20 +63,38 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
     )
     val state = viewModel.uiState
     var confirmReset by remember { mutableStateOf(false) }
-    var pendingExport by remember { mutableStateOf<String?>(null) }
+    var pendingExport by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
-        val json = pendingExport
+        val export = pendingExport
         pendingExport = null
-        if (uri == null || json == null) return@rememberLauncherForActivityResult
+        if (uri == null || export == null) return@rememberLauncherForActivityResult
         scope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
-                    context.contentResolver.openOutputStream(uri, "wt")?.bufferedWriter()?.use { it.write(json) }
+                    context.contentResolver.openOutputStream(uri, "wt")?.bufferedWriter()?.use { it.write(export.first) }
                         ?: error("Android could not open the selected diagnostic file.")
                 }
-            }.onSuccess { viewModel.markExported() }
+            }.onSuccess {
+                if (export.second) viewModel.markNBio6Exported() else viewModel.markExported()
+            }
+                .onFailure(viewModel::reportError)
+        }
+    }
+    val liteBackupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    val name = selectedFileName(context, uri)
+                    val json = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                        ?: error("Android could not open the selected Lite backup.")
+                    name to json
+                }
+            }.onSuccess { (name, json) -> viewModel.verifyLiteBackup(name, json) }
                 .onFailure(viewModel::reportError)
         }
     }
@@ -88,7 +109,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 title = {
                     Column {
                         Text("Biological developer tools", fontWeight = FontWeight.SemiBold)
-                        Text("N‑BIO‑5.1 observability", style = MaterialTheme.typography.labelMedium)
+                        Text("N‑BIO‑6 observability and closure", style = MaterialTheme.typography.labelMedium)
                     }
                 },
                 navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
@@ -134,7 +155,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                             onClick = {
                                 runCatching { viewModel.diagnosticJson() }
                                     .onSuccess { json ->
-                                        pendingExport = json
+                                        pendingExport = json to false
                                         exportLauncher.launch("my-mettle-n-bio-${Instant.now().epochSecond}.json")
                                     }
                                     .onFailure(viewModel::reportError)
@@ -154,6 +175,72 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                                 TextButton(onClick = viewModel::dismissTaskResult) { Text("Dismiss task result") }
                             }
                         }
+                    }
+                }
+
+                item {
+                    DebugCard("N‑BIO‑6 device acceptance") {
+                        Text(
+                            "Runs production Room, profile authoring, workout, history and conservative inference paths in isolated databases. Your Native history is not modified.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Button(
+                            onClick = viewModel::runNBio6DeviceVerification,
+                            enabled = !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            if (state.nBio6VerificationRunning) {
+                                CircularProgressIndicator(modifier = Modifier.padding(end = 10.dp))
+                                Text("Running on-device checks…")
+                            } else {
+                                Text("Run automated Room and flow checks")
+                            }
+                        }
+                        state.nBio6DeviceReport?.let { report ->
+                            HorizontalDivider()
+                            DebugLine("Automated result", if (report.passed) "PASS" else "FAIL")
+                            DebugLine("Checks", "${report.checks.count { it.passed }}/${report.checks.size} passed")
+                            report.checks.forEach { VerificationCheckResult(it) }
+                        }
+                        HorizontalDivider()
+                        Text(
+                            "Select an actual Lite schema-6 backup to translate, persist and inspect in another isolated Room database. Photo bytes are validated without writing files; app settings are untouched.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedButton(
+                            onClick = { liteBackupLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+                            enabled = !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(if (state.nBio6LiteVerificationRunning) "Validating Lite backup…" else "Validate a real Lite backup")
+                        }
+                        state.nBio6LiteReport?.let { report ->
+                            DebugLine("Lite backup", if (report.passed) "PASS" else "FAIL")
+                            DebugLine("File", report.fileName)
+                            Text(report.detail, color = if (report.passed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                            if (report.passed) {
+                                DebugLine("Exercises", report.exercises.toString())
+                                DebugLine("Sessions", report.sessions.toString())
+                                DebugLine("Sets / observations", "${report.sets} / ${report.observations}")
+                                DebugLine("Metric values", report.metricValues.toString())
+                                DebugLine("Photos validated", report.setupPhotosValidated.toString())
+                                report.sampleEvidence.take(5).forEach { sample ->
+                                    Text(sample, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                runCatching { viewModel.nBio6ClosureJson() }
+                                    .onSuccess { json ->
+                                        pendingExport = json to true
+                                        exportLauncher.launch("my-mettle-n-bio-6-closure-${Instant.now().epochSecond}.json")
+                                    }
+                                    .onFailure(viewModel::reportError)
+                            },
+                            enabled = state.nBio6DeviceReport != null || state.nBio6LiteReport != null,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text("Export N-BIO-6 closure report") }
                     }
                 }
 
@@ -342,3 +429,29 @@ private fun PlanDebug(plan: NativeWorkoutPlan) {
 
 private fun formatDebug(value: Double): String =
     if (value % 1.0 == 0.0) value.toInt().toString() else "%.3f".format(value).trimEnd('0').trimEnd('.')
+
+@Composable
+private fun VerificationCheckResult(check: NBio6VerificationCheck) {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(
+            "${if (check.passed) "PASS" else "FAIL"} · ${check.title}",
+            fontWeight = FontWeight.Medium,
+            color = if (check.passed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+        )
+        Text(
+            "${check.detail} · ${check.durationMillis} ms",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+private fun selectedFileName(context: android.content.Context, uri: Uri): String {
+    context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+        if (cursor.moveToFirst()) {
+            val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (index >= 0) return cursor.getString(index)
+        }
+    }
+    return uri.lastPathSegment ?: "selected-lite-backup.json"
+}

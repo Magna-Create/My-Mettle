@@ -37,9 +37,12 @@ From the repository root:
 
 ```sh
 pkg install -y openjdk-17 curl unzip
-./gradlew :app:assembleDebug
+./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --no-daemon
 cp app/build/outputs/apk/debug/app-debug.apk /sdcard/Download/My-Mettle-Dev.apk
 ```
+
+For the N-BIO-6 Room/device acceptance procedure and report export, see
+[`docs/n-bio-vnext/DEVICE_VERIFICATION.md`](docs/n-bio-vnext/DEVICE_VERIFICATION.md).
 
 The debug application can be installed alongside My Mettle Lite Legacy. Do not uninstall Lite Legacy during migration.
 
