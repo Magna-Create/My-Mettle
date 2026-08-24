@@ -52,6 +52,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -261,6 +262,32 @@ class NBio6RoomIntegrationTest {
             setOf(v1.recruitment.id.value, v2.recruitment.id.value),
             dao.recruitmentProfileVersions(listOf(v1.recruitment.id.value, v2.recruitment.id.value)).mapTo(hashSetOf()) { it.id },
         )
+    }
+
+    @Test
+    fun firstAuthoredProfileMustEstablishTheStableDefault() = runBlocking {
+        val version = profileVersion(
+            profile = "non_default_first",
+            version = 1,
+            family = MetricFamily.REPEATED_CONTRACTION,
+            metrics = listOf(SchemaMetric(PerformanceMetric.REPETITIONS, required = true)),
+            lateralityMode = LateralityMode.BILATERAL_ONLY,
+            entryBasis = EntryBasis.TOTAL,
+            recruitment = emptyList(),
+        )
+
+        assertFailsWith<dev.kian.mymettle.library.ExecutionProfileAuthoringException> {
+            ExecutionProfileAuthoringRepository(database).createProfile(
+                ExecutionProfileAuthoringRequest(
+                    exerciseId = ExerciseId("non_default_first"),
+                    exerciseName = "Invalid first profile",
+                    profileName = "Not default",
+                    isDefault = false,
+                    version = version,
+                ),
+            )
+        }
+        assertTrue(database.workoutDao().exercises(listOf("non_default_first")).isEmpty())
     }
 
     private suspend fun seedUser() {

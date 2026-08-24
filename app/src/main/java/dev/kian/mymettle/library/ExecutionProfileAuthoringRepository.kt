@@ -51,10 +51,13 @@ class ExecutionProfileAuthoringRepository(
 
         val existingExercise = dao.exercises(listOf(request.exerciseId.value)).singleOrNull()
         val existingProfiles = dao.executionProfiles(listOf(request.exerciseId.value))
+        if (existingProfiles.count { it.isDefault } > 1) {
+            throw ExecutionProfileAuthoringException("Exercise ${request.exerciseId.value} has ambiguous default profiles.")
+        }
+        if (!request.isDefault && existingProfiles.none { it.isDefault }) {
+            throw ExecutionProfileAuthoringException("The first profile for an exercise must be the default.")
+        }
         if (existingExercise == null) {
-            if (!request.isDefault) {
-                throw ExecutionProfileAuthoringException("The first profile for a new exercise must be the default.")
-            }
             dao.upsertExercises(
                 listOf(
                     ExerciseEntity(
