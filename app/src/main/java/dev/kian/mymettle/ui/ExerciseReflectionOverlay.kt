@@ -1,197 +1,129 @@
 package dev.kian.mymettle.ui
 
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
-@OptIn(ExperimentalMaterial3Api::class)
+private const val ExerciseReviewMaxCharacters = 1200
+private val ReviewSurface = Color(0xFF272B25)
+private val ReviewField = Color(0xFF32362F)
+private val ReviewPaper = Color(0xFFE1E4DA)
+private val ReviewMuted = Color(0xFFC3C8BB)
+private val ReviewSave = Color(0xFFC3EFAD)
+private val ReviewDiscard = Color(0xFFFFB4AB)
+
+/**
+ * Raw exercise review capture.
+ *
+ * The note is intentionally free-form. It is persisted unchanged in the existing reflection
+ * record, while the retired structured ratings remain `unrated`. Any Gemini Nano/ML Kit
+ * interpretation happens downstream and must never replace this user-authored source text.
+ */
 @Composable
 fun ExerciseReflectionOverlay(viewModel: N2WorkoutViewModel) {
     val state = viewModel.uiState
     val target = state.reflectionTarget ?: return
-    val existing = state.reflection
-
-    var engagement by remember(target.entity.id, existing?.updatedAt) {
-        mutableIntStateOf(existing?.targetMuscleEngagement?.toIntOrNull() ?: 0)
+    var text by remember(target.entity.id, state.reflection?.updatedAt) {
+        mutableStateOf(TextFieldValue(state.reflection?.note.orEmpty()))
     }
-    var execution by remember(target.entity.id, existing?.updatedAt) {
-        mutableStateOf(existing?.execution?.takeUnless { it == "unrated" })
-    }
-    var enjoyment by remember(target.entity.id, existing?.updatedAt) {
-        mutableIntStateOf(existing?.enjoyment?.toIntOrNull() ?: 0)
-    }
-    var comfort by remember(target.entity.id, existing?.updatedAt) {
-        mutableStateOf(existing?.comfort?.takeUnless { it == "unrated" })
-    }
-    var note by remember(target.entity.id, existing?.updatedAt) { mutableStateOf(existing?.note.orEmpty()) }
 
-    ModalBottomSheet(onDismissRequest = viewModel::dismissReflection) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .navigationBarsPadding()
-                .padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Column {
-                Text("How did that feel?", style = MaterialTheme.typography.headlineSmall)
-                Text(
-                    target.entity.exerciseNameSnapshot,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-            }
-
-            SevenPointRating(
-                title = "Target muscle",
-                value = engagement,
-                lowLabel = "Barely",
-                highLabel = "Very clear",
-                onValueChange = { engagement = it },
-            )
-
-            ChoiceRating(
-                title = "Form",
-                choices = listOf("clean" to "Clean", "mixed" to "Mixed", "poor" to "Poor"),
-                selected = execution,
-                onSelected = { execution = if (execution == it) null else it },
-            )
-
-            SevenPointRating(
-                title = "Vibe",
-                value = enjoyment,
-                lowLabel = "Hated it",
-                highLabel = "Loved it",
-                onValueChange = { enjoyment = it },
-            )
-
-            ChoiceRating(
-                title = "Comfort",
-                choices = listOf(
-                    "good" to "Good",
-                    "fine" to "Fine",
-                    "uncomfortable" to "Uncomfortable",
-                    "pain" to "Pain",
-                ),
-                selected = comfort,
-                onSelected = { comfort = if (comfort == it) null else it },
-            )
-
-            OutlinedTextField(
-                value = note,
-                onValueChange = { note = it.take(500) },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Optional note") },
-                minLines = 2,
-                maxLines = 4,
-            )
-
-            MettleGlassActionButton(
-                onClick = {
-                    viewModel.saveExerciseReflection(
-                        targetMuscleEngagement = engagement.takeIf { it > 0 },
-                        execution = execution,
-                        enjoyment = enjoyment.takeIf { it > 0 },
-                        comfort = comfort,
-                        note = note,
-                    )
-                },
-                enabled = !state.savingReflection,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(if (state.savingReflection) "Saving…" else "Save reflection")
-            }
-
-            TextButton(onClick = viewModel::dismissReflection, modifier = Modifier.fillMaxWidth()) {
-                Text("Skip")
-            }
-        }
-    }
-}
-
-@Composable
-private fun SevenPointRating(
-    title: String,
-    value: Int,
-    lowLabel: String,
-    highLabel: String,
-    onValueChange: (Int) -> Unit,
-) {
-    Column {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(title, style = MaterialTheme.typography.titleSmall)
+    AlertDialog(
+        onDismissRequest = {
+            if (!state.savingReflection) viewModel.dismissReflection()
+        },
+        modifier = Modifier.fillMaxWidth(.78f),
+        shape = RoundedCornerShape(28.dp),
+        containerColor = ReviewSurface,
+        tonalElevation = 0.dp,
+        title = {
             Text(
-                when (value) {
-                    0 -> "Not rated"
-                    1 -> lowLabel
-                    7 -> highLabel
-                    else -> "$value / 7"
-                },
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelLarge,
+                "Review / Notes",
+                color = ReviewPaper,
+                fontSize = 24.sp,
+                lineHeight = 32.sp,
+                fontWeight = FontWeight.Normal,
             )
-        }
-        Spacer(Modifier.height(6.dp))
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            (1..7).forEach { rating ->
-                MettleGlassChoiceChip(
-                    selected = value == rating,
-                    onClick = { onValueChange(if (value == rating) 0 else rating) },
-                    label = { Text(rating.toString()) },
+        },
+        text = {
+            Column {
+                TextField(
+                    value = text,
+                    onValueChange = { next ->
+                        if (next.text.length <= ExerciseReviewMaxCharacters) text = next
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 250.dp),
+                    label = { Text("Edit") },
+                    placeholder = {
+                        Text(
+                            "How did it feel? Anything about setup, comfort, technique, asymmetry or what you want to remember next time?",
+                        )
+                    },
+                    supportingText = {
+                        Text(
+                            "This will be reviewed by Gemini Nano  ·  ${ExerciseReviewMaxCharacters - text.text.length} characters remaining",
+                            color = ReviewMuted,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                        )
+                    },
+                    minLines = 7,
+                    maxLines = 12,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = ReviewField,
+                        unfocusedContainerColor = ReviewField,
+                        disabledContainerColor = ReviewField,
+                        focusedTextColor = ReviewPaper,
+                        unfocusedTextColor = ReviewPaper,
+                        focusedLabelColor = ReviewMuted,
+                        unfocusedLabelColor = ReviewMuted,
+                        cursorColor = Color(0xFFA0CFD0),
+                        focusedIndicatorColor = ReviewPaper,
+                        unfocusedIndicatorColor = ReviewMuted.copy(alpha = .55f),
+                    ),
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun ChoiceRating(
-    title: String,
-    choices: List<Pair<String, String>>,
-    selected: String?,
-    onSelected: (String) -> Unit,
-) {
-    Column {
-        Text(title, style = MaterialTheme.typography.titleSmall)
-        Spacer(Modifier.height(6.dp))
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            choices.forEach { (value, label) ->
-                MettleGlassChoiceChip(
-                    selected = selected == value,
-                    onClick = { onSelected(value) },
-                    label = { Text(label) },
+        },
+        dismissButton = {
+            TextButton(
+                onClick = viewModel::dismissReflection,
+                enabled = !state.savingReflection,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            ) {
+                Text("Discard", color = ReviewDiscard, fontWeight = FontWeight.Medium)
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { viewModel.saveExerciseReview(text.text) },
+                enabled = !state.savingReflection,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            ) {
+                Text(
+                    if (state.savingReflection) "Saving…" else "Save",
+                    color = ReviewSave,
+                    fontWeight = FontWeight.Medium,
                 )
             }
-        }
-    }
+        },
+    )
 }
