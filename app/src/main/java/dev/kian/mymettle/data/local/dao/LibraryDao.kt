@@ -24,8 +24,14 @@ interface LibraryDao {
     @Query("SELECT * FROM exercise WHERE id = :exerciseId LIMIT 1")
     suspend fun exercise(exerciseId: String): ExerciseEntity?
 
+    @Upsert
+    suspend fun upsertExercise(value: ExerciseEntity)
+
     @Query("SELECT * FROM exercise_memory WHERE exerciseId = :exerciseId LIMIT 1")
     suspend fun memory(exerciseId: String): ExerciseMemoryEntity?
+
+    @Upsert
+    suspend fun upsertMemory(value: ExerciseMemoryEntity)
 
     @Query("SELECT * FROM exercise_execution_profile WHERE exerciseId = :exerciseId ORDER BY isDefault DESC, name COLLATE NOCASE")
     suspend fun executionProfiles(exerciseId: String): List<ExerciseExecutionProfileEntity>
