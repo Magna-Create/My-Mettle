@@ -55,6 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
@@ -799,25 +800,36 @@ private fun WorkoutV2ObservationRow(
     }
 
     Box(
+    Modifier
+        .fillMaxWidth()
+        .height(rowHeight),
+) {
+    // Keep the structural row clipped, but let the current-set light live outside that
+    // clip. The old blurred child was clipped at its own rectangular bounds, creating
+    // the hard top/bottom cut-off visible on device.
+    Box(
         Modifier
-            .fillMaxWidth()
-            .height(rowHeight)
+            .matchParentSize()
             .clip(shape)
             .background(Color.White.copy(alpha = if (completed) .055f else .025f)),
-    ) {
+    )
         if (isCurrent) {
             Box(
                 Modifier
-                    .size(metrics.dp(96))
-                    .align(Alignment.CenterStart)
-                    .blur(metrics.dp(22))
-                    .background(WorkoutV2Cyan.copy(alpha = .18f), CircleShape),
+                .size(metrics.dp(104))
+                .align(Alignment.CenterStart)
+                .blur(
+                    radius = metrics.dp(40),
+                    edgeTreatment = BlurredEdgeTreatment.Unbounded,
+                )
+                .background(WorkoutV2Cyan.copy(alpha = .20f), CircleShape),
             )
         }
         Row(
-            Modifier
-                .fillMaxSize()
-                .mettleDirectionalBorder(
+        Modifier
+            .fillMaxSize()
+            .clip(shape)
+            .mettleDirectionalBorder(
                     width = metrics.dp(.55),
                     color = Color.White.copy(alpha = if (isCurrent) .17f else .12f),
                     shape = shape,

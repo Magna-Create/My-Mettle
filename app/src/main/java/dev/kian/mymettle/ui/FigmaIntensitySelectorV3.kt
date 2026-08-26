@@ -626,34 +626,19 @@ private fun IntensityV3ModeZone(
 private fun IntensityV3HandleDock(
     metrics: IntensityV3Metrics,
 ) {
-    MettleGlassSurface(
-        modifier = Modifier.size(metrics.dp(46)),
-        shape = CircleShape,
-        tint = Color.White.copy(alpha = 0.018f),
-        blurRadius = metrics.dp(4),
-        refractionDisplacement = metrics.dp(2.4),
-        refractionStrength = 0.22f,
-        shadowElevation = metrics.dp(1.5),
-        borderWidth = metrics.dp(0.32),
-        borderColor = IntensityV3OnTertiaryContainer.copy(alpha = 0.10f),
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val thin = metrics.dp(0.72).toPx()
-            drawCircle(
-                color = Color.White.copy(alpha = 0.16f),
-                radius = size.minDimension * 0.31f,
-                style = Stroke(width = thin),
-            )
-            drawCircle(
-                color = IntensityV3Tertiary.copy(alpha = 0.10f),
-                radius = size.minDimension * 0.22f,
-            )
-            drawCircle(
-                color = Color.White.copy(alpha = 0.12f),
-                radius = size.minDimension * 0.19f,
-                style = Stroke(width = thin * 0.82f),
-            )
-        }
+    // Same home marker as the workout-exit surface: quiet fill, outer definition ring,
+    // then one smaller inner ring. Deliberately no third concentric treatment.
+    Canvas(modifier = Modifier.size(metrics.dp(48))) {
+        drawCircle(Color.White.copy(alpha = .045f))
+        drawCircle(
+            MettleOnSurface.copy(alpha = .68f),
+            style = Stroke(metrics.dp(.8).toPx()),
+        )
+        drawCircle(
+            MettleOnSurface.copy(alpha = .34f),
+            radius = size.minDimension * .22f,
+            style = Stroke(metrics.dp(.65).toPx()),
+        )
     }
 }
 
