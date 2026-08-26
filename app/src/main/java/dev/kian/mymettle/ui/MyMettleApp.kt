@@ -86,6 +86,7 @@ fun MyMettleApp() {
     // and scrolling content are sampled exactly as rendered rather than exposing the app gradient
     // that happens to sit underneath them.
     val bottomBarHazeState = rememberHazeState()
+    val workoutExitGestureState = remember { WorkoutExitGestureState() }
 
     val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
     val windowWidthClass = when {
@@ -174,6 +175,7 @@ fun MyMettleApp() {
         CompositionLocalProvider(
             LocalMettleHazeState provides hazeState,
             LocalMettleWindowWidthClass provides windowWidthClass,
+            LocalWorkoutExitGestureState provides workoutExitGestureState,
         ) {
             Scaffold(
                 modifier = Modifier.fillMaxSize(),
@@ -186,7 +188,7 @@ fun MyMettleApp() {
                     // Override only the hotbar's Haze input. Its source is the complete rendered
                     // destination below, while glass inside that destination continues using the
                     // normal destination-owned hazeState and therefore cannot self-sample.
-                    if (!finishOverlayVisible) CompositionLocalProvider(LocalMettleHazeState provides bottomBarHazeState) {
+                    CompositionLocalProvider(LocalMettleHazeState provides bottomBarHazeState) {
                         MettleBottomToolbarV2(
                             selectedIndex = when (currentRoute) {
                                 HOME_ROUTE -> 0
@@ -231,6 +233,8 @@ fun MyMettleApp() {
                             showWorkoutControls = workoutViewModel.uiState.workout != null,
                             transparentMaterial = currentRoute == INTENSITY_ROUTE,
                             preserveEdgeDefinition = currentRoute == HOME_ROUTE,
+                            finishOverlayVisible = finishOverlayVisible,
+                            enableFinishDrag = currentRoute == TRAIN_ROUTE && workoutViewModel.uiState.workout != null,
                         )
                     }
                 },

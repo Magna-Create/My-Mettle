@@ -158,6 +158,7 @@ fun TrainScreen(
         onShowSets = viewModel::showWorkoutSets,
         onShowSetup = viewModel::showExerciseSetup,
         onAddSetupPhoto = ::openSetupCamera,
+        onDeleteSetupPhoto = viewModel::deleteSetupPhoto,
         onSaveSetupDetails = viewModel::saveWorkoutSetup,
         onOpenExerciseLink = ::openExerciseLink,
         onToggleExercise = viewModel::toggleExercise,

@@ -189,6 +189,22 @@ class ExerciseLibraryRepository(
         return exercise(media.exerciseId)
     }
 
+    suspend fun deleteSetupPhoto(exerciseId: String, relativePath: String): Exercise {
+        val media = dao.setupMedia(exerciseId)
+            .firstOrNull { it.relativePath == relativePath }
+            ?: throw NativeWorkoutException("Setup photo not found.")
+        database.withTransaction {
+            dao.deleteSetupMedia(media.id)
+            dao.setupMedia(exerciseId).forEachIndexed { index, remaining ->
+                if (remaining.sortOrder != index) {
+                    dao.upsertSetupMedia(remaining.copy(sortOrder = index))
+                }
+            }
+        }
+        withContext(Dispatchers.IO) { File(context.filesDir, media.relativePath).delete() }
+        return exercise(exerciseId)
+    }
+
     private suspend fun load(entity: ExerciseEntity): Exercise {
         val memoryEntity = dao.memory(entity.id)
         val executionEntities = dao.executionProfiles(entity.id)

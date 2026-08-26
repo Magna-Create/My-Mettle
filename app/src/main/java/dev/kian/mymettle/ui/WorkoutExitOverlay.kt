@@ -111,19 +111,20 @@ internal fun WorkoutExitOverlay(
     val view = LocalView.current
     val density = LocalDensity.current
     val exitHazeState = rememberHazeState()
+    var overlayOriginRoot by remember { mutableStateOf(Offset.Zero) }
 
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
             .onGloballyPositioned { coordinates ->
-                ExitOverlayOrigin.root = coordinates.localToRoot(Offset.Zero)
+                overlayOriginRoot = coordinates.localToRoot(Offset.Zero)
             },
     ) {
         val scale = (maxWidth.value / ExitReferenceWidth).coerceAtMost(1f)
         val metrics = ExitMetrics(scale)
         val widthPx = constraints.maxWidth.toFloat()
         val heightPx = constraints.maxHeight.toFloat()
-        val originRoot = ExitOverlayOrigin.root
+        val originRoot = overlayOriginRoot
 
         val targets = remember {
             listOf(
@@ -402,7 +403,7 @@ private fun ExitHeader(
 }
 
 @Composable
-private fun BoxWithConstraintsScope.ExitTargetSurface(
+private fun ExitTargetSurface(
     target: ExitTarget,
     metrics: ExitMetrics,
     dangerBlend: Float,
@@ -437,7 +438,7 @@ private fun BoxWithConstraintsScope.ExitTargetSurface(
 }
 
 @Composable
-private fun BoxWithConstraintsScope.ExitDockGhost(
+private fun ExitDockGhost(
     centre: Offset,
     metrics: ExitMetrics,
 ) {
@@ -484,10 +485,6 @@ private fun ExitDragHandle(modifier: Modifier, active: Boolean) {
             )
         }
     }
-}
-
-private object ExitOverlayOrigin {
-    var root: Offset = Offset.Zero
 }
 
 private fun blendColour(from: Color, to: Color, amount: Float): Color {

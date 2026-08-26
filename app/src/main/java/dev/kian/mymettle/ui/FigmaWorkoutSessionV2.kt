@@ -141,6 +141,7 @@ internal fun FigmaWorkoutSessionV2(
     onShowSets: (String?) -> Unit,
     onShowSetup: () -> Unit,
     onAddSetupPhoto: (ActiveWorkoutExercise) -> Unit,
+    onDeleteSetupPhoto: (ActiveWorkoutExercise, String) -> Unit,
     onSaveSetupDetails: (ActiveWorkoutExercise, String, String, String) -> Unit,
     onOpenExerciseLink: (String) -> Unit,
     onToggleExercise: (ActiveWorkoutExercise) -> Unit,
@@ -151,11 +152,7 @@ internal fun FigmaWorkoutSessionV2(
     onCompleteWithoutReview: () -> Unit,
     onDiscardSession: () -> Unit,
 ) {
-    val delegateToLegacy = state.swapTarget != null || state.workoutSurface in setOf(
-        WorkoutSurface.QUICK_SELECT,
-        WorkoutSurface.FINISH,
-        WorkoutSurface.DELETE_CONFIRM,
-    )
+    val delegateToLegacy = state.swapTarget != null || state.workoutSurface == WorkoutSurface.QUICK_SELECT
     if (delegateToLegacy) {
         FigmaWorkoutSession(
             state = state,
@@ -216,12 +213,14 @@ internal fun FigmaWorkoutSessionV2(
                         setupDetails = state.setupDetails,
                         loadingSetupDetails = state.loadingSetupDetails,
                         savingSetupDetails = state.savingSetupDetails,
+                        savingSetupPhoto = state.savingSetupPhoto,
                         drafts = drafts,
                         loading = state.loading,
                         listState = listState,
                         onFocusExercise = onShowSets,
                         onShowSetup = onShowSetup,
                         onAddSetupPhoto = onAddSetupPhoto,
+                        onDeleteSetupPhoto = onDeleteSetupPhoto,
                         onSaveSetupDetails = onSaveSetupDetails,
                         onOpenExerciseLink = onOpenExerciseLink,
                         onOpenCalculator = onOpenCalculator,
@@ -237,6 +236,16 @@ internal fun FigmaWorkoutSessionV2(
             }
             CompositionLocalProvider(LocalMettleHazeState provides headerHazeState) {
                 WorkoutV2Header(workout, metrics, onOpenSettings, onOpenAccount)
+            }
+            if (state.workoutSurface in setOf(WorkoutSurface.FINISH, WorkoutSurface.DELETE_CONFIRM)) {
+                WorkoutExitOverlay(
+                    onOpenSettings = onOpenSettings,
+                    onOpenAccount = onOpenAccount,
+                    onDismiss = onDismissSheet,
+                    onCompleteAndRate = onCompleteSession,
+                    onComplete = onCompleteWithoutReview,
+                    onDelete = onDiscardSession,
+                )
             }
         }
     }
@@ -271,12 +280,14 @@ private fun WorkoutV2ExerciseContent(
     setupDetails: WorkoutSetupDetails?,
     loadingSetupDetails: Boolean,
     savingSetupDetails: Boolean,
+    savingSetupPhoto: Boolean,
     drafts: MutableMap<String, TrainSetDraft>,
     loading: Boolean,
     listState: LazyListState,
     onFocusExercise: (String?) -> Unit,
     onShowSetup: () -> Unit,
     onAddSetupPhoto: (ActiveWorkoutExercise) -> Unit,
+    onDeleteSetupPhoto: (ActiveWorkoutExercise, String) -> Unit,
     onSaveSetupDetails: (ActiveWorkoutExercise, String, String, String) -> Unit,
     onOpenExerciseLink: (String) -> Unit,
     onOpenCalculator: (ActiveWorkoutExercise, PerformanceSetRecord, PerformanceMetric, Laterality?) -> Unit,
@@ -315,6 +326,7 @@ private fun WorkoutV2ExerciseContent(
                 setupDetails = setupDetails.takeIf { exercise.entity.id == setupExerciseId },
                 loadingSetupDetails = loadingSetupDetails && exercise.entity.id == setupExerciseId,
                 savingSetupDetails = savingSetupDetails,
+                savingSetupPhoto = savingSetupPhoto,
                 drafts = drafts,
                 enabled = workout.session.status == "active" && !loading,
                 onFocus = {
@@ -327,6 +339,7 @@ private fun WorkoutV2ExerciseContent(
                     onShowSetup()
                 },
                 onAddSetupPhoto = { onAddSetupPhoto(exercise) },
+                onDeleteSetupPhoto = { relativePath -> onDeleteSetupPhoto(exercise, relativePath) },
                 onSaveSetupDetails = { exerciseInstructions, setupInstructions, url ->
                     onSaveSetupDetails(exercise, exerciseInstructions, setupInstructions, url)
                 },
@@ -473,11 +486,13 @@ private fun WorkoutV2ExerciseCard(
     setupDetails: WorkoutSetupDetails?,
     loadingSetupDetails: Boolean,
     savingSetupDetails: Boolean,
+    savingSetupPhoto: Boolean,
     drafts: MutableMap<String, TrainSetDraft>,
     enabled: Boolean,
     onFocus: () -> Unit,
     onSetup: () -> Unit,
     onAddSetupPhoto: () -> Unit,
+    onDeleteSetupPhoto: (String) -> Unit,
     onSaveSetupDetails: (String, String, String) -> Unit,
     onOpenExerciseLink: (String) -> Unit,
     onOpenCalculator: (PerformanceSetRecord, PerformanceMetric, Laterality?) -> Unit,
@@ -590,7 +605,9 @@ private fun WorkoutV2ExerciseCard(
                     details = setupDetails,
                     loading = loadingSetupDetails,
                     saving = savingSetupDetails,
+                    photoMutationInProgress = savingSetupPhoto,
                     onAddPhoto = onAddSetupPhoto,
+                    onDeletePhoto = onDeleteSetupPhoto,
                     onSave = onSaveSetupDetails,
                     onOpenLink = onOpenExerciseLink,
                     onReturn = onFocus,
@@ -960,7 +977,9 @@ private fun WorkoutV2SetupBody(
     details: WorkoutSetupDetails?,
     loading: Boolean,
     saving: Boolean,
+    photoMutationInProgress: Boolean,
     onAddPhoto: () -> Unit,
+    onDeletePhoto: (String) -> Unit,
     onSave: (String, String, String) -> Unit,
     onOpenLink: (String) -> Unit,
     onReturn: () -> Unit,
@@ -973,6 +992,7 @@ private fun WorkoutV2SetupBody(
     val fallbackExerciseInstructions = exercise.details.cues.joinToString(" ").ifBlank { exercise.entity.movementReason }
     var editMode by remember(exercise.entity.id) { mutableStateOf(false) }
     var dialog by remember(exercise.entity.id) { mutableStateOf<WorkoutSetupDialog?>(null) }
+    var pendingDeletePhoto by remember(exercise.entity.id) { mutableStateOf<String?>(null) }
     var exerciseInstructions by remember(exercise.entity.id) { mutableStateOf(fallbackExerciseInstructions) }
     var setupInstructions by remember(exercise.entity.id) { mutableStateOf(fallbackSetup) }
     var link by remember(exercise.entity.id) { mutableStateOf("") }
@@ -1086,7 +1106,14 @@ private fun WorkoutV2SetupBody(
         )
 
         Spacer(Modifier.height(metrics.dp(14)))
-        WorkoutV2SetupMediaStrip(exercise.details.setupMediaPaths, onAddPhoto, metrics)
+        WorkoutV2SetupMediaStrip(
+            paths = exercise.details.setupMediaPaths,
+            editMode = editMode,
+            mutationInProgress = photoMutationInProgress,
+            onAddPhoto = onAddPhoto,
+            onRequestDelete = { pendingDeletePhoto = it },
+            metrics = metrics,
+        )
         Spacer(Modifier.height(metrics.dp(20)))
         if (!editMode) {
             Box(Modifier.padding(horizontal = metrics.dp(15))) {
@@ -1125,6 +1152,39 @@ private fun WorkoutV2SetupBody(
             },
         )
         null -> Unit
+    }
+
+    pendingDeletePhoto?.let { relativePath ->
+        AlertDialog(
+            onDismissRequest = { if (!photoMutationInProgress) pendingDeletePhoto = null },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = Color(0xFF272B25),
+            tonalElevation = 0.dp,
+            title = { Text("Delete setup photo?", color = WorkoutV2Paper, fontSize = 24.sp, lineHeight = 32.sp) },
+            text = {
+                Text(
+                    "This photo will be permanently removed from this exercise.",
+                    color = WorkoutV2Muted,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                )
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingDeletePhoto = null },
+                    enabled = !photoMutationInProgress,
+                ) { Text("Cancel", color = WorkoutV2Paper) }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeletePhoto(relativePath)
+                        pendingDeletePhoto = null
+                    },
+                    enabled = !photoMutationInProgress,
+                ) { Text("Delete", color = WorkoutV2Delete) }
+            },
+        )
     }
 }
 
@@ -1276,7 +1336,14 @@ private fun WorkoutV2LinkEditDialog(
 }
 
 @Composable
-private fun WorkoutV2SetupMediaStrip(paths: List<String>, onAddPhoto: () -> Unit, metrics: WorkoutV2Metrics) {
+private fun WorkoutV2SetupMediaStrip(
+    paths: List<String>,
+    editMode: Boolean,
+    mutationInProgress: Boolean,
+    onAddPhoto: () -> Unit,
+    onRequestDelete: (String) -> Unit,
+    metrics: WorkoutV2Metrics,
+) {
     Row(
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = metrics.dp(16)),
         horizontalArrangement = Arrangement.spacedBy(metrics.dp(10)),
@@ -1286,14 +1353,28 @@ private fun WorkoutV2SetupMediaStrip(paths: List<String>, onAddPhoto: () -> Unit
             shape = RoundedCornerShape(metrics.dp(25)),
             tint = WorkoutV2Cyan.copy(alpha = .035f),
             baseColor = WorkoutV2DarkCyan.copy(alpha = .20f),
+            enabled = !mutationInProgress,
             borderColor = WorkoutV2Cyan.copy(alpha = .32f),
-            onClick = onAddPhoto,
+            onClick = if (mutationInProgress) null else onAddPhoto,
         ) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("+", color = WorkoutV2Paper, fontSize = metrics.sp(24), fontWeight = FontWeight.Medium)
+                Text(
+                    "+",
+                    color = WorkoutV2Paper.copy(alpha = if (mutationInProgress) .38f else 1f),
+                    fontSize = metrics.sp(24),
+                    fontWeight = FontWeight.Medium,
+                )
             }
         }
-        paths.forEach { WorkoutV2SetupMediaImage(it, metrics) }
+        paths.forEach { relativePath ->
+            WorkoutV2SetupMediaImage(
+                relativePath = relativePath,
+                editMode = editMode,
+                mutationInProgress = mutationInProgress,
+                onRequestDelete = { onRequestDelete(relativePath) },
+                metrics = metrics,
+            )
+        }
         if (paths.isEmpty()) {
             Surface(
                 modifier = Modifier.width(metrics.dp(252)).height(metrics.dp(196)),
@@ -1309,7 +1390,13 @@ private fun WorkoutV2SetupMediaStrip(paths: List<String>, onAddPhoto: () -> Unit
 }
 
 @Composable
-private fun WorkoutV2SetupMediaImage(relativePath: String, metrics: WorkoutV2Metrics) {
+private fun WorkoutV2SetupMediaImage(
+    relativePath: String,
+    editMode: Boolean,
+    mutationInProgress: Boolean,
+    onRequestDelete: () -> Unit,
+    metrics: WorkoutV2Metrics,
+) {
     val context = LocalContext.current
     val bitmap by produceState<android.graphics.Bitmap?>(null, relativePath) {
         value = withContext(Dispatchers.IO) {
@@ -1318,15 +1405,44 @@ private fun WorkoutV2SetupMediaImage(relativePath: String, metrics: WorkoutV2Met
             if (candidate.isFile) BitmapFactory.decodeFile(candidate.absolutePath) else null
         }
     }
-    Surface(
-        modifier = Modifier.width(metrics.dp(252)).height(metrics.dp(196)),
-        shape = RoundedCornerShape(metrics.dp(25)),
-        color = Color.White.copy(alpha = .04f),
-    ) {
-        if (bitmap != null) {
-            Image(bitmap!!.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-        } else {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Setup photo", color = WorkoutV2Muted) }
+    Box(Modifier.width(metrics.dp(252)).height(metrics.dp(196))) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            shape = RoundedCornerShape(metrics.dp(25)),
+            color = Color.White.copy(alpha = .04f),
+        ) {
+            if (bitmap != null) {
+                Image(bitmap!!.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            } else {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Setup photo", color = WorkoutV2Muted)
+                }
+            }
+        }
+        if (editMode) {
+            MettleControlGlassSurface(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(metrics.dp(8))
+                    .size(metrics.dp(36)),
+                shape = CircleShape,
+                tint = WorkoutV2Delete.copy(alpha = .08f),
+                baseColor = WorkoutV2Ink.copy(alpha = .48f),
+                enabled = !mutationInProgress,
+                borderWidth = metrics.dp(.55),
+                borderColor = WorkoutV2Delete.copy(alpha = .62f),
+                shadowElevation = metrics.dp(4),
+                onClick = if (mutationInProgress) null else onRequestDelete,
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        MettleIcons.Close,
+                        contentDescription = "Delete setup photo",
+                        tint = WorkoutV2Delete.copy(alpha = if (mutationInProgress) .38f else 1f),
+                        modifier = Modifier.size(metrics.dp(18)),
+                    )
+                }
+            }
         }
     }
 }

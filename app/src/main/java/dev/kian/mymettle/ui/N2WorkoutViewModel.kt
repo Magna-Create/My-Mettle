@@ -156,6 +156,25 @@ class N2WorkoutViewModel(
         }
     }
 
+    fun deleteSetupPhoto(exercise: ActiveWorkoutExercise, relativePath: String) {
+        if (uiState.savingSetupPhoto) return
+        viewModelScope.launch {
+            uiState = uiState.copy(savingSetupPhoto = true, error = null)
+            runCatching {
+                libraryRepository.deleteSetupPhoto(exercise.entity.exerciseId, relativePath)
+                repository.activeWorkout()
+            }.onSuccess { refreshed ->
+                uiState = uiState.copy(
+                    savingSetupPhoto = false,
+                    workout = refreshed ?: uiState.workout,
+                )
+            }.onFailure { error ->
+                uiState = uiState.copy(savingSetupPhoto = false)
+                showError(error)
+            }
+        }
+    }
+
     fun selectMode(mode: TrainingMode) {
         val workout = uiState.workout
         if (workout == null) {
