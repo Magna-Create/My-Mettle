@@ -1,7 +1,10 @@
 package dev.kian.mymettle.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -43,18 +46,23 @@ import dev.kian.mymettle.workout.PerformanceSetRecord
 import dev.kian.mymettle.workout.evaluateLoadExpression
 
 /** Mutable UI buffer only. Canonical history is created as immutable observations on log. */
-internal class TrainSetDraft(set: PerformanceSetRecord, exercise: ActiveWorkoutExercise) {
+internal class TrainSetDraft(
+    set: PerformanceSetRecord,
+    exercise: ActiveWorkoutExercise,
+    initialLaterality: Laterality? = null,
+) {
     private val values = mutableStateMapOf<PerformanceMetric, String>().apply {
         exercise.schema.metrics.forEach { definition ->
-            this[definition.metric] = set.enteredValue(definition.metric)?.let(::formatDecimal).orEmpty()
+            this[definition.metric] = set.enteredValue(definition.metric, initialLaterality)?.let(::formatDecimal).orEmpty()
         }
     }
     private val units = exercise.schema.metrics.associate { definition ->
-        definition.metric to (set.enteredUnit(definition.metric) ?: definition.defaultUnit)
+        definition.metric to (set.enteredUnit(definition.metric, initialLaterality) ?: definition.defaultUnit)
     }
 
     var laterality by mutableStateOf(
-        set.observations.maxByOrNull { it.completedAt }?.laterality
+        initialLaterality
+            ?: set.latestObservation()?.laterality
             ?: exercise.prescription.setPrescriptions.firstOrNull { it.index == set.setIndex }?.laterality
             ?: when (exercise.lateralityMode) {
                 LateralityMode.BILATERAL_ONLY -> Laterality.BILATERAL
@@ -73,10 +81,14 @@ internal class TrainSetDraft(set: PerformanceSetRecord, exercise: ActiveWorkoutE
     }
 }
 
+internal fun workoutDraftKey(setId: String, laterality: Laterality? = null): String =
+    if (laterality == null) setId else "$setId:${laterality.storageValue}"
+
 private data class LoadCalculatorTarget(
     val exercise: ActiveWorkoutExercise,
     val set: PerformanceSetRecord,
     val metric: PerformanceMetric,
+    val laterality: Laterality?,
 )
 
 /** Active-session renderer only. Session choice belongs exclusively to the intensity selector. */
@@ -108,16 +120,34 @@ fun TrainScreen(
         }
     }
 
+    fun openExerciseLink(rawUrl: String) {
+        val trimmed = rawUrl.trim()
+        if (trimmed.isEmpty()) return
+        val normalised = if (trimmed.startsWith("http://", true) || trimmed.startsWith("https://", true)) {
+            trimmed
+        } else {
+            "https://$trimmed"
+        }
+        runCatching {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(normalised)).apply {
+                addCategory(Intent.CATEGORY_BROWSABLE)
+            }
+            context.startActivity(intent)
+        }.onFailure {
+            Toast.makeText(context, "No app can open that exercise link.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     FigmaWorkoutSession(
         state = state,
         drafts = drafts,
         onOpenSettings = onOpenSettings,
         onOpenAccount = onOpenAccount,
-        onOpenCalculator = { exercise, set, metric ->
-            calculatorTarget = LoadCalculatorTarget(exercise, set, metric)
+        onOpenCalculator = { exercise, set, metric, laterality ->
+            calculatorTarget = LoadCalculatorTarget(exercise, set, metric, laterality)
         },
         onSaveDraft = { exercise, set, draft ->
-            persistDraft(viewModel, exercise, set, draft, logged = set.completedAt != null)
+            persistDraft(viewModel, exercise, set, draft, logged = set.hasObservation(draft.laterality))
         },
         onLogSet = { exercise, set, draft ->
             persistDraft(viewModel, exercise, set, draft, logged = true)
@@ -128,6 +158,8 @@ fun TrainScreen(
         onShowSets = viewModel::showWorkoutSets,
         onShowSetup = viewModel::showExerciseSetup,
         onAddSetupPhoto = ::openSetupCamera,
+        onSaveSetupDetails = viewModel::saveWorkoutSetup,
+        onOpenExerciseLink = ::openExerciseLink,
         onToggleExercise = viewModel::toggleExercise,
         onRateExercise = viewModel::rateExercise,
         onDismissSheet = viewModel::dismissWorkoutSheet,
@@ -164,13 +196,20 @@ fun TrainScreen(
     }
 
     calculatorTarget?.let { target ->
-        val draft = drafts.getOrPut(target.set.id) { TrainSetDraft(target.set, target.exercise) }
+        val key = workoutDraftKey(target.set.id, target.laterality)
+        val draft = drafts.getOrPut(key) { TrainSetDraft(target.set, target.exercise, target.laterality) }
         LoadCalculatorDialog(
             initialValue = draft.value(target.metric),
             onDismiss = { calculatorTarget = null },
             onUseValue = { value ->
                 draft.update(target.metric, formatDecimal(value))
-                persistDraft(viewModel, target.exercise, target.set, draft, logged = target.set.completedAt != null)
+                persistDraft(
+                    viewModel,
+                    target.exercise,
+                    target.set,
+                    draft,
+                    logged = target.set.hasObservation(draft.laterality),
+                )
                 calculatorTarget = null
             },
         )
@@ -290,6 +329,11 @@ private fun persistDraft(
     logged: Boolean,
 ) {
     if (exercise.entity.status == "completed") return
+    // N-BIO-6 stores immutable side-addressed observations correctly, but active Room drafts are
+    // intentionally still set+metric keyed. Keep unfinished unilateral input in Compose memory so
+    // LEFT and RIGHT can never overwrite one another before either side becomes real evidence.
+    if (!logged && exercise.lateralityMode == LateralityMode.UNILATERAL) return
+
     val values = exercise.schema.metrics.mapNotNull { definition ->
         draft.value(definition.metric).toDoubleOrNull()?.let { entered ->
             PerformanceMetricValue(definition.metric, Quantity(entered, draft.unit(definition.metric)))
