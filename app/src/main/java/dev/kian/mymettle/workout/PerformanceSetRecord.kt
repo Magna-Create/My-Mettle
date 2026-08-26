@@ -2,6 +2,8 @@ package dev.kian.mymettle.workout
 
 import dev.kian.mymettle.data.local.entity.SetDraftMetricValueEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
+import dev.kian.mymettle.domain.performance.Laterality
+import dev.kian.mymettle.domain.performance.LateralityMode
 import dev.kian.mymettle.domain.performance.MetricTarget
 import dev.kian.mymettle.domain.performance.PerformanceMetric
 import dev.kian.mymettle.domain.performance.PerformanceMetricValue
@@ -25,25 +27,58 @@ data class PerformanceSetRecord(
     val kind: String get() = record.kind
     val completedAt: String? get() = observations.maxByOrNull { it.completedAt }?.completedAt?.toString()
 
-    fun observedValue(metric: PerformanceMetric): PerformanceMetricValue? = observations
+    fun latestObservation(laterality: Laterality? = null): PerformanceObservation? = observations
+        .asSequence()
+        .filter { laterality == null || it.laterality == laterality }
+        .sortedWith(compareByDescending<PerformanceObservation> { it.completedAt }.thenByDescending { it.ordinal })
+        .firstOrNull()
+
+    fun hasObservation(laterality: Laterality): Boolean = observations.any { it.laterality == laterality }
+
+    fun observedValue(metric: PerformanceMetric): PerformanceMetricValue? = observedValue(metric, laterality = null)
+
+    fun observedValue(metric: PerformanceMetric, laterality: Laterality?): PerformanceMetricValue? = observations
+        .asSequence()
+        .filter { laterality == null || it.laterality == laterality }
         .sortedWith(compareByDescending<PerformanceObservation> { it.completedAt }.thenByDescending { it.ordinal })
         .firstNotNullOfOrNull { observation -> observation.values.firstOrNull { it.metric == metric } }
 
-    fun enteredValue(metric: PerformanceMetric): Double? = observedValue(metric)?.entered?.value
-        ?: draftValues.firstOrNull { it.metric == metric.storageValue }?.enteredValue
-        ?: metricTargets.firstOrNull { it.metric == metric && it.kind == TargetKind.EXACT }
-            ?.lowerCanonical
-            ?.let { canonical ->
-                val target = metricTargets.first { it.metric == metric }
-                UnitConverter.convert(
-                    dev.kian.mymettle.domain.performance.Quantity(canonical, target.canonicalUnit),
-                    target.displayUnit,
-                ).value
-            }
+    fun enteredValue(metric: PerformanceMetric): Double? = enteredValue(metric, laterality = null)
 
-    fun enteredUnit(metric: PerformanceMetric): UnitId? = observedValue(metric)?.entered?.unit
-        ?: draftValues.firstOrNull { it.metric == metric.storageValue }?.enteredUnit?.let(UnitId::fromStorage)
-        ?: metricTargets.firstOrNull { it.metric == metric }?.displayUnit
+    fun enteredValue(metric: PerformanceMetric, laterality: Laterality?): Double? =
+        observedValue(metric, laterality)?.entered?.value
+            ?: draftValues.firstOrNull { it.metric == metric.storageValue }?.enteredValue
+            ?: metricTargets.firstOrNull { it.metric == metric && it.kind == TargetKind.EXACT }
+                ?.lowerCanonical
+                ?.let { canonical ->
+                    val target = metricTargets.first { it.metric == metric }
+                    UnitConverter.convert(
+                        dev.kian.mymettle.domain.performance.Quantity(canonical, target.canonicalUnit),
+                        target.displayUnit,
+                    ).value
+                }
+
+    fun enteredUnit(metric: PerformanceMetric): UnitId? = enteredUnit(metric, laterality = null)
+
+    fun enteredUnit(metric: PerformanceMetric, laterality: Laterality?): UnitId? =
+        observedValue(metric, laterality)?.entered?.unit
+            ?: draftValues.firstOrNull { it.metric == metric.storageValue }?.enteredUnit?.let(UnitId::fromStorage)
+            ?: metricTargets.firstOrNull { it.metric == metric }?.displayUnit
+
+    /** A prescribed set stays one logical set even when it contains two side-specific observations. */
+    fun isCompleteFor(mode: LateralityMode): Boolean {
+        if (observations.isEmpty()) return false
+        val sides = observations.mapTo(mutableSetOf()) { it.laterality }
+        return when (mode) {
+            LateralityMode.UNILATERAL -> Laterality.RIGHT in sides && Laterality.LEFT in sides
+            LateralityMode.BILATERAL_ONLY -> Laterality.BILATERAL in sides || Laterality.UNKNOWN in sides
+            LateralityMode.ALTERNATING_ALLOWED -> sides.any {
+                it in setOf(Laterality.ALTERNATING, Laterality.BILATERAL, Laterality.LEFT, Laterality.RIGHT, Laterality.UNKNOWN)
+            }
+            LateralityMode.NOT_APPLICABLE -> Laterality.NOT_APPLICABLE in sides || Laterality.UNKNOWN in sides
+            LateralityMode.UNKNOWN -> true
+        }
+    }
 
     val load: Double? get() = enteredValue(PerformanceMetric.EXTERNAL_LOAD)
         ?: enteredValue(PerformanceMetric.ASSISTANCE)
