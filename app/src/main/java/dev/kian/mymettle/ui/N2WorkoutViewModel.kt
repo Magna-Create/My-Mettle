@@ -11,14 +11,17 @@ import dev.kian.mymettle.data.local.DatabaseProvider
 import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
 import dev.kian.mymettle.data.local.entity.SessionReviewEntity
 import dev.kian.mymettle.domain.performance.Laterality
+import dev.kian.mymettle.domain.performance.LateralityMode
 import dev.kian.mymettle.domain.performance.PerformanceMetricValue
 import dev.kian.mymettle.history.HistoryRepository
 import dev.kian.mymettle.library.ExerciseLibraryRepository
+import dev.kian.mymettle.library.WorkoutSetupDetails
 import dev.kian.mymettle.timer.RestTimerController
 import dev.kian.mymettle.workout.ActiveWorkout
 import dev.kian.mymettle.workout.ActiveWorkoutExercise
 import dev.kian.mymettle.workout.ExerciseSwapOption
 import dev.kian.mymettle.workout.NativeWorkoutPlan
+import dev.kian.mymettle.workout.PerformanceSetRecord
 import dev.kian.mymettle.workout.RoomWorkoutRepository
 import dev.kian.mymettle.workout.SessionAchievement
 import dev.kian.mymettle.workout.SessionAchievementScorer
@@ -51,6 +54,9 @@ data class N2WorkoutUiState(
     val swapOptions: List<ExerciseSwapOption> = emptyList(),
     val loadingSwapOptions: Boolean = false,
     val savingSetupPhoto: Boolean = false,
+    val setupDetails: WorkoutSetupDetails? = null,
+    val loadingSetupDetails: Boolean = false,
+    val savingSetupDetails: Boolean = false,
     val reflectionTarget: ActiveWorkoutExercise? = null,
     val reflection: ExerciseReflectionEntity? = null,
     val savingReflection: Boolean = false,
@@ -85,6 +91,7 @@ class N2WorkoutViewModel(
                         hasProgramme = false,
                         plans = emptyMap(),
                         workout = null,
+                        setupDetails = null,
                     )
                     return@runCatching
                 }
@@ -101,6 +108,9 @@ class N2WorkoutViewModel(
                         workoutSurface = WorkoutSurface.SETS,
                         focusedExerciseId = active.exercises.firstOrNull { it.entity.status != "completed" }?.entity?.id
                             ?: active.exercises.firstOrNull()?.entity?.id,
+                        setupDetails = null,
+                        loadingSetupDetails = false,
+                        savingSetupDetails = false,
                         reflectionTarget = null,
                         reflection = null,
                         sessionCompleted = false,
@@ -174,6 +184,7 @@ class N2WorkoutViewModel(
             uiState = uiState.copy(
                 loading = true,
                 error = null,
+                setupDetails = null,
                 reflectionTarget = null,
                 reflection = null,
                 sessionCompleted = false,
@@ -209,6 +220,9 @@ class N2WorkoutViewModel(
         onSaved: (() -> Unit)? = null,
     ) {
         val sessionId = uiState.workout?.session?.id ?: return
+        val wasLogicalSetComplete = exercise.sets
+            .firstOrNull { it.id == setId }
+            ?.isCompleteFor(exercise.lateralityMode) == true
         viewModelScope.launch {
             runCatching {
                 repository.saveSet(
@@ -225,12 +239,19 @@ class N2WorkoutViewModel(
                 repository.activeWorkout(sessionId)
             }.onSuccess { workout ->
                 uiState = uiState.copy(workout = workout, error = null)
-                if (logged) {
+                val refreshedSet = workout.exercises
+                    .firstOrNull { it.entity.id == exercise.entity.id }
+                    ?.sets
+                    ?.firstOrNull { it.id == setId }
+                val logicalSetJustCompleted = logged &&
+                    !wasLogicalSetComplete &&
+                    refreshedSet?.isCompleteFor(exercise.lateralityMode) == true
+                if (logicalSetJustCompleted) {
                     restTimer.start(
                         exerciseName = exercise.entity.exerciseNameSnapshot,
                         seconds = exercise.entity.restSeconds,
                     )
-                } else {
+                } else if (!logged) {
                     onSaved?.invoke()
                 }
             }.onFailure(::showError)
@@ -239,7 +260,7 @@ class N2WorkoutViewModel(
 
     fun requestExerciseSwap(exercise: ActiveWorkoutExercise) {
         val workout = uiState.workout ?: return
-        if (workout.session.status != "active" || exercise.sets.any { it.completedAt != null }) return
+        if (workout.session.status != "active" || exercise.sets.any { it.observations.isNotEmpty() }) return
         uiState = uiState.copy(
             swapTarget = exercise,
             swapOptions = emptyList(),
@@ -262,27 +283,78 @@ class N2WorkoutViewModel(
         uiState = uiState.copy(
             workoutSurface = WorkoutSurface.SETS,
             focusedExerciseId = exerciseId ?: uiState.workout?.exercises?.firstOrNull()?.entity?.id,
+            setupDetails = null,
+            loadingSetupDetails = false,
+            savingSetupDetails = false,
         )
     }
 
     fun showExerciseSetup() {
-        if (uiState.workout == null) return
-        uiState = uiState.copy(workoutSurface = WorkoutSurface.SETUP)
+        val workout = uiState.workout ?: return
+        val target = workout.exercises.firstOrNull { it.entity.id == uiState.focusedExerciseId }
+            ?: workout.exercises.firstOrNull()
+            ?: return
+        uiState = uiState.copy(
+            workoutSurface = WorkoutSurface.SETUP,
+            focusedExerciseId = target.entity.id,
+            setupDetails = null,
+            loadingSetupDetails = true,
+            error = null,
+        )
+        viewModelScope.launch {
+            runCatching { libraryRepository.workoutSetupDetails(target.entity.exerciseId) }
+                .onSuccess { details ->
+                    if (uiState.workoutSurface == WorkoutSurface.SETUP && uiState.focusedExerciseId == target.entity.id) {
+                        uiState = uiState.copy(setupDetails = details, loadingSetupDetails = false)
+                    }
+                }
+                .onFailure { error ->
+                    uiState = uiState.copy(loadingSetupDetails = false)
+                    showError(error)
+                }
+        }
+    }
+
+    fun saveWorkoutSetup(
+        exercise: ActiveWorkoutExercise,
+        exerciseInstructions: String,
+        setupInstructions: String,
+        videoReferenceUrl: String,
+    ) {
+        viewModelScope.launch {
+            uiState = uiState.copy(savingSetupDetails = true, error = null)
+            runCatching {
+                libraryRepository.updateWorkoutSetupDetails(
+                    exerciseId = exercise.entity.exerciseId,
+                    exerciseInstructions = exerciseInstructions,
+                    setupInstructions = setupInstructions,
+                    videoReferenceUrl = videoReferenceUrl,
+                )
+            }.onSuccess { details ->
+                uiState = uiState.copy(
+                    setupDetails = details,
+                    savingSetupDetails = false,
+                )
+            }.onFailure { error ->
+                uiState = uiState.copy(savingSetupDetails = false)
+                showError(error)
+            }
+        }
     }
 
     fun showQuickSelect() {
         if (uiState.workout == null) return
-        uiState = uiState.copy(workoutSurface = WorkoutSurface.QUICK_SELECT)
+        uiState = uiState.copy(workoutSurface = WorkoutSurface.QUICK_SELECT, setupDetails = null)
     }
 
     fun showFinishSheet() {
         if (uiState.workout?.session?.status != "active") return
-        uiState = uiState.copy(workoutSurface = WorkoutSurface.FINISH)
+        uiState = uiState.copy(workoutSurface = WorkoutSurface.FINISH, setupDetails = null)
     }
 
     fun showDeleteConfirmation() {
         if (uiState.workout?.session?.status != "active") return
-        uiState = uiState.copy(workoutSurface = WorkoutSurface.DELETE_CONFIRM)
+        uiState = uiState.copy(workoutSurface = WorkoutSurface.DELETE_CONFIRM, setupDetails = null)
     }
 
     fun dismissWorkoutSheet() {
@@ -315,6 +387,7 @@ class N2WorkoutViewModel(
                         workout = null,
                         workoutSurface = WorkoutSurface.SETS,
                         focusedExerciseId = null,
+                        setupDetails = null,
                     )
                     loadProgrammeDay(uiState.selectedDay, uiState.selectedMode)
                 }
@@ -377,6 +450,16 @@ class N2WorkoutViewModel(
         uiState = uiState.copy(reflectionTarget = null, reflection = null, savingReflection = false)
     }
 
+    fun saveExerciseReview(note: String?) {
+        saveExerciseReflection(
+            targetMuscleEngagement = null,
+            execution = null,
+            enjoyment = null,
+            comfort = null,
+            note = note,
+        )
+    }
+
     fun saveExerciseReflection(
         targetMuscleEngagement: Int?,
         execution: String?,
@@ -416,7 +499,7 @@ class N2WorkoutViewModel(
         if (workout.session.status != "active") return
         restTimer.stop()
         viewModelScope.launch {
-            uiState = uiState.copy(loading = true, error = null, reflectionTarget = null, reflection = null)
+            uiState = uiState.copy(loading = true, error = null, reflectionTarget = null, reflection = null, setupDetails = null)
             runCatching {
                 val completed = repository.completeSession(workout.session.id)
                 val review = if (skipReview) null else outcomeRepository.review(completed.session.id)
@@ -479,6 +562,7 @@ class N2WorkoutViewModel(
         if (uiState.workout?.session?.status != "completed") return
         uiState = uiState.copy(
             workout = null,
+            setupDetails = null,
             reflectionTarget = null,
             reflection = null,
             sessionCompleted = false,
@@ -512,6 +596,7 @@ class N2WorkoutViewModel(
             bodyweightKg = bodyweightKg,
             plans = plans,
             workout = null,
+            setupDetails = null,
             reflectionTarget = null,
             reflection = null,
             sessionCompleted = false,
@@ -528,12 +613,28 @@ class N2WorkoutViewModel(
             savingReview = false,
             loadingSwapOptions = false,
             savingSetupPhoto = false,
+            loadingSetupDetails = false,
+            savingSetupDetails = false,
             error = error.message ?: error::class.java.simpleName,
         )
     }
 
     private fun modeFromCode(code: String): TrainingMode =
         TrainingMode.entries.firstOrNull { it.code == code } ?: TrainingMode.B
+}
+
+private fun PerformanceSetRecord.isCompleteFor(mode: LateralityMode): Boolean {
+    if (observations.isEmpty()) return false
+    val sides = observations.mapTo(mutableSetOf()) { it.laterality }
+    return when (mode) {
+        LateralityMode.UNILATERAL -> Laterality.RIGHT in sides && Laterality.LEFT in sides
+        LateralityMode.BILATERAL_ONLY -> Laterality.BILATERAL in sides || Laterality.UNKNOWN in sides
+        LateralityMode.ALTERNATING_ALLOWED -> sides.any {
+            it in setOf(Laterality.ALTERNATING, Laterality.BILATERAL, Laterality.LEFT, Laterality.RIGHT, Laterality.UNKNOWN)
+        }
+        LateralityMode.NOT_APPLICABLE -> Laterality.NOT_APPLICABLE in sides || Laterality.UNKNOWN in sides
+        LateralityMode.UNKNOWN -> true
+    }
 }
 
 class N2WorkoutViewModelFactory(context: Context) : ViewModelProvider.Factory {
