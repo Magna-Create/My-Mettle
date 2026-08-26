@@ -10,6 +10,7 @@ import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.RoutineVersionEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
+import dev.kian.mymettle.data.local.entity.SessionSetPrescriptionEntity
 import dev.kian.mymettle.data.local.entity.SetObservationEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.data.local.entity.TrainingCycleEntity
@@ -743,6 +744,24 @@ class NBio6DeviceVerificationRepository(context: Context) {
                     substitutedFromExerciseId = null,
                 ),
             ),
+        )
+        val prescriptionLaterality = when (version.lateralityMode) {
+            LateralityMode.BILATERAL_ONLY -> Laterality.BILATERAL
+            LateralityMode.UNILATERAL -> Laterality.UNKNOWN
+            LateralityMode.ALTERNATING_ALLOWED -> Laterality.ALTERNATING
+            LateralityMode.NOT_APPLICABLE -> Laterality.NOT_APPLICABLE
+            LateralityMode.UNKNOWN -> Laterality.UNKNOWN
+        }
+        dao.upsertSessionSetPrescriptions(
+            List(setCount) { index ->
+                SessionSetPrescriptionEntity(
+                    id = "session_exercise_$key:prescription:set:$index",
+                    sessionExerciseId = "session_exercise_$key",
+                    setIndex = index,
+                    kind = "prescribed",
+                    laterality = prescriptionLaterality.storageValue,
+                )
+            },
         )
         dao.upsertSets(
             List(setCount) { index -> SetRecordEntity("set_${key}_$index", "session_exercise_$key", index, null, false, "prescribed", NOW) },
