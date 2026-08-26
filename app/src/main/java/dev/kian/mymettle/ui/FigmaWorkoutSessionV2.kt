@@ -46,6 +46,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +78,8 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import dev.kian.mymettle.domain.performance.Laterality
 import dev.kian.mymettle.domain.performance.LateralityMode
 import dev.kian.mymettle.domain.performance.PerformanceMetric
@@ -182,6 +185,8 @@ internal fun FigmaWorkoutSessionV2(
         ?: workout.exercises.firstOrNull { it.entity.status != "completed" }
         ?: workout.exercises.first()
     val listState = rememberLazyListState()
+    val viewportHazeState = rememberHazeState()
+    val headerHazeState = rememberHazeState()
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val viewportWidth = minOf(maxWidth, WorkoutV2ReferenceWidth.dp)
@@ -193,39 +198,50 @@ internal fun FigmaWorkoutSessionV2(
                 .align(Alignment.TopCenter)
                 .background(WorkoutV2Ink),
         ) {
-            WorkoutV2Backdrop { focusManager.clearFocus(force = true) }
-            WorkoutV2ExerciseContent(
-                workout = workout,
-                focusedId = focused.entity.id,
-                setupExerciseId = focused.entity.id.takeIf { state.workoutSurface == WorkoutSurface.SETUP },
-                setupDetails = state.setupDetails,
-                loadingSetupDetails = state.loadingSetupDetails,
-                savingSetupDetails = state.savingSetupDetails,
-                drafts = drafts,
-                loading = state.loading,
-                listState = listState,
-                onFocusExercise = onShowSets,
-                onShowSetup = onShowSetup,
-                onAddSetupPhoto = onAddSetupPhoto,
-                onSaveSetupDetails = onSaveSetupDetails,
-                onOpenExerciseLink = onOpenExerciseLink,
-                onOpenCalculator = onOpenCalculator,
-                onSaveDraft = onSaveDraft,
-                onLogSet = onLogSet,
-                onSwap = onSwapExercise,
-                onToggleExercise = onToggleExercise,
-                onRateExercise = onRateExercise,
-                metrics = metrics,
-            )
-            WorkoutV2ViewportScrims(metrics)
-            WorkoutV2Header(workout, metrics, onOpenSettings, onOpenAccount)
+            // Header glass samples the fully composited workout below it. The header itself stays
+            // outside this source, preventing the recursive/black glass artefact seen on device.
+            Box(Modifier.fillMaxSize().hazeSource(headerHazeState)) {
+                WorkoutV2Backdrop(
+                    modifier = Modifier.fillMaxSize().hazeSource(viewportHazeState),
+                    onTap = { focusManager.clearFocus(force = true) },
+                )
+                CompositionLocalProvider(LocalMettleHazeState provides viewportHazeState) {
+                    WorkoutV2ExerciseContent(
+                        workout = workout,
+                        focusedId = focused.entity.id,
+                        setupExerciseId = focused.entity.id.takeIf { state.workoutSurface == WorkoutSurface.SETUP },
+                        setupDetails = state.setupDetails,
+                        loadingSetupDetails = state.loadingSetupDetails,
+                        savingSetupDetails = state.savingSetupDetails,
+                        drafts = drafts,
+                        loading = state.loading,
+                        listState = listState,
+                        onFocusExercise = onShowSets,
+                        onShowSetup = onShowSetup,
+                        onAddSetupPhoto = onAddSetupPhoto,
+                        onSaveSetupDetails = onSaveSetupDetails,
+                        onOpenExerciseLink = onOpenExerciseLink,
+                        onOpenCalculator = onOpenCalculator,
+                        onSaveDraft = onSaveDraft,
+                        onLogSet = onLogSet,
+                        onSwap = onSwapExercise,
+                        onToggleExercise = onToggleExercise,
+                        onRateExercise = onRateExercise,
+                        metrics = metrics,
+                    )
+                }
+                WorkoutV2ViewportScrims(metrics)
+            }
+            CompositionLocalProvider(LocalMettleHazeState provides headerHazeState) {
+                WorkoutV2Header(workout, metrics, onOpenSettings, onOpenAccount)
+            }
         }
     }
 }
 
 @Composable
-private fun WorkoutV2Backdrop(onTap: () -> Unit) {
-    Canvas(Modifier.fillMaxSize().clickable(onClick = onTap)) {
+private fun WorkoutV2Backdrop(modifier: Modifier = Modifier, onTap: () -> Unit) {
+    Canvas(modifier.clickable(onClick = onTap)) {
         drawRect(WorkoutV2Ink)
         drawRect(
             brush = Brush.radialGradient(
@@ -692,10 +708,17 @@ private fun WorkoutV2ObservationRow(
         else -> null
     }
     val label = "${displayIndex + 1}${sideLabel?.let { " · $it" }.orEmpty()}"
+    val standardTwoMetricLayout = definitions.size == 2 && lateralityChoices.isEmpty()
     val fieldHeight = metrics.dp(55)
-    val rowHeight = definitions.size * fieldHeight +
-        (definitions.size - 1).coerceAtLeast(0) * metrics.dp(8) +
-        if (lateralityChoices.isNotEmpty()) metrics.dp(52) else metrics.dp(18)
+    val rowHeight = if (standardTwoMetricLayout) {
+        // Preserve the established workout interaction geometry: one set column at left and two
+        // large full-width metric rows stacked vertically. N-BIO-6 changes data semantics, not UX.
+        metrics.dp(132)
+    } else {
+        definitions.size * fieldHeight +
+            (definitions.size - 1).coerceAtLeast(0) * metrics.dp(8) +
+            if (lateralityChoices.isNotEmpty()) metrics.dp(52) else metrics.dp(18)
+    }
 
     Box(
         Modifier
@@ -716,11 +739,15 @@ private fun WorkoutV2ObservationRow(
         Row(
             Modifier
                 .fillMaxSize()
-                .background(Color.Transparent),
+                .mettleDirectionalBorder(
+                    width = metrics.dp(.55),
+                    color = Color.White.copy(alpha = if (isCurrent) .17f else .12f),
+                    shape = shape,
+                ),
         ) {
             Box(
                 modifier = Modifier
-                    .width(metrics.dp(85))
+                    .width(metrics.dp(94))
                     .fillMaxHeight()
                     .background(
                         when {
@@ -773,7 +800,11 @@ private fun WorkoutV2ObservationRow(
                         label = workoutV2MetricFieldLabel(definition, draft.unit(definition.metric)),
                         enabled = enabled,
                         decimal = definition.metric.dimension !in setOf(QuantityDimension.COUNT, QuantityDimension.ORDINAL),
-                        modifier = Modifier.fillMaxWidth().height(fieldHeight),
+                        modifier = if (standardTwoMetricLayout) {
+                            Modifier.fillMaxWidth().weight(1f)
+                        } else {
+                            Modifier.fillMaxWidth().height(fieldHeight)
+                        },
                         onValueChange = { value ->
                             draft.update(definition.metric, workoutV2MetricInput(definition.metric, value))
                         },
@@ -791,12 +822,6 @@ private fun WorkoutV2ObservationRow(
                 }
             }
         }
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Transparent)
-                .then(Modifier),
-        )
     }
 }
 
@@ -1348,8 +1373,13 @@ private fun workoutV2PrescriptionLabels(exercise: ActiveWorkoutExercise): List<S
     }
 }
 
-private fun workoutV2MetricFieldLabel(definition: SchemaMetric, enteredUnit: UnitId): String =
-    "${definition.metric.workoutV2DisplayName()} · ${enteredUnit.storageValue}"
+private fun workoutV2MetricFieldLabel(definition: SchemaMetric, enteredUnit: UnitId): String = when (definition.metric) {
+    PerformanceMetric.EXTERNAL_LOAD, PerformanceMetric.ASSISTANCE -> enteredUnit.storageValue
+    PerformanceMetric.REPETITIONS -> "Reps"
+    PerformanceMetric.DURATION -> if (enteredUnit == UnitId.SECOND) "Seconds" else enteredUnit.storageValue
+    PerformanceMetric.DISTANCE -> enteredUnit.storageValue
+    else -> "${definition.metric.workoutV2DisplayName()} · ${enteredUnit.storageValue}"
+}
 
 private fun dev.kian.mymettle.domain.performance.MetricTarget.workoutV2DisplayValue(canonical: Double): String =
     formatDecimal(UnitConverter.convert(dev.kian.mymettle.domain.performance.Quantity(canonical, canonicalUnit), displayUnit).value)
