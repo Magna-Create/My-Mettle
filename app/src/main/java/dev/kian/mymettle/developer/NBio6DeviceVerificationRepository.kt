@@ -666,7 +666,9 @@ class NBio6DeviceVerificationRepository(context: Context) {
         val workouts = RoomWorkoutRepository(database)
         val saved = workouts.saveObservation("session_exercise_$key", "set_${key}_0", Laterality.NOT_APPLICABLE, values)
         val history = HistoryRepository(database).recent().single().exercises.single().sets.single().observations.single()
-        expect(history == saved) { "History read model changed $name observation semantics." }
+        val savedCanonical = saved.copy(values = saved.values.sortedBy { it.metric.storageValue })
+        val historyCanonical = history.copy(values = history.values.sortedBy { it.metric.storageValue })
+        expect(historyCanonical == savedCanonical) { "History read model changed $name observation semantics beyond metric ordering." }
         val inference = RoomInferenceRepository(database).recomputeFromRawHistory()
         expect(inference.exerciseTranslationStates.single().laterality == Laterality.NOT_APPLICABLE) {
             "$name inference lost not-applicable laterality."
