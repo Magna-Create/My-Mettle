@@ -1,0 +1,138 @@
+name: Workout lighting and dock patch
+
+on:
+  push:
+    branches:
+      - agent/workout-ui-nbio6-upgrade
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Stage workout lighting and dock patch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/workout-ui-nbio6-upgrade
+          fetch-depth: 0
+
+      - name: Apply focused UI patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          workout = Path('app/src/main/java/dev/kian/mymettle/ui/FigmaWorkoutSessionV2.kt')
+          text = workout.read_text()
+
+          if 'import androidx.compose.foundation.layout.requiredSize\n' not in text:
+              text = text.replace(
+                  'import androidx.compose.foundation.layout.padding\n',
+                  'import androidx.compose.foundation.layout.padding\nimport androidx.compose.foundation.layout.requiredSize\n',
+                  1,
+              )
+          if 'import androidx.compose.ui.zIndex\n' not in text:
+              text = text.replace(
+                  'import androidx.compose.ui.unit.sp\n',
+                  'import androidx.compose.ui.unit.sp\nimport androidx.compose.ui.zIndex\n',
+                  1,
+              )
+
+          old_light = '''        if (isCurrent) {
+            Box(
+                Modifier
+                .size(metrics.dp(104))
+                .align(Alignment.CenterStart)
+                .blur(
+                    radius = metrics.dp(40),
+                    edgeTreatment = BlurredEdgeTreatment.Unbounded,
+                )
+                .background(WorkoutV2Cyan.copy(alpha = .20f), CircleShape),
+            )
+        }
+'''
+          new_light = '''        if (isCurrent) {
+            // Draw the active-set light as one oversized radial field above the complete row.
+            // A blurred child behind the metric surfaces was visually clipped to the set-number
+            // cell and then hidden by the load/reps glass, which produced the rectangular cut-off
+            // seen on device. This field deliberately exceeds the row bounds so its fall-off can
+            // continue naturally into neighbouring space and across the metric surfaces.
+            Canvas(
+                Modifier
+                    .requiredSize(metrics.dp(280))
+                    .align(Alignment.CenterStart)
+                    .zIndex(1f),
+            ) {
+                val centre = Offset(metrics.dp(47).toPx(), size.height / 2f)
+                val radius = metrics.dp(140).toPx()
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0f to WorkoutV2Cyan.copy(alpha = .12f),
+                            .28f to WorkoutV2Cyan.copy(alpha = .075f),
+                            .58f to WorkoutV2Cyan.copy(alpha = .032f),
+                            1f to Color.Transparent,
+                        ),
+                        center = centre,
+                        radius = radius,
+                    ),
+                    center = centre,
+                    radius = radius,
+                )
+            }
+        }
+'''
+          if old_light not in text:
+              raise SystemExit('Workout lighting block did not match expected source')
+          text = text.replace(old_light, new_light, 1)
+          workout.write_text(text)
+
+          intensity = Path('app/src/main/java/dev/kian/mymettle/ui/FigmaIntensitySelectorV3.kt')
+          text = intensity.read_text()
+          old_dock = '''    // Same home marker as the workout-exit surface: quiet fill, outer definition ring,
+    // then one smaller inner ring. Deliberately no third concentric treatment.
+    Canvas(modifier = Modifier.size(metrics.dp(48))) {
+        drawCircle(Color.White.copy(alpha = .045f))
+        drawCircle(
+            MettleOnSurface.copy(alpha = .68f),
+            style = Stroke(metrics.dp(.8).toPx()),
+        )
+        drawCircle(
+            MettleOnSurface.copy(alpha = .34f),
+            radius = size.minDimension * .22f,
+            style = Stroke(metrics.dp(.65).toPx()),
+        )
+    }
+'''
+          new_dock = '''    // Match the perceived workout-exit home marker: just its outer definition and one
+    // smaller inner ring. The old translucent disc reads as a third concentric circle against
+    // this selector's brighter lower field, even though it is only a fill layer.
+    Canvas(modifier = Modifier.size(metrics.dp(48))) {
+        drawCircle(
+            Color(0xFFE1E4DA).copy(alpha = .68f),
+            style = Stroke(metrics.dp(.8).toPx()),
+        )
+        drawCircle(
+            Color(0xFFE1E4DA).copy(alpha = .34f),
+            radius = size.minDimension * .22f,
+            style = Stroke(metrics.dp(.65).toPx()),
+        )
+    }
+'''
+          if old_dock not in text:
+              raise SystemExit('Intensity dock block did not match expected source')
+          text = text.replace(old_dock, new_dock, 1)
+          intensity.write_text(text)
+
+          Path('.github/workflows/workout-lighting-dock-once.yml').unlink()
+          PY
+
+          git config user.name "Magna-Create"
+          git config user.email "53941598+Magna-Create@users.noreply.github.com"
+          git add app/src/main/java/dev/kian/mymettle/ui/FigmaWorkoutSessionV2.kt \
+                  app/src/main/java/dev/kian/mymettle/ui/FigmaIntensitySelectorV3.kt \
+                  .github/workflows/workout-lighting-dock-once.yml
+          git commit -m "Fix workout set lighting and simplify intensity dock"
+          git push origin HEAD:agent/workout-ui-nbio6-upgrade
