@@ -8,6 +8,7 @@ import androidx.room.withTransaction
 import dev.kian.mymettle.data.local.MyMettleDatabase
 import dev.kian.mymettle.data.local.toDomain
 import dev.kian.mymettle.data.local.entity.ExerciseEntity
+import dev.kian.mymettle.data.local.entity.ExerciseMemoryEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSetupMediaEntity
 import dev.kian.mymettle.domain.anatomy.MuscleSegmentId
 import dev.kian.mymettle.domain.exercise.EntryBasis
@@ -40,6 +41,15 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 import org.json.JSONArray
 
+data class WorkoutSetupDetails(
+    val exerciseId: String,
+    val exerciseInstructions: String,
+    val setupInstructions: String,
+    val videoReferenceUrl: String,
+    /** Nullable presentation slot reserved for the allow-listed on-device note interpreter. */
+    val reviewReminder: String? = null,
+)
+
 class ExerciseLibraryRepository(
     private val context: Context,
     private val database: MyMettleDatabase,
@@ -52,6 +62,66 @@ class ExerciseLibraryRepository(
     suspend fun exercise(exerciseId: String): Exercise {
         val exercise = dao.exercise(exerciseId) ?: throw NativeWorkoutException("Exercise not found.")
         return load(exercise)
+    }
+
+    suspend fun workoutSetupDetails(exerciseId: String): WorkoutSetupDetails {
+        val exercise = dao.exercise(exerciseId) ?: throw NativeWorkoutException("Exercise not found.")
+        val memory = dao.memory(exerciseId)
+        return WorkoutSetupDetails(
+            exerciseId = exerciseId,
+            exerciseInstructions = exercise.essentialCue.orEmpty(),
+            setupInstructions = memory?.setupNotes.orEmpty(),
+            videoReferenceUrl = memory?.videoReferenceUrl.orEmpty(),
+            reviewReminder = null,
+        )
+    }
+
+    suspend fun updateWorkoutSetupDetails(
+        exerciseId: String,
+        exerciseInstructions: String,
+        setupInstructions: String,
+        videoReferenceUrl: String,
+    ): WorkoutSetupDetails = database.withTransaction {
+        val exercise = dao.exercise(exerciseId) ?: throw NativeWorkoutException("Exercise not found.")
+        val currentMemory = dao.memory(exerciseId)
+        val now = Instant.now().toString()
+        val cleanExerciseInstructions = exerciseInstructions.trim().take(MAX_INSTRUCTION_CHARS)
+        val cleanSetupInstructions = setupInstructions.trim().take(MAX_INSTRUCTION_CHARS)
+        val cleanUrl = videoReferenceUrl.trim().take(MAX_LINK_CHARS)
+        if (cleanUrl.isNotEmpty() && !cleanUrl.startsWith("http://", ignoreCase = true) &&
+            !cleanUrl.startsWith("https://", ignoreCase = true)
+        ) {
+            throw NativeWorkoutException("Exercise links must start with http:// or https://.")
+        }
+
+        dao.upsertExercise(
+            exercise.copy(
+                essentialCue = cleanExerciseInstructions.takeIf(String::isNotEmpty),
+                updatedAt = now,
+            ),
+        )
+        dao.upsertMemory(
+            currentMemory?.copy(
+                setupNotes = cleanSetupInstructions,
+                videoReferenceUrl = cleanUrl,
+            ) ?: ExerciseMemoryEntity(
+                exerciseId = exerciseId,
+                category = "",
+                equipment = "",
+                fatigueCost = 0,
+                skillDifficulty = 0,
+                setupNotes = cleanSetupInstructions,
+                videoReferenceUrl = cleanUrl,
+                machineSettings = "",
+            ),
+        )
+        WorkoutSetupDetails(
+            exerciseId = exerciseId,
+            exerciseInstructions = cleanExerciseInstructions,
+            setupInstructions = cleanSetupInstructions,
+            videoReferenceUrl = cleanUrl,
+            reviewReminder = null,
+        )
     }
 
     suspend fun addSetupPhotos(exerciseId: String, uris: List<Uri>): Exercise {
@@ -307,6 +377,8 @@ class ExerciseLibraryRepository(
         const val MAX_SETUP_PHOTOS = 12
         const val MAX_LONG_EDGE = 1600
         const val JPEG_QUALITY = 72
+        const val MAX_INSTRUCTION_CHARS = 1600
+        const val MAX_LINK_CHARS = 2048
     }
 }
 
