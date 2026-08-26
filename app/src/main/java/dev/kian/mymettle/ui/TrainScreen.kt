@@ -138,7 +138,7 @@ fun TrainScreen(
         }
     }
 
-    FigmaWorkoutSession(
+    FigmaWorkoutSessionV2(
         state = state,
         drafts = drafts,
         onOpenSettings = onOpenSettings,
