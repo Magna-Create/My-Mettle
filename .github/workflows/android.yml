@@ -8,14 +8,48 @@ on:
       - "agent/**"
   pull_request:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply staged workout UX patch
+        if: github.ref == 'refs/heads/agent/workout-ui-nbio6-upgrade'
+        shell: bash
+        run: |
+          if grep -q 'if (!finishOverlayVisible) CompositionLocalProvider' app/src/main/java/dev/kian/mymettle/ui/MyMettleApp.kt || \
+             ! grep -q 'fun deleteSetupPhoto(exercise: ActiveWorkoutExercise' app/src/main/java/dev/kian/mymettle/ui/N2WorkoutViewModel.kt; then
+            python - <<'PY'
+          from pathlib import Path
+          import re
+          import textwrap
+
+          source = Path('.github/workflows/exit-photo-rebuild-once.yml').read_text()
+          marker = "          python - <<'PY'\n"
+          start = source.index(marker) + len(marker)
+          end = source.index("\n          PY\n", start)
+          script = textwrap.dedent(source[start:end])
+          script, replacements = re.subn(
+              r"def replace_once\(path, old, new\):.*?\n\n(?=# WorkoutExitOverlay)",
+              """def replace_once(path, old, new):\n    p = Path(path)\n    text = p.read_text()\n    if old not in text:\n        raise SystemExit(f'Missing patch anchor in {path}: {old[:100]!r}')\n    p.write_text(text.replace(old, new, 1))\n\n""",
+              script,
+              count=1,
+              flags=re.S,
+          )
+          if replacements != 1:
+              raise SystemExit('Could not prepare staged UI patch')
+          exec(compile(script, 'exit-photo-rebuild', 'exec'))
+          PY
+          fi
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -40,3 +74,20 @@ jobs:
 
       - name: Test and build debug APK
         run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace
+
+      - name: Commit verified staged workout UX patch
+        if: github.ref == 'refs/heads/agent/workout-ui-nbio6-upgrade' && success()
+        shell: bash
+        run: |
+          if ! git diff --quiet; then
+            git config user.name "Magna-Create"
+            git config user.email "53941598+Magna-Create@users.noreply.github.com"
+            git add app/src/main/java/dev/kian/mymettle/ui/WorkoutExitOverlay.kt \
+                    app/src/main/java/dev/kian/mymettle/ui/MyMettleApp.kt \
+                    app/src/main/java/dev/kian/mymettle/ui/FigmaWorkoutSessionV2.kt \
+                    app/src/main/java/dev/kian/mymettle/ui/TrainScreen.kt \
+                    app/src/main/java/dev/kian/mymettle/ui/N2WorkoutViewModel.kt \
+                    app/src/main/java/dev/kian/mymettle/library/ExerciseLibraryRepository.kt
+            git commit -m "Rebuild exit workout UX and add setup photo deletion"
+            git push origin HEAD:agent/workout-ui-nbio6-upgrade
+          fi
