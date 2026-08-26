@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -82,6 +83,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import dev.kian.mymettle.domain.performance.Laterality
@@ -814,16 +816,33 @@ private fun WorkoutV2ObservationRow(
             .background(Color.White.copy(alpha = if (completed) .055f else .025f)),
     )
         if (isCurrent) {
-            Box(
+            // Oversized active-set illumination: the old blurred child sat behind the metric
+            // glass and was visually clipped to the set-number cell on device. This radial field
+            // is deliberately larger than the row and drawn above it, so fall-off continues
+            // naturally across load/reps and slightly beyond the row boundaries.
+            Canvas(
                 Modifier
-                .size(metrics.dp(104))
-                .align(Alignment.CenterStart)
-                .blur(
-                    radius = metrics.dp(40),
-                    edgeTreatment = BlurredEdgeTreatment.Unbounded,
+                    .requiredSize(metrics.dp(280))
+                    .align(Alignment.CenterStart)
+                    .zIndex(1f),
+            ) {
+                val centre = Offset(metrics.dp(47).toPx(), size.height / 2f)
+                val radius = metrics.dp(140).toPx()
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0f to WorkoutV2Cyan.copy(alpha = .12f),
+                            .28f to WorkoutV2Cyan.copy(alpha = .075f),
+                            .58f to WorkoutV2Cyan.copy(alpha = .032f),
+                            1f to Color.Transparent,
+                        ),
+                        center = centre,
+                        radius = radius,
+                    ),
+                    center = centre,
+                    radius = radius,
                 )
-                .background(WorkoutV2Cyan.copy(alpha = .20f), CircleShape),
-            )
+            }
         }
         Row(
         Modifier

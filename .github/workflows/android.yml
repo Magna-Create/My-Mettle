@@ -8,9 +8,6 @@ on:
       - "agent/**"
   pull_request:
 
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,10 +16,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Apply one-off workout UI patch
-        if: github.event_name == 'push' && github.ref_name == 'agent/workout-ui-nbio6-upgrade'
-        run: python3 tools/workout_ui_patch_once.py
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4

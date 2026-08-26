@@ -626,16 +626,16 @@ private fun IntensityV3ModeZone(
 private fun IntensityV3HandleDock(
     metrics: IntensityV3Metrics,
 ) {
-    // Same home marker as the workout-exit surface: quiet fill, outer definition ring,
-    // then one smaller inner ring. Deliberately no third concentric treatment.
+    // Match the workout-exit dock as it actually reads on-device: one outer definition
+    // ring and one smaller home ring. The selector's brighter field made the previous translucent
+    // disc read as an unwanted third concentric circle.
     Canvas(modifier = Modifier.size(metrics.dp(48))) {
-        drawCircle(Color.White.copy(alpha = .045f))
         drawCircle(
-            MettleOnSurface.copy(alpha = .68f),
+            Color(0xFFE1E4DA).copy(alpha = .68f),
             style = Stroke(metrics.dp(.8).toPx()),
         )
         drawCircle(
-            MettleOnSurface.copy(alpha = .34f),
+            Color(0xFFE1E4DA).copy(alpha = .34f),
             radius = size.minDimension * .22f,
             style = Stroke(metrics.dp(.65).toPx()),
         )
