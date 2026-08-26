@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -57,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -64,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -74,6 +77,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -490,16 +494,39 @@ private fun WorkoutV2ExerciseCard(
     val sets = exercise.sets
         .filter { it.setIndex < exercise.prescription.sets || it.observations.isNotEmpty() }
         .sortedBy { it.setIndex }
-    val logged = sets.count { it.isCompleteFor(exercise.lateralityMode) }
+    val logged = sets.count { it.isCompleteFor(exercise.resolvedWorkoutLateralityMode()) }
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = WorkoutV2CardShape,
-        color = if (completed) WorkoutV2GreenDark.copy(alpha = .78f) else WorkoutV2Card,
-        border = BorderStroke(metrics.dp(.7), Color.White.copy(alpha = if (focused) .18f else .10f)),
-        shadowElevation = metrics.dp(if (focused) 5 else 2),
+    val cardHazeState = rememberHazeState()
+    val cardColor = if (completed) WorkoutV2GreenDark.copy(alpha = .78f) else WorkoutV2Card
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .dropShadow(
+                shape = WorkoutV2CardShape,
+                shadow = Shadow(
+                    radius = metrics.dp(if (focused) 7 else 4.5),
+                    spread = 0.dp,
+                    color = Color.Black.copy(alpha = if (focused) .30f else .22f),
+                    offset = DpOffset(0.dp, metrics.dp(if (focused) 2.6 else 1.7)),
+                ),
+            )
+            .mettleDirectionalBorder(
+                width = metrics.dp(.7),
+                color = Color.White.copy(alpha = if (focused) .18f else .11f),
+                shape = WorkoutV2CardShape,
+            )
+            .clip(WorkoutV2CardShape),
     ) {
-        Column {
+        // Restrict the Haze source to the clipped card paint. Sampling an elevated Surface was
+        // producing the large rectangular ghost layer visible behind cards while scrolling.
+        Box(
+            Modifier
+                .matchParentSize()
+                .hazeSource(cardHazeState)
+                .background(cardColor),
+        )
+        CompositionLocalProvider(LocalMettleHazeState provides cardHazeState) {
+            Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -523,6 +550,7 @@ private fun WorkoutV2ExerciseCard(
                     modifier = Modifier.size(metrics.dp(80)),
                     shape = CircleShape,
                     tint = if (completed) WorkoutV2Green.copy(alpha = .10f) else WorkoutV2Cyan.copy(alpha = .055f),
+                    baseColor = WorkoutV2DarkCyan.copy(alpha = .20f),
                     borderColor = if (completed) WorkoutV2Green.copy(alpha = .50f) else WorkoutV2Cyan.copy(alpha = .38f),
                     shadowElevation = metrics.dp(4),
                     onClick = if (completed) null else onSetup,
@@ -576,14 +604,20 @@ private fun WorkoutV2ExerciseCard(
                             end = metrics.dp(15),
                             top = metrics.dp(15),
                         ),
-                        verticalArrangement = Arrangement.spacedBy(metrics.dp(9)),
+                        verticalArrangement = Arrangement.spacedBy(
+                            metrics.dp(
+                                if (exercise.resolvedWorkoutLateralityMode() == LateralityMode.UNILATERAL) 9 else 2.5,
+                            ),
+                        ),
                     ) {
                         sets.forEachIndexed { index, set ->
                             val isCurrentLogicalSet = focused &&
-                                !set.isCompleteFor(exercise.lateralityMode) &&
-                                sets.take(index).all { it.isCompleteFor(exercise.lateralityMode) }
+                                !set.isCompleteFor(exercise.resolvedWorkoutLateralityMode()) &&
+                                sets.take(index).all { it.isCompleteFor(exercise.resolvedWorkoutLateralityMode()) }
                             WorkoutV2LogicalSetGroup(
                                 displayIndex = index,
+                                groupIndex = index,
+                                groupLastIndex = sets.lastIndex,
                                 exercise = exercise,
                                 set = set,
                                 drafts = drafts,
@@ -600,11 +634,12 @@ private fun WorkoutV2ExerciseCard(
                         onSwap = onSwap,
                         onRate = onRateExercise,
                         onComplete = onToggleExercise,
-                        allSetsComplete = sets.isNotEmpty() && sets.all { it.isCompleteFor(exercise.lateralityMode) },
+                        allSetsComplete = sets.isNotEmpty() && sets.all { it.isCompleteFor(exercise.resolvedWorkoutLateralityMode()) },
                         metrics = metrics,
                     )
                 }
             }
+        }
         }
     }
 }
@@ -612,6 +647,8 @@ private fun WorkoutV2ExerciseCard(
 @Composable
 private fun WorkoutV2LogicalSetGroup(
     displayIndex: Int,
+    groupIndex: Int,
+    groupLastIndex: Int,
     exercise: ActiveWorkoutExercise,
     set: PerformanceSetRecord,
     drafts: MutableMap<String, TrainSetDraft>,
@@ -622,7 +659,7 @@ private fun WorkoutV2LogicalSetGroup(
     onLogSet: (TrainSetDraft) -> Unit,
     metrics: WorkoutV2Metrics,
 ) {
-    val sides = when (exercise.lateralityMode) {
+    val sides = when (exercise.resolvedWorkoutLateralityMode()) {
         LateralityMode.UNILATERAL -> listOf(Laterality.RIGHT, Laterality.LEFT)
         else -> listOf<Laterality?>(null)
     }
@@ -631,9 +668,9 @@ private fun WorkoutV2LogicalSetGroup(
             val key = workoutDraftKey(set.id, side)
             val draft = drafts.getOrPut(key) { TrainSetDraft(set, exercise, side) }
             val sideCompleted = side?.let(set::hasObservation)
-                ?: set.isCompleteFor(exercise.lateralityMode)
+                ?: set.isCompleteFor(exercise.resolvedWorkoutLateralityMode())
             val shape = when {
-                sides.size == 1 -> RoundedCornerShape(metrics.dp(25))
+                sides.size == 1 -> workoutV2GroupedSetShape(groupIndex, groupLastIndex, metrics)
                 sideIndex == 0 -> RoundedCornerShape(
                     topStart = metrics.dp(25),
                     topEnd = metrics.dp(25),
@@ -668,6 +705,31 @@ private fun WorkoutV2LogicalSetGroup(
     }
 }
 
+private fun workoutV2GroupedSetShape(
+    index: Int,
+    lastIndex: Int,
+    metrics: WorkoutV2Metrics,
+): RoundedCornerShape {
+    val outer = metrics.dp(25)
+    val inner = metrics.dp(5)
+    return when {
+        lastIndex == 0 -> RoundedCornerShape(outer)
+        index == 0 -> RoundedCornerShape(
+            topStart = outer,
+            topEnd = outer,
+            bottomStart = inner,
+            bottomEnd = inner,
+        )
+        index == lastIndex -> RoundedCornerShape(
+            topStart = inner,
+            topEnd = inner,
+            bottomStart = outer,
+            bottomEnd = outer,
+        )
+        else -> RoundedCornerShape(inner)
+    }
+}
+
 @Composable
 private fun WorkoutV2ObservationRow(
     displayIndex: Int,
@@ -686,7 +748,7 @@ private fun WorkoutV2ObservationRow(
 ) {
     val focusManager = LocalFocusManager.current
     val definitions = exercise.schema.metrics
-    val lateralityChoices = if (side == null && exercise.lateralityMode == LateralityMode.ALTERNATING_ALLOWED) {
+    val lateralityChoices = if (side == null && exercise.resolvedWorkoutLateralityMode() == LateralityMode.ALTERNATING_ALLOWED) {
         listOf(Laterality.LEFT, Laterality.RIGHT, Laterality.ALTERNATING)
     } else {
         emptyList()
@@ -698,7 +760,7 @@ private fun WorkoutV2ObservationRow(
             else -> true
         }
     }
-    val lateralityReady = exercise.lateralityMode != LateralityMode.UNILATERAL ||
+    val lateralityReady = exercise.resolvedWorkoutLateralityMode() != LateralityMode.UNILATERAL ||
         draft.laterality in setOf(Laterality.LEFT, Laterality.RIGHT)
     val ready = requiredReady && lateralityReady
     val sideLabel = when (side ?: draft.laterality) {
@@ -842,7 +904,7 @@ private fun WorkoutV2MetricField(
         modifier = modifier,
         shape = RoundedCornerShape(11.dp),
         tint = WorkoutV2Cyan.copy(alpha = .018f),
-        baseColor = WorkoutV2DarkCyan.copy(alpha = .72f),
+        baseColor = WorkoutV2DarkCyan.copy(alpha = .22f),
         borderWidth = .55.dp,
         borderColor = WorkoutV2Cyan.copy(alpha = .18f),
         shadowElevation = .75.dp,
@@ -963,16 +1025,15 @@ private fun WorkoutV2SetupBody(
                 lineHeight = metrics.sp(32),
             )
             if (!editMode) {
-                if (link.isNotBlank()) {
-                    WorkoutV2RoundIconButton(
-                        icon = MettleIcons.ArrowForward,
-                        description = "Open exercise link",
-                        tint = WorkoutV2Cyan,
-                        onClick = { onOpenLink(link) },
-                        metrics = metrics,
-                    )
-                    Spacer(Modifier.width(metrics.dp(10)))
-                }
+                WorkoutV2RoundIconButton(
+                    icon = WorkoutLinkIcons.Link,
+                    description = "Open exercise link",
+                    tint = WorkoutV2Cyan,
+                    onClick = { if (link.isNotBlank()) onOpenLink(link) },
+                    enabled = link.isNotBlank(),
+                    metrics = metrics,
+                )
+                Spacer(Modifier.width(metrics.dp(10)))
                 WorkoutV2RoundIconButton(
                     icon = MettleIcons.Edit,
                     description = "Edit setup notes",
@@ -982,7 +1043,7 @@ private fun WorkoutV2SetupBody(
                 )
             } else {
                 WorkoutV2RoundIconButton(
-                    icon = MettleIcons.ArrowForward,
+                    icon = WorkoutLinkIcons.AddLink,
                     description = "Edit exercise link",
                     tint = WorkoutV2Cyan,
                     onClick = { dialog = WorkoutSetupDialog.LINK },
@@ -1118,6 +1179,7 @@ private fun WorkoutV2RoundIconButton(
         modifier = Modifier.size(metrics.dp(58)),
         shape = CircleShape,
         tint = tint.copy(alpha = .035f),
+        baseColor = WorkoutV2DarkCyan.copy(alpha = .22f),
         borderColor = tint.copy(alpha = .35f),
         shadowElevation = metrics.dp(3),
         onClick = if (enabled) onClick else null,
@@ -1164,7 +1226,7 @@ private fun WorkoutV2TextEditDialog(
                 ),
             )
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Discard", color = WorkoutV2Delete) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Discard Changes", color = WorkoutV2Delete) } },
         confirmButton = { TextButton(onClick = { onSave(draft) }) { Text("Save", color = WorkoutV2Green) } },
     )
 }
@@ -1224,6 +1286,7 @@ private fun WorkoutV2SetupMediaStrip(paths: List<String>, onAddPhoto: () -> Unit
             modifier = Modifier.width(metrics.dp(56)).height(metrics.dp(196)),
             shape = RoundedCornerShape(metrics.dp(25)),
             tint = WorkoutV2Cyan.copy(alpha = .035f),
+            baseColor = WorkoutV2DarkCyan.copy(alpha = .20f),
             borderColor = WorkoutV2Cyan.copy(alpha = .32f),
             onClick = onAddPhoto,
         ) {
@@ -1276,7 +1339,7 @@ private fun WorkoutV2Chip(text: String, metrics: WorkoutV2Metrics, success: Bool
         height = metrics.dp(32),
         cornerRadius = metrics.dp(8),
         horizontalPadding = metrics.dp(12),
-        fill = if (success) WorkoutV2Green.copy(alpha = .028f) else WorkoutV2DarkCyan.copy(alpha = .055f),
+        fill = if (success) WorkoutV2Green.copy(alpha = .028f) else WorkoutV2DarkCyan.copy(alpha = .18f),
         borderWidth = metrics.dp(1),
         borderColor = if (success) WorkoutV2Green.copy(alpha = .28f) else WorkoutV2Cyan.copy(alpha = .20f),
         textColor = if (success) WorkoutV2Green else WorkoutV2Muted,
@@ -1342,7 +1405,7 @@ private fun WorkoutV2CardButton(text: String, onClick: () -> Unit, modifier: Mod
         modifier = modifier.heightIn(min = metrics.dp(48)),
         shadowElevation = metrics.dp(2.6),
         accent = false,
-        containerTint = WorkoutV2Cyan.copy(alpha = .055f),
+        containerTint = WorkoutV2DarkCyan.copy(alpha = .22f),
         outlineColor = WorkoutV2Cyan.copy(alpha = .24f),
         foregroundColor = WorkoutV2Paper,
         contentPadding = PaddingValues(horizontal = metrics.dp(13), vertical = metrics.dp(9)),

@@ -220,9 +220,10 @@ class N2WorkoutViewModel(
         onSaved: (() -> Unit)? = null,
     ) {
         val sessionId = uiState.workout?.session?.id ?: return
+        val resolvedLateralityMode = exercise.resolvedWorkoutLateralityMode()
         val wasLogicalSetComplete = exercise.sets
             .firstOrNull { it.id == setId }
-            ?.isCompleteFor(exercise.lateralityMode) == true
+            ?.isCompleteFor(resolvedLateralityMode) == true
         viewModelScope.launch {
             runCatching {
                 repository.saveSet(
@@ -245,7 +246,7 @@ class N2WorkoutViewModel(
                     ?.firstOrNull { it.id == setId }
                 val logicalSetJustCompleted = logged &&
                     !wasLogicalSetComplete &&
-                    refreshedSet?.isCompleteFor(exercise.lateralityMode) == true
+                    refreshedSet?.isCompleteFor(resolvedLateralityMode) == true
                 if (logicalSetJustCompleted) {
                     restTimer.start(
                         exerciseName = exercise.entity.exerciseNameSnapshot,

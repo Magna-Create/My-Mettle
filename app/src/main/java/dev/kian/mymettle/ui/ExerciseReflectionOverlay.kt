@@ -11,16 +11,21 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 private const val ExerciseReviewMaxCharacters = 1200
 private val ReviewSurface = Color(0xFF272B25)
@@ -41,15 +46,23 @@ private val ReviewDiscard = Color(0xFFFFB4AB)
 fun ExerciseReflectionOverlay(viewModel: N2WorkoutViewModel) {
     val state = viewModel.uiState
     val target = state.reflectionTarget ?: return
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
     var text by remember(target.entity.id, state.reflection?.updatedAt) {
         mutableStateOf(TextFieldValue(state.reflection?.note.orEmpty()))
+    }
+
+    LaunchedEffect(target.entity.id) {
+        delay(90)
+        focusRequester.requestFocus()
+        keyboardController?.show()
     }
 
     AlertDialog(
         onDismissRequest = {
             if (!state.savingReflection) viewModel.dismissReflection()
         },
-        modifier = Modifier.fillMaxWidth(.78f),
+        modifier = Modifier.fillMaxWidth(.88f),
         shape = RoundedCornerShape(28.dp),
         containerColor = ReviewSurface,
         tonalElevation = 0.dp,
@@ -71,7 +84,8 @@ fun ExerciseReflectionOverlay(viewModel: N2WorkoutViewModel) {
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 250.dp),
+                        .heightIn(min = 250.dp)
+                        .focusRequester(focusRequester),
                     label = { Text("Edit") },
                     placeholder = {
                         Text(
