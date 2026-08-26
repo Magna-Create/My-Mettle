@@ -24,6 +24,7 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           workout = Path("app/src/main/java/dev/kian/mymettle/ui/FigmaWorkoutSessionV2.kt")
           text = workout.read_text()
@@ -37,15 +38,11 @@ jobs:
           section_end = text.index("\n@Composable\nprivate fun WorkoutV2MetricField", section_start)
           section = text[section_start:section_end]
 
-          outer_old = '''    Box(
-              Modifier
-                  .fillMaxWidth()
-                  .height(rowHeight)
-                  .clip(shape)
-                  .background(Color.White.copy(alpha = if (completed) .055f else .025f)),
-          ) {
-          '''
-          outer_new = '''    Box(
+          shell_pattern = re.compile(
+              r'''Box\(\s*Modifier\s*\.fillMaxWidth\(\)\s*\.height\(rowHeight\)\s*\.clip\(shape\)\s*\.background\(Color\.White\.copy\(alpha = if \(completed\) \.055f else \.025f\)\),\s*\) \{''',
+              re.S,
+          )
+          shell_replacement = '''Box(
               Modifier
                   .fillMaxWidth()
                   .height(rowHeight),
@@ -58,42 +55,33 @@ jobs:
                       .matchParentSize()
                       .clip(shape)
                       .background(Color.White.copy(alpha = if (completed) .055f else .025f)),
-              )
-          '''
-          assert outer_old in section, "Workout row shell anchor not found"
-          section = section.replace(outer_old, outer_new, 1)
+              )'''
+          section, count = shell_pattern.subn(shell_replacement, section, count=1)
+          assert count == 1, f"Workout row shell matches: {count}"
 
-          glow_old = '''                Modifier
-                      .size(metrics.dp(96))
-                      .align(Alignment.CenterStart)
-                      .blur(metrics.dp(22))
-                      .background(WorkoutV2Cyan.copy(alpha = .18f), CircleShape),
-          '''
-          glow_new = '''                Modifier
-                      .size(metrics.dp(104))
-                      .align(Alignment.CenterStart)
-                      .blur(
-                          radius = metrics.dp(40),
-                          edgeTreatment = BlurredEdgeTreatment.Unbounded,
-                      )
-                      .background(WorkoutV2Cyan.copy(alpha = .20f), CircleShape),
-          '''
-          assert glow_old in section, "Workout current-set glow anchor not found"
-          section = section.replace(glow_old, glow_new, 1)
+          glow_pattern = re.compile(
+              r'''Modifier\s*\.size\(metrics\.dp\(96\)\)\s*\.align\(Alignment\.CenterStart\)\s*\.blur\(metrics\.dp\(22\)\)\s*\.background\(WorkoutV2Cyan\.copy\(alpha = \.18f\), CircleShape\),''',
+              re.S,
+          )
+          glow_replacement = '''Modifier
+                          .size(metrics.dp(104))
+                          .align(Alignment.CenterStart)
+                          .blur(
+                              radius = metrics.dp(40),
+                              edgeTreatment = BlurredEdgeTreatment.Unbounded,
+                          )
+                          .background(WorkoutV2Cyan.copy(alpha = .20f), CircleShape),'''
+          section, count = glow_pattern.subn(glow_replacement, section, count=1)
+          assert count == 1, f"Workout current glow matches: {count}"
 
-          row_old = '''        Row(
-              Modifier
-                  .fillMaxSize()
-                  .mettleDirectionalBorder(
-          '''
-          row_new = '''        Row(
-              Modifier
-                  .fillMaxSize()
-                  .clip(shape)
-                  .mettleDirectionalBorder(
-          '''
-          assert row_old in section, "Workout row content anchor not found"
-          section = section.replace(row_old, row_new, 1)
+          row_pattern = re.compile(r'''Row\(\s*Modifier\s*\.fillMaxSize\(\)\s*\.mettleDirectionalBorder\(''', re.S)
+          row_replacement = '''Row(
+                  Modifier
+                      .fillMaxSize()
+                      .clip(shape)
+                      .mettleDirectionalBorder('''
+          section, count = row_pattern.subn(row_replacement, section, count=1)
+          assert count == 1, f"Workout row content matches: {count}"
 
           text = text[:section_start] + section + text[section_end:]
           workout.write_text(text)
