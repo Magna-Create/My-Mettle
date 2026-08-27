@@ -24,22 +24,24 @@ Use this directory in the following order.
 - [`DEVICE_VERIFICATION.md`](./DEVICE_VERIFICATION.md) — reproducible Termux build and isolated on-device scalar/temporal acceptance procedure.
 - [`CONTEXT_INTERPRETATION_CONTRACT.md`](./CONTEXT_INTERPRETATION_CONTRACT.md) — N-BIO-7A.5 canonical-note ownership, bounded tag ontology, interpreter/fallback/privacy boundary, provenance and zero-effect N-BIO context interface.
 - [`EXERCISE_AUTHORING_CONTRACT.md`](./EXERCISE_AUTHORING_CONTRACT.md) — authoritative protocol for externally proposed exercise/execution/recruitment semantics before they enter the existing Native authoring pathway.
-- [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md) — N-BIO-7B internal checkpoints plus the 7B.1 evidence-eligibility, profile-local resistance-coordinate, centred log-rep, reference-rep, context-NONE and pre-fit capability contract.
+- [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md) — N-BIO-7B internal checkpoints plus the frozen 7B.1 evidence/coordinate contract and completed 7B.2 stochastic-frontier candidate specification.
 - [`exercise-import.schema.json`](./exercise-import.schema.json) — Draft 2020-12 machine-readable structural exchange schema, format v1.
 - [`exercise-import-example.json`](./exercise-import-example.json) — canonical validated authoring example.
 
 ## Current N-BIO-7 phase order
 
 ```text
-7A    probabilistic/posterior + model/config/inference provenance foundation
-7A.5  context interpretation + external exercise-authoring contracts
-7B.1  dynamic-resistance evidence eligibility + coordinate/model contract
-7B.2  stochastic-frontier inference
-7B.3  held-out validation + shadow persistence + diagnostics
-7B.4  real-data/device acceptance + 7B closure
+7A    complete — probabilistic/posterior + model/config/inference provenance foundation
+7A.5  complete — context interpretation + external exercise-authoring contracts
+7B.1  complete — dynamic-resistance evidence eligibility + coordinate/model contract
+7B.2  complete — stochastic-frontier inference + synthetic/model verification
+7B.3  next explicit phase only — held-out validation + shadow persistence + diagnostics
+7B.4  later — real-data/device acceptance + 7B closure
 later 7C–7G as defined by PLAN.md
 7F     must also consult PRODUCT_ROADMAP_GATES.md for equipment identity/calibration/session-binding + uncertainty-presentation hooks
 ```
+
+7B.2 is an in-memory/domain mathematical candidate only. Normal candidate/shadow persistence, chronological held-out comparison and expanded production diagnostics remain 7B.3 work and must not be started implicitly.
 
 Before behaviour-driving N-BIO-8 implementation, `PRODUCT_ROADMAP_GATES.md` requires a dedicated research + product/UX design gate rather than marching directly from N-BIO-7H into an optimiser. Programme intent/priorities, in-workout adaptation, editing/regeneration semantics, equipment setup/feasible-load UX and uncertainty presentation require explicit collaboration.
 
