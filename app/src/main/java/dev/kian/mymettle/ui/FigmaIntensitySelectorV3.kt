@@ -9,8 +9,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -193,18 +194,19 @@ private fun IntensitySelectorPageV3(
             scale = (viewportWidth.value / IntensityV3ReferenceWidth).coerceAtMost(1f),
         )
         val density = LocalDensity.current
+        val densityValue = density.density
         val view = LocalView.current
         val hazeState = LocalMettleHazeState.current
 
         var dragging by remember { mutableStateOf(false) }
         var settling by remember { mutableStateOf(false) }
-        var rawOffset by remember { mutableStateOf(Offset.Zero) }
+        val rawOffset = remember { mutableStateOf(Offset.Zero) }
         var dragOrigin by remember { mutableStateOf(Offset.Zero) }
         var activeMode by remember { mutableStateOf<TrainingMode?>(null) }
         var ambientMode by remember { mutableStateOf<TrainingMode?>(null) }
         val warmPulse = remember { Animatable(0f) }
 
-        val settleProgress by animateFloatAsState(
+        val settleProgress = animateFloatAsState(
             targetValue = if (settling) 1f else 0f,
             animationSpec = spring(dampingRatio = 0.72f, stiffness = 460f),
             label = "intensity-v3-handle-return",
@@ -213,7 +215,7 @@ private fun IntensitySelectorPageV3(
         LaunchedEffect(settling) {
             if (settling) {
                 kotlinx.coroutines.delay(320)
-                rawOffset = Offset.Zero
+                rawOffset.value = Offset.Zero
                 settling = false
             }
         }
@@ -238,19 +240,32 @@ private fun IntensitySelectorPageV3(
             label = "intensity-v3-ambient-colour",
         )
 
-        val releaseOffset = if (settling) rawOffset * (1f - settleProgress) else rawOffset
-        val magneticOffset = if (dragging && activeMode != null) {
-            val target = intensityV3ModeTargetVector(activeMode!!, metrics, density.density)
-            val targetDistance = hypot(target.x, target.y).coerceAtLeast(1f)
-            val distanceToTarget = hypot(target.x - releaseOffset.x, target.y - releaseOffset.y)
-            val proximity = (1f - (distanceToTarget / targetDistance)).coerceIn(0f, 1f)
-            val attraction = 0.08f + (0.18f * proximity)
-            Offset(
-                x = releaseOffset.x + ((target.x - releaseOffset.x) * attraction),
-                y = releaseOffset.y + ((target.y - releaseOffset.y) * attraction),
-            )
-        } else {
-            releaseOffset
+        // Pointer movement can arrive at the display cadence (or faster). Keep that high-frequency
+        // offset state out of composition: the derived value is read only by the offset layout
+        // lambda below, so MOVE events invalidate the lens position rather than the whole selector.
+        val magneticOffset = remember(metrics.scale, densityValue) {
+            derivedStateOf {
+                val sourceOffset = rawOffset.value
+                val releaseOffset = if (settling) {
+                    sourceOffset * (1f - settleProgress.value)
+                } else {
+                    sourceOffset
+                }
+                val mode = activeMode
+                if (dragging && mode != null) {
+                    val target = intensityV3ModeTargetVector(mode, metrics, densityValue)
+                    val targetDistance = hypot(target.x, target.y).coerceAtLeast(1f)
+                    val distanceToTarget = hypot(target.x - releaseOffset.x, target.y - releaseOffset.y)
+                    val proximity = (1f - (distanceToTarget / targetDistance)).coerceIn(0f, 1f)
+                    val attraction = 0.08f + (0.18f * proximity)
+                    Offset(
+                        x = releaseOffset.x + ((target.x - releaseOffset.x) * attraction),
+                        y = releaseOffset.y + ((target.y - releaseOffset.y) * attraction),
+                    )
+                } else {
+                    releaseOffset
+                }
+            }
         }
 
         Box(
@@ -332,7 +347,7 @@ private fun IntensitySelectorPageV3(
                             MotionEvent.ACTION_DOWN -> {
                                 dragging = true
                                 settling = false
-                                rawOffset = Offset.Zero
+                                rawOffset.value = Offset.Zero
                                 activeMode = null
                                 dragOrigin = Offset(event.x, event.y)
                                 view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
@@ -340,16 +355,17 @@ private fun IntensitySelectorPageV3(
                             }
 
                             MotionEvent.ACTION_MOVE -> {
-                                rawOffset = intensityV3ClampOffset(
+                                val nextOffset = intensityV3ClampOffset(
                                     Offset(event.x - dragOrigin.x, event.y - dragOrigin.y),
                                     maxRadiusPx,
                                 )
+                                rawOffset.value = nextOffset
                                 val nextMode = intensityV3ResolveMode(
-                                    offset = rawOffset,
+                                    offset = nextOffset,
                                     current = activeMode,
                                     thresholdPx = thresholdPx,
                                     metrics = metrics,
-                                    density = density.density,
+                                    density = densityValue,
                                 )
                                 if (nextMode != activeMode) {
                                     activeMode = nextMode
@@ -361,7 +377,8 @@ private fun IntensitySelectorPageV3(
                             }
 
                             MotionEvent.ACTION_UP -> {
-                                val distance = hypot(rawOffset.x, rawOffset.y)
+                                val currentOffset = rawOffset.value
+                                val distance = hypot(currentOffset.x, currentOffset.y)
                                 val confirmed = activeMode
                                 dragging = false
                                 if (confirmed != null && distance >= thresholdPx) {
@@ -394,9 +411,10 @@ private fun IntensitySelectorPageV3(
                 if (dragging || settling) {
                     IntensityV3MovingGlassLens(
                         modifier = Modifier.offset {
+                            val offset = magneticOffset.value
                             IntOffset(
-                                magneticOffset.x.roundToInt(),
-                                magneticOffset.y.roundToInt(),
+                                offset.x.roundToInt(),
+                                offset.y.roundToInt(),
                             )
                         },
                         metrics = metrics,
@@ -462,8 +480,6 @@ private fun IntensityV3AppBar(
                 .width(metrics.dp(96))
                 .height(metrics.dp(52)),
             shape = CircleShape,
-            // Same hotbar-derived optic as the rest of the interactive glass family. Keep only
-            // the page's cyan semantic bias and the capsule's own compact lift.
             tint = IntensityV3OnTertiaryContainer.copy(alpha = 0.07f),
             shadowElevation = metrics.dp(3),
         ) {
@@ -626,9 +642,6 @@ private fun IntensityV3ModeZone(
 private fun IntensityV3HandleDock(
     metrics: IntensityV3Metrics,
 ) {
-    // Match the workout-exit dock as it actually reads on-device: one outer definition
-    // ring and one smaller home ring. The selector's brighter field made the previous translucent
-    // disc read as an unwanted third concentric circle.
     Canvas(modifier = Modifier.size(metrics.dp(48))) {
         drawCircle(
             Color(0xFFE1E4DA).copy(alpha = .68f),
@@ -642,11 +655,6 @@ private fun IntensityV3HandleDock(
     }
 }
 
-/**
- * The actual draggable object: a nearly untinted Haze lens. It is intentionally separate from
- * the centre dock and expands to almost the diameter of a mode field once that field is engaged.
- * No blurred backing layer is used, avoiding the rectangular compositing artefact seen on device.
- */
 @Composable
 private fun IntensityV3MovingGlassLens(
     modifier: Modifier,
@@ -672,9 +680,6 @@ private fun IntensityV3MovingGlassLens(
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val thin = metrics.dp(if (active) 0.95 else 0.78).toPx()
-
-            // A soft off-axis specular wash; the surface remains transparent enough for the
-            // refracted selector lighting to be the dominant visual information.
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
@@ -691,8 +696,6 @@ private fun IntensityV3MovingGlassLens(
             val innerRing = size.minDimension * if (active) 0.28f else 0.19f
 
             if (active) {
-                // The low-alpha broad ring gives the selected state the glass-donut volume seen
-                // in the Figma prototype without introducing an opaque centre or backing tile.
                 drawCircle(
                     color = IntensityV3Tertiary.copy(alpha = 0.075f),
                     radius = outerRing,
