@@ -41,8 +41,17 @@ jobs:
       - name: Verify generated biological reference assets
         run: python3 tools/reference_data/generate_reference_assets.py --check
 
+      - name: Verify exercise authoring JSON Schema
+        shell: bash
+        run: |
+          python3 -m pip install --disable-pip-version-check -r tools/exercise_authoring/requirements.txt
+          python3 tools/exercise_authoring/validate_contract.py
+
       - name: Check whitespace errors
         run: git diff --check
+
+      - name: Clean generated Kotlin and Room outputs
+        run: ./gradlew clean --stacktrace --no-daemon
 
       - name: Unit tests and debug APK
         run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --no-daemon
@@ -56,8 +65,8 @@ jobs:
       - name: Verify exported Room schema
         shell: bash
         run: |
-          test -f app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/13.json
-          grep -q '"version": 13' app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/13.json
+          test -f app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/14.json
+          grep -q '"version": 14' app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/14.json
 
       - name: Upload Room schemas
         uses: actions/upload-artifact@v4
