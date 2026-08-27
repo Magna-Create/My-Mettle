@@ -17,10 +17,25 @@ Use this directory in the following order.
 5. [`RESEARCH_HEALTH_TEMPORAL_GUIDE.md`](./RESEARCH_HEALTH_TEMPORAL_GUIDE.md) — implementation-facing evaluation/navigation.
 6. [`RESEARCH_HEALTH_TEMPORAL_RAW.md`](./RESEARCH_HEALTH_TEMPORAL_RAW.md) — raw-report index and integrity metadata; links seven verbatim storage parts.
 
-## Implementation notes
+## Implementation contracts and notes
 
 - [`TEMPORAL_FOUNDATION.md`](./TEMPORAL_FOUNDATION.md) — concrete N-BIO-6 Room 12 storage, scope, codec, revision and compatibility decisions.
 - [`DEVICE_VERIFICATION.md`](./DEVICE_VERIFICATION.md) — reproducible Termux build and isolated on-device scalar/temporal acceptance procedure.
+- [`CONTEXT_INTERPRETATION_CONTRACT.md`](./CONTEXT_INTERPRETATION_CONTRACT.md) — N-BIO-7A.5 canonical-note ownership, bounded tag ontology, interpreter/fallback/privacy boundary, provenance and zero-effect N-BIO context interface.
+- [`EXERCISE_AUTHORING_CONTRACT.md`](./EXERCISE_AUTHORING_CONTRACT.md) — authoritative protocol for externally proposed exercise/execution/recruitment semantics before they enter the existing Native authoring pathway.
+- [`exercise-import.schema.json`](./exercise-import.schema.json) — Draft 2020-12 machine-readable structural exchange schema, format v1.
+- [`exercise-import-example.json`](./exercise-import-example.json) — canonical validated authoring example.
+
+## Current N-BIO-7 phase order
+
+```text
+7A    probabilistic/posterior + model/config/inference provenance foundation
+7A.5  context interpretation + external exercise-authoring contracts
+7B    dynamic-resistance capability model
+later 7C–7G as defined by PLAN.md
+```
+
+N-BIO-9 remains the later product/integration phase for broader context UX, explicit reannotation/data controls, Nano rollout/download management, notification/dashboard consumers, Health Connect/HR experiments and Analysis Export. The note-annotation architecture itself begins in 7A.5, not N-BIO-9.
 
 ## Reading rule
 
@@ -30,6 +45,7 @@ For a normal task:
 PLAN.md
 → relevant CORE_MODEL_DETAIL.md section if implementing N-BIO-7/8
 → relevant research guide section
+→ relevant implementation contract when crossing a stored semantic boundary
 → only targeted raw research when exact evidence/equations/platform wording are needed
 → current source code
 ```
