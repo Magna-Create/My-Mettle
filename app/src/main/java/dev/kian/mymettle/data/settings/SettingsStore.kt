@@ -15,7 +15,6 @@ data class RestTimerPreferences(
     val vibrationEnabled: Boolean = true,
     val vibrationStrength: String = "strong",
     val chimeEnabled: Boolean = false,
-    val backgroundNotificationEnabled: Boolean = true,
 )
 
 class SettingsStore(context: Context) {
@@ -28,7 +27,6 @@ class SettingsStore(context: Context) {
                 vibrationEnabled = settings.vibrationEnabled,
                 vibrationStrength = settings.vibrationStrength,
                 chimeEnabled = settings.chimeEnabled,
-                backgroundNotificationEnabled = settings.backgroundNotificationEnabled,
             ),
         )
     }
@@ -40,7 +38,6 @@ class SettingsStore(context: Context) {
             vibrationEnabled = preferences[Keys.restVibrationEnabled] ?: true,
             vibrationStrength = preferences[Keys.restVibrationStrength] ?: "strong",
             chimeEnabled = preferences[Keys.restChimeEnabled] ?: false,
-            backgroundNotificationEnabled = preferences[Keys.restBackgroundNotificationEnabled] ?: true,
         )
     }
 
@@ -50,7 +47,7 @@ class SettingsStore(context: Context) {
             preferences[Keys.restVibrationEnabled] = value.vibrationEnabled
             preferences[Keys.restVibrationStrength] = value.vibrationStrength
             preferences[Keys.restChimeEnabled] = value.chimeEnabled
-            preferences[Keys.restBackgroundNotificationEnabled] = value.backgroundNotificationEnabled
+            preferences.remove(Keys.legacyRestBackgroundNotificationEnabled)
         }
     }
 
@@ -59,6 +56,6 @@ class SettingsStore(context: Context) {
         val restVibrationEnabled = booleanPreferencesKey("rest_vibration_enabled")
         val restVibrationStrength = stringPreferencesKey("rest_vibration_strength")
         val restChimeEnabled = booleanPreferencesKey("rest_chime_enabled")
-        val restBackgroundNotificationEnabled = booleanPreferencesKey("rest_background_notification_enabled")
+        val legacyRestBackgroundNotificationEnabled = booleanPreferencesKey("rest_background_notification_enabled")
     }
 }
