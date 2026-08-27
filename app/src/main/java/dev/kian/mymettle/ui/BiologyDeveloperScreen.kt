@@ -292,11 +292,26 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                             Text("No inference run exists. Complete a session, then use Recompute biological state.")
                         } else {
                             DebugLine("Run", inference.run.id.value)
+                            DebugLine("Execution mode", inference.run.executionMode.storageValue)
+                            DebugLine("Semantics", inference.run.semanticsMode.storageValue)
+                            DebugLine("Manifest", inference.run.modelManifestId.value)
                             DebugLine("Calculated", inference.run.calculatedAt.toString())
                             DebugLine("Evidence sets", inference.run.evidenceSetCount.toString())
+                            DebugLine("Evidence observations", inference.run.evidenceObservationCount.toString())
+                            DebugLine("Independent sessions", inference.run.effectiveIndependentSessionCount.toString())
                             DebugLine("Stimulus estimates", inference.stimulusEstimates.size.toString())
                             DebugLine("Muscle states", inference.muscleStates.size.toString())
                             DebugLine("Performance anchors", inference.exerciseTranslationStates.size.toString())
+                            DebugLine("Candidate v7 posterior", "None — 7A foundation only")
+                            HorizontalDivider()
+                            Text("Model/config manifest", style = MaterialTheme.typography.titleSmall)
+                            inference.modelConfigs.sortedBy { it.component.storageValue }.forEach { config ->
+                                Text(
+                                    "${config.component.storageValue} · ${config.modelName} · ${config.semanticVersion}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                             HorizontalDivider()
                             Text("Performance anchors", style = MaterialTheme.typography.titleSmall)
                             inference.exerciseTranslationStates.take(40).forEach { state ->
