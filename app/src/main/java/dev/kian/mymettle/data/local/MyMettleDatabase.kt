@@ -2,6 +2,7 @@ package dev.kian.mymettle.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import dev.kian.mymettle.data.local.dao.ContextDao
 import dev.kian.mymettle.data.local.dao.HistoryDao
 import dev.kian.mymettle.data.local.dao.InferenceDao
 import dev.kian.mymettle.data.local.dao.LibraryDao
@@ -13,6 +14,7 @@ import dev.kian.mymettle.data.local.entity.AppStateEntity
 import dev.kian.mymettle.data.local.entity.BodyMeasurementEntity
 import dev.kian.mymettle.data.local.entity.CapabilityParameterStateEntity
 import dev.kian.mymettle.data.local.entity.CapabilityStateEntity
+import dev.kian.mymettle.data.local.entity.ContextAnnotationEntity
 import dev.kian.mymettle.data.local.entity.CycleCompletedDayEntity
 import dev.kian.mymettle.data.local.entity.DerivedEvidenceSummaryEntity
 import dev.kian.mymettle.data.local.entity.DerivedEvidenceSummaryInputEntity
@@ -44,6 +46,7 @@ import dev.kian.mymettle.data.local.entity.MuscleSegmentEntity
 import dev.kian.mymettle.data.local.entity.MuscleSessionDoseEntity
 import dev.kian.mymettle.data.local.entity.MuscleSetDoseEntity
 import dev.kian.mymettle.data.local.entity.MuscleStateSnapshotEntity
+import dev.kian.mymettle.data.local.entity.NoteInterpretationRunEntity
 import dev.kian.mymettle.data.local.entity.ObservationTraceLinkEntity
 import dev.kian.mymettle.data.local.entity.PerformanceSchemaEntity
 import dev.kian.mymettle.data.local.entity.PerformanceSchemaMetricEntity
@@ -117,6 +120,8 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         SetDraftMetricValueEntity::class,
         ExerciseReflectionEntity::class,
         SessionReviewEntity::class,
+        NoteInterpretationRunEntity::class,
+        ContextAnnotationEntity::class,
         HealthObservationEntity::class,
         HealthIntegrationStateEntity::class,
         ExternalEvidenceArtifactEntity::class,
@@ -148,7 +153,7 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         ExerciseTranslationPredictionEntity::class,
         ExerciseTranslationSourceEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
 )
 abstract class MyMettleDatabase : RoomDatabase() {
@@ -158,4 +163,5 @@ abstract class MyMettleDatabase : RoomDatabase() {
     abstract fun referenceDao(): ReferenceDao
     abstract fun inferenceDao(): InferenceDao
     abstract fun temporalEvidenceDao(): TemporalEvidenceDao
+    abstract fun contextDao(): ContextDao
 }
