@@ -1,5 +1,7 @@
 package dev.kian.mymettle.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,10 +15,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,10 +30,12 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
 import dev.kian.mymettle.ui.theme.MettleBackground
 import dev.kian.mymettle.ui.theme.MettleOnPrimaryContainer
 import dev.kian.mymettle.ui.theme.MettleOnSurface
@@ -73,6 +81,17 @@ fun HomeScreen(
     onOpenAccount: () -> Unit,
 ) {
     val state = viewModel.uiState
+    val context = LocalContext.current
+    val backupFactory = remember(context) { NativeBackupViewModelFactory(context) }
+    val backupViewModel: NativeBackupViewModel = composeViewModel(factory = backupFactory)
+    val backupState = backupViewModel.uiState
+    val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) backupViewModel.restoreBackup(uri)
+    }
+
+    LaunchedEffect(backupState.completedGeneration) {
+        if (backupState.completedGeneration > 0) viewModel.refresh()
+    }
 
     when {
         state.loading && state.workout == null -> {
@@ -86,7 +105,12 @@ fun HomeScreen(
 
         !state.hasProgramme -> {
             ProgrammeBootstrapHome(
-                onOpenWorkout = onOpenWorkout,
+                restoring = backupState.restoring,
+                onRestoreBackup = {
+                    if (!backupState.restoring) {
+                        restoreLauncher.launch(arrayOf("application/json", "text/json", "text/plain"))
+                    }
+                },
                 onOpenSettings = onOpenSettings,
                 onOpenAccount = onOpenAccount,
             )
@@ -144,11 +168,25 @@ fun HomeScreen(
             )
         }
     }
+
+    backupState.error?.let { error ->
+        AlertDialog(
+            onDismissRequest = backupViewModel::dismissError,
+            title = { Text("Couldn’t restore backup") },
+            text = { Text(error) },
+            confirmButton = {
+                TextButton(onClick = backupViewModel::dismissError) {
+                    Text("OK")
+                }
+            },
+        )
+    }
 }
 
 @Composable
 private fun ProgrammeBootstrapHome(
-    onOpenWorkout: () -> Unit,
+    restoring: Boolean,
+    onRestoreBackup: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccount: () -> Unit,
 ) {
@@ -205,18 +243,22 @@ private fun ProgrammeBootstrapHome(
                 shape = RoundedCornerShape(28.dp),
                 tint = MettleOnPrimaryContainer.copy(alpha = 0.055f),
                 shadowElevation = 4.dp,
-                onClick = onOpenWorkout,
+                onClick = { if (!restoring) onRestoreBackup() },
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Text(
-                        text = "Bring over My Mettle Lite",
+                        text = "Restore My Mettle",
                         color = MettleOnSurface,
                         fontSize = 24.sp,
                         lineHeight = 32.sp,
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Import your existing programme before the first Daily Update can be prepared.",
+                        text = if (restoring) {
+                            "Restoring your Native backup…"
+                        } else {
+                            "Restore a current My Mettle Native backup before the first Daily Update can be prepared."
+                        },
                         color = MettleOnSurfaceVariant,
                         fontSize = 14.sp,
                         lineHeight = 20.sp,
