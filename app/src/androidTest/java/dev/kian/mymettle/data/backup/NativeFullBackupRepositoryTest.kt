@@ -9,7 +9,6 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
@@ -81,9 +80,8 @@ class NativeFullBackupRepositoryTest {
             .put("databaseSchemaVersion", 999)
             .toString()
 
-        assertFailsWith<IllegalArgumentException> {
-            repository.restoreJson(backup)
-        }
+        val failure = runCatching { repository.restoreJson(backup) }.exceptionOrNull()
+        assertTrue(failure is IllegalArgumentException)
 
         val current = sqlite.query(
             "SELECT lastError FROM health_integration_state WHERE id = 'primary'",
