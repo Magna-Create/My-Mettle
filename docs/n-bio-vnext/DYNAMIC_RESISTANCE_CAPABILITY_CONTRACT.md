@@ -1,6 +1,6 @@
 # N-BIO-7B Dynamic Resistance Capability Contract
 
-Status: **7B.1 complete; 7B.2 stochastic-frontier candidate specified / implementation in progress**
+Status: **7B.2 implemented / pre-7B.3 validation and persistence boundary**
 
 This document makes the implementation boundary for N-BIO-7B concrete without replacing the research record in `DeepResearch/` or the normative model detail in `CORE_MODEL_DETAIL.md`.
 
