@@ -36,6 +36,10 @@ class NativeFullBackupRepositoryTest {
     @Test
     fun fullBackupRestoresTypedCurrentSchemaRowsAtomically() = runBlocking {
         val sqlite = database.openHelper.writableDatabase
+        val expectedSchema = sqlite.query("PRAGMA user_version").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            cursor.getInt(0)
+        }
         sqlite.execSQL(
             "INSERT INTO health_integration_state " +
                 "(id, provider, permissionState, lastSyncedAt, lastError) " +
@@ -47,7 +51,7 @@ class NativeFullBackupRepositoryTest {
 
         val result = repository.restoreJson(backup)
 
-        assertEquals(13, result.schemaVersion)
+        assertEquals(expectedSchema, result.schemaVersion)
         assertTrue(result.tableCount > 0)
         assertTrue(result.rowCount >= 1)
         val restored = sqlite.query(
