@@ -1,7 +1,9 @@
 package dev.kian.mymettle.ui
 
 import android.annotation.SuppressLint
-
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -11,35 +13,29 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.window.core.layout.WindowSizeClass
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import dev.kian.mymettle.developer.BiologyTaskController
 import dev.kian.mymettle.developer.BiologyTaskPhase
-import dev.kian.mymettle.ui.theme.MettleBackground
 import dev.kian.mymettle.timer.RestTimerController
 import dev.kian.mymettle.timer.RestTimerPhase
-import kotlinx.coroutines.delay
+import dev.kian.mymettle.ui.theme.MettleBackground
 
 private const val HOME_ROUTE = "home"
 private const val INTENSITY_ROUTE = "intensity"
@@ -50,7 +46,6 @@ private const val ACCOUNT_ROUTE = "account"
 private const val SETTINGS_ROUTE = "settings"
 private const val BIOLOGY_DEVELOPER_ROUTE = "settings/biology-developer"
 
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun MyMettleApp() {
@@ -64,17 +59,31 @@ fun MyMettleApp() {
     val biologyTask by BiologyTaskController.state.collectAsState()
     val restTimer = remember(context) { RestTimerController.get(context) }
     val restTimerSnapshot by restTimer.state.collectAsState()
-    var restTimerProgress by remember { mutableFloatStateOf(restTimerSnapshot.elapsedFraction()) }
+
+    // The old progress ring polled elapsed time every 250 ms and pushed each update through the
+    // top-level app composition. Animatable follows Compose's frame clock instead. asState() lets
+    // the toolbar read the value directly in Canvas draw, narrowing frame-by-frame invalidation to
+    // that progress arc rather than recomposing navigation, screens and overlays.
+    val restTimerProgress = remember { Animatable(restTimerSnapshot.elapsedFraction()) }
+    val restTimerProgressState = restTimerProgress.asState()
     LaunchedEffect(
         restTimerSnapshot.phase,
         restTimerSnapshot.endElapsedRealtime,
         restTimerSnapshot.pausedRemainingMillis,
         restTimerSnapshot.totalDurationMillis,
     ) {
-        restTimerProgress = restTimerSnapshot.elapsedFraction()
-        while (restTimerSnapshot.phase == RestTimerPhase.RUNNING) {
-            delay(250)
-            restTimerProgress = restTimerSnapshot.elapsedFraction()
+        restTimerProgress.snapTo(restTimerSnapshot.elapsedFraction())
+        if (restTimerSnapshot.phase == RestTimerPhase.RUNNING) {
+            val remainingMillis = restTimerSnapshot.remainingMillis()
+            if (remainingMillis > 0L) {
+                restTimerProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = remainingMillis.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                        easing = LinearEasing,
+                    ),
+                )
+            }
         }
     }
 
@@ -87,17 +96,6 @@ fun MyMettleApp() {
     // that happens to sit underneath them.
     val bottomBarHazeState = rememberHazeState()
     val workoutExitGestureState = remember { WorkoutExitGestureState() }
-
-    val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
-    val windowWidthClass = when {
-        windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> {
-            MettleWindowWidthClass.Expanded
-        }
-        windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) -> {
-            MettleWindowWidthClass.Medium
-        }
-        else -> MettleWindowWidthClass.Compact
-    }
 
     fun openHomeDestination() {
         // Intensity is a transient step, not a restorable main destination. Popping directly to
@@ -174,7 +172,6 @@ fun MyMettleApp() {
 
         CompositionLocalProvider(
             LocalMettleHazeState provides hazeState,
-            LocalMettleWindowWidthClass provides windowWidthClass,
             LocalWorkoutExitGestureState provides workoutExitGestureState,
         ) {
             Scaffold(
@@ -229,7 +226,7 @@ fun MyMettleApp() {
                             },
                             leadingIcon = if (restTimerSnapshot.visible) MettleIcons.Timer else MettleIcons.QuickSelect,
                             leadingDescription = if (restTimerSnapshot.visible) "Rest timer" else "Quick select",
-                            leadingProgress = restTimerProgress.takeIf { restTimerSnapshot.visible },
+                            leadingProgress = restTimerProgressState.takeIf { restTimerSnapshot.visible },
                             showWorkoutControls = workoutViewModel.uiState.workout != null,
                             transparentMaterial = currentRoute == INTENSITY_ROUTE,
                             preserveEdgeDefinition = currentRoute == HOME_ROUTE,
