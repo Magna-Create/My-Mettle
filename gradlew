@@ -2,6 +2,7 @@
 set -eu
 
 GRADLE_VERSION="9.3.1"
+GRADLE_SHA256="b266d5ff6b90eada6dc3b20cb090e3731302e553a27c5d3e4df1f0d76beaff06"
 APP_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 CACHE_ROOT="${GRADLE_USER_HOME:-$HOME/.gradle}/my-mettle-bootstrap"
 DIST_DIR="$CACHE_ROOT/gradle-$GRADLE_VERSION"
@@ -31,6 +32,17 @@ if [ ! -x "$GRADLE_BIN" ]; then
             printf '%s\n' "Install curl or wget, then run ./gradlew again." >&2
             exit 1
         fi
+    fi
+
+    command -v sha256sum >/dev/null 2>&1 || {
+        printf '%s\n' "Install coreutils (sha256sum), then run ./gradlew again." >&2
+        exit 1
+    }
+    ACTUAL_SHA256=$(sha256sum "$ZIP_PATH" | awk '{print $1}')
+    if [ "$ACTUAL_SHA256" != "$GRADLE_SHA256" ]; then
+        rm -f "$ZIP_PATH"
+        printf '%s\n' "My Mettle: Gradle $GRADLE_VERSION checksum verification failed; the cached download was removed." >&2
+        exit 1
     fi
 
     command -v unzip >/dev/null 2>&1 || {
