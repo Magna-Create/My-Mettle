@@ -88,10 +88,8 @@ class ExerciseLibraryRepository(
         val cleanExerciseInstructions = exerciseInstructions.trim().take(MAX_INSTRUCTION_CHARS)
         val cleanSetupInstructions = setupInstructions.trim().take(MAX_INSTRUCTION_CHARS)
         val cleanUrl = videoReferenceUrl.trim().take(MAX_LINK_CHARS)
-        if (cleanUrl.isNotEmpty() && !cleanUrl.startsWith("http://", ignoreCase = true) &&
-            !cleanUrl.startsWith("https://", ignoreCase = true)
-        ) {
-            throw NativeWorkoutException("Exercise links must start with http:// or https://.")
+        if (cleanUrl.isNotEmpty() && !cleanUrl.startsWith("https://", ignoreCase = true)) {
+            throw NativeWorkoutException("Exercise links must use https://.")
         }
 
         dao.upsertExercise(
