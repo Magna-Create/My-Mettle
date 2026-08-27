@@ -6,16 +6,17 @@ Use this directory in the following order.
 
 1. [`PLAN.md`](./PLAN.md) — overarching phase/architecture/acceptance contract.
 2. [`CORE_MODEL_DETAIL.md`](./CORE_MODEL_DETAIL.md) — normative detailed N-BIO-7/N-BIO-8 mathematical and behavioural supplement. Where temporal research explicitly changed a boundary, `PLAN.md` wins; otherwise this detail remains required.
+3. [`PRODUCT_ROADMAP_GATES.md`](./PRODUCT_ROADMAP_GATES.md) — authoritative additive product/research/collaboration gates for late N-BIO-7 equipment intelligence, uncertainty communication, N-BIO-8 research/UX design, N-BIO-9 recomputation lifecycle and Native database-safety behaviour. When it marks `COLLABORATION REQUIRED`, stop before behaviour-driving implementation and involve Kian rather than silently choosing product policy.
 
 ## Core biological/performance research
 
-3. [`RESEARCH_GUIDE.md`](./RESEARCH_GUIDE.md) — implementation-facing evaluation/navigation.
-4. [`RESEARCH_RAW.md`](./RESEARCH_RAW.md) — preserved core DeepResearch source.
+4. [`RESEARCH_GUIDE.md`](./RESEARCH_GUIDE.md) — implementation-facing evaluation/navigation.
+5. [`RESEARCH_RAW.md`](./RESEARCH_RAW.md) — preserved core DeepResearch source.
 
 ## Temporal / Health Connect / conditioning / HR research
 
-5. [`RESEARCH_HEALTH_TEMPORAL_GUIDE.md`](./RESEARCH_HEALTH_TEMPORAL_GUIDE.md) — implementation-facing evaluation/navigation.
-6. [`RESEARCH_HEALTH_TEMPORAL_RAW.md`](./RESEARCH_HEALTH_TEMPORAL_RAW.md) — raw-report index and integrity metadata; links seven verbatim storage parts.
+6. [`RESEARCH_HEALTH_TEMPORAL_GUIDE.md`](./RESEARCH_HEALTH_TEMPORAL_GUIDE.md) — implementation-facing evaluation/navigation.
+7. [`RESEARCH_HEALTH_TEMPORAL_RAW.md`](./RESEARCH_HEALTH_TEMPORAL_RAW.md) — raw-report index and integrity metadata; links seven verbatim storage parts.
 
 ## Implementation contracts and notes
 
@@ -37,9 +38,14 @@ Use this directory in the following order.
 7B.3  held-out validation + shadow persistence + diagnostics
 7B.4  real-data/device acceptance + 7B closure
 later 7C–7G as defined by PLAN.md
+7F     must also consult PRODUCT_ROADMAP_GATES.md for equipment identity/calibration/session-binding + uncertainty-presentation hooks
 ```
 
-N-BIO-9 remains the later product/integration phase for broader context UX, explicit reannotation/data controls, Nano rollout/download management, notification/dashboard consumers, Health Connect/HR experiments and Analysis Export. The note-annotation architecture itself begins in 7A.5, not N-BIO-9.
+Before behaviour-driving N-BIO-8 implementation, `PRODUCT_ROADMAP_GATES.md` requires a dedicated research + product/UX design gate rather than marching directly from N-BIO-7H into an optimiser. Programme intent/priorities, in-workout adaptation, editing/regeneration semantics, equipment setup/feasible-load UX and uncertainty presentation require explicit collaboration.
+
+N-BIO-9 remains the later product/integration phase for broader context UX, explicit reannotation/data controls, Nano rollout/download management, notification/dashboard consumers, Health Connect/HR experiments and Analysis Export. The note-annotation architecture itself begins in 7A.5, not N-BIO-9. N-BIO-9 must additionally consult the recomputation/model-upgrade UX gates in `PRODUCT_ROADMAP_GATES.md`.
+
+Native Cutover must consult the database compatibility, downgrade protection, migration-safety and recovery-UX gates in `PRODUCT_ROADMAP_GATES.md` before destructive migration is removed and the first permanent Native schema is declared.
 
 ## Reading rule
 
@@ -48,11 +54,14 @@ For a normal task:
 ```text
 PLAN.md
 → relevant CORE_MODEL_DETAIL.md section if implementing N-BIO-7/8
+→ PRODUCT_ROADMAP_GATES.md whenever entering late-7 equipment translation, N-BIO-8, N-BIO-9 intelligence/recompute UX or Native Cutover
 → relevant research guide section
 → relevant implementation contract when crossing a stored semantic boundary
 → only targeted raw research when exact evidence/equations/platform wording are needed
 → current source code
 ```
+
+When `PRODUCT_ROADMAP_GATES.md` says `COLLABORATION REQUIRED`, do not silently infer a final UX/product policy from backend capability. Explicitly remind Kian of the planned research/design gate and ask whether to research, define the interaction contract, or design/provide the relevant Figma flow before implementation.
 
 Do not load both full raw research bodies into ordinary implementation context.
 
