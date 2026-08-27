@@ -5,7 +5,10 @@ import dev.kian.mymettle.data.local.MyMettleDatabase
 import dev.kian.mymettle.data.local.dao.CompletedSetEvidenceRow
 import dev.kian.mymettle.data.local.entity.ExerciseTranslationMetricAnchorEntity
 import dev.kian.mymettle.data.local.entity.ExerciseTranslationStateEntity
+import dev.kian.mymettle.data.local.entity.InferenceModelManifestEntity
+import dev.kian.mymettle.data.local.entity.InferenceModelManifestEntryEntity
 import dev.kian.mymettle.data.local.entity.InferenceRunEntity
+import dev.kian.mymettle.data.local.entity.ModelConfigDefinitionEntity
 import dev.kian.mymettle.data.local.entity.MuscleStateSnapshotEntity
 import dev.kian.mymettle.data.local.entity.StimulusEstimateEntity
 import dev.kian.mymettle.domain.anatomy.MuscleSegmentId
@@ -15,23 +18,32 @@ import dev.kian.mymettle.domain.exercise.RecruitmentRole
 import dev.kian.mymettle.domain.inference.BodySide
 import dev.kian.mymettle.domain.inference.CompletedSetEvidence
 import dev.kian.mymettle.domain.inference.ExerciseTranslationState
-import dev.kian.mymettle.domain.inference.PerformanceAnchor
+import dev.kian.mymettle.domain.inference.InferenceExecutionMode
+import dev.kian.mymettle.domain.inference.InferenceModelComponent
 import dev.kian.mymettle.domain.inference.InferenceRun
 import dev.kian.mymettle.domain.inference.InferenceRunId
+import dev.kian.mymettle.domain.inference.InferenceSemanticsMode
+import dev.kian.mymettle.domain.inference.ModelConfigDefinition
+import dev.kian.mymettle.domain.inference.ModelConfigId
+import dev.kian.mymettle.domain.inference.ModelManifest
+import dev.kian.mymettle.domain.inference.ModelManifestId
+import dev.kian.mymettle.domain.inference.PerformanceAnchor
 import dev.kian.mymettle.domain.inference.RecruitmentEvidence
 import dev.kian.mymettle.domain.inference.StimulusEstimate
 import dev.kian.mymettle.domain.inference.UserInferenceSnapshot
 import dev.kian.mymettle.domain.inference.UserMuscleState
-import dev.kian.mymettle.domain.physiology.Estimate
-import dev.kian.mymettle.domain.physiology.EstimateSourceKind
-import dev.kian.mymettle.domain.physiology.ReferenceProfileId
 import dev.kian.mymettle.domain.performance.Laterality
 import dev.kian.mymettle.domain.performance.MetricFamily
 import dev.kian.mymettle.domain.performance.PerformanceMetric
 import dev.kian.mymettle.domain.performance.PerformanceMetricValue
 import dev.kian.mymettle.domain.performance.Quantity
 import dev.kian.mymettle.domain.performance.UnitId
+import dev.kian.mymettle.domain.physiology.Estimate
+import dev.kian.mymettle.domain.physiology.EstimateSourceKind
+import dev.kian.mymettle.domain.physiology.ReferenceProfileId
+import dev.kian.mymettle.engine.inference.BenchmarkV0ModelManifestFactory
 import dev.kian.mymettle.engine.inference.ExerciseTranslationModel
+import dev.kian.mymettle.engine.inference.ModelManifestBundle
 import dev.kian.mymettle.engine.inference.MuscleStateUpdateRequest
 import dev.kian.mymettle.engine.inference.MuscleStateUpdater
 import dev.kian.mymettle.engine.inference.NeutralPriorMuscleStateUpdater
@@ -46,9 +58,9 @@ class InferenceException(message: String) : IllegalStateException(message)
 /**
  * Explicit persistence boundary for derived biological interpretation.
  *
- * Full-history replay is never triggered by ordinary navigation or set entry. Callers must start
- * it as a visible maintenance/background task; every output remains tied to one immutable run and
- * can be discarded and rebuilt without changing raw workout history.
+ * Full-history replay is never triggered by ordinary navigation or set entry. The repository still
+ * executes the conservative v0 benchmark only; candidate v7 runs use separate execution modes and
+ * cannot become prescription-driving merely by being newer.
  */
 class RoomInferenceRepository(
     private val database: MyMettleDatabase,
@@ -88,6 +100,15 @@ class RoomInferenceRepository(
         }
         val calculatedAt = clock()
         val runId = InferenceRunId(idFactory())
+        val manifestBundle = BenchmarkV0ModelManifestFactory.create(
+            referenceModelVersion = referenceProfile.modelVersion,
+            recruitmentModelVersion = RECRUITMENT_MODEL_VERSION,
+            exposureModelVersion = stimulusEstimator.modelVersion,
+            muscleStateModelVersion = muscleStateUpdater.modelVersion,
+            translationModelVersion = exerciseTranslationModel.modelVersion,
+        )
+        persistManifest(manifestBundle)
+
         val stimuli = evidence.flatMap { set ->
             val recruitment = recruitmentByProfile[set.executionProfileVersionId.value].orEmpty().map { allocation ->
                 RecruitmentEvidence(
@@ -120,18 +141,19 @@ class RoomInferenceRepository(
             stimulusModelVersion = stimulusEstimator.modelVersion,
             muscleStateModelVersion = muscleStateUpdater.modelVersion,
             exerciseTranslationModelVersion = exerciseTranslationModel.modelVersion,
+            modelManifestId = manifestBundle.manifest.id,
+            executionMode = InferenceExecutionMode.BENCHMARK_V0,
+            semanticsMode = InferenceSemanticsMode.HISTORICAL_SEMANTICS,
             calculatedAt = calculatedAt,
             evidenceThrough = evidence.maxOfOrNull { it.completedAt },
             evidenceSetCount = evidence.map { it.setRecordId }.distinct().size,
+            evidenceObservationCount = evidence.map { it.observationId }.distinct().size,
+            effectiveIndependentSessionCount = evidence.mapNotNull { it.sessionId }.distinct().size,
         )
 
         dao.insertInferenceRun(run.toEntity())
-        if (stimuli.isNotEmpty()) {
-            dao.insertStimulusEstimates(stimuli.map { it.toEntity(runId) })
-        }
-        if (muscleStates.isNotEmpty()) {
-            dao.insertMuscleStateSnapshots(muscleStates.map { it.toEntity(runId) })
-        }
+        if (stimuli.isNotEmpty()) dao.insertStimulusEstimates(stimuli.map { it.toEntity(runId) })
+        if (muscleStates.isNotEmpty()) dao.insertMuscleStateSnapshots(muscleStates.map { it.toEntity(runId) })
         if (translationStates.isNotEmpty()) {
             dao.insertExerciseTranslationStates(translationStates.map { it.toEntity(runId) })
             dao.insertExerciseTranslationMetricAnchors(
@@ -141,17 +163,23 @@ class RoomInferenceRepository(
             )
         }
 
-        UserInferenceSnapshot(run, muscleStates, stimuli, translationStates)
+        UserInferenceSnapshot(
+            run = run,
+            muscleStates = muscleStates,
+            stimulusEstimates = stimuli,
+            exerciseTranslationStates = translationStates,
+            modelManifest = manifestBundle.manifest,
+            modelConfigs = manifestBundle.configs,
+        )
     }
 
-    suspend fun latestSnapshot(
-        userProfileId: String? = null,
-    ): UserInferenceSnapshot? {
+    suspend fun latestSnapshot(userProfileId: String? = null): UserInferenceSnapshot? {
         val runEntity = dao.latestInferenceRun(resolveUserProfileId(userProfileId)) ?: return null
         val run = runEntity.toDomain()
         val translationEntities = dao.exerciseTranslationStates(runEntity.id)
         val anchorsByVersionAndSide = dao.exerciseTranslationMetricAnchors(runEntity.id)
             .groupBy { it.executionProfileVersionId to it.side }
+        val (manifest, configs) = loadManifest(run.modelManifestId)
         return UserInferenceSnapshot(
             run = run,
             muscleStates = dao.muscleStateSnapshots(runEntity.id).map { it.toDomain() },
@@ -159,6 +187,8 @@ class RoomInferenceRepository(
             exerciseTranslationStates = translationEntities.map {
                 it.toDomain(anchorsByVersionAndSide[it.executionProfileVersionId to it.side].orEmpty())
             },
+            modelManifest = manifest,
+            modelConfigs = configs,
         )
     }
 
@@ -166,12 +196,52 @@ class RoomInferenceRepository(
         dao.deleteDerivedState(resolveUserProfileId(userProfileId))
     }
 
+    private suspend fun persistManifest(bundle: ModelManifestBundle) {
+        bundle.configs.forEach { config ->
+            val entity = config.toEntity()
+            val existing = dao.modelConfigDefinition(entity.id)
+            when {
+                existing == null -> dao.insertModelConfigDefinition(entity)
+                existing != entity -> throw InferenceException("Immutable model config ${entity.id} does not match persisted definition.")
+            }
+        }
+        val manifestEntity = InferenceModelManifestEntity(
+            id = bundle.manifest.id.value,
+            createdAt = bundle.configs.minOf { it.createdAt }.toString(),
+        )
+        val entries = bundle.manifest.entries.map { (component, configId) ->
+            InferenceModelManifestEntryEntity(bundle.manifest.id.value, component.storageValue, configId.value)
+        }.sortedBy { it.component }
+        val existingManifest = dao.inferenceModelManifest(manifestEntity.id)
+        if (existingManifest == null) {
+            dao.insertInferenceModelManifest(manifestEntity)
+            dao.insertInferenceModelManifestEntries(entries)
+        } else {
+            val existingEntries = dao.inferenceModelManifestEntries(manifestEntity.id)
+            if (existingManifest != manifestEntity || existingEntries != entries) {
+                throw InferenceException("Immutable model manifest ${manifestEntity.id} does not match persisted definition.")
+            }
+        }
+    }
+
+    private suspend fun loadManifest(id: ModelManifestId): Pair<ModelManifest, List<ModelConfigDefinition>> {
+        val manifestEntity = dao.inferenceModelManifest(id.value)
+            ?: throw InferenceException("Inference run references missing model manifest ${id.value}.")
+        val entries = dao.inferenceModelManifestEntries(manifestEntity.id)
+        val configs = if (entries.isEmpty()) emptyList() else {
+            dao.modelConfigDefinitions(entries.map { it.modelConfigId }.distinct()).map { it.toDomain() }
+        }
+        val manifest = ModelManifest.restore(
+            id,
+            entries.associate { InferenceModelComponent.fromStorage(it.component) to ModelConfigId(it.modelConfigId) },
+        )
+        return manifest to configs
+    }
+
     private suspend fun resolveUserProfileId(requestedId: String?): String {
         val profileIds = dao.userProfileIds()
         if (requestedId != null) {
-            if (requestedId !in profileIds) {
-                throw InferenceException("User profile $requestedId does not exist.")
-            }
+            if (requestedId !in profileIds) throw InferenceException("User profile $requestedId does not exist.")
             return requestedId
         }
         if (profileIds.size != 1) {
@@ -198,6 +268,7 @@ private fun CompletedSetEvidenceRow.toDomain(values: List<PerformanceMetricValue
     bodyMassContextKg = observationBodyMassContextKg ?: sessionBodyMassSnapshotKg,
     warmUp = warmUp,
     kind = kind,
+    sessionId = sessionId,
 )
 
 private fun InferenceRun.toEntity(): InferenceRunEntity = InferenceRunEntity(
@@ -211,9 +282,14 @@ private fun InferenceRun.toEntity(): InferenceRunEntity = InferenceRunEntity(
     stimulusModelVersion = stimulusModelVersion,
     muscleStateModelVersion = muscleStateModelVersion,
     exerciseTranslationModelVersion = exerciseTranslationModelVersion,
+    modelManifestId = modelManifestId.value,
+    executionMode = executionMode.storageValue,
+    semanticsMode = semanticsMode.storageValue,
     calculatedAt = calculatedAt.toString(),
     evidenceThrough = evidenceThrough?.toString(),
     evidenceSetCount = evidenceSetCount,
+    evidenceObservationCount = evidenceObservationCount,
+    effectiveIndependentSessionCount = effectiveIndependentSessionCount,
 )
 
 private fun InferenceRunEntity.toDomain(): InferenceRun = InferenceRun(
@@ -227,9 +303,38 @@ private fun InferenceRunEntity.toDomain(): InferenceRun = InferenceRun(
     stimulusModelVersion = stimulusModelVersion,
     muscleStateModelVersion = muscleStateModelVersion,
     exerciseTranslationModelVersion = exerciseTranslationModelVersion,
+    modelManifestId = ModelManifestId(modelManifestId),
+    executionMode = InferenceExecutionMode.fromStorage(executionMode),
+    semanticsMode = InferenceSemanticsMode.fromStorage(semanticsMode),
     calculatedAt = Instant.parse(calculatedAt),
     evidenceThrough = evidenceThrough?.let(Instant::parse),
     evidenceSetCount = evidenceSetCount,
+    evidenceObservationCount = evidenceObservationCount,
+    effectiveIndependentSessionCount = effectiveIndependentSessionCount,
+)
+
+private fun ModelConfigDefinition.toEntity(): ModelConfigDefinitionEntity = ModelConfigDefinitionEntity(
+    id = id.value,
+    component = component.storageValue,
+    modelFamily = modelFamily,
+    modelName = modelName,
+    semanticVersion = semanticVersion,
+    configSchemaVersion = configSchemaVersion,
+    canonicalConfigPayload = canonicalConfigPayload,
+    createdAt = createdAt.toString(),
+    effectiveAt = effectiveAt?.toString(),
+)
+
+private fun ModelConfigDefinitionEntity.toDomain(): ModelConfigDefinition = ModelConfigDefinition.restore(
+    id = ModelConfigId(id),
+    component = InferenceModelComponent.fromStorage(component),
+    modelFamily = modelFamily,
+    modelName = modelName,
+    semanticVersion = semanticVersion,
+    configSchemaVersion = configSchemaVersion,
+    canonicalConfigPayload = canonicalConfigPayload,
+    createdAt = Instant.parse(createdAt),
+    effectiveAt = effectiveAt?.let(Instant::parse),
 )
 
 private fun StimulusEstimate.toEntity(runId: InferenceRunId): StimulusEstimateEntity = StimulusEstimateEntity(
@@ -264,25 +369,24 @@ private fun StimulusEstimateEntity.toDomain(): StimulusEstimate = StimulusEstima
     modelVersion = modelVersion,
 )
 
-private fun UserMuscleState.toEntity(runId: InferenceRunId): MuscleStateSnapshotEntity =
-    MuscleStateSnapshotEntity(
-        inferenceRunId = runId.value,
-        muscleSegmentId = segmentId.value,
-        side = side.storageValue,
-        developmentIndex = developmentIndex.value,
-        developmentUncertainty = developmentIndex.uncertainty,
-        volumeScale = volumeScale?.value,
-        volumeScaleUncertainty = volumeScale?.uncertainty,
-        structuralCapacityScale = structuralCapacityScale?.value,
-        structuralCapacityScaleUncertainty = structuralCapacityScale?.uncertainty,
-        recentStimulus = recentStimulus?.value,
-        recentStimulusUncertainty = recentStimulus?.uncertainty,
-        recovery = recovery?.value,
-        recoveryUncertainty = recovery?.uncertainty,
-        evidenceCount = evidenceCount,
-        updatedAt = updatedAt.toString(),
-        inferenceModelVersion = inferenceModelVersion,
-    )
+private fun UserMuscleState.toEntity(runId: InferenceRunId): MuscleStateSnapshotEntity = MuscleStateSnapshotEntity(
+    inferenceRunId = runId.value,
+    muscleSegmentId = segmentId.value,
+    side = side.storageValue,
+    developmentIndex = developmentIndex.value,
+    developmentUncertainty = developmentIndex.uncertainty,
+    volumeScale = volumeScale?.value,
+    volumeScaleUncertainty = volumeScale?.uncertainty,
+    structuralCapacityScale = structuralCapacityScale?.value,
+    structuralCapacityScaleUncertainty = structuralCapacityScale?.uncertainty,
+    recentStimulus = recentStimulus?.value,
+    recentStimulusUncertainty = recentStimulus?.uncertainty,
+    recovery = recovery?.value,
+    recoveryUncertainty = recovery?.uncertainty,
+    evidenceCount = evidenceCount,
+    updatedAt = updatedAt.toString(),
+    inferenceModelVersion = inferenceModelVersion,
+)
 
 private fun MuscleStateSnapshotEntity.toDomain(): UserMuscleState = UserMuscleState(
     segmentId = MuscleSegmentId(muscleSegmentId),
@@ -295,12 +399,7 @@ private fun MuscleStateSnapshotEntity.toDomain(): UserMuscleState = UserMuscleSt
         modelVersion = inferenceModelVersion,
     ),
     volumeScale = estimate(volumeScale, volumeScaleUncertainty, inferenceRunId, inferenceModelVersion),
-    structuralCapacityScale = estimate(
-        structuralCapacityScale,
-        structuralCapacityScaleUncertainty,
-        inferenceRunId,
-        inferenceModelVersion,
-    ),
+    structuralCapacityScale = estimate(structuralCapacityScale, structuralCapacityScaleUncertainty, inferenceRunId, inferenceModelVersion),
     recentStimulus = estimate(recentStimulus, recentStimulusUncertainty, inferenceRunId, inferenceModelVersion),
     recovery = estimate(recovery, recoveryUncertainty, inferenceRunId, inferenceModelVersion),
     evidenceCount = evidenceCount,
@@ -308,15 +407,14 @@ private fun MuscleStateSnapshotEntity.toDomain(): UserMuscleState = UserMuscleSt
     inferenceModelVersion = inferenceModelVersion,
 )
 
-private fun ExerciseTranslationState.toEntity(runId: InferenceRunId): ExerciseTranslationStateEntity =
-    ExerciseTranslationStateEntity(
-        inferenceRunId = runId.value,
-        executionProfileVersionId = executionProfileVersionId.value,
-        side = laterality.storageValue,
-        sampleCount = sampleCount,
-        updatedAt = updatedAt.toString(),
-        modelVersion = modelVersion,
-    )
+private fun ExerciseTranslationState.toEntity(runId: InferenceRunId): ExerciseTranslationStateEntity = ExerciseTranslationStateEntity(
+    inferenceRunId = runId.value,
+    executionProfileVersionId = executionProfileVersionId.value,
+    side = laterality.storageValue,
+    sampleCount = sampleCount,
+    updatedAt = updatedAt.toString(),
+    modelVersion = modelVersion,
+)
 
 private fun ExerciseTranslationStateEntity.toDomain(
     anchors: List<ExerciseTranslationMetricAnchorEntity>,
@@ -353,12 +451,7 @@ private fun PerformanceAnchor.toEntity(
     sourceSetRecordId = sourceSetRecordId,
 )
 
-private fun estimate(
-    value: Double?,
-    uncertainty: Double?,
-    sourceId: String?,
-    modelVersion: String,
-): Estimate<Double>? = value?.let {
+private fun estimate(value: Double?, uncertainty: Double?, sourceId: String?, modelVersion: String): Estimate<Double>? = value?.let {
     Estimate(
         value = it,
         uncertainty = uncertainty,

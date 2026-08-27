@@ -4,19 +4,32 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import dev.kian.mymettle.data.local.entity.ExerciseTranslationStateEntity
+import dev.kian.mymettle.data.local.entity.AdaptiveMuscleStateEntity
+import dev.kian.mymettle.data.local.entity.CapabilityParameterStateEntity
+import dev.kian.mymettle.data.local.entity.CapabilityStateEntity
 import dev.kian.mymettle.data.local.entity.ExerciseTranslationMetricAnchorEntity
+import dev.kian.mymettle.data.local.entity.ExerciseTranslationPredictionEntity
+import dev.kian.mymettle.data.local.entity.ExerciseTranslationSourceEntity
+import dev.kian.mymettle.data.local.entity.ExerciseTranslationStateEntity
+import dev.kian.mymettle.data.local.entity.InferenceModelManifestEntity
+import dev.kian.mymettle.data.local.entity.InferenceModelManifestEntryEntity
 import dev.kian.mymettle.data.local.entity.InferenceRunEntity
+import dev.kian.mymettle.data.local.entity.ModelConfigDefinitionEntity
 import dev.kian.mymettle.data.local.entity.MuscleSegmentEntity
+import dev.kian.mymettle.data.local.entity.MuscleSessionDoseEntity
+import dev.kian.mymettle.data.local.entity.MuscleSetDoseEntity
 import dev.kian.mymettle.data.local.entity.MuscleStateSnapshotEntity
 import dev.kian.mymettle.data.local.entity.RecruitmentAllocationEntity
 import dev.kian.mymettle.data.local.entity.ReferenceProfileEntity
-import dev.kian.mymettle.data.local.entity.StimulusEstimateEntity
+import dev.kian.mymettle.data.local.entity.SetDemandEstimateEntity
 import dev.kian.mymettle.data.local.entity.SetMetricValueEntity
+import dev.kian.mymettle.data.local.entity.SkillStateEntity
+import dev.kian.mymettle.data.local.entity.StimulusEstimateEntity
 
 data class CompletedSetEvidenceRow(
     val setRecordId: String,
     val observationId: String,
+    val sessionId: String,
     val sessionExerciseId: String,
     val executionProfileVersionId: String,
     val metricFamily: String,
@@ -38,6 +51,7 @@ interface InferenceDao {
         SELECT
             sr.id AS setRecordId,
             so.id AS observationId,
+            s.id AS sessionId,
             sr.sessionExerciseId AS sessionExerciseId,
             so.executionProfileVersionId AS executionProfileVersionId,
             epv.metricFamily AS metricFamily,
@@ -75,9 +89,7 @@ interface InferenceDao {
         WHERE epv.id IN (:executionProfileVersionIds)
         """,
     )
-    suspend fun recruitmentAllocations(
-        executionProfileVersionIds: List<String>,
-    ): List<RecruitmentEvidenceRow>
+    suspend fun recruitmentAllocations(executionProfileVersionIds: List<String>): List<RecruitmentEvidenceRow>
 
     @Query("SELECT * FROM muscle_segment WHERE statePolicy != 'SHARED_PARENT' ORDER BY id")
     suspend fun independentlyTrackedSegments(): List<MuscleSegmentEntity>
@@ -85,15 +97,34 @@ interface InferenceDao {
     @Query("SELECT * FROM reference_profile ORDER BY version DESC, id LIMIT 1")
     suspend fun latestReferenceProfile(): ReferenceProfileEntity?
 
+    /** Normal workout UX deliberately reads only the conservative benchmark until v7 promotion. */
     @Query(
         """
         SELECT * FROM inference_run
-        WHERE userProfileId = :userProfileId
+        WHERE userProfileId = :userProfileId AND executionMode = 'benchmark_v0'
         ORDER BY calculatedAt DESC, id DESC
         LIMIT 1
         """,
     )
     suspend fun latestInferenceRun(userProfileId: String): InferenceRunEntity?
+
+    @Query("SELECT * FROM inference_run WHERE id = :inferenceRunId LIMIT 1")
+    suspend fun inferenceRun(inferenceRunId: String): InferenceRunEntity?
+
+    @Query("SELECT * FROM inference_run WHERE userProfileId = :userProfileId ORDER BY calculatedAt DESC, id DESC")
+    suspend fun inferenceRuns(userProfileId: String): List<InferenceRunEntity>
+
+    @Query("SELECT * FROM model_config_definition WHERE id = :id LIMIT 1")
+    suspend fun modelConfigDefinition(id: String): ModelConfigDefinitionEntity?
+
+    @Query("SELECT * FROM model_config_definition WHERE id IN (:ids) ORDER BY component, id")
+    suspend fun modelConfigDefinitions(ids: List<String>): List<ModelConfigDefinitionEntity>
+
+    @Query("SELECT * FROM inference_model_manifest WHERE id = :id LIMIT 1")
+    suspend fun inferenceModelManifest(id: String): InferenceModelManifestEntity?
+
+    @Query("SELECT * FROM inference_model_manifest_entry WHERE manifestId = :manifestId ORDER BY component")
+    suspend fun inferenceModelManifestEntries(manifestId: String): List<InferenceModelManifestEntryEntity>
 
     @Query("SELECT * FROM muscle_state_snapshot WHERE inferenceRunId = :inferenceRunId ORDER BY muscleSegmentId, side")
     suspend fun muscleStateSnapshots(inferenceRunId: String): List<MuscleStateSnapshotEntity>
@@ -106,6 +137,42 @@ interface InferenceDao {
 
     @Query("SELECT * FROM exercise_translation_metric_anchor WHERE inferenceRunId = :inferenceRunId ORDER BY executionProfileVersionId, side, metric")
     suspend fun exerciseTranslationMetricAnchors(inferenceRunId: String): List<ExerciseTranslationMetricAnchorEntity>
+
+    @Query("SELECT * FROM capability_state WHERE inferenceRunId = :inferenceRunId ORDER BY executionProfileVersionId, side, capabilityFamily")
+    suspend fun capabilityStates(inferenceRunId: String): List<CapabilityStateEntity>
+
+    @Query("SELECT * FROM capability_parameter_state WHERE inferenceRunId = :inferenceRunId ORDER BY executionProfileVersionId, side, capabilityFamily")
+    suspend fun capabilityParameterStates(inferenceRunId: String): List<CapabilityParameterStateEntity>
+
+    @Query("SELECT * FROM set_demand_estimate WHERE inferenceRunId = :inferenceRunId ORDER BY setObservationId")
+    suspend fun setDemandEstimates(inferenceRunId: String): List<SetDemandEstimateEntity>
+
+    @Query("SELECT * FROM muscle_set_dose WHERE inferenceRunId = :inferenceRunId ORDER BY setObservationId, muscleSegmentId, side")
+    suspend fun muscleSetDoses(inferenceRunId: String): List<MuscleSetDoseEntity>
+
+    @Query("SELECT * FROM muscle_session_dose WHERE inferenceRunId = :inferenceRunId ORDER BY sessionId, muscleSegmentId, side")
+    suspend fun muscleSessionDoses(inferenceRunId: String): List<MuscleSessionDoseEntity>
+
+    @Query("SELECT * FROM adaptive_muscle_state WHERE inferenceRunId = :inferenceRunId ORDER BY muscleSegmentId, side")
+    suspend fun adaptiveMuscleStates(inferenceRunId: String): List<AdaptiveMuscleStateEntity>
+
+    @Query("SELECT * FROM skill_state WHERE inferenceRunId = :inferenceRunId ORDER BY executionProfileVersionId, side")
+    suspend fun skillStates(inferenceRunId: String): List<SkillStateEntity>
+
+    @Query("SELECT * FROM exercise_translation_prediction WHERE inferenceRunId = :inferenceRunId ORDER BY destinationExecutionProfileVersionId, side, metric")
+    suspend fun exerciseTranslationPredictions(inferenceRunId: String): List<ExerciseTranslationPredictionEntity>
+
+    @Query("SELECT * FROM exercise_translation_source WHERE inferenceRunId = :inferenceRunId ORDER BY destinationExecutionProfileVersionId, side, metric, sourceExecutionProfileVersionId")
+    suspend fun exerciseTranslationSources(inferenceRunId: String): List<ExerciseTranslationSourceEntity>
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertModelConfigDefinition(value: ModelConfigDefinitionEntity)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertInferenceModelManifest(value: InferenceModelManifestEntity)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertInferenceModelManifestEntries(values: List<InferenceModelManifestEntryEntity>)
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertInferenceRun(value: InferenceRunEntity)
@@ -121,6 +188,36 @@ interface InferenceDao {
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertExerciseTranslationMetricAnchors(values: List<ExerciseTranslationMetricAnchorEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertCapabilityStates(values: List<CapabilityStateEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertCapabilityParameterStates(values: List<CapabilityParameterStateEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertSetDemandEstimates(values: List<SetDemandEstimateEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertMuscleSetDoses(values: List<MuscleSetDoseEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertMuscleSessionDoses(values: List<MuscleSessionDoseEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertAdaptiveMuscleStates(values: List<AdaptiveMuscleStateEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertSkillStates(values: List<SkillStateEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertExerciseTranslationPredictions(values: List<ExerciseTranslationPredictionEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertExerciseTranslationSources(values: List<ExerciseTranslationSourceEntity>)
+
+    @Query("DELETE FROM inference_run WHERE id = :inferenceRunId")
+    suspend fun deleteInferenceRun(inferenceRunId: String)
 
     @Query("DELETE FROM inference_run WHERE userProfileId = :userProfileId")
     suspend fun deleteDerivedState(userProfileId: String)

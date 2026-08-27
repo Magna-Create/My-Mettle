@@ -19,12 +19,19 @@ import androidx.room.Index
             parentColumns = ["id"],
             childColumns = ["referenceProfileId"],
         ),
+        ForeignKey(
+            entity = InferenceModelManifestEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["modelManifestId"],
+            onDelete = ForeignKey.RESTRICT,
+        ),
     ],
     indices = [
         Index("userProfileId"),
         Index("referenceProfileId"),
+        Index("modelManifestId"),
         Index("calculatedAt"),
-        Index(value = ["userProfileId", "calculatedAt"]),
+        Index(value = ["userProfileId", "executionMode", "calculatedAt"]),
     ],
 )
 data class InferenceRunEntity(
@@ -38,11 +45,17 @@ data class InferenceRunEntity(
     val stimulusModelVersion: String,
     val muscleStateModelVersion: String,
     val exerciseTranslationModelVersion: String,
+    val modelManifestId: String,
+    val executionMode: String,
+    val semanticsMode: String,
     val calculatedAt: String,
     val evidenceThrough: String?,
     val evidenceSetCount: Int,
+    val evidenceObservationCount: Int,
+    val effectiveIndependentSessionCount: Int,
 )
 
+/** Legacy N-BIO-4/6 benchmark projection. Candidate v7 adaptive state uses adaptive_muscle_state. */
 @Entity(
     tableName = "muscle_state_snapshot",
     primaryKeys = ["inferenceRunId", "muscleSegmentId", "side"],
@@ -80,6 +93,7 @@ data class MuscleStateSnapshotEntity(
     val inferenceModelVersion: String,
 )
 
+/** Legacy N-BIO-4/6 recruitment-weighted working-set benchmark projection. */
 @Entity(
     tableName = "stimulus_estimate",
     primaryKeys = ["id"],
@@ -157,6 +171,7 @@ data class StimulusEstimateEntity(
     val modelVersion: String,
 )
 
+/** Legacy N-BIO-4/6 same-profile anchor benchmark projection. */
 @Entity(
     tableName = "exercise_translation_state",
     primaryKeys = ["inferenceRunId", "executionProfileVersionId", "side"],

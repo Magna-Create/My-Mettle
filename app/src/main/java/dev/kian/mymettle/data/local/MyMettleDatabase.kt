@@ -8,59 +8,71 @@ import dev.kian.mymettle.data.local.dao.LibraryDao
 import dev.kian.mymettle.data.local.dao.ReferenceDao
 import dev.kian.mymettle.data.local.dao.TemporalEvidenceDao
 import dev.kian.mymettle.data.local.dao.WorkoutDao
+import dev.kian.mymettle.data.local.entity.AdaptiveMuscleStateEntity
 import dev.kian.mymettle.data.local.entity.AppStateEntity
 import dev.kian.mymettle.data.local.entity.BodyMeasurementEntity
+import dev.kian.mymettle.data.local.entity.CapabilityParameterStateEntity
+import dev.kian.mymettle.data.local.entity.CapabilityStateEntity
 import dev.kian.mymettle.data.local.entity.CycleCompletedDayEntity
+import dev.kian.mymettle.data.local.entity.DerivedEvidenceSummaryEntity
+import dev.kian.mymettle.data.local.entity.DerivedEvidenceSummaryInputEntity
+import dev.kian.mymettle.data.local.entity.EvidenceTraceChunkEntity
+import dev.kian.mymettle.data.local.entity.EvidenceTraceEntity
+import dev.kian.mymettle.data.local.entity.EvidenceTraceUiCacheEntity
 import dev.kian.mymettle.data.local.entity.ExerciseCommonMistakeEntity
 import dev.kian.mymettle.data.local.entity.ExerciseCueEntity
 import dev.kian.mymettle.data.local.entity.ExerciseEntity
 import dev.kian.mymettle.data.local.entity.ExerciseExecutionProfileEntity
-import dev.kian.mymettle.data.local.entity.ExecutionProfileVersionEntity
 import dev.kian.mymettle.data.local.entity.ExerciseMemoryEntity
 import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSetupMediaEntity
 import dev.kian.mymettle.data.local.entity.ExerciseSubstitutionEntity
-import dev.kian.mymettle.data.local.entity.ExerciseTranslationStateEntity
 import dev.kian.mymettle.data.local.entity.ExerciseTranslationMetricAnchorEntity
-import dev.kian.mymettle.data.local.entity.EvidenceTraceChunkEntity
-import dev.kian.mymettle.data.local.entity.EvidenceTraceEntity
-import dev.kian.mymettle.data.local.entity.EvidenceTraceUiCacheEntity
+import dev.kian.mymettle.data.local.entity.ExerciseTranslationPredictionEntity
+import dev.kian.mymettle.data.local.entity.ExerciseTranslationSourceEntity
+import dev.kian.mymettle.data.local.entity.ExerciseTranslationStateEntity
+import dev.kian.mymettle.data.local.entity.ExecutionProfileVersionEntity
 import dev.kian.mymettle.data.local.entity.ExternalEvidenceArtifactEntity
 import dev.kian.mymettle.data.local.entity.HealthIntegrationStateEntity
 import dev.kian.mymettle.data.local.entity.HealthObservationEntity
+import dev.kian.mymettle.data.local.entity.InferenceModelManifestEntity
+import dev.kian.mymettle.data.local.entity.InferenceModelManifestEntryEntity
 import dev.kian.mymettle.data.local.entity.InferenceRunEntity
-import dev.kian.mymettle.data.local.entity.DerivedEvidenceSummaryEntity
-import dev.kian.mymettle.data.local.entity.DerivedEvidenceSummaryInputEntity
+import dev.kian.mymettle.data.local.entity.ModelConfigDefinitionEntity
 import dev.kian.mymettle.data.local.entity.MuscleEntity
 import dev.kian.mymettle.data.local.entity.MuscleSegmentEntity
+import dev.kian.mymettle.data.local.entity.MuscleSessionDoseEntity
+import dev.kian.mymettle.data.local.entity.MuscleSetDoseEntity
 import dev.kian.mymettle.data.local.entity.MuscleStateSnapshotEntity
-import dev.kian.mymettle.data.local.entity.ProgrammeModeConstraintEntity
-import dev.kian.mymettle.data.local.entity.ProgrammeTargetEntity
+import dev.kian.mymettle.data.local.entity.ObservationTraceLinkEntity
 import dev.kian.mymettle.data.local.entity.PerformanceSchemaEntity
 import dev.kian.mymettle.data.local.entity.PerformanceSchemaMetricEntity
+import dev.kian.mymettle.data.local.entity.ProgrammeModeConstraintEntity
+import dev.kian.mymettle.data.local.entity.ProgrammeTargetEntity
 import dev.kian.mymettle.data.local.entity.RecruitmentAllocationEntity
 import dev.kian.mymettle.data.local.entity.RecruitmentProfileVersionEntity
 import dev.kian.mymettle.data.local.entity.ReferencePhysiologyPriorEntity
 import dev.kian.mymettle.data.local.entity.ReferenceProfileEntity
-import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.RoutineMetricTargetEntity
+import dev.kian.mymettle.data.local.entity.RoutineSlotEntity
 import dev.kian.mymettle.data.local.entity.RoutineVersionEntity
-import dev.kian.mymettle.data.local.entity.ObservationTraceLinkEntity
-import dev.kian.mymettle.data.local.entity.SessionEntity
 import dev.kian.mymettle.data.local.entity.SessionConstraintEntity
+import dev.kian.mymettle.data.local.entity.SessionEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseTargetEntity
+import dev.kian.mymettle.data.local.entity.SessionExerciseTraceLinkEntity
+import dev.kian.mymettle.data.local.entity.SessionMetricTargetEntity
 import dev.kian.mymettle.data.local.entity.SessionReviewEntity
+import dev.kian.mymettle.data.local.entity.SessionSetPrescriptionEntity
 import dev.kian.mymettle.data.local.entity.SessionTargetEntity
 import dev.kian.mymettle.data.local.entity.SessionTraceLinkEntity
-import dev.kian.mymettle.data.local.entity.SessionExerciseTraceLinkEntity
-import dev.kian.mymettle.data.local.entity.SessionSetPrescriptionEntity
-import dev.kian.mymettle.data.local.entity.SessionMetricTargetEntity
+import dev.kian.mymettle.data.local.entity.SetDemandEstimateEntity
+import dev.kian.mymettle.data.local.entity.SetDraftMetricValueEntity
+import dev.kian.mymettle.data.local.entity.SetMetricValueEntity
+import dev.kian.mymettle.data.local.entity.SetObservationEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.data.local.entity.SetRecordTraceLinkEntity
-import dev.kian.mymettle.data.local.entity.SetObservationEntity
-import dev.kian.mymettle.data.local.entity.SetMetricValueEntity
-import dev.kian.mymettle.data.local.entity.SetDraftMetricValueEntity
+import dev.kian.mymettle.data.local.entity.SkillStateEntity
 import dev.kian.mymettle.data.local.entity.StimulusEstimateEntity
 import dev.kian.mymettle.data.local.entity.TrainingCycleEntity
 import dev.kian.mymettle.data.local.entity.UserProfileEntity
@@ -118,13 +130,25 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         DerivedEvidenceSummaryInputEntity::class,
         EvidenceTraceUiCacheEntity::class,
         AppStateEntity::class,
+        ModelConfigDefinitionEntity::class,
+        InferenceModelManifestEntity::class,
+        InferenceModelManifestEntryEntity::class,
         InferenceRunEntity::class,
         MuscleStateSnapshotEntity::class,
         StimulusEstimateEntity::class,
         ExerciseTranslationStateEntity::class,
         ExerciseTranslationMetricAnchorEntity::class,
+        CapabilityStateEntity::class,
+        CapabilityParameterStateEntity::class,
+        SetDemandEstimateEntity::class,
+        MuscleSetDoseEntity::class,
+        MuscleSessionDoseEntity::class,
+        AdaptiveMuscleStateEntity::class,
+        SkillStateEntity::class,
+        ExerciseTranslationPredictionEntity::class,
+        ExerciseTranslationSourceEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
 )
 abstract class MyMettleDatabase : RoomDatabase() {

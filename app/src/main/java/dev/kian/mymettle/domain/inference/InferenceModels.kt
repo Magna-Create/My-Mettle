@@ -40,19 +40,30 @@ data class InferenceRun(
     val referenceProfileId: ReferenceProfileId,
     val referenceProfileVersion: Int,
     val referenceModelVersion: String,
+    /** Legacy benchmark component identities retained for N-BIO-4/6 replay diagnostics. */
     val recruitmentModelVersion: String,
     val stimulusModelVersion: String,
     val muscleStateModelVersion: String,
     val exerciseTranslationModelVersion: String,
+    /** Canonical N-BIO-7 component/config manifest. */
+    val modelManifestId: ModelManifestId,
+    val executionMode: InferenceExecutionMode,
+    val semanticsMode: InferenceSemanticsMode,
     val calculatedAt: Instant,
     val evidenceThrough: Instant?,
     val evidenceSetCount: Int,
+    val evidenceObservationCount: Int,
+    val effectiveIndependentSessionCount: Int,
 ) {
     init {
         require(userProfileId.isNotBlank()) { "Inference requires a user profile id." }
         require(modelVersion.isNotBlank()) { "Inference model version cannot be blank." }
         require(referenceProfileVersion > 0) { "Reference profile version must be positive." }
-        require(evidenceSetCount >= 0) { "Inference evidence count cannot be negative." }
+        require(evidenceSetCount >= 0) { "Inference set-evidence count cannot be negative." }
+        require(evidenceObservationCount >= 0) { "Inference observation count cannot be negative." }
+        require(effectiveIndependentSessionCount in 0..evidenceObservationCount) {
+            "Independent-session count cannot exceed observation count."
+        }
     }
 }
 
@@ -68,11 +79,14 @@ data class CompletedSetEvidence(
     val bodyMassContextKg: Double?,
     val warmUp: Boolean,
     val kind: String,
+    /** Owning workout session. Added for longitudinal support accounting; it does not alter raw evidence. */
+    val sessionId: String? = null,
 ) {
     init {
         require(setRecordId.isNotBlank()) { "Set evidence needs an id." }
         require(observationId.isNotBlank()) { "Set evidence needs an observation id." }
         require(sessionExerciseId.isNotBlank()) { "Set evidence needs a session-exercise id." }
+        require(sessionId == null || sessionId.isNotBlank()) { "Evidence session id cannot be blank." }
         require(metricValues.isNotEmpty()) { "Set evidence needs performed metric values." }
         require(metricValues.map { it.metric }.distinct().size == metricValues.size)
         require(bodyMassContextKg == null || bodyMassContextKg > 0.0)
@@ -168,4 +182,6 @@ data class UserInferenceSnapshot(
     val muscleStates: List<UserMuscleState>,
     val stimulusEstimates: List<StimulusEstimate>,
     val exerciseTranslationStates: List<ExerciseTranslationState>,
+    val modelManifest: ModelManifest? = null,
+    val modelConfigs: List<ModelConfigDefinition> = emptyList(),
 )
