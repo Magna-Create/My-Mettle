@@ -53,7 +53,7 @@ def main() -> None:
     if request_match is None:
         fail("NoteInterpretationRequest declaration was not found.")
     request_body = request_match.group(1)
-    for required in ("rawText", "scope", "exerciseName"):
+    for required in ("sourceText", "scope", "exerciseName"):
         if required not in request_body:
             fail(f"NoteInterpretationRequest is missing bounded field {required}.")
     for forbidden in ("health", "history", "posterior", "bodyMeasurement", "heartRate", "hrv"):
@@ -64,8 +64,10 @@ def main() -> None:
         fail("Nano extraction must remain schema-constrained Structured Output.")
     if "enableThinking = false" not in nano:
         fail("Thinking Mode must remain disabled for note extraction.")
-    if "structuredOutputAvailable != true" not in nano:
-        fail("Nano must fail closed when Structured Output is unavailable.")
+    if "!capabilities.strictExtractionAvailable" not in nano:
+        fail("Nano must fail closed unless Prompt API is AVAILABLE and Structured Output is available.")
+    if "structuredOutputAvailable == true" not in boundary:
+        fail("Strict extraction capability must explicitly require Structured Output availability.")
     if "InterpretationExecutionOutcome.FALLBACK_SUCCESS" not in coordinator:
         fail("Coordinator no longer records deterministic fallback provenance.")
 
