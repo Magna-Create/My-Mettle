@@ -8,7 +8,11 @@ import dev.kian.mymettle.data.local.MyMettleDatabase
  */
 class ContextInterpretationCoordinator(
     database: MyMettleDatabase,
-    private val nano: NanoNoteInterpreter = NanoNoteInterpreter(),
+    private val nano: NoteInterpreter = NanoNoteInterpreter(),
+    private val nanoCapabilityProbe: suspend () -> NanoRuntimeCapabilities = {
+        (nano as? NanoNoteInterpreter)?.capabilities()
+            ?: NanoRuntimeCapabilities(PromptApiStatus.NOT_CHECKED)
+    },
     private val rules: NoteInterpreter = RulesNoteInterpreter(),
     private val noOp: NoteInterpreter = NoOpNoteInterpreter(),
     private val persistence: ContextInterpretationRepository = ContextInterpretationRepository(database),
@@ -47,7 +51,7 @@ class ContextInterpretationCoordinator(
         }
     }
 
-    suspend fun capabilities(): NanoRuntimeCapabilities = nano.capabilities()
+    suspend fun capabilities(): NanoRuntimeCapabilities = nanoCapabilityProbe()
 
     private suspend fun fallbackToRules(
         source: CanonicalNoteSource,
