@@ -1,0 +1,141 @@
+{
+  "format": "my-mettle-exercise-authoring",
+  "formatVersion": 1,
+  "exercise": {
+    "stableConceptKey": "cable_lateral_raise",
+    "name": "Cable Lateral Raise",
+    "conceptDefinition": "Standing single-arm cable shoulder abduction/lateral raise using an adjustable cable stack."
+  },
+  "profile": {
+    "name": "Standing single-arm cable",
+    "semanticVersionIntent": "create_new_immutable_profile",
+    "isDefault": true,
+    "metricFamily": "dynamic_resistance",
+    "performanceSchema": {
+      "metrics": [
+        {
+          "metric": "external_load",
+          "required": true,
+          "targetable": true,
+          "defaultUnit": "kg",
+          "minimumCanonical": 1.25,
+          "maximumCanonical": 40.0,
+          "incrementCanonical": 1.25,
+          "allowedCanonicalValues": []
+        },
+        {
+          "metric": "repetitions",
+          "required": true,
+          "targetable": true,
+          "defaultUnit": "rep",
+          "minimumCanonical": 1.0,
+          "maximumCanonical": 50.0,
+          "incrementCanonical": 1.0,
+          "allowedCanonicalValues": []
+        }
+      ]
+    },
+    "resistance": {
+      "semantics": "external",
+      "bodyweightCoefficient": 0.0,
+      "externalLoadCoefficient": 1.0,
+      "assistanceCoefficient": 0.0,
+      "modelVersion": "external-load-v1"
+    },
+    "entryBasis": "per_side",
+    "implementCount": 1,
+    "lateralityMode": "unilateral",
+    "equipment": {
+      "type": "cable_stack",
+      "identity": "generic-adjustable-cable",
+      "calibration": {
+        "status": "calibrated_physical",
+        "physicalUnit": "kg"
+      }
+    },
+    "mechanics": {
+      "movementPattern": "shoulder_abduction",
+      "jointActions": ["glenohumeral_abduction", "scapular_upward_rotation"],
+      "kineticChain": "open",
+      "contractionType": "dynamic",
+      "romClass": "approximately_0_to_90_deg_abduction",
+      "techniqueClass": "strict_standing_single_arm",
+      "resistanceCurveClass": "cable_continuous_tension",
+      "gripSupportConstraints": ["contralateral_support_optional", "single_handle"]
+    },
+    "recruitment": {
+      "modelVersion": "authoring-proposal-v1",
+      "profileProvenance": "Reasoning-based recruitment proposal for human review; coefficients are muscle-local exposure estimates, not load shares.",
+      "allocations": [
+        {
+          "segmentId": "deltoid_acromial_part",
+          "segmentName": "Deltoid — acromial part",
+          "role": "prime",
+          "weighting": 0.9,
+          "confidence": 0.82,
+          "applicableRom": "approximately_0_to_90_deg_abduction",
+          "applicableTechnique": "strict_standing_single_arm",
+          "resistanceCurveClass": "cable_continuous_tension",
+          "provenance": {
+            "authorType": "ai",
+            "evidenceStatus": "reasoning_based_proposal",
+            "sourceReferences": [],
+            "biomechanicalBasis": "Primary shoulder-abduction exposure under the stated strict cable execution.",
+            "modelToolIdentity": "example-external-author"
+          }
+        },
+        {
+          "segmentId": "supraspinatus_whole",
+          "segmentName": "Supraspinatus",
+          "role": "synergist",
+          "weighting": 0.55,
+          "confidence": 0.66,
+          "applicableRom": "approximately_0_to_90_deg_abduction",
+          "applicableTechnique": "strict_standing_single_arm",
+          "resistanceCurveClass": "cable_continuous_tension",
+          "provenance": {
+            "authorType": "ai",
+            "evidenceStatus": "reasoning_based_proposal",
+            "sourceReferences": [],
+            "biomechanicalBasis": "Shoulder-abduction synergy is expected, but the coefficient remains a proposal rather than a measured activation percentage.",
+            "modelToolIdentity": "example-external-author"
+          }
+        },
+        {
+          "segmentId": "trapezius_descending_part",
+          "segmentName": "Trapezius — descending part",
+          "role": "stabiliser",
+          "weighting": 0.45,
+          "confidence": 0.6,
+          "applicableRom": "approximately_0_to_90_deg_abduction",
+          "applicableTechnique": "strict_standing_single_arm",
+          "resistanceCurveClass": "cable_continuous_tension",
+          "provenance": {
+            "authorType": "ai",
+            "evidenceStatus": "reasoning_based_proposal",
+            "sourceReferences": [],
+            "biomechanicalBasis": "Scapular control/upward-rotation exposure is plausible under this execution; role does not determine the numeric weighting.",
+            "modelToolIdentity": "example-external-author"
+          }
+        },
+        {
+          "segmentId": "deltoid_clavicular_part",
+          "segmentName": "Deltoid — clavicular part",
+          "role": "synergist",
+          "weighting": 0.25,
+          "confidence": 0.55,
+          "applicableRom": "approximately_0_to_90_deg_abduction",
+          "applicableTechnique": "strict_standing_single_arm",
+          "resistanceCurveClass": "cable_continuous_tension",
+          "provenance": {
+            "authorType": "ai",
+            "evidenceStatus": "reasoning_based_proposal",
+            "sourceReferences": [],
+            "biomechanicalBasis": "Secondary local exposure is plausible depending on arm path; this estimate requires human review.",
+            "modelToolIdentity": "example-external-author"
+          }
+        }
+      ]
+    }
+  }
+}
