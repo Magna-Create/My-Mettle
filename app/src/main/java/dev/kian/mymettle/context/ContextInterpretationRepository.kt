@@ -128,7 +128,7 @@ class ContextInterpretationRepository(
             is CanonicalNoteSource.ExerciseReview -> dao.exerciseReviewRuns(source.sessionExerciseId)
         }
         val run = runs.firstOrNull { it.sourceTextHash == hash && it.tagSchemaVersion == registry.schemaVersion } ?: return null
-        val annotations = dao.annotations(run.id).map(ContextAnnotationEntity::toDomain)
+        val annotations = dao.annotations(run.id).map { it.toDomain(source.scope) }
         annotations.forEach { it.validate(source.text, registry) }
         return PersistedInterpretation(run, annotations)
     }
@@ -154,11 +154,16 @@ class ContextInterpretationRepository(
 
     suspend fun recentRuns(limit: Int = 40): List<NoteInterpretationRunEntity> = dao.recentRuns(limit)
 
-    suspend fun annotations(runId: String): List<ContextAnnotation> = dao.annotations(runId).map(ContextAnnotationEntity::toDomain)
+    suspend fun annotations(runId: String): List<ContextAnnotation> {
+        val run = requireNotNull(dao.run(runId)) { "Unknown interpretation run: $runId" }
+        val scope = NoteScope.entries.firstOrNull { it.storageValue == run.sourceScope }
+            ?: throw IllegalArgumentException("Unknown persisted note scope: ${run.sourceScope}")
+        return dao.annotations(runId).map { it.toDomain(scope) }
+    }
 
     private fun ContextAnnotation.toEntity(runId: String, ordinal: Int): ContextAnnotationEntity {
         val boolean = (value as? ContextValue.BooleanValue)?.value
-        val number = (value as? ContextValue.NumberValue)
+        val number = value as? ContextValue.NumberValue
         val category = (value as? ContextValue.CategoryValue)?.value
         val textAction = (value as? ContextValue.TextActionValue)?.value
         return ContextAnnotationEntity(
@@ -181,7 +186,7 @@ class ContextInterpretationRepository(
         )
     }
 
-    private fun ContextAnnotationEntity.toDomain(): ContextAnnotation {
+    private fun ContextAnnotationEntity.toDomain(scope: NoteScope): ContextAnnotation {
         val type = ContextValueType.entries.firstOrNull { it.storageValue == valueType }
             ?: throw IllegalArgumentException("Unknown persisted context value type: $valueType")
         val value = when (type) {
@@ -190,8 +195,6 @@ class ContextInterpretationRepository(
             ContextValueType.CATEGORY -> ContextValue.CategoryValue(requireNotNull(categoryValue))
             ContextValueType.TEXT_ACTION -> ContextValue.TextActionValue(requireNotNull(textActionValue))
         }
-        val scope = NoteScope.entries.firstOrNull { it.storageValue == runScopeForEntity(this) }
-            ?: throw IllegalArgumentException("Invalid persisted note scope")
         return ContextAnnotation(
             tagId = ContextTagId(tagId),
             tagSchemaVersion = tagSchemaVersion,
@@ -206,15 +209,5 @@ class ContextInterpretationRepository(
                 SourceTextSpan(start, requireNotNull(sourceSpanEnd), requireNotNull(sourceSpanText))
             },
         )
-    }
-
-    private fun runScopeForEntity(entity: ContextAnnotationEntity): String {
-        // Annotation rows intentionally do not duplicate owner/scope truth; resolve it from their run.
-        val run = requireNotNull(runBlockingRun(entity.interpretationRunId))
-        return run.sourceScope
-    }
-
-    private fun runBlockingRun(runId: String): NoteInterpretationRunEntity? {
-        throw UnsupportedOperationException("Scope-aware mapping must use annotationsWithRun().")
     }
 }
