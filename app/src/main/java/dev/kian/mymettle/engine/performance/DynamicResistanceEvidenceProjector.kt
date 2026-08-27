@@ -16,14 +16,17 @@ import dev.kian.mymettle.domain.performance.LateralityMode
 import dev.kian.mymettle.domain.performance.PerformanceMetric
 import dev.kian.mymettle.domain.performance.PerformanceMetricValue
 import dev.kian.mymettle.domain.performance.PerformanceObservation
+import dev.kian.mymettle.domain.performance.ResistanceInputs
+import dev.kian.mymettle.domain.performance.ResistanceResolver
 import dev.kian.mymettle.domain.performance.ResistanceSemantics
 import dev.kian.mymettle.domain.performance.UnitId
 import kotlin.math.exp
 import kotlin.math.ln
 
 /**
- * Strict 7B resolver. Unlike the older generic resistance bookkeeping helper this never clamps or
- * offsets a non-positive result simply to make ln(R) defined.
+ * Strict 7B adapter over the established N-BIO-6 resistance equation. The generic resolver remains
+ * canonical for resistance arithmetic; this layer validates profile semantics and rejects any null,
+ * non-physical or non-positive result rather than accepting its bookkeeping zero clamp as ln(R).
  */
 object DynamicResistanceCoordinateResolver {
     fun resolve(
@@ -36,44 +39,24 @@ object DynamicResistanceCoordinateResolver {
         val assistance = evidence.metric(PerformanceMetric.ASSISTANCE)?.canonicalMassKg()
         val bodyMass = evidence.bodyMassContextKg
 
-        val coordinate = when (model.semantics) {
-            ResistanceSemantics.EXTERNAL -> {
-                if (model.bodyweightCoefficient != 0.0 || model.assistanceCoefficient != 0.0 || model.externalLoadCoefficient <= 0.0) {
-                    return unresolved(DynamicResistanceExclusionReason.INCONSISTENT_RESISTANCE_MODEL)
-                }
-                val load = external ?: return unresolved(DynamicResistanceExclusionReason.MISSING_EXTERNAL_LOAD)
-                model.externalLoadCoefficient * load
-            }
+        val semanticProblem = when (model.semantics) {
+            ResistanceSemantics.EXTERNAL ->
+                model.bodyweightCoefficient != 0.0 ||
+                    model.assistanceCoefficient != 0.0 ||
+                    model.externalLoadCoefficient <= 0.0
 
-            ResistanceSemantics.ASSISTANCE -> {
-                if (model.bodyweightCoefficient <= 0.0 || model.assistanceCoefficient <= 0.0) {
-                    return unresolved(DynamicResistanceExclusionReason.INCONSISTENT_RESISTANCE_MODEL)
-                }
-                val mass = bodyMass ?: return unresolved(DynamicResistanceExclusionReason.MISSING_BODY_MASS)
-                val assist = assistance ?: return unresolved(DynamicResistanceExclusionReason.MISSING_ASSISTANCE)
-                val externalTerm = if (model.externalLoadCoefficient > 0.0) {
-                    val load = external ?: return unresolved(DynamicResistanceExclusionReason.MISSING_EXTERNAL_LOAD)
-                    model.externalLoadCoefficient * load
-                } else 0.0
-                model.bodyweightCoefficient * mass + externalTerm - model.assistanceCoefficient * assist
-            }
+            ResistanceSemantics.ASSISTANCE ->
+                model.bodyweightCoefficient <= 0.0 || model.assistanceCoefficient <= 0.0
 
-            ResistanceSemantics.BODYWEIGHT -> {
-                if (model.bodyweightCoefficient <= 0.0 || model.externalLoadCoefficient != 0.0 || model.assistanceCoefficient != 0.0) {
-                    return unresolved(DynamicResistanceExclusionReason.INCONSISTENT_RESISTANCE_MODEL)
-                }
-                val mass = bodyMass ?: return unresolved(DynamicResistanceExclusionReason.MISSING_BODY_MASS)
-                model.bodyweightCoefficient * mass
-            }
+            ResistanceSemantics.BODYWEIGHT ->
+                model.bodyweightCoefficient <= 0.0 ||
+                    model.externalLoadCoefficient != 0.0 ||
+                    model.assistanceCoefficient != 0.0
 
-            ResistanceSemantics.BODYWEIGHT_PLUS_EXTERNAL -> {
-                if (model.bodyweightCoefficient <= 0.0 || model.externalLoadCoefficient <= 0.0 || model.assistanceCoefficient != 0.0) {
-                    return unresolved(DynamicResistanceExclusionReason.INCONSISTENT_RESISTANCE_MODEL)
-                }
-                val mass = bodyMass ?: return unresolved(DynamicResistanceExclusionReason.MISSING_BODY_MASS)
-                val load = external ?: return unresolved(DynamicResistanceExclusionReason.MISSING_EXTERNAL_LOAD)
-                model.bodyweightCoefficient * mass + model.externalLoadCoefficient * load
-            }
+            ResistanceSemantics.BODYWEIGHT_PLUS_EXTERNAL ->
+                model.bodyweightCoefficient <= 0.0 ||
+                    model.externalLoadCoefficient <= 0.0 ||
+                    model.assistanceCoefficient != 0.0
 
             ResistanceSemantics.DEVICE_ORDINAL ->
                 return unresolved(DynamicResistanceExclusionReason.DEVICE_ORDINAL_NOT_PHYSICAL)
@@ -81,17 +64,43 @@ object DynamicResistanceCoordinateResolver {
             ResistanceSemantics.NONE ->
                 return unresolved(DynamicResistanceExclusionReason.UNSUPPORTED_RESISTANCE_SEMANTICS)
         }
+        if (semanticProblem) {
+            return unresolved(DynamicResistanceExclusionReason.INCONSISTENT_RESISTANCE_MODEL)
+        }
 
-        if (!coordinate.isFinite() || coordinate <= 0.0) {
+        if (model.bodyweightCoefficient > 0.0 && bodyMass == null) {
+            return unresolved(DynamicResistanceExclusionReason.MISSING_BODY_MASS)
+        }
+        if (model.externalLoadCoefficient > 0.0 && external == null) {
+            return unresolved(DynamicResistanceExclusionReason.MISSING_EXTERNAL_LOAD)
+        }
+        if (model.assistanceCoefficient > 0.0 && assistance == null) {
+            return unresolved(DynamicResistanceExclusionReason.MISSING_ASSISTANCE)
+        }
+
+        val resolved = ResistanceResolver.resolve(
+            model = model,
+            inputs = ResistanceInputs(
+                bodyMassKg = bodyMass,
+                externalLoadKg = external,
+                assistanceKg = assistance,
+            ),
+        ) ?: return unresolved(DynamicResistanceExclusionReason.UNSUPPORTED_RESISTANCE_SEMANTICS)
+
+        if (!resolved.coordinate.isFinite() || resolved.coordinate <= 0.0) {
             return unresolved(DynamicResistanceExclusionReason.NON_POSITIVE_RESISTANCE_COORDINATE)
         }
+        if (resolved.unit != UnitId.KILOGRAM) {
+            return unresolved(DynamicResistanceExclusionReason.UNSUPPORTED_RESISTANCE_SEMANTICS)
+        }
+
         return ResistanceCoordinateResolution.Resolved(
             ProfileLocalResistanceCoordinate(
-                value = coordinate,
-                unit = UnitId.KILOGRAM,
+                value = resolved.coordinate,
+                unit = resolved.unit,
                 resistanceSemantics = model.semantics,
                 entryBasis = profile.entryBasis,
-                resistanceModelVersion = model.modelVersion,
+                resistanceModelVersion = resolved.modelVersion,
                 resolverVersion = policy.resistanceCoordinateResolverVersion,
             ),
         )
@@ -169,7 +178,7 @@ object DynamicResistanceEvidenceProjector {
                             )
                         },
                         warmUp = false,
-                        setKind = candidate.kind.ifBlank { "performed" },
+                        setKind = candidate.kind,
                         evidencePolicyIdentity = policy.identity,
                     )
                 }

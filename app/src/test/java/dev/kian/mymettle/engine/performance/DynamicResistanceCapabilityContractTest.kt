@@ -21,12 +21,9 @@ import dev.kian.mymettle.domain.performance.ResistanceModel
 import dev.kian.mymettle.domain.performance.ResistanceSemantics
 import dev.kian.mymettle.domain.performance.UnitId
 import java.time.Instant
-import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DynamicResistanceCapabilityContractTest {
@@ -39,31 +36,35 @@ class DynamicResistanceCapabilityContractTest {
     }
 
     @Test
-    fun `duration hold power cardio and ordinal families are not dynamic frontier evidence`() {
+    fun `non dynamic performance families are ineligible`() {
         val cases = listOf(
             MetricFamily.DURATION_ONLY to listOf(metric(PerformanceMetric.DURATION, 30.0)),
             MetricFamily.LOADED_HOLD to listOf(metric(PerformanceMetric.EXTERNAL_LOAD, 40.0), metric(PerformanceMetric.DURATION, 30.0)),
+            MetricFamily.REPEATED_CONTRACTION to listOf(metric(PerformanceMetric.REPETITIONS, 30.0)),
             MetricFamily.POWER_DURATION to listOf(metric(PerformanceMetric.POWER, 250.0), metric(PerformanceMetric.DURATION, 60.0)),
             MetricFamily.SPEED_DURATION to listOf(metric(PerformanceMetric.SPEED, 3.0), metric(PerformanceMetric.DURATION, 60.0)),
             MetricFamily.DEVICE_ORDINAL to listOf(metric(PerformanceMetric.MACHINE_LEVEL, 8.0), metric(PerformanceMetric.REPETITIONS, 10.0)),
         )
         cases.forEachIndexed { index, (family, values) ->
-            val target = profile(family = family, semantics = if (family == MetricFamily.DEVICE_ORDINAL) ResistanceSemantics.DEVICE_ORDINAL else ResistanceSemantics.EXTERNAL)
-            val candidate = evidence(id = "case_$index", family = family, valuesOverride = values)
-            val projection = project(target, candidate)
+            val semantics = if (family == MetricFamily.DEVICE_ORDINAL) ResistanceSemantics.DEVICE_ORDINAL else ResistanceSemantics.EXTERNAL
+            val projection = project(
+                profile(family = family, semantics = semantics),
+                evidence(id = "case_$index", family = family, valuesOverride = values),
+            )
             assertTrue(projection.evidence.isEmpty(), family.storageValue)
             assertEquals(DynamicResistanceExclusionReason.METRIC_FAMILY_INELIGIBLE, projection.exclusions.single().reason)
         }
     }
 
     @Test
-    fun `zero reps and non-positive resolved resistance are rejected without epsilon clamp`() {
-        val zeroReps = project(profile(), evidence(load = 60.0, reps = 0))
-        assertEquals(DynamicResistanceExclusionReason.NON_POSITIVE_REPETITIONS, zeroReps.exclusions.single().reason)
-
+    fun `zero reps and non-positive resistance are rejected without epsilon clamp`() {
+        assertEquals(
+            DynamicResistanceExclusionReason.NON_POSITIVE_REPETITIONS,
+            project(profile(), evidence(load = 60.0, reps = 0)).exclusions.single().reason,
+        )
         val zeroLoad = project(profile(), evidence(load = 0.0, reps = 8))
-        assertEquals(DynamicResistanceExclusionReason.NON_POSITIVE_RESISTANCE_COORDINATE, zeroLoad.exclusions.single().reason)
         assertTrue(zeroLoad.evidence.isEmpty())
+        assertEquals(DynamicResistanceExclusionReason.NON_POSITIVE_RESISTANCE_COORDINATE, zeroLoad.exclusions.single().reason)
     }
 
     @Test
@@ -83,34 +84,36 @@ class DynamicResistanceCapabilityContractTest {
     }
 
     @Test
-    fun `profile version A cannot enter B and left cannot enter right`() {
-        val evidenceA = evidence(profileVersionId = "profile:v1", laterality = Laterality.LEFT)
+    fun `profile version and side are isolated exactly`() {
+        val leftA = evidence(profileVersionId = "profile:v1", laterality = Laterality.LEFT)
         val profileB = profile(versionId = "profile:v2", mode = LateralityMode.UNILATERAL)
-        val wrongVersion = DynamicResistanceEvidenceProjector.project(profileB, Laterality.LEFT, listOf(evidenceA))
-        assertEquals(DynamicResistanceExclusionReason.PROFILE_VERSION_MISMATCH, wrongVersion.exclusions.single().reason)
+        assertEquals(
+            DynamicResistanceExclusionReason.PROFILE_VERSION_MISMATCH,
+            DynamicResistanceEvidenceProjector.project(profileB, Laterality.LEFT, listOf(leftA)).exclusions.single().reason,
+        )
 
         val profileA = profile(versionId = "profile:v1", mode = LateralityMode.UNILATERAL)
-        val wrongSide = DynamicResistanceEvidenceProjector.project(profileA, Laterality.RIGHT, listOf(evidenceA))
-        assertEquals(DynamicResistanceExclusionReason.LATERALITY_INCOMPATIBLE, wrongSide.exclusions.single().reason)
+        assertEquals(
+            DynamicResistanceExclusionReason.LATERALITY_INCOMPATIBLE,
+            DynamicResistanceEvidenceProjector.project(profileA, Laterality.RIGHT, listOf(leftA)).exclusions.single().reason,
+        )
     }
 
     @Test
-    fun `profile-local evidence remains keyed to exact version and side`() {
+    fun `profile-local evidence retains exact profile version and side`() {
         val p = profile(versionId = "row:v4", profileId = "row")
-        val projection = project(p, evidence(profileVersionId = "row:v4"))
-        val item = projection.evidence.single()
+        val item = project(p, evidence(profileVersionId = "row:v4")).evidence.single()
         assertEquals(ExecutionProfileVersionId("row:v4"), item.executionProfileVersionId)
         assertEquals(Laterality.BILATERAL, item.side)
     }
 
     @Test
-    fun `equivalent kg and lb resolve to equal coordinates while raw units remain untouched`() {
+    fun `equivalent kg and lb map to equal coordinate while raw units remain untouched`() {
         val poundsFor60Kg = 60.0 * 2.2046226218487757
         val kgEvidence = evidence(id = "kg", load = 60.0, loadUnit = UnitId.KILOGRAM)
         val lbEvidence = evidence(id = "lb", load = poundsFor60Kg, loadUnit = UnitId.POUND)
-        val p = profile()
-        val kg = project(p, kgEvidence).evidence.single()
-        val lb = project(p, lbEvidence).evidence.single()
+        val kg = project(profile(), kgEvidence).evidence.single()
+        val lb = project(profile(), lbEvidence).evidence.single()
 
         assertEquals(kg.resistance.value, lb.resistance.value, 1e-9)
         assertEquals(UnitId.KILOGRAM, kgEvidence.metric(PerformanceMetric.EXTERNAL_LOAD)!!.entered.unit)
@@ -119,15 +122,14 @@ class DynamicResistanceCapabilityContractTest {
     }
 
     @Test
-    fun `per hand semantics are preserved rather than silently totalised`() {
-        val p = profile(entryBasis = EntryBasis.PER_HAND)
-        val projected = project(p, evidence(load = 20.0)).evidence.single()
+    fun `per hand semantics are preserved rather than totalised`() {
+        val projected = project(profile(entryBasis = EntryBasis.PER_HAND), evidence(load = 20.0)).evidence.single()
         assertEquals(20.0, projected.resistance.value)
         assertEquals(EntryBasis.PER_HAND, projected.resistance.entryBasis)
     }
 
     @Test
-    fun `assistance direction is monotonic when explicit profile mapping is available`() {
+    fun `assistance direction is monotonic when explicit profile mapping exists`() {
         val p = profile(
             family = MetricFamily.BODYWEIGHT_RESISTANCE,
             semantics = ResistanceSemantics.ASSISTANCE,
@@ -141,7 +143,7 @@ class DynamicResistanceCapabilityContractTest {
     }
 
     @Test
-    fun `unsupported assistance mapping is unresolved instead of fake resistance`() {
+    fun `unsupported assistance mapping is unresolved rather than fabricated`() {
         val p = profile(
             family = MetricFamily.BODYWEIGHT_RESISTANCE,
             semantics = ResistanceSemantics.ASSISTANCE,
@@ -155,7 +157,7 @@ class DynamicResistanceCapabilityContractTest {
     }
 
     @Test
-    fun `bodyweight coordinate requires explicit coefficient and never assumes full body mass`() {
+    fun `bodyweight never assumes full body mass without explicit coefficient`() {
         val unsupported = profile(
             family = MetricFamily.BODYWEIGHT_RESISTANCE,
             semantics = ResistanceSemantics.BODYWEIGHT,
@@ -185,28 +187,29 @@ class DynamicResistanceCapabilityContractTest {
     }
 
     @Test
-    fun `device ordinal can never become physical kilograms`() {
+    fun `device ordinal never becomes physical kilograms`() {
         val p = profile(family = MetricFamily.DEVICE_ORDINAL, semantics = ResistanceSemantics.DEVICE_ORDINAL)
         val candidate = evidence(
             family = MetricFamily.DEVICE_ORDINAL,
             valuesOverride = listOf(metric(PerformanceMetric.MACHINE_LEVEL, 8.0), metric(PerformanceMetric.REPETITIONS, 10.0)),
         )
-        val projection = project(p, candidate)
-        assertTrue(projection.evidence.isEmpty())
+        assertTrue(project(p, candidate).evidence.isEmpty())
         assertFalse(candidate.metric(PerformanceMetric.MACHINE_LEVEL)!!.canonical.unit == UnitId.KILOGRAM)
     }
 
     @Test
-    fun `log resistance inverse round trip is stable and strictly positive`() {
+    fun `log resistance inverse round trip is stable and positive`() {
         val coordinate = project(profile(), evidence(load = 62.5)).evidence.single().resistance
-        val logged = DynamicResistanceLogCoordinates.logResistance(coordinate)
-        val restored = DynamicResistanceLogCoordinates.resistanceFromLog(logged, coordinate)
+        val restored = DynamicResistanceLogCoordinates.resistanceFromLog(
+            DynamicResistanceLogCoordinates.logResistance(coordinate),
+            coordinate,
+        )
         assertTrue(restored.value > 0.0)
         assertEquals(coordinate.value, restored.value, 1e-12)
     }
 
     @Test
-    fun `reference rep selection is deterministic and inside observed domain`() {
+    fun `reference rep is deterministic and inside observed domain`() {
         val p = profile()
         val observations = listOf(
             evidence(id = "one", reps = 5),
@@ -227,7 +230,7 @@ class DynamicResistanceCapabilityContractTest {
     }
 
     @Test
-    fun `one eligible set projects successfully without pretending slope is identified`() {
+    fun `one eligible set projects without pretending slope is identified`() {
         val projection = project(profile(), evidence(reps = 9))
         assertEquals(1, projection.evidence.size)
         assertEquals(9.0, projection.referenceRepetitions)
@@ -235,7 +238,7 @@ class DynamicResistanceCapabilityContractTest {
     }
 
     @Test
-    fun `same rep sets keep local domain while multiple zones preserve wider domain`() {
+    fun `rep domains preserve same-zone and distant-zone information`() {
         val p = profile()
         val same = DynamicResistanceEvidenceProjector.project(
             p,
@@ -243,7 +246,6 @@ class DynamicResistanceCapabilityContractTest {
             listOf(evidence(id = "s1", reps = 8), evidence(id = "s2", reps = 8), evidence(id = "s3", reps = 8)),
         )
         assertEquals(8..8, same.repDomain)
-
         val zones = DynamicResistanceEvidenceProjector.project(
             p,
             Laterality.BILATERAL,
@@ -270,14 +272,13 @@ class DynamicResistanceCapabilityContractTest {
         val p = profile()
         val candidate = evidence()
         val before = project(p, candidate)
-        // 7A.5 annotations can be added/deleted independently; the 7B.1 projector has no context argument.
         val after = project(p, candidate)
         assertEquals(before.evidence, after.evidence)
         assertEquals("NONE", DynamicResistancePreparationDiagnostics.from(before).contextPolicy)
     }
 
     @Test
-    fun `7B1 model configs encode real policy choices without fitting hyperparameters`() {
+    fun `7B1 configs contain real policy choices and no fitting placeholders`() {
         val configs = DynamicResistanceV1Contract.modelConfigs(Instant.parse("2026-08-27T00:00:00Z"))
         assertEquals(
             setOf(
@@ -289,13 +290,14 @@ class DynamicResistanceCapabilityContractTest {
         )
         val capability = configs.single { it.component == InferenceModelComponent.DYNAMIC_CAPABILITY }
         assertTrue(capability.canonicalConfigPayload.contains("contextConsumption=NONE"))
-        assertTrue(capability.canonicalConfigPayload.contains("not_implemented_until_7b2"))
+        assertTrue(capability.canonicalConfigPayload.contains("referenceRepPolicy"))
+        assertFalse(capability.canonicalConfigPayload.contains("fittingStage"))
         assertFalse(capability.canonicalConfigPayload.contains("slopePrior"))
         assertFalse(capability.canonicalConfigPayload.contains("e1RM", ignoreCase = true))
     }
 
     @Test
-    fun `successful-set validation contract is lower-bound rather than chosen-load MAE`() {
+    fun `successful sets are lower-bound validation evidence not chosen-load MAE targets`() {
         val validation = dev.kian.mymettle.domain.inference.DynamicCapabilityValidationContract()
         assertFalse(validation.naiveChosenLoadMaeIsCapabilityMetric)
         assertEquals("lower_bound_demonstration", validation.successfulSetSemantics.storageValue)
@@ -303,16 +305,22 @@ class DynamicResistanceCapabilityContractTest {
     }
 
     @Test
-    fun `projection does not mutate raw entered or canonical evidence`() {
-        val candidate = evidence(load = 132.27735731092655, loadUnit = UnitId.POUND, reps = 8)
+    fun `projection does not mutate raw evidence and preserves blank legacy set kind`() {
+        val candidate = evidence(
+            load = 132.27735731092655,
+            loadUnit = UnitId.POUND,
+            reps = 8,
+            kind = "",
+        )
         val original = candidate.metricValues.map { it.copy() }
-        project(profile(), candidate)
+        val projected = project(profile(), candidate).evidence.single()
         assertEquals(original, candidate.metricValues)
         assertEquals(UnitId.POUND, candidate.metric(PerformanceMetric.EXTERNAL_LOAD)!!.entered.unit)
+        assertEquals("", projected.setKind)
     }
 
     @Test
-    fun `ordinary external coordinate is independent of unrelated body mass changes`() {
+    fun `ordinary external coordinate ignores unrelated body mass changes`() {
         val p = profile()
         val lightBody = project(p, evidence(id = "light", bodyMass = 60.0)).evidence.single()
         val heavyBody = project(p, evidence(id = "heavy", bodyMass = 100.0)).evidence.single()
@@ -320,7 +328,7 @@ class DynamicResistanceCapabilityContractTest {
     }
 
     @Test
-    fun `developer preparation diagnostics report evidence not a fake posterior`() {
+    fun `developer preparation diagnostics report evidence and no fake posterior`() {
         val p = profile()
         val projection = DynamicResistanceEvidenceProjector.project(
             p,
@@ -381,6 +389,7 @@ class DynamicResistanceCapabilityContractTest {
         warmUp: Boolean = false,
         sessionId: String = "session_1",
         noLoad: Boolean = false,
+        kind: String = if (warmUp) "warmup" else "working",
         valuesOverride: List<PerformanceMetricValue>? = null,
     ): CompletedSetEvidence {
         val values = valuesOverride ?: buildList {
@@ -399,7 +408,7 @@ class DynamicResistanceCapabilityContractTest {
             metricValues = values,
             bodyMassContextKg = bodyMass,
             warmUp = warmUp,
-            kind = if (warmUp) "warmup" else "working",
+            kind = kind,
             sessionId = sessionId,
         )
     }

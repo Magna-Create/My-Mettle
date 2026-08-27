@@ -174,7 +174,7 @@ object DynamicResistanceV1Contract {
         ModelConfigDefinition.create(
             component = InferenceModelComponent.DYNAMIC_CAPABILITY,
             modelFamily = "stochastic_frontier_contract",
-            modelName = "centred_log_rep_frontier_pre_fit_contract",
+            modelName = "centred_log_rep_frontier_contract",
             semanticVersion = "n-bio-7b1-dynamic-capability-contract-v1",
             configSchemaVersion = 1,
             parameters = mapOf(
@@ -183,7 +183,6 @@ object DynamicResistanceV1Contract {
                 "successfulSetSemantics" to evidencePolicy.successfulSetSemantics.storageValue,
                 "contextConsumption" to "NONE:${contextPolicy.identity}",
                 "temporalPolicy" to evidencePolicy.temporalPolicy.storageValue,
-                "fittingStage" to "not_implemented_until_7b2",
             ),
             createdAt = createdAt,
         ),
@@ -239,7 +238,6 @@ data class DynamicResistanceEvidence(
         require(repetitions > 0)
         require(metricEvidence.isNotEmpty())
         require(!warmUp) { "Warm-ups are excluded from 7B v1 frontier evidence." }
-        require(setKind.isNotBlank())
         require(evidencePolicyIdentity.isNotBlank())
     }
 }

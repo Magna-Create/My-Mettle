@@ -23,6 +23,7 @@ Use this directory in the following order.
 - [`DEVICE_VERIFICATION.md`](./DEVICE_VERIFICATION.md) — reproducible Termux build and isolated on-device scalar/temporal acceptance procedure.
 - [`CONTEXT_INTERPRETATION_CONTRACT.md`](./CONTEXT_INTERPRETATION_CONTRACT.md) — N-BIO-7A.5 canonical-note ownership, bounded tag ontology, interpreter/fallback/privacy boundary, provenance and zero-effect N-BIO context interface.
 - [`EXERCISE_AUTHORING_CONTRACT.md`](./EXERCISE_AUTHORING_CONTRACT.md) — authoritative protocol for externally proposed exercise/execution/recruitment semantics before they enter the existing Native authoring pathway.
+- [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md) — N-BIO-7B internal checkpoints plus the 7B.1 evidence-eligibility, profile-local resistance-coordinate, centred log-rep, reference-rep, context-NONE and pre-fit capability contract.
 - [`exercise-import.schema.json`](./exercise-import.schema.json) — Draft 2020-12 machine-readable structural exchange schema, format v1.
 - [`exercise-import-example.json`](./exercise-import-example.json) — canonical validated authoring example.
 
@@ -31,7 +32,10 @@ Use this directory in the following order.
 ```text
 7A    probabilistic/posterior + model/config/inference provenance foundation
 7A.5  context interpretation + external exercise-authoring contracts
-7B    dynamic-resistance capability model
+7B.1  dynamic-resistance evidence eligibility + coordinate/model contract
+7B.2  stochastic-frontier inference
+7B.3  held-out validation + shadow persistence + diagnostics
+7B.4  real-data/device acceptance + 7B closure
 later 7C–7G as defined by PLAN.md
 ```
 
