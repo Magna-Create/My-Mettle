@@ -47,6 +47,9 @@ jobs:
           python3 -m pip install --disable-pip-version-check -r tools/exercise_authoring/requirements.txt
           python3 tools/exercise_authoring/validate_contract.py
 
+      - name: Verify context interpretation architecture
+        run: python3 tools/context_interpretation/verify_boundary.py
+
       - name: Check whitespace errors
         run: git diff --check
 
