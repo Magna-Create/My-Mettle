@@ -1,6 +1,6 @@
 # N-BIO-7B Dynamic Resistance Capability Contract
 
-Status: **7B.1 implemented contract / pre-fit boundary**
+Status: **7B.1 complete; 7B.2 stochastic-frontier candidate specified / implementation in progress**
 
 This document makes the implementation boundary for N-BIO-7B concrete without replacing the research record in `DeepResearch/` or the normative model detail in `CORE_MODEL_DETAIL.md`.
 
@@ -222,7 +222,7 @@ No e1RM field is introduced by 7B.1.
 - `fit(evidence, inference horizon, config)`;
 - `predictFrontier(fit, reps)`.
 
-7B.1 supplies **no implementation** and therefore cannot fabricate a stochastic frontier value. 7B.2 must implement a real fit behind this interface.
+7B.1 supplies **no implementation** and therefore cannot fabricate a stochastic frontier value. 7B.2 supplies the first real implementation behind this interface.
 
 ## Context policy
 
@@ -299,8 +299,231 @@ Existing tables are sufficient:
 
 It deliberately reports no fabricated capability number.
 
-## 7B.2 boundary
+---
 
-The next phase must implement the actual stochastic-frontier mathematics behind `DynamicCapabilityModel`, including the likelihood/prior structure for frontier level, slope, submaximality slack, ordinary performance noise, temporal/recency treatment, posterior inference, and prediction uncertainty.
+# 7B.2 candidate mathematical specification
 
-7B.2 must not redefine the factual evidence/coordinate semantics established here unless a contradiction is found and versioned explicitly.
+## Research-backed boundaries versus modelling assumptions
+
+The following are treated as **[RESEARCH-BACKED]** boundaries from the preserved research record:
+
+- an ordinary completed load×rep set does not identify RM or RIR;
+- capability is execution-profile/task specific;
+- capability should be queried around the actual rep region rather than routed through generic e1RM;
+- uncertainty must widen as inference moves away from direct support;
+- robust/heavy-tailed observation handling is desirable because one poor session should not catastrophically rewrite state.
+
+The following are explicitly **[MODELLING-ASSUMPTION]** choices of the first candidate and may be replaced only behind a new immutable config identity:
+
+- the stochastic-frontier likelihood itself;
+- Half-Normal slack;
+- Student-t symmetric performance noise with fixed degrees of freedom;
+- all prior families and numeric hyperparameters;
+- the staged parameter-learning thresholds;
+- equal-total-weight-per-session dependence approximation;
+- the bounded recent-session local-stationarity policy;
+- deterministic tensor-grid/midpoint-quadrature posterior approximation;
+- the explicit extrapolation-uncertainty increment.
+
+None of those choices is described as a discovered physiological constant.
+
+## Exact v1 equation
+
+For selected evidence at an inference horizon:
+
+```text
+y_s = ln(R_s)
+x_s = ln(reps_s / r_ref)
+
+y_s = c - b*x_s - u_s + epsilon_s
+```
+
+with:
+
+```text
+b > 0
+u_s >= 0
+u_s ~ HalfNormal(sigma_u)
+epsilon_s ~ StudentT(df = 5, location = 0, scale = sigma_e)
+```
+
+`c` is the log frontier at reference reps. `u_s` is distance below that frontier on the log-performance scale. It is not RIR and is never converted to an integer rep count.
+
+### Why Half-Normal slack
+
+Half-Normal is the first one-sided candidate because it:
+
+- has support only for `u >= 0`;
+- has maximum density at zero, so a frontier-near set remains plausible;
+- penalises increasingly large slack smoothly without an arbitrary hard maximum;
+- is conventional in stochastic-frontier modelling;
+- keeps deterministic quadrature straightforward and replaceable.
+
+The v1 slack-scale prior median is `0.12` log-performance with log-SD `0.55`. These are regularising modelling assumptions, not an RIR mapping.
+
+### Why Student-t noise
+
+The symmetric noise family is Student-t with `df = 5` and positive scale. Five degrees of freedom retains finite variance but materially heavier tails than Gaussian noise. V1 fixes the shape parameter rather than attempting to estimate tail shape from one sparse profile.
+
+The v1 noise-scale prior median is `0.05` log-performance with log-SD `0.45`.
+
+## Slope prior and positivity
+
+Slope is parameterised on the log scale:
+
+```text
+log(b) ~ Normal(log(0.16), 0.55^2)
+```
+
+so `b` is positive by construction. There is no unconstrained fit followed by a clamp.
+
+`0.16` is a deliberately conservative model prior, not cross-profile transfer and not a population claim stored as user truth. Direct profile evidence can override it only when rep diversity and independent-session support exist.
+
+## Frontier prior
+
+The reference-rep frontier uses a proper broad log-uniform prior over:
+
+```text
+0.1 kg <= frontier <= 5000 kg
+```
+
+The numerical tensor grid is centred around observed log resistance only to avoid wasting computation. The prior density itself is flat in log resistance within the broad proper bounds; `max(observed load)` is therefore not declared to be the frontier and does not become a narrow prior centre.
+
+## Identifiability / staged freedom
+
+The first candidate refuses to estimate every nuisance parameter from tiny histories.
+
+### Slope
+
+- fewer than 3 independent sessions or insufficient log-rep span: `PRIOR_DOMINATED`;
+- at least 3 sessions and log-rep span >= `ln(1.5)`: may become `PARTIALLY_LEARNED`;
+- at least 6 sessions and span >= `ln(2)`: may be labelled `DATA_INFORMED`.
+
+The slope is still represented as a posterior at every stage; the labels describe identification support, not a hard confidence score.
+
+### Slack/noise scales
+
+Before both:
+
+```text
+independent sessions >= 8
+observations >= 12
+```
+
+`σ_u` and `σ_e` are fixed at their prior medians and labelled `FIXED_BY_CONFIG`. This deliberately prevents sparse data from confidently decomposing poor performance into slack versus symmetric noise.
+
+After that gate, the scales are allowed to update on a small log-space grid under their proper priors. They become `DATA_INFORMED` only at at least 10 independent sessions and 20 observations; otherwise they remain `PARTIALLY_LEARNED`.
+
+Per-observation `u_s` remains a broad latent posterior when the nuisance decomposition is weak.
+
+## Within-session dependence
+
+V1 uses:
+
+`EQUAL_TOTAL_WEIGHT_PER_SESSION_V1`
+
+If a session contains `n` eligible observations, each contributes likelihood weight `1/n`. Therefore every independent workout contributes total global-parameter likelihood weight 1.
+
+All sets remain useful for load/rep-shape information, but five sets in one workout cannot create the same longitudinal certainty as five independent sessions. Per-observation slack posteriors use the observation's full local likelihood after the global fit; the session balancing applies to global-parameter learning.
+
+## Current-capability / temporal policy
+
+V1 uses the smallest explicit statistical policy:
+
+`RECENT_INDEPENDENT_SESSION_WINDOW_V1`
+
+At an inference horizon, only evidence at/before the horizon is eligible, and only the latest **12 independent sessions** are fitted. All selected sessions are otherwise treated symmetrically; there is no exponential biological decay, fatigue, recovery, detraining half-life, SkillState or Development term.
+
+This local-stationarity window allows repeated newer lower demonstrations to lower the current frontier once older sessions leave the window. Historical maxima are not irreversible.
+
+## Deterministic posterior approximation
+
+V1 uses deterministic tensor-grid integration over global parameters plus deterministic midpoint quadrature over Half-Normal slack:
+
+```text
+frontier c grid: 31 points
+positive slope log-grid: 15 points
+slack-scale log-grid when unlocked: 3 points
+noise-scale log-grid when unlocked: 3 points
+slack quadrature: 16 midpoint bins over 0..6 prior SD
+```
+
+Sparse histories therefore use `31 × 15` global nodes; nuisance-unlocked histories use `31 × 15 × 3 × 3` nodes.
+
+Posterior arithmetic uses stable log densities/log-sum-exp. Student-t normalisation uses a deterministic Lanczos log-gamma implementation. This is **approximate deterministic Bayesian inference**, not an exact posterior.
+
+The immutable config also records the grid radii, quadrature range, top-node count used for per-observation slack reconstruction, numerical resistance domain and maximum grid-evaluation budget.
+
+Failure to obtain finite posterior mass, model-config mismatch, evidence-policy mismatch, zero eligible evidence or an exceeded numerical budget produces an explicit fit failure. No stale/zero capability is returned.
+
+## Capability posterior and predictions
+
+At `r_ref`, the posterior over `exp(c)` populates the existing `PosteriorSummary`/`PosteriorEstimate` contract with finite positive p05/p50/p95 and variance, plus `EvidenceSupport` and `ModelOutputProvenance`.
+
+For arbitrary positive reps:
+
+```text
+x = ln(reps / r_ref)
+log frontier = c - b*x
+```
+
+Every retained posterior node is transformed before quantiles are computed, preserving fitted `c`/`b` dependence within the grid approximation rather than evaluating only median parameters.
+
+## Extrapolation uncertainty
+
+Slope uncertainty naturally widens predictions as `|x|` grows. V1 additionally applies an explicit conservative uncertainty term only outside the observed rep domain:
+
+```text
+extraLogSd = 0.18 * log-distance beyond nearest observed rep boundary
+```
+
+It widens the posterior interval/variance without changing the median frontier. It does not turn a one-rep query into canonical e1RM.
+
+## Per-observation slack and future SetDemand hook
+
+Each fitted observation retains a deterministic discrete approximation to:
+
+```text
+p(u_s | fitted history)
+```
+
+plus p05/p50/p95/variance. All support is non-negative and remains on the log-performance-distance scale.
+
+The model exposes a generic query equivalent to:
+
+```text
+P(u_s <= delta)
+```
+
+but **7B.2 chooses no `delta`** and therefore implements no SetDemand threshold. The retained distribution is only the hook required for later 7B/SetDemand work.
+
+## Frontier versus ordinary-demonstration predictive
+
+The frontier posterior answers latent upper demonstrated-performance capability. The model separately exposes the fitted ordinary-demonstration predictive density, marginalising Half-Normal slack and Student-t noise. This is provided so 7B.3 can evaluate successful lower-bound demonstrations without reconstructing hidden likelihood internals.
+
+7B.2 does not implement the chronological evaluation loop.
+
+## Context and equipment boundaries
+
+Context consumption remains exactly:
+
+`NONE`
+
+No note, sleep, illness, stress, fatigue annotation or Nano interpretation changes evidence weight, slack, noise, frontier or temporal selection.
+
+`PRODUCT_ROADMAP_GATES.md` equipment-instance/calibration requirements are preserved for 7F. 7B.2 consumes only the 7B.1 profile-local resistance coordinate and does not pull equipment translation forward.
+
+## Known 7B.2 candidate limitations
+
+- Half-Normal versus another one-sided slack family is not yet model-compared.
+- Session balancing is a deterministic dependence approximation, not a fitted session random-effect model.
+- The 12-session window is a statistical local-stationarity assumption, not biology.
+- Slack and symmetric noise remain only weakly separable even after the unlock threshold; identification labels must remain visible.
+- Tensor-grid resolution is intentionally modest for on-device determinism and will require held-out validation in 7B.3.
+- No failure/upper-bound evidence exists because canonical workout data still cannot reliably distinguish true physical failure from stopping/skipping/interruption.
+- No cross-profile transfer, equipment-instance translation, RIR, SetDemand threshold, fatigue, recovery, SkillState or Development is present.
+- Room remains 14; persistence orchestration of candidate fit state is deferred to 7B.3.
+
+## 7B.3 boundary
+
+7B.3 must chronologically compare this candidate against simpler frontier baselines, evaluate lower-bound calibration/exceedance behaviour, assess predictive uncertainty, persist normal candidate/shadow outputs and expand diagnostics. It must not silently reinterpret the 7B.1 evidence boundary or promote the candidate into normal workout prescriptions without the later acceptance gates.
