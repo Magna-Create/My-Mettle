@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -44,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
@@ -553,9 +555,11 @@ private fun WorkoutTransientCardButton(
 ) {
     MettleGlassActionButton(
         onClick = onClick,
-        modifier = modifier.height(metrics.dp(48)),
+        modifier = modifier.heightIn(min = metrics.dp(48)),
         shadowElevation = metrics.dp(2.6),
         accent = false,
+        containerTint = WorkoutTransientCyan.copy(alpha = .055f),
+        outlineColor = WorkoutTransientCyan.copy(alpha = .24f),
         foregroundColor = WorkoutTransientPaper,
         contentPadding = PaddingValues(horizontal = metrics.dp(13), vertical = metrics.dp(9)),
     ) {
@@ -564,6 +568,7 @@ private fun WorkoutTransientCardButton(
             fontSize = metrics.sp(14.5),
             lineHeight = metrics.sp(20),
             fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
             maxLines = 1,
         )
     }
