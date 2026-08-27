@@ -48,12 +48,20 @@ A 7B.1 candidate observation must have all of the following:
 - exact target `ExecutionProfileVersionId`;
 - exact compatible side/laterality;
 - eligible metric family (`DYNAMIC_RESISTANCE` or `BODYWEIGHT_RESISTANCE`);
+- a resistance semantic explicitly compatible with that metric family under the versioned evidence policy;
 - a current performed observation from a completed insight-eligible session;
 - non-empty session identity for longitudinal support accounting;
 - positive integral repetitions;
 - an explicit resistance semantic mapping that resolves a finite positive physical challenge coordinate;
 - canonical physical resistance in kilograms after deterministic metric conversion;
 - non-warm-up status.
+
+The first candidate's family/semantics compatibility is deliberately narrow:
+
+- `DYNAMIC_RESISTANCE` -> `EXTERNAL`;
+- `BODYWEIGHT_RESISTANCE` -> `ASSISTANCE`, `BODYWEIGHT`, or `BODYWEIGHT_PLUS_EXTERNAL`.
+
+That mapping is encoded directly in `DynamicResistanceEvidencePolicy`, participates in the evidence-policy fingerprint, and is included in immutable model-config payloads. It is therefore behaviour-driving provenance rather than an anonymous engine constant.
 
 The following do **not** enter the first dynamic-resistance frontier:
 
@@ -63,6 +71,7 @@ The following do **not** enter the first dynamic-resistance frontier:
 - power-duration work;
 - speed-duration/cardio;
 - device ordinal resistance;
+- an otherwise eligible family paired with incompatible resistance semantics;
 - zero/non-positive repetitions;
 - unresolved or non-positive resistance coordinates;
 - another execution profile/version;
@@ -105,11 +114,25 @@ The resolver version is:
 
 `n-bio-7b1-profile-local-positive-resistance-v1`
 
-It differs deliberately from generic N-BIO-6 resistance bookkeeping in one important way: it **never clamps** zero/negative values to epsilon or zero merely to make the logarithm usable. Unresolvable or non-positive coordinates are excluded.
+The strict 7B adapter reuses the established N-BIO-6 resistance equation for resistance arithmetic. It adds frontier-specific eligibility around that resolver and **never accepts** a zero/non-positive bookkeeping result merely to make `ln(R)` usable. Unresolvable or non-positive coordinates are excluded; no epsilon clamp or arbitrary offset is introduced.
+
+### Family/resistance-semantics gate
+
+Metric family and resistance semantics are separate canonical facts, so 7B must validate their combination explicitly rather than assuming that either one implies the other.
+
+In v1, an ambiguous combination such as:
+
+`BODYWEIGHT_RESISTANCE + EXTERNAL`
+
+is excluded. Treating its external-load metric as the complete challenge coordinate could silently discard the bodyweight component. A profile that genuinely combines bodyweight and external load must state `BODYWEIGHT_PLUS_EXTERNAL` with explicit coefficients.
+
+Likewise, assistance belongs to a `BODYWEIGHT_RESISTANCE` profile in this candidate rather than being silently accepted under `DYNAMIC_RESISTANCE`.
+
+Changing these compatibility rules is model behaviour and therefore requires changed config/evidence-policy identity.
 
 ### External resistance
 
-For a calibrated `EXTERNAL` profile, the profile's explicit external-load coefficient is applied to the canonical external-load metric. Ordinary profiles normally use coefficient `1.0`.
+For a calibrated `DYNAMIC_RESISTANCE + EXTERNAL` profile, the profile's explicit external-load coefficient is applied to the canonical external-load metric. Ordinary profiles normally use coefficient `1.0`.
 
 `EntryBasis` is preserved. A `20 kg PER_HAND` observation remains a profile-local coordinate of `20 kg`; it is not silently totalised to `40 kg`.
 
@@ -119,7 +142,7 @@ Raw entered units remain unchanged. The model consumes deterministic canonical u
 
 ### Assistance
 
-Assistance uses the already-versioned profile coefficients only when the execution profile provides a complete deterministic mapping. The coordinate direction is:
+Assistance uses the already-versioned profile coefficients only for an explicitly compatible `BODYWEIGHT_RESISTANCE + ASSISTANCE` profile and only when the execution profile provides a complete deterministic mapping. The coordinate direction is:
 
 more assistance -> lower challenge
 
@@ -129,7 +152,7 @@ No `R = -assistance`, arbitrary offset, or epsilon trick is allowed. Missing bod
 
 ### Bodyweight and bodyweight + external
 
-Body mass is used only when the immutable profile semantics contain an explicit positive bodyweight coefficient. 7B.1 never assumes that every bodyweight exercise moves 100% of body mass.
+Body mass is used only for `BODYWEIGHT_RESISTANCE` when the immutable profile semantics contain an explicit positive bodyweight coefficient. 7B.1 never assumes that every bodyweight exercise moves 100% of body mass.
 
 `BODYWEIGHT_PLUS_EXTERNAL` similarly requires explicit positive bodyweight and external-load coefficients. If those semantics are absent or inconsistent, the observation is excluded rather than assigned hidden kilograms.
 

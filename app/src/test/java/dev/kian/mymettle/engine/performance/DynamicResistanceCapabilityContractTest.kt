@@ -57,6 +57,42 @@ class DynamicResistanceCapabilityContractTest {
     }
 
     @Test
+    fun `eligible family still requires compatible resistance semantics`() {
+        val ambiguousBodyweightExternal = project(
+            profile(
+                family = MetricFamily.BODYWEIGHT_RESISTANCE,
+                semantics = ResistanceSemantics.EXTERNAL,
+            ),
+            evidence(family = MetricFamily.BODYWEIGHT_RESISTANCE, load = 20.0),
+        )
+        assertTrue(ambiguousBodyweightExternal.evidence.isEmpty())
+        assertEquals(
+            DynamicResistanceExclusionReason.METRIC_FAMILY_RESISTANCE_SEMANTICS_INCOMPATIBLE,
+            ambiguousBodyweightExternal.exclusions.single().reason,
+        )
+
+        val misclassifiedAssistance = project(
+            profile(
+                family = MetricFamily.DYNAMIC_RESISTANCE,
+                semantics = ResistanceSemantics.ASSISTANCE,
+                bodyweightCoefficient = 1.0,
+                externalLoadCoefficient = 0.0,
+                assistanceCoefficient = 1.0,
+            ),
+            evidence(
+                family = MetricFamily.DYNAMIC_RESISTANCE,
+                assistance = 20.0,
+                bodyMass = 80.0,
+            ),
+        )
+        assertTrue(misclassifiedAssistance.evidence.isEmpty())
+        assertEquals(
+            DynamicResistanceExclusionReason.METRIC_FAMILY_RESISTANCE_SEMANTICS_INCOMPATIBLE,
+            misclassifiedAssistance.exclusions.single().reason,
+        )
+    }
+
+    @Test
     fun `zero reps and non-positive resistance are rejected without epsilon clamp`() {
         assertEquals(
             DynamicResistanceExclusionReason.NON_POSITIVE_REPETITIONS,
@@ -288,7 +324,11 @@ class DynamicResistanceCapabilityContractTest {
             ),
             configs.map { it.component }.toSet(),
         )
+        val normalisation = configs.single { it.component == InferenceModelComponent.PERFORMANCE_NORMALISATION }
         val capability = configs.single { it.component == InferenceModelComponent.DYNAMIC_CAPABILITY }
+        assertTrue(normalisation.canonicalConfigPayload.contains("familyResistanceCompatibility="))
+        assertTrue(DynamicResistanceV1Contract.evidencePolicy.familyResistanceCompatibility.contains("dynamic_resistance:external"))
+        assertTrue(DynamicResistanceV1Contract.evidencePolicy.familyResistanceCompatibility.contains("bodyweight_resistance:assistance,bodyweight,bodyweight_plus_external"))
         assertTrue(capability.canonicalConfigPayload.contains("contextConsumption=NONE"))
         assertTrue(capability.canonicalConfigPayload.contains("referenceRepPolicy"))
         assertFalse(capability.canonicalConfigPayload.contains("fittingStage"))
@@ -344,6 +384,20 @@ class DynamicResistanceCapabilityContractTest {
         assertEquals(1, diagnostics.warmUpsExcludedCount)
         assertEquals("NOT_YET_FIT_7B1", diagnostics.candidateCapabilityPosterior)
         assertTrue(diagnostics.renderText().contains("candidate capability posterior: NOT_YET_FIT_7B1"))
+    }
+
+    @Test
+    fun `family-semantics mismatch is counted as unresolved resistance diagnostic`() {
+        val projection = project(
+            profile(
+                family = MetricFamily.BODYWEIGHT_RESISTANCE,
+                semantics = ResistanceSemantics.EXTERNAL,
+            ),
+            evidence(family = MetricFamily.BODYWEIGHT_RESISTANCE, load = 20.0),
+        )
+        val diagnostics = DynamicResistancePreparationDiagnostics.from(projection)
+        assertEquals(0, diagnostics.eligibleObservationCount)
+        assertEquals(1, diagnostics.unresolvedResistanceExclusionCount)
     }
 
     private fun project(

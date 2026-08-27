@@ -64,6 +64,7 @@ enum class DynamicResistanceTemporalPolicy(val storageValue: String) {
 data class DynamicResistanceEvidencePolicy(
     val semanticVersion: String,
     val eligibleMetricFamilies: Set<MetricFamily>,
+    val eligibleResistanceSemanticsByFamily: Map<MetricFamily, Set<ResistanceSemantics>>,
     val warmUpPolicy: DynamicResistanceWarmUpPolicy,
     val resistanceCoordinateResolverVersion: String,
     val canonicalUnitPolicyVersion: String,
@@ -78,6 +79,10 @@ data class DynamicResistanceEvidencePolicy(
     init {
         require(semanticVersion.isNotBlank())
         require(eligibleMetricFamilies.isNotEmpty())
+        require(eligibleResistanceSemanticsByFamily.keys == eligibleMetricFamilies) {
+            "Every eligible metric family must declare explicit resistance-semantics compatibility."
+        }
+        require(eligibleResistanceSemanticsByFamily.values.all { it.isNotEmpty() })
         require(resistanceCoordinateResolverVersion.isNotBlank())
         require(canonicalUnitPolicyVersion.isNotBlank())
         require(unresolvedAssistancePolicy.isNotBlank())
@@ -85,12 +90,23 @@ data class DynamicResistanceEvidencePolicy(
         require(deviceOrdinalPolicy.isNotBlank())
     }
 
+    val familyResistanceCompatibility: String
+        get() = eligibleResistanceSemanticsByFamily.entries
+            .sortedBy { it.key.storageValue }
+            .joinToString("|") { (family, semantics) ->
+                "${family.storageValue}:${semantics.map { it.storageValue }.sorted().joinToString(",")}"
+            }
+
+    fun acceptsResistanceSemantics(family: MetricFamily, semantics: ResistanceSemantics): Boolean =
+        semantics in eligibleResistanceSemanticsByFamily[family].orEmpty()
+
     /** Stable policy fingerprint suitable for attaching to projected modelling evidence. */
     val identity: String by lazy {
         sha256(
             buildString {
                 append("dynamic-resistance-evidence|").append(semanticVersion).append('\n')
                 append("families=").append(eligibleMetricFamilies.map { it.storageValue }.sorted().joinToString(",")).append('\n')
+                append("familyResistanceCompatibility=").append(familyResistanceCompatibility).append('\n')
                 append("warmup=").append(warmUpPolicy.storageValue).append('\n')
                 append("resolver=").append(resistanceCoordinateResolverVersion).append('\n')
                 append("canonicalUnits=").append(canonicalUnitPolicyVersion).append('\n')
@@ -122,6 +138,14 @@ object DynamicResistanceV1Contract {
     val evidencePolicy = DynamicResistanceEvidencePolicy(
         semanticVersion = EVIDENCE_POLICY_VERSION,
         eligibleMetricFamilies = setOf(MetricFamily.DYNAMIC_RESISTANCE, MetricFamily.BODYWEIGHT_RESISTANCE),
+        eligibleResistanceSemanticsByFamily = mapOf(
+            MetricFamily.DYNAMIC_RESISTANCE to setOf(ResistanceSemantics.EXTERNAL),
+            MetricFamily.BODYWEIGHT_RESISTANCE to setOf(
+                ResistanceSemantics.ASSISTANCE,
+                ResistanceSemantics.BODYWEIGHT,
+                ResistanceSemantics.BODYWEIGHT_PLUS_EXTERNAL,
+            ),
+        ),
         warmUpPolicy = DynamicResistanceWarmUpPolicy.EXCLUDE,
         resistanceCoordinateResolverVersion = RESISTANCE_RESOLVER_VERSION,
         canonicalUnitPolicyVersion = CANONICAL_UNIT_POLICY_VERSION,
@@ -147,6 +171,7 @@ object DynamicResistanceV1Contract {
             configSchemaVersion = 1,
             parameters = mapOf(
                 "eligibleMetricFamilies" to evidencePolicy.eligibleMetricFamilies.map { it.storageValue }.sorted().joinToString(","),
+                "familyResistanceCompatibility" to evidencePolicy.familyResistanceCompatibility,
                 "warmUpPolicy" to evidencePolicy.warmUpPolicy.storageValue,
                 "canonicalUnitPolicy" to evidencePolicy.canonicalUnitPolicyVersion,
                 "correctionPolicy" to "current_non_superseded_only",
@@ -163,6 +188,7 @@ object DynamicResistanceV1Contract {
             configSchemaVersion = 1,
             parameters = mapOf(
                 "resolverVersion" to evidencePolicy.resistanceCoordinateResolverVersion,
+                "familyResistanceCompatibility" to evidencePolicy.familyResistanceCompatibility,
                 "externalEntryBasis" to "preserve_profile_entry_basis",
                 "nonPositiveCoordinate" to "exclude_no_clamp_or_offset",
                 "deviceOrdinal" to evidencePolicy.deviceOrdinalPolicy,
@@ -245,6 +271,7 @@ data class DynamicResistanceEvidence(
 enum class DynamicResistanceExclusionReason(val storageValue: String) {
     PROFILE_VERSION_MISMATCH("profile_version_mismatch"),
     METRIC_FAMILY_INELIGIBLE("metric_family_ineligible"),
+    METRIC_FAMILY_RESISTANCE_SEMANTICS_INCOMPATIBLE("metric_family_resistance_semantics_incompatible"),
     WARM_UP_EXCLUDED("warm_up_excluded"),
     LATERALITY_INCOMPATIBLE("laterality_incompatible"),
     MISSING_SESSION_ID("missing_session_id"),

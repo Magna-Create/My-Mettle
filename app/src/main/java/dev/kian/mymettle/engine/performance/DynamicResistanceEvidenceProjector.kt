@@ -35,6 +35,10 @@ object DynamicResistanceCoordinateResolver {
         policy: DynamicResistanceEvidencePolicy = DynamicResistanceV1Contract.evidencePolicy,
     ): ResistanceCoordinateResolution {
         val model = profile.resistanceModel
+        if (!policy.acceptsResistanceSemantics(profile.metricFamily, model.semantics)) {
+            return unresolved(DynamicResistanceExclusionReason.METRIC_FAMILY_RESISTANCE_SEMANTICS_INCOMPATIBLE)
+        }
+
         val external = evidence.metric(PerformanceMetric.EXTERNAL_LOAD)?.canonicalMassKg()
         val assistance = evidence.metric(PerformanceMetric.ASSISTANCE)?.canonicalMassKg()
         val bodyMass = evidence.bodyMassContextKg
@@ -205,6 +209,8 @@ object DynamicResistanceEvidenceProjector {
             DynamicResistanceExclusionReason.PROFILE_VERSION_MISMATCH
         evidence.metricFamily != profile.metricFamily || evidence.metricFamily !in policy.eligibleMetricFamilies ->
             DynamicResistanceExclusionReason.METRIC_FAMILY_INELIGIBLE
+        !policy.acceptsResistanceSemantics(profile.metricFamily, profile.resistanceModel.semantics) ->
+            DynamicResistanceExclusionReason.METRIC_FAMILY_RESISTANCE_SEMANTICS_INCOMPATIBLE
         policy.warmUpPolicy == dev.kian.mymettle.domain.inference.DynamicResistanceWarmUpPolicy.EXCLUDE && evidence.warmUp ->
             DynamicResistanceExclusionReason.WARM_UP_EXCLUDED
         evidence.sessionId == null -> DynamicResistanceExclusionReason.MISSING_SESSION_ID

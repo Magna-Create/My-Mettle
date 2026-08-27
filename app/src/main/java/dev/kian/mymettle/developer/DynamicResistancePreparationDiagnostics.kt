@@ -37,6 +37,7 @@ data class DynamicResistancePreparationDiagnostics(
         ): DynamicResistancePreparationDiagnostics {
             val counts = projection.exclusions.groupingBy { it.reason }.eachCount()
             val unresolvedReasons = setOf(
+                DynamicResistanceExclusionReason.METRIC_FAMILY_RESISTANCE_SEMANTICS_INCOMPATIBLE,
                 DynamicResistanceExclusionReason.MISSING_EXTERNAL_LOAD,
                 DynamicResistanceExclusionReason.MISSING_ASSISTANCE,
                 DynamicResistanceExclusionReason.MISSING_BODY_MASS,
