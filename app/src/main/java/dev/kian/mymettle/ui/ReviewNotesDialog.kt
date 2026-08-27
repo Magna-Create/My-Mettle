@@ -46,7 +46,7 @@ internal fun ReviewNotesDialog(
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
     title: String = "Review / Notes",
-    supportingMessage: String = "This will be reviewed by Gemini Nano",
+    supportingMessage: String = "Saved as written; optional on-device interpretation may run when supported",
     maxCharacters: Int = ReviewNotesMaxCharacters,
 ) {
     val focusRequester = remember { FocusRequester() }
