@@ -86,7 +86,7 @@ data class NBio6DeviceVerificationReport(
         .put("startedAt", startedAt)
         .put("completedAt", completedAt)
         .put("passed", passed)
-        .put("schemaVersion", 12)
+        .put("minimumSchemaVersion", MINIMUM_SCHEMA_VERSION)
         .put("codecVersion", dev.kian.mymettle.domain.evidence.TemporalEvidenceCodec.ENCODING_VERSION)
         .put("checks", checks.toJson())
         .put("temporalChecks", temporalChecks.toJson())
@@ -106,6 +106,7 @@ data class NBio6DeviceVerificationReport(
 
     companion object {
         const val CONTRACT_VERSION = "n-bio-6-device-verifier-v2"
+        const val MINIMUM_SCHEMA_VERSION = 12
     }
 }
 
@@ -149,7 +150,7 @@ class NBio6DeviceVerificationRepository(context: Context) {
     suspend fun runAutomatedChecks(): NBio6DeviceVerificationReport = withContext(Dispatchers.IO) {
         val startedAt = Instant.now().toString()
         val checks = listOf(
-            runCheck("room-12", "Room 12 schema and foreign keys", ::verifyRoomContract),
+            runCheck("room-contract", "Current Room schema: N-BIO-6 contract", ::verifyRoomContract),
             runCheck("dead-hang", "Dead hang: rep-free end to end", ::verifyDeadHang),
             runCheck("grip-replay", "Grip hold: sides, correction and replay", ::verifyGripAndReplay),
             runCheck("assistance", "Assistance directionality", ::verifyAssistanceDirection),
@@ -239,7 +240,7 @@ class NBio6DeviceVerificationRepository(context: Context) {
                         fileName = fileName,
                         completedAt = Instant.now().toString(),
                         passed = true,
-                        detail = "AI-reviewed Native supplement and factual Lite rows persisted into isolated Room 12; independent recruitment completeness, completion-only timing, no invented traces, history, provenance, foreign keys and inference replay verified.",
+                        detail = "AI-reviewed Native supplement and factual Lite rows persisted into the current isolated Room schema; independent recruitment completeness, completion-only timing, no invented traces, history, provenance, foreign keys and inference replay verified.",
                         exercises = snapshot.exercises.size,
                         sessions = snapshot.sessions.size,
                         sets = snapshot.sets.size,
@@ -304,7 +305,9 @@ class NBio6DeviceVerificationRepository(context: Context) {
             expect(cursor.moveToFirst()) { "PRAGMA user_version returned no row." }
             cursor.getInt(0)
         }
-        expect(userVersion == 12) { "Room opened schema $userVersion instead of schema 12." }
+        expect(userVersion >= NBio6DeviceVerificationReport.MINIMUM_SCHEMA_VERSION) {
+            "Room opened schema $userVersion, older than the N-BIO-6 minimum schema ${NBio6DeviceVerificationReport.MINIMUM_SCHEMA_VERSION}."
+        }
         val tables = sqlite.query("SELECT name FROM sqlite_master WHERE type = 'table'").use { cursor ->
             buildSet {
                 while (cursor.moveToNext()) add(cursor.getString(0))
@@ -336,7 +339,7 @@ class NBio6DeviceVerificationRepository(context: Context) {
         )
         expect(required.all { it in tables }) { "Missing Room tables: ${(required - tables).sorted().joinToString()}." }
         expect(foreignKeyFailures(database).isEmpty()) { "Fresh Room schema failed PRAGMA foreign_key_check." }
-        return "Room $userVersion opened on-device; all N-BIO-6 raw and derived tables exist; foreign_key_check is clean."
+        return "Room $userVersion opened on-device; the N-BIO-6 contract tables are present and foreign_key_check is clean."
     }
 
     private suspend fun verifyDeadHang(database: MyMettleDatabase): String {
