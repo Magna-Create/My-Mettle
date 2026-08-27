@@ -38,13 +38,28 @@ data class RetrospectivePrediction(
     val trainingSessionIds: Set<String>,
 )
 
+enum class EvaluationMetricKind {
+    MAE_NATIVE_DIMENSION,
+    LOG_PREDICTIVE_DENSITY,
+    CREDIBLE_INTERVAL_COVERAGE,
+    CALIBRATION_ERROR,
+    BLANK_APPROPRIATENESS,
+}
+
+data class EvaluationScore(
+    val kind: EvaluationMetricKind,
+    val value: Double?,
+)
+
 data class RetrospectiveEvaluationResult(
+    val protocolVersion: String,
     val executionMode: InferenceExecutionMode,
     val metricFamily: MetricFamily,
     val dimension: QuantityDimension,
     val predictions: List<RetrospectivePrediction>,
 ) {
     init {
+        require(protocolVersion.isNotBlank())
         require(predictions.all { it.holdout.metricFamily == metricFamily }) {
             "Evaluation results cannot mix metric families."
         }
@@ -72,12 +87,24 @@ data class RetrospectiveEvaluationResult(
     }
 
     val blankPredictionCount: Int get() = predictions.count { it.predictivePosterior == null }
+
+    /**
+     * Metrics that require a full predictive density or explicit calibration target stay null until
+     * the relevant candidate family supplies them; 7A does not manufacture a distribution shape.
+     */
+    fun scoreSkeleton(): List<EvaluationScore> = listOf(
+        EvaluationScore(EvaluationMetricKind.MAE_NATIVE_DIMENSION, meanAbsoluteError()),
+        EvaluationScore(EvaluationMetricKind.LOG_PREDICTIVE_DENSITY, null),
+        EvaluationScore(EvaluationMetricKind.CREDIBLE_INTERVAL_COVERAGE, credibleIntervalCoverage()),
+        EvaluationScore(EvaluationMetricKind.CALIBRATION_ERROR, null),
+        EvaluationScore(EvaluationMetricKind.BLANK_APPROPRIATENESS, null),
+    )
 }
 
 /**
- * Chronological held-out skeleton. The default split holds out an entire session at once, so sets
- * from the target session cannot leak into one another's training window. Sessions are ordered by
- * their earliest observation and then stable session id; observations are stable-sorted likewise.
+ * Chronological held-out skeleton. The split holds out an entire session at once, so sets from the
+ * target session cannot leak into one another's training window. Sessions are ordered by their
+ * earliest observation and then stable session id; observations are stable-sorted likewise.
  */
 class ChronologicalRetrospectiveEvaluator {
     fun evaluate(
@@ -87,12 +114,8 @@ class ChronologicalRetrospectiveEvaluator {
         dimension: QuantityDimension,
         predict: (RetrospectiveTrainingWindow, RetrospectiveObservation) -> PosteriorSummary?,
     ): RetrospectiveEvaluationResult {
-        require(observations.all { it.metricFamily == metricFamily }) {
-            "Evaluate one metric family at a time."
-        }
-        require(observations.all { it.dimension == dimension }) {
-            "Evaluate one canonical dimension at a time."
-        }
+        require(observations.all { it.metricFamily == metricFamily }) { "Evaluate one metric family at a time." }
+        require(observations.all { it.dimension == dimension }) { "Evaluate one canonical dimension at a time." }
         require(observations.map { it.observationId }.distinct().size == observations.size) {
             "Evaluation observation ids must be unique."
         }
@@ -113,11 +136,10 @@ class ChronologicalRetrospectiveEvaluator {
                 heldOutSession
                     .sortedWith(compareBy<RetrospectiveObservation>({ it.observedAt }, { it.observationId }))
                     .forEach { holdout ->
-                        val posterior = predict(training, holdout)
                         add(
                             RetrospectivePrediction(
                                 holdout = holdout,
-                                predictivePosterior = posterior,
+                                predictivePosterior = predict(training, holdout),
                                 trainingObservationIds = training.observationIds,
                                 trainingSessionIds = training.sessionIds,
                             ),
@@ -128,10 +150,15 @@ class ChronologicalRetrospectiveEvaluator {
         }
 
         return RetrospectiveEvaluationResult(
+            protocolVersion = PROTOCOL_VERSION,
             executionMode = executionMode,
             metricFamily = metricFamily,
             dimension = dimension,
             predictions = predictions,
         )
+    }
+
+    companion object {
+        const val PROTOCOL_VERSION = "n-bio-7a-session-held-out-v1"
     }
 }

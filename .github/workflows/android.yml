@@ -8,10 +8,13 @@ on:
       - "agent/**"
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -38,5 +41,27 @@ jobs:
       - name: Verify generated biological reference assets
         run: python3 tools/reference_data/generate_reference_assets.py --check
 
-      - name: Test and build debug APK
-        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace
+      - name: Check whitespace errors
+        run: git diff --check
+
+      - name: Unit tests and debug APK
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --no-daemon
+
+      - name: Compile instrumentation APK
+        run: ./gradlew :app:assembleDebugAndroidTest --stacktrace --no-daemon
+
+      - name: Android lint
+        run: ./gradlew :app:lintDebug --stacktrace --no-daemon
+
+      - name: Verify exported Room schema
+        shell: bash
+        run: |
+          test -f app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/13.json
+          grep -q '"version": 13' app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/13.json
+
+      - name: Upload Room schemas
+        uses: actions/upload-artifact@v4
+        with:
+          name: room-schemas-${{ github.sha }}
+          path: app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase
+          if-no-files-found: error

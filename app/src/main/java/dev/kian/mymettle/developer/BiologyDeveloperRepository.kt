@@ -22,11 +22,22 @@ data class ProgrammeDayDebug(
     val plans: Map<TrainingMode, NativeWorkoutPlan>,
 )
 
+data class InferenceRunDebugSummary(
+    val id: String,
+    val executionMode: String,
+    val semanticsMode: String,
+    val modelManifestId: String,
+    val calculatedAt: String,
+    val evidenceObservationCount: Int,
+    val effectiveIndependentSessionCount: Int,
+)
+
 data class BiologyDeveloperSnapshot(
     val reference: ReferenceDebugStatus,
     val routineVersionId: String?,
     val days: List<ProgrammeDayDebug>,
     val inference: UserInferenceSnapshot?,
+    val inferenceRuns: List<InferenceRunDebugSummary>,
     val executionProfileLabels: Map<String, String>,
 )
 
@@ -56,6 +67,19 @@ class BiologyDeveloperRepository(
         val inference = runCatching {
             dev.kian.mymettle.inference.RoomInferenceRepository(database).latestSnapshot()
         }.getOrNull()
+        val inferenceRuns = inference?.run?.userProfileId?.let { userProfileId ->
+            inferenceDao.inferenceRuns(userProfileId).map { run ->
+                InferenceRunDebugSummary(
+                    id = run.id,
+                    executionMode = run.executionMode,
+                    semanticsMode = run.semanticsMode,
+                    modelManifestId = run.modelManifestId,
+                    calculatedAt = run.calculatedAt,
+                    evidenceObservationCount = run.evidenceObservationCount,
+                    effectiveIndependentSessionCount = run.effectiveIndependentSessionCount,
+                )
+            }
+        }.orEmpty()
         val versionIds = inference?.exerciseTranslationStates.orEmpty()
             .map { it.executionProfileVersionId.value }
             .distinct()
@@ -82,22 +106,24 @@ class BiologyDeveloperRepository(
             routineVersionId = state?.currentRoutineVersionId,
             days = days,
             inference = inference,
+            inferenceRuns = inferenceRuns,
             executionProfileLabels = profileLabels,
         )
     }
 
     fun diagnosticJson(snapshot: BiologyDeveloperSnapshot): String = JSONObject()
         .put("format", "my-mettle-n-bio-diagnostic")
-        .put("formatVersion", 1)
+        .put("formatVersion", 2)
         .put("roomSchemaVersion", snapshot.reference.schemaVersion)
         .put("reference", snapshot.reference.toJson())
         .put("routineVersionId", snapshot.routineVersionId ?: JSONObject.NULL)
         .put("programme", JSONArray(snapshot.days.map(ProgrammeDayDebug::toJson)))
+        .put("inferenceRuns", JSONArray(snapshot.inferenceRuns.map(InferenceRunDebugSummary::toJson)))
         .put("inference", snapshot.inference?.toJson(snapshot.executionProfileLabels) ?: JSONObject.NULL)
         .toString(2)
 
     private companion object {
-        const val SCHEMA_VERSION = 11
+        const val SCHEMA_VERSION = 13
     }
 }
 
@@ -109,6 +135,15 @@ private fun ReferenceDebugStatus.toJson(): JSONObject = JSONObject()
     .put("profileVersion", referenceProfile?.version ?: JSONObject.NULL)
     .put("datasetVersion", referenceProfile?.datasetVersion ?: JSONObject.NULL)
     .put("modelVersion", referenceProfile?.modelVersion ?: JSONObject.NULL)
+
+private fun InferenceRunDebugSummary.toJson(): JSONObject = JSONObject()
+    .put("id", id)
+    .put("executionMode", executionMode)
+    .put("semanticsMode", semanticsMode)
+    .put("modelManifestId", modelManifestId)
+    .put("calculatedAt", calculatedAt)
+    .put("evidenceObservationCount", evidenceObservationCount)
+    .put("effectiveIndependentSessionCount", effectiveIndependentSessionCount)
 
 private fun ProgrammeDayDebug.toJson(): JSONObject = JSONObject()
     .put("day", day)
@@ -184,9 +219,14 @@ private fun UserInferenceSnapshot.toJson(profileLabels: Map<String, String>): JS
     .put("run", JSONObject()
         .put("id", run.id.value)
         .put("modelVersion", run.modelVersion)
+        .put("executionMode", run.executionMode.storageValue)
+        .put("semanticsMode", run.semanticsMode.storageValue)
+        .put("modelManifestId", run.modelManifestId.value)
         .put("calculatedAt", run.calculatedAt.toString())
         .put("evidenceThrough", run.evidenceThrough?.toString() ?: JSONObject.NULL)
         .put("evidenceSetCount", run.evidenceSetCount)
+        .put("evidenceObservationCount", run.evidenceObservationCount)
+        .put("effectiveIndependentSessionCount", run.effectiveIndependentSessionCount)
         .put("referenceProfileId", run.referenceProfileId.value)
         .put("referenceProfileVersion", run.referenceProfileVersion)
         .put("referenceModelVersion", run.referenceModelVersion)
@@ -194,6 +234,24 @@ private fun UserInferenceSnapshot.toJson(profileLabels: Map<String, String>): JS
         .put("stimulusModelVersion", run.stimulusModelVersion)
         .put("muscleStateModelVersion", run.muscleStateModelVersion)
         .put("exerciseTranslationModelVersion", run.exerciseTranslationModelVersion))
+    .put("modelManifest", modelManifest?.let { manifest -> JSONObject()
+        .put("id", manifest.id.value)
+        .put("entries", JSONArray(manifest.entries.entries.sortedBy { it.key.storageValue }.map { (component, configId) ->
+            JSONObject().put("component", component.storageValue).put("modelConfigId", configId.value)
+        }))
+    } ?: JSONObject.NULL)
+    .put("modelConfigs", JSONArray(modelConfigs.sortedBy { it.component.storageValue }.map { config -> JSONObject()
+        .put("id", config.id.value)
+        .put("component", config.component.storageValue)
+        .put("modelFamily", config.modelFamily)
+        .put("modelName", config.modelName)
+        .put("semanticVersion", config.semanticVersion)
+        .put("configSchemaVersion", config.configSchemaVersion)
+        .put("canonicalConfigPayload", config.canonicalConfigPayload)
+        .put("createdAt", config.createdAt.toString())
+        .put("effectiveAt", config.effectiveAt?.toString() ?: JSONObject.NULL)
+    }))
+    .put("candidatePosteriorCount", 0)
     .put("muscleStates", JSONArray(muscleStates.map { state -> JSONObject()
         .put("segmentId", state.segmentId.value)
         .put("side", state.side.storageValue)
