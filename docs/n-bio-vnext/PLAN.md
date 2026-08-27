@@ -1093,6 +1093,17 @@ Only if C repeatedly improves held-out prediction over B may HR-derived terms gr
 
 No rule such as `HR < X = ready` may be introduced without personal validation.
 
+## 6.16 Interstitial foundation — N-BIO-7A.5 context interpretation and authoring contracts
+
+Before N-BIO-7B, establish two non-driving semantic boundaries:
+
+- raw user-authored workout notes remain canonical while bounded, versioned structured annotations remain derived/recomputable;
+- externally authored exercise/execution/recruitment proposals must satisfy an explicit semantic authoring contract before they can map into the existing canonical authoring pathway.
+
+The 7A.5 context layer provides typed assertion/temporal semantics, source-text hashes/spans, interpreter provenance, deterministic Rules/NoOp fallback, runtime-gated ML Kit Prompt interpretation and a typed `ContextEvidenceView`. No context tag has any mathematical effect during 7A.5. A later behaviour-driving model must explicitly version which eligible tags it consumes and prove value through chronological held-out evaluation.
+
+The 7A.5 exercise exchange is not a Room dump and schema-valid AI output is not biological truth. Structural validation, canonical anatomy/domain semantic validation and human review remain separate gates. Recruitment weighting remains a muscle-local exposure coefficient rather than a conserved percentage share.
+
 ---
 
 # 7. N-BIO-8 — Adaptive Programme Resolution
@@ -1180,19 +1191,15 @@ Modes may change time, dose/set budget, exercise count, target priority floor an
 
 ## Goal
 
-Implement auxiliary evidence/interpretation systems after the canonical substrate and core inference are stable.
+Extend the already-established N-BIO-7A.5 context-interpretation substrate with later product controls, Health Connect integration, device validation and broader intelligence/data features after core inference is stable.
 
-## 8A. Natural-language exercise notes
+## 8A. Context-intelligence product continuation
 
-Replace mandatory rating questionnaires with optional free text.
+N-BIO-7A.5 already owns canonical raw-note versus derived-annotation semantics, the bounded tag ontology, `NoteInterpreter`, runtime-gated Nano/Rules/NoOp fallback, interpretation provenance and the zero-effect `ContextEvidenceView` boundary.
 
-Raw note is canonical.
+N-BIO-9 may add broader context UX, explicit reannotation/data controls, Nano rollout/download management, notification/dashboard consumers and Analysis Export. It must consume rather than recreate the 7A.5 architecture, and annotation failure must remain non-fatal.
 
-Derived/versioned annotation may include bounded tags and next-session cues.
-
-Create a `NoteInterpreter` abstraction with runtime Nano support/fallback. Annotation failure must never block workout completion.
-
-Health/physiological data is not an allowed note-interpreter input.
+Health/physiological data remains outside the note-interpreter input boundary.
 
 ## 8B. Health Connect integration
 
@@ -1586,7 +1593,7 @@ Until specifically promoted by validated work, do not implement as behaviour-dri
 
 ## N-BIO-9 complete when
 
-- note interpretation is bounded/versioned/fallback-safe;
+- later note-intelligence product controls safely consume the bounded/versioned/fallback-safe interpretation substrate established in N-BIO-7A.5;
 - Health Connect maps through generic evidence with provenance;
 - actual Samsung/device fixtures establish real-world behaviour;
 - cardio import/manual fallback works;

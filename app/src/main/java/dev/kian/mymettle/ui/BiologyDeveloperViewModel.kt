@@ -14,6 +14,8 @@ import dev.kian.mymettle.developer.BiologyDeveloperSnapshot
 import dev.kian.mymettle.developer.BiologyTaskController
 import dev.kian.mymettle.developer.BiologyTaskPhase
 import dev.kian.mymettle.developer.BiologyTaskState
+import dev.kian.mymettle.developer.ContextDeveloperDiagnosticsRepository
+import dev.kian.mymettle.developer.ContextDeveloperSnapshot
 import dev.kian.mymettle.developer.NBio6DeviceVerificationReport
 import dev.kian.mymettle.developer.NBio6DeviceVerificationRepository
 import dev.kian.mymettle.developer.NBio6LiteBackupVerificationReport
@@ -23,6 +25,7 @@ import kotlinx.coroutines.launch
 data class BiologyDeveloperUiState(
     val loading: Boolean = true,
     val snapshot: BiologyDeveloperSnapshot? = null,
+    val contextSnapshot: ContextDeveloperSnapshot? = null,
     val selectedDay: String? = null,
     val selectedMode: TrainingMode = TrainingMode.B,
     val task: BiologyTaskState = BiologyTaskState(),
@@ -39,6 +42,7 @@ class BiologyDeveloperViewModel(
     private val appContext: Context,
     private val database: MyMettleDatabase,
     private val repository: BiologyDeveloperRepository,
+    private val contextDiagnosticsRepository: ContextDeveloperDiagnosticsRepository,
     private val nBio6Verifier: NBio6DeviceVerificationRepository,
 ) : ViewModel() {
     var uiState by mutableStateOf(BiologyDeveloperUiState())
@@ -59,14 +63,15 @@ class BiologyDeveloperViewModel(
     fun refresh() {
         viewModelScope.launch {
             uiState = uiState.copy(loading = true, error = null)
-            runCatching { repository.snapshot() }
-                .onSuccess { snapshot ->
+            runCatching { repository.snapshot() to contextDiagnosticsRepository.snapshot() }
+                .onSuccess { (snapshot, contextSnapshot) ->
                     val selectedDay = uiState.selectedDay
                         ?.takeIf { selected -> snapshot.days.any { it.day == selected } }
                         ?: snapshot.days.firstOrNull()?.day
                     uiState = uiState.copy(
                         loading = false,
                         snapshot = snapshot,
+                        contextSnapshot = contextSnapshot,
                         selectedDay = selectedDay,
                     )
                 }
@@ -179,6 +184,7 @@ class BiologyDeveloperViewModelFactory(context: Context) : ViewModelProvider.Fac
             appContext = appContext,
             database = database,
             repository = BiologyDeveloperRepository(database),
+            contextDiagnosticsRepository = ContextDeveloperDiagnosticsRepository(database),
             nBio6Verifier = NBio6DeviceVerificationRepository(appContext),
         ) as T
     }

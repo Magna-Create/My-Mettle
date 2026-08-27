@@ -1,6 +1,7 @@
 package dev.kian.mymettle.context
 
 import dev.kian.mymettle.domain.context.AssertionSemantics
+import dev.kian.mymettle.domain.context.ContextAnnotation
 import dev.kian.mymettle.domain.context.ContextEvidenceProjector
 import dev.kian.mymettle.domain.context.ContextInterpretationProvenance
 import dev.kian.mymettle.domain.context.ContextTagId
@@ -13,6 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 
@@ -97,6 +99,35 @@ class NoteInterpreterTest {
     }
 
     @Test
+    fun malformedModelResultWithUnregisteredTagFailsClosed() {
+        val request = NoteInterpretationRequest("I slept 4 hours", NoteScope.SESSION_REVIEW)
+        val malformed = NoteInterpretationResult(
+            interpreterKind = InterpreterKind.ML_KIT_NANO,
+            implementationVersion = "fixture-nano",
+            annotations = listOf(
+                ContextAnnotation(
+                    tagId = ContextTagId("MODEL_MADE_THIS_UP"),
+                    tagSchemaVersion = ContextTagRegistry.V1.schemaVersion,
+                    value = ContextValue.BooleanValue(true),
+                    scope = NoteScope.SESSION_REVIEW,
+                    assertion = AssertionSemantics.ASSERTED,
+                    temporalApplicability = TemporalApplicability.CURRENT,
+                ),
+            ),
+            promptVersion = "fixture-prompt",
+            structuredOutputSchemaVersion = 1,
+            capabilities = NanoRuntimeCapabilities(
+                promptApiStatus = PromptApiStatus.AVAILABLE,
+                structuredOutputAvailable = true,
+                systemInstructionAvailable = true,
+                baseModelName = "fixture-model",
+            ),
+        )
+
+        assertFailsWith<IllegalArgumentException> { malformed.validate(request) }
+    }
+
+    @Test
     fun scopesRemainExplicit() = runBlocking {
         val session = rules.interpret(NoteInterpretationRequest("I slept 4 hours", NoteScope.SESSION_REVIEW))
         assertEquals(NoteScope.SESSION_REVIEW, session.annotations.single().scope)
@@ -145,6 +176,16 @@ class NoteInterpreterTest {
         )
         assertEquals(1, view.items.size)
         assertEquals(InferenceEligibility.CANDIDATE_COVARIATE, view.items.single().eligibility)
+    }
+
+    @Test
+    fun rulesProvenanceCannotMasqueradeAsNano() = runBlocking {
+        val result = rules.interpret(NoteInterpretationRequest("I slept 4 hours", NoteScope.SESSION_REVIEW))
+        assertEquals(InterpreterKind.RULES, result.interpreterKind)
+        assertEquals(RulesNoteInterpreter.VERSION, result.implementationVersion)
+        assertNull(result.promptVersion)
+        assertNull(result.structuredOutputSchemaVersion)
+        assertEquals(PromptApiStatus.NOT_CHECKED, result.capabilities.promptApiStatus)
     }
 
     @Test

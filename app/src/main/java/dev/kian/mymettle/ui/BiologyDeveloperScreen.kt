@@ -145,6 +145,53 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 }
 
                 item {
+                    DebugCard("N-BIO-7A.5 context interpretation") {
+                        val contextSnapshot = state.contextSnapshot
+                        if (contextSnapshot == null) {
+                            Text("Context diagnostics have not loaded yet.")
+                        } else {
+                            DebugLine("Tag schema", "v${contextSnapshot.tagSchemaVersion}")
+                            DebugLine("Prompt API", contextSnapshot.capabilities.promptApiStatus.storageValue)
+                            DebugLine(
+                                "Structured Output",
+                                contextSnapshot.capabilities.structuredOutputAvailable?.toString() ?: "Unknown",
+                            )
+                            DebugLine(
+                                "System Instructions",
+                                contextSnapshot.capabilities.systemInstructionAvailable?.toString() ?: "Unknown",
+                            )
+                            DebugLine("Base model", contextSnapshot.capabilities.baseModelName ?: "Unavailable / not exposed")
+                            DebugLine("Selected interpreter", contextSnapshot.selectedInterpreter)
+                            DebugLine("Recent interpretation runs", contextSnapshot.recentRuns.size.toString())
+                            contextSnapshot.capabilities.probeFailure?.let { failure ->
+                                DebugLine("Capability probe", "Fallback-safe · $failure")
+                            }
+                            contextSnapshot.recentRuns.take(8).forEach { run ->
+                                HorizontalDivider()
+                                DebugLine("Source", "${run.sourceScope} · ${run.sourceTextHash.take(12)}…")
+                                DebugLine("Interpreter", "${run.interpreterKind} · ${run.interpreterImplementationVersion}")
+                                DebugLine("Outcome", run.executionOutcome)
+                                run.actualBaseModelName?.let { model -> DebugLine("Runtime model", model) }
+                                run.fallbackReason?.let { reason -> DebugLine("Fallback", reason) }
+                                DebugLine("Annotations", run.annotations.size.toString())
+                                run.annotations.take(8).forEach { annotation ->
+                                    Text(
+                                        "${annotation.tagId} · ${annotation.valueType} · ${annotation.inferenceEligibility}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            Text(
+                                "Raw note text is intentionally omitted from diagnostics.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+
+                item {
                     DebugCard("Lifecycle and diagnostics") {
                         Button(
                             onClick = viewModel::recompute,
