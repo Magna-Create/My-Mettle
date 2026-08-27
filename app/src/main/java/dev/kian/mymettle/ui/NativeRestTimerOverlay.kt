@@ -6,6 +6,10 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,16 +23,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -37,7 +39,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -66,7 +71,8 @@ fun NativeRestTimerOverlay() {
     val snapshot by controller.state.collectAsState()
     var expanded by remember { mutableStateOf(false) }
     var remainingSeconds by remember { mutableIntStateOf(snapshot.remainingSeconds()) }
-    var elapsedFraction by remember { mutableStateOf(snapshot.elapsedFraction()) }
+    val elapsedProgress = remember { Animatable(snapshot.elapsedFraction()) }
+    val elapsedProgressState = elapsedProgress.asState()
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     LaunchedEffect(Unit) { controller.refresh() }
@@ -83,13 +89,42 @@ fun NativeRestTimerOverlay() {
         if (snapshot.phase == RestTimerPhase.READY) expanded = true
         if (snapshot.phase == RestTimerPhase.IDLE) expanded = false
     }
+
+    // The numeric clock only changes at second boundaries; do not wake the full sheet four times a
+    // second. Align the next update to the current remaining-millisecond boundary instead.
     LaunchedEffect(snapshot.phase, snapshot.endElapsedRealtime, snapshot.pausedRemainingMillis) {
         remainingSeconds = snapshot.remainingSeconds()
-        elapsedFraction = snapshot.elapsedFraction()
         while (snapshot.phase == RestTimerPhase.RUNNING && remainingSeconds > 0) {
-            delay(250)
+            val remainingMillis = snapshot.remainingMillis()
+            val untilNextSecond = (remainingMillis % 1_000L).let { remainder ->
+                if (remainder == 0L) 1_000L else remainder
+            }
+            delay(untilNextSecond.coerceAtLeast(1L))
             remainingSeconds = snapshot.remainingSeconds()
-            elapsedFraction = snapshot.elapsedFraction()
+        }
+    }
+
+    // The visual progress track is genuinely continuous. Let Compose's frame clock interpolate it
+    // and read the State only in Canvas draw, so 120 Hz-capable rendering does not mean 120
+    // recompositions of the ModalBottomSheet.
+    LaunchedEffect(
+        snapshot.phase,
+        snapshot.endElapsedRealtime,
+        snapshot.pausedRemainingMillis,
+        snapshot.totalDurationMillis,
+    ) {
+        elapsedProgress.snapTo(snapshot.elapsedFraction())
+        if (snapshot.phase == RestTimerPhase.RUNNING) {
+            val remainingMillis = snapshot.remainingMillis()
+            if (remainingMillis > 0L) {
+                elapsedProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = remainingMillis.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                        easing = LinearEasing,
+                    ),
+                )
+            }
         }
     }
 
@@ -125,17 +160,7 @@ fun NativeRestTimerOverlay() {
                     fontWeight = FontWeight.Medium,
                 )
                 Spacer(Modifier.height(8.dp))
-                Slider(
-                    value = elapsedFraction,
-                    onValueChange = {},
-                    enabled = false,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = SliderDefaults.colors(
-                        disabledThumbColor = Color(0xFFBBEBED),
-                        disabledActiveTrackColor = Color(0xFFA0CFD0),
-                        disabledInactiveTrackColor = Color(0xFFE1E4DA).copy(alpha = .32f),
-                    ),
-                )
+                TimerProgressTrack(elapsedProgressState)
                 Spacer(Modifier.height(10.dp))
 
                 if (snapshot.phase == RestTimerPhase.READY) {
@@ -172,6 +197,49 @@ fun NativeRestTimerOverlay() {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TimerProgressTrack(progress: State<Float>) {
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
+    ) {
+        val thumbRadius = 10.dp.toPx()
+        val trackStroke = 4.dp.toPx()
+        val startX = thumbRadius
+        val endX = size.width - thumbRadius
+        val centreY = size.height / 2f
+        val fraction = progress.value.coerceIn(0f, 1f)
+        val activeX = startX + ((endX - startX) * fraction)
+
+        drawLine(
+            color = Color(0xFFE1E4DA).copy(alpha = .32f),
+            start = Offset(startX, centreY),
+            end = Offset(endX, centreY),
+            strokeWidth = trackStroke,
+            cap = StrokeCap.Round,
+        )
+        drawLine(
+            color = Color(0xFFA0CFD0),
+            start = Offset(startX, centreY),
+            end = Offset(activeX, centreY),
+            strokeWidth = trackStroke,
+            cap = StrokeCap.Round,
+        )
+        drawCircle(
+            color = Color(0xFFBBEBED),
+            radius = thumbRadius,
+            center = Offset(activeX, centreY),
+            style = Stroke(width = 2.dp.toPx()),
+        )
+        drawCircle(
+            color = Color(0xFFBBEBED).copy(alpha = .18f),
+            radius = thumbRadius - 2.dp.toPx(),
+            center = Offset(activeX, centreY),
+        )
     }
 }
 
