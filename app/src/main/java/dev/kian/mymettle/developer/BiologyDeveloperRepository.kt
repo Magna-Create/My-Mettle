@@ -73,7 +73,7 @@ class BiologyDeveloperRepository(
 
         return BiologyDeveloperSnapshot(
             reference = ReferenceDebugStatus(
-                schemaVersion = SCHEMA_VERSION,
+                schemaVersion = database.openHelper.readableDatabase.version,
                 muscleCount = muscles.size,
                 segmentCount = segments.size,
                 priorCount = referenceProfile?.let { referenceDao.priors(it.id).size } ?: 0,
@@ -95,10 +95,6 @@ class BiologyDeveloperRepository(
         .put("programme", JSONArray(snapshot.days.map(ProgrammeDayDebug::toJson)))
         .put("inference", snapshot.inference?.toJson(snapshot.executionProfileLabels) ?: JSONObject.NULL)
         .toString(2)
-
-    private companion object {
-        const val SCHEMA_VERSION = 11
-    }
 }
 
 private fun ReferenceDebugStatus.toJson(): JSONObject = JSONObject()
