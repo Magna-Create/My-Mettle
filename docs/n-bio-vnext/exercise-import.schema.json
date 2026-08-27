@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mymettle.dev/schema/exercise-authoring/v1",
+  "title": "My Mettle Exercise Authoring Exchange",
+  "description": "Semantic proposal format. This is not a Room/database dump and schema validity does not imply biological trust.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "formatVersion", "exercise", "profile"],
+  "properties": {
+    "format": { "const": "my-mettle-exercise-authoring" },
+    "formatVersion": { "const": 1 },
+    "exercise": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stableConceptKey", "name", "conceptDefinition"],
+      "properties": {
+        "stableConceptKey": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{2,79}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "conceptDefinition": { "type": "string", "minLength": 1, "maxLength": 1000 }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name", "semanticVersionIntent", "isDefault", "metricFamily", "performanceSchema",
+        "resistance", "entryBasis", "lateralityMode", "equipment", "mechanics", "recruitment"
+      ],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "semanticVersionIntent": {
+          "type": "string",
+          "enum": ["create_new_immutable_profile", "propose_successor_immutable_version"]
+        },
+        "isDefault": { "type": "boolean" },
+        "metricFamily": {
+          "type": "string",
+          "enum": [
+            "dynamic_resistance", "bodyweight_resistance", "loaded_hold", "duration_only",
+            "repeated_contraction", "power_duration", "speed_duration", "device_ordinal"
+          ]
+        },
+        "performanceSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["metrics"],
+          "properties": {
+            "metrics": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["metric", "required", "targetable", "defaultUnit"],
+                "properties": {
+                  "metric": {
+                    "type": "string",
+                    "enum": [
+                      "external_load", "assistance", "repetitions", "duration", "distance", "speed",
+                      "pace", "incline_grade", "machine_level", "power", "cadence", "steps", "floors",
+                      "elevation_gain"
+                    ]
+                  },
+                  "required": { "type": "boolean" },
+                  "targetable": { "type": "boolean" },
+                  "defaultUnit": {
+                    "type": "string",
+                    "enum": [
+                      "kg", "lb", "rep", "s", "min", "m", "km", "mi", "m/s", "km/h", "mph",
+                      "s/m", "min/km", "min/mi", "fraction", "percent", "machine_level", "W",
+                      "events/min", "step", "floor"
+                    ]
+                  },
+                  "minimumCanonical": { "type": ["number", "null"] },
+                  "maximumCanonical": { "type": ["number", "null"] },
+                  "incrementCanonical": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+                  "allowedCanonicalValues": {
+                    "type": "array",
+                    "items": { "type": "number" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "resistance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["semantics", "bodyweightCoefficient", "externalLoadCoefficient", "assistanceCoefficient", "modelVersion"],
+          "properties": {
+            "semantics": {
+              "type": "string",
+              "enum": ["external", "assistance", "bodyweight", "bodyweight_plus_external", "none", "device_ordinal"]
+            },
+            "bodyweightCoefficient": { "type": "number", "minimum": 0 },
+            "externalLoadCoefficient": { "type": "number", "minimum": 0 },
+            "assistanceCoefficient": { "type": "number", "minimum": 0 },
+            "modelVersion": { "type": "string", "minLength": 1 }
+          }
+        },
+        "entryBasis": { "type": "string", "enum": ["total", "per_hand", "per_side"] },
+        "implementCount": { "type": ["integer", "null"], "minimum": 1 },
+        "lateralityMode": {
+          "type": "string",
+          "enum": ["bilateral_only", "unilateral", "alternating_allowed", "not_applicable", "unknown"]
+        },
+        "equipment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "identity", "calibration"],
+          "properties": {
+            "type": { "type": ["string", "null"] },
+            "identity": { "type": ["string", "null"] },
+            "calibration": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["status", "physicalUnit"],
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": ["calibrated_physical", "uncalibrated_ordinal", "not_applicable"]
+                },
+                "physicalUnit": { "type": ["string", "null"] }
+              }
+            }
+          }
+        },
+        "mechanics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "movementPattern", "jointActions", "kineticChain", "contractionType", "romClass",
+            "techniqueClass", "resistanceCurveClass", "gripSupportConstraints"
+          ],
+          "properties": {
+            "movementPattern": { "type": ["string", "null"] },
+            "jointActions": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+            "kineticChain": { "type": ["string", "null"] },
+            "contractionType": { "type": ["string", "null"] },
+            "romClass": { "type": ["string", "null"] },
+            "techniqueClass": { "type": ["string", "null"] },
+            "resistanceCurveClass": { "type": ["string", "null"] },
+            "gripSupportConstraints": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+          }
+        },
+        "recruitment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["modelVersion", "profileProvenance", "allocations"],
+          "properties": {
+            "modelVersion": { "type": "string", "minLength": 1 },
+            "profileProvenance": { "type": "string", "minLength": 1 },
+            "allocations": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "segmentId", "segmentName", "role", "weighting", "confidence", "provenance",
+                  "applicableRom", "applicableTechnique", "resistanceCurveClass"
+                ],
+                "properties": {
+                  "segmentId": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+                  "segmentName": { "type": "string", "minLength": 1 },
+                  "role": { "type": "string", "enum": ["prime", "synergist", "stabiliser"] },
+                  "weighting": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "applicableRom": { "type": ["string", "null"] },
+                  "applicableTechnique": { "type": ["string", "null"] },
+                  "resistanceCurveClass": { "type": ["string", "null"] },
+                  "provenance": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["authorType", "evidenceStatus", "sourceReferences", "biomechanicalBasis", "modelToolIdentity"],
+                    "properties": {
+                      "authorType": { "type": "string", "enum": ["human", "ai", "mixed", "unknown"] },
+                      "evidenceStatus": {
+                        "type": "string",
+                        "enum": ["external_evidence", "reasoning_based_proposal", "source_unknown"]
+                      },
+                      "sourceReferences": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+                      "biomechanicalBasis": { "type": "string", "minLength": 1 },
+                      "modelToolIdentity": { "type": ["string", "null"] }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
