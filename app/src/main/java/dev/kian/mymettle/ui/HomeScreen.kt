@@ -1,5 +1,7 @@
 package dev.kian.mymettle.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,10 +15,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,10 +30,12 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
 import dev.kian.mymettle.ui.theme.MettleBackground
 import dev.kian.mymettle.ui.theme.MettleOnPrimaryContainer
 import dev.kian.mymettle.ui.theme.MettleOnSurface
@@ -73,6 +81,17 @@ fun HomeScreen(
     onOpenAccount: () -> Unit,
 ) {
     val state = viewModel.uiState
+    val context = LocalContext.current
+    val importFactory = remember(context) { LegacyImportViewModelFactory(context) }
+    val legacyImportViewModel: LegacyImportViewModel = composeViewModel(factory = importFactory)
+    val importState = legacyImportViewModel.uiState
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) legacyImportViewModel.importBackup(uri)
+    }
+
+    LaunchedEffect(importState.completedGeneration) {
+        if (importState.completedGeneration > 0) viewModel.refresh()
+    }
 
     when {
         state.loading && state.workout == null -> {
@@ -86,7 +105,12 @@ fun HomeScreen(
 
         !state.hasProgramme -> {
             ProgrammeBootstrapHome(
-                onOpenWorkout = onOpenWorkout,
+                importing = importState.importing,
+                onImportLite = {
+                    if (!importState.importing) {
+                        importLauncher.launch(arrayOf("application/json", "text/*"))
+                    }
+                },
                 onOpenSettings = onOpenSettings,
                 onOpenAccount = onOpenAccount,
             )
@@ -144,11 +168,25 @@ fun HomeScreen(
             )
         }
     }
+
+    importState.error?.let { error ->
+        AlertDialog(
+            onDismissRequest = legacyImportViewModel::dismissError,
+            title = { Text("Couldn’t import Lite backup") },
+            text = { Text(error) },
+            confirmButton = {
+                TextButton(onClick = legacyImportViewModel::dismissError) {
+                    Text("OK")
+                }
+            },
+        )
+    }
 }
 
 @Composable
 private fun ProgrammeBootstrapHome(
-    onOpenWorkout: () -> Unit,
+    importing: Boolean,
+    onImportLite: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccount: () -> Unit,
 ) {
@@ -205,7 +243,7 @@ private fun ProgrammeBootstrapHome(
                 shape = RoundedCornerShape(28.dp),
                 tint = MettleOnPrimaryContainer.copy(alpha = 0.055f),
                 shadowElevation = 4.dp,
-                onClick = onOpenWorkout,
+                onClick = { if (!importing) onImportLite() },
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Text(
@@ -216,7 +254,11 @@ private fun ProgrammeBootstrapHome(
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Import your existing programme before the first Daily Update can be prepared.",
+                        text = if (importing) {
+                            "Importing your Lite backup…"
+                        } else {
+                            "Import your existing programme before the first Daily Update can be prepared."
+                        },
                         color = MettleOnSurfaceVariant,
                         fontSize = 14.sp,
                         lineHeight = 20.sp,
