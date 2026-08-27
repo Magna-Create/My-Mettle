@@ -256,16 +256,32 @@ class N2WorkoutViewModel(
                     laterality = laterality,
                     logged = logged,
                 )
-                repository.activeWorkout(sessionId)
-            }.onSuccess { workout ->
-                uiState = uiState.copy(workout = workout, error = null)
-                val refreshedSet = workout.exercises
-                    .firstOrNull { it.entity.id == exercise.entity.id }
-                    ?.sets
-                    ?.firstOrNull { it.id == setId }
+            }.onSuccess { updatedSet ->
+                // saveSet already returns the complete persisted read-model for this set. Do not
+                // reload the entire active workout (all exercise profiles, prescriptions, history,
+                // cues and setup media) on the hottest input path just to discover one changed set.
+                // Merge the immutable set snapshot into whatever current workout state is newest.
+                val currentWorkout = uiState.workout
+                if (currentWorkout?.session?.id != sessionId) return@onSuccess
+                val updatedExercises = currentWorkout.exercises.map { currentExercise ->
+                    if (currentExercise.entity.id != exercise.entity.id) {
+                        currentExercise
+                    } else {
+                        currentExercise.copy(
+                            sets = currentExercise.sets.map { currentSet ->
+                                if (currentSet.id == setId) updatedSet else currentSet
+                            },
+                        )
+                    }
+                }
+                uiState = uiState.copy(
+                    workout = currentWorkout.copy(exercises = updatedExercises),
+                    error = null,
+                )
+
                 val logicalSetJustCompleted = logged &&
                     !wasLogicalSetComplete &&
-                    refreshedSet?.isCompleteFor(resolvedLateralityMode) == true
+                    updatedSet.isCompleteFor(resolvedLateralityMode)
                 if (logicalSetJustCompleted) {
                     restTimer.start(
                         exerciseName = exercise.entity.exerciseNameSnapshot,
