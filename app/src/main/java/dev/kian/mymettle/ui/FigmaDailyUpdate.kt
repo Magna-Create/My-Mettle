@@ -1,7 +1,6 @@
 package dev.kian.mymettle.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,7 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -37,13 +34,11 @@ import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.draw.innerShadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.shadow.Shadow
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -199,14 +194,8 @@ internal fun FigmaDailyUpdateScreen(
 
 @Composable
 private fun FigmaDailyViewport(content: @Composable (FigmaMetrics) -> Unit) {
-    val widthClass = LocalMettleWindowWidthClass.current
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val viewportWidth = when (widthClass) {
-            MettleWindowWidthClass.Compact -> minOf(maxWidth, FigmaReferenceWidth.dp)
-            MettleWindowWidthClass.Medium,
-            MettleWindowWidthClass.Expanded,
-            -> minOf(maxWidth, FigmaReferenceWidth.dp)
-        }
+        val viewportWidth = minOf(maxWidth, FigmaReferenceWidth.dp)
         val metrics = FigmaMetrics(
             scale = (viewportWidth.value / FigmaReferenceWidth).coerceAtMost(1f),
         )
@@ -525,8 +514,6 @@ private fun FigmaSessionActions(
             .height(metrics.dp(72)),
     ) {
         if (beginEnabled) {
-            // Keep the Figma glow treatment but tighten its source so the bloom remains
-            // concentrated beneath the centre of the primary action.
             Box(
                 modifier = Modifier
                     .offset(x = metrics.dp(295.1), y = metrics.dp(26.481))
@@ -645,99 +632,6 @@ private fun FigmaDayButton(
 }
 
 @Composable
-fun MettleBottomToolbar(
-    selectedIndex: Int,
-    onOpenHome: () -> Unit,
-    onOpenWorkout: () -> Unit,
-    onOpenHistory: () -> Unit,
-    onOpenLibrary: () -> Unit,
-) {
-    val destinations = listOf(
-        FigmaToolbarDestination("Daily Update", MettleIcons.Cycle, 23f, 23f, onOpenHome),
-        FigmaToolbarDestination("Workout", MettleIcons.SportsMartialArts, 20f, 23f, onOpenWorkout),
-        FigmaToolbarDestination("Progress", MettleIcons.AddChart, 20f, 20f, onOpenHistory),
-        FigmaToolbarDestination("Exercise library", MettleIcons.CardsStack, 23f, 20f, onOpenLibrary),
-    )
-
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding(),
-    ) {
-        val viewportWidth = minOf(maxWidth, FigmaReferenceWidth.dp)
-        val metrics = FigmaMetrics(
-            scale = (viewportWidth.value / FigmaReferenceWidth).coerceAtMost(1f),
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = metrics.dp(6)),
-            contentAlignment = Alignment.Center,
-        ) {
-            FigmaTintedSurface(
-                modifier = Modifier
-                    .width(metrics.dp(220))
-                    .height(metrics.dp(64)),
-                shape = CircleShape,
-                // The global hotbar should inherit its colour from whatever is physically behind
-                // it. Keep the tint nearly neutral and use edge/refraction/shadow for separation.
-                fill = Color.White.copy(alpha = 0.035f),
-                shadowElevation = metrics.dp(7),
-                shadowAlpha = 0.24f,
-                shadowBlurRadius = metrics.dp(14),
-                shadowOffsetY = metrics.dp(3),
-                shadowSpread = metrics.dp(0.5),
-                glassBlurRadius = metrics.dp(5.5),
-                glassRefractionDisplacement = metrics.dp(4.8),
-                glassRefractionStrength = 0.38f,
-                borderWidth = metrics.dp(0.65),
-                borderColor = Color.White.copy(alpha = 0.16f),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = metrics.dp(8)),
-                    horizontalArrangement = Arrangement.spacedBy(metrics.dp(4)),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    destinations.forEachIndexed { index, destination ->
-                        val isSelected = selectedIndex == index
-                        Box(
-                            modifier = Modifier
-                                .width(metrics.dp(48))
-                                .fillMaxHeight()
-                                .clickable(role = Role.Button, onClick = destination.onClick),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = destination.icon,
-                                contentDescription = destination.contentDescription,
-                                tint = Color.White.copy(alpha = if (isSelected) 1f else 0.8f),
-                                modifier = Modifier.size(
-                                    DpSize(
-                                        metrics.dp(destination.width),
-                                        metrics.dp(destination.height),
-                                    ),
-                                ),
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-private data class FigmaToolbarDestination(
-    val contentDescription: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val width: Float,
-    val height: Float,
-    val onClick: () -> Unit,
-)
-
-@Composable
 private fun FigmaTintedSurface(
     modifier: Modifier,
     shape: RoundedCornerShape,
@@ -795,9 +689,6 @@ private fun FigmaTintedSurface(
             .then(innerShadowModifier),
     ) {
         if (useSharedControlGlass) {
-            // Interactive surfaces use the same optical material as the global hotbar. Keep the
-            // component's existing outer/inset shadow treatment above, and only translate its old
-            // paint-heavy tint into a much lighter semantic hue.
             MettleControlGlassSurface(
                 modifier = Modifier.fillMaxSize(),
                 shape = shape,
@@ -817,9 +708,6 @@ private fun FigmaTintedSurface(
                 blurRadius = glassBlurRadius,
                 refractionDisplacement = glassRefractionDisplacement,
                 refractionStrength = glassRefractionStrength,
-                // For Figma shadows with "show behind translucent areas" enabled, the
-                // precise drop shadow is drawn on the outer layer above. Where Figma disables
-                // that option (Begin Session), retain a small platform shadow instead.
                 shadowElevation = if (shadowBehindTranslucent) 0.dp else shadowElevation,
                 borderWidth = borderWidth,
                 borderColor = borderColor,
