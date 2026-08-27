@@ -152,7 +152,12 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$cameraXVersion")
     implementation("androidx.camera:camera-view:$cameraXVersion")
 
+    // Current maintained on-device Prompt API. Structured Output is KSP-generated and is used
+    // only when the runtime reports the feature as available; Save never initiates a download.
+    implementation("com.google.mlkit:genai-prompt:1.0.0-beta4")
+
     ksp(libs.androidx.room.compiler)
+    ksp("com.google.mlkit:genai-schema-compiler:1.0.0-alpha1")
 
     testImplementation(kotlin("test-junit"))
     testImplementation("org.json:json:20250517")
