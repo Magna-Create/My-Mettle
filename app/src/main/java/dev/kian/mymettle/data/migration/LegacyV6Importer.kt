@@ -21,6 +21,9 @@ class LegacyV6Importer(
     private val photoImporter: LegacySetupPhotoImporter = LegacySetupPhotoImporter(context.applicationContext),
 ) {
     suspend fun importJson(json: String): LegacyImportReport {
+        if (json.length > MAX_BACKUP_CHARACTERS) {
+            throw LegacyImportException("Lite backup is too large to import safely.")
+        }
         val snapshot = LegacyV6BackupReader.read(json)
         LegacyTranslationContract.requireActiveRecruitment(snapshot)
         val dao = database.workoutDao()
@@ -65,4 +68,7 @@ class LegacyV6Importer(
         )
     }
 
+    private companion object {
+        const val MAX_BACKUP_CHARACTERS = 64 * 1024 * 1024
+    }
 }
