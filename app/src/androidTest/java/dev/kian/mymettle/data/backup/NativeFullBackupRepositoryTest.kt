@@ -5,13 +5,13 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.kian.mymettle.data.local.MyMettleDatabase
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
@@ -19,7 +19,7 @@ class NativeFullBackupRepositoryTest {
     private lateinit var database: MyMettleDatabase
     private lateinit var repository: NativeFullBackupRepository
 
-    @BeforeTest
+    @Before
     fun setUp() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         database = Room.inMemoryDatabaseBuilder(context, MyMettleDatabase::class.java).build()
@@ -27,7 +27,7 @@ class NativeFullBackupRepositoryTest {
         repository = NativeFullBackupRepository(database)
     }
 
-    @AfterTest
+    @After
     fun tearDown() {
         database.close()
     }
