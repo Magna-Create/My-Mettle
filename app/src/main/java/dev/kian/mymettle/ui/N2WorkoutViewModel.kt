@@ -7,6 +7,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import dev.kian.mymettle.context.CanonicalNoteSource
+import dev.kian.mymettle.context.ContextInterpretationCoordinator
 import dev.kian.mymettle.data.local.DatabaseProvider
 import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
 import dev.kian.mymettle.data.local.entity.SessionReviewEntity
@@ -27,10 +29,10 @@ import dev.kian.mymettle.workout.SessionAchievement
 import dev.kian.mymettle.workout.SessionAchievementScorer
 import dev.kian.mymettle.workout.SessionOutcomeRepository
 import dev.kian.mymettle.workout.TrainingMode
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 enum class WorkoutSurface {
     SETS,
@@ -73,6 +75,7 @@ class N2WorkoutViewModel(
     private val historyRepository: HistoryRepository,
     private val libraryRepository: ExerciseLibraryRepository,
     private val restTimer: RestTimerController,
+    private val contextInterpretationCoordinator: ContextInterpretationCoordinator? = null,
 ) : ViewModel() {
     var uiState by mutableStateOf(N2WorkoutUiState())
         private set
@@ -507,6 +510,9 @@ class N2WorkoutViewModel(
                     reflection = reflection,
                     reflectionTarget = null,
                 )
+                CanonicalNoteSource.from(reflection, target.entity.exerciseNameSnapshot)?.let { source ->
+                    viewModelScope.launch { contextInterpretationCoordinator?.interpretSaved(source) }
+                }
             }.onFailure { error ->
                 uiState = uiState.copy(savingReflection = false)
                 showError(error)
@@ -571,6 +577,9 @@ class N2WorkoutViewModel(
                 )
             }.onSuccess { review ->
                 uiState = uiState.copy(savingReview = false, sessionReview = review)
+                CanonicalNoteSource.from(review)?.let { source ->
+                    viewModelScope.launch { contextInterpretationCoordinator?.interpretSaved(source) }
+                }
             }.onFailure { error ->
                 uiState = uiState.copy(savingReview = false)
                 showError(error)
@@ -669,6 +678,7 @@ class N2WorkoutViewModelFactory(context: Context) : ViewModelProvider.Factory {
             historyRepository = HistoryRepository(database),
             libraryRepository = ExerciseLibraryRepository(appContext, database),
             restTimer = RestTimerController.get(appContext),
+            contextInterpretationCoordinator = ContextInterpretationCoordinator(database),
         ) as T
     }
 }
