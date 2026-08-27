@@ -14,7 +14,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 data class NativeBackupUiState(
+    val exporting: Boolean = false,
     val restoring: Boolean = false,
+    val exportedGeneration: Int = 0,
     val completedGeneration: Int = 0,
     val error: String? = null,
 )
@@ -26,8 +28,35 @@ class NativeBackupViewModel(
     var uiState by androidx.compose.runtime.mutableStateOf(NativeBackupUiState())
         private set
 
+    fun exportBackup(uri: Uri) {
+        if (uiState.exporting || uiState.restoring) return
+        viewModelScope.launch {
+            uiState = uiState.copy(exporting = true, error = null)
+            runCatching {
+                val json = backups.exportJson()
+                withContext(Dispatchers.IO) {
+                    appContext.contentResolver.openOutputStream(uri, "wt")
+                        ?.bufferedWriter(Charsets.UTF_8)
+                        ?.use { it.write(json) }
+                        ?: error("Could not open the selected destination for the Native backup.")
+                }
+            }.onSuccess {
+                uiState = uiState.copy(
+                    exporting = false,
+                    exportedGeneration = uiState.exportedGeneration + 1,
+                    error = null,
+                )
+            }.onFailure { error ->
+                uiState = uiState.copy(
+                    exporting = false,
+                    error = error.message ?: error::class.java.simpleName,
+                )
+            }
+        }
+    }
+
     fun restoreBackup(uri: Uri) {
-        if (uiState.restoring) return
+        if (uiState.exporting || uiState.restoring) return
         viewModelScope.launch {
             uiState = uiState.copy(restoring = true, error = null)
             runCatching {

@@ -48,6 +48,7 @@ private const val FigmaDiagnosticReferenceHeight = 983f
 @Composable
 fun SettingsScreen(
     onOpenDeveloper: () -> Unit,
+    onOpenBackups: () -> Unit,
     onOpenAccount: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -150,6 +151,31 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+
+                item {
+                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Text(
+                                "Backups",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                "Export a complete Native database snapshot before changing Room schema versions.",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            MettleGlassActionButton(
+                                onClick = onOpenBackups,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Open backups")
+                            }
+                        }
+                    }
                 }
 
                 if (BuildConfig.DEBUG) {
