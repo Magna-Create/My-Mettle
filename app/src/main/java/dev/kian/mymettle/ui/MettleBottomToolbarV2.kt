@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -56,7 +57,7 @@ internal fun MettleBottomToolbarV2(
     onLongPressWorkout: () -> Unit = onOpenWorkout,
     leadingIcon: ImageVector = MettleIcons.QuickSelect,
     leadingDescription: String = "Quick select",
-    leadingProgress: Float? = null,
+    leadingProgress: State<Float>? = null,
     showWorkoutControls: Boolean = true,
     transparentMaterial: Boolean = false,
     preserveEdgeDefinition: Boolean = false,
@@ -93,7 +94,7 @@ internal fun MettleBottomToolbarV2(
                     preserveEdgeDefinition = preserveEdgeDefinition,
                 ) {
                     Canvas(Modifier.fillMaxSize()) {
-                        leadingProgress?.let { progress ->
+                        leadingProgress?.value?.let { progress ->
                             val stroke = scaled(4).toPx()
                             drawArc(
                                 brush = Brush.sweepGradient(listOf(Color(0xFFBBEBED), Color(0xFFC3EFAD))),
