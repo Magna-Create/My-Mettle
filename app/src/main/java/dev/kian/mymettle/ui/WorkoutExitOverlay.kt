@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,7 +58,6 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 private const val ExitReferenceWidth = 453f
-private const val ExitReferenceHeight = 983f
 
 private val ExitInk = Color(0xFF11140F)
 private val ExitField = Color(0xFF5E7A7A)
@@ -122,8 +122,6 @@ internal fun WorkoutExitOverlay(
     ) {
         val scale = (maxWidth.value / ExitReferenceWidth).coerceAtMost(1f)
         val metrics = ExitMetrics(scale)
-        val widthPx = constraints.maxWidth.toFloat()
-        val heightPx = constraints.maxHeight.toFloat()
         val originRoot = overlayOriginRoot
 
         val targets = remember {
@@ -155,21 +153,30 @@ internal fun WorkoutExitOverlay(
         val dockLocal = sharedGesture.dockCentreRoot
             ?.let { it - originRoot }
             ?: fallbackDock
-        val stateHandleLocal = sharedGesture.handleCentreRoot
-            ?.let { it - originRoot }
-            ?: dockLocal
 
         var settling by remember { mutableStateOf(false) }
         var settleStart by remember { mutableStateOf<Offset?>(null) }
-        val settleProgress by animateFloatAsState(
+        val settleProgress = animateFloatAsState(
             targetValue = if (settling) 1f else 0f,
             animationSpec = spring(dampingRatio = .72f, stiffness = 440f),
             label = "exit-handle-settle",
         )
-        val handleLocal = settleStart?.takeIf { settling }?.let { start ->
-            start + (dockLocal - start) * settleProgress
-        } ?: stateHandleLocal
-        val active = if (settling) null else resolveTarget(handleLocal)
+
+        // Raw handle movement is pointer-rate state. Resolve it to the coarse semantic choice before
+        // composition observes it, so moving within one target region does not recompose the entire
+        // exit overlay. The exact handle position is read later in the offset layout lambda.
+        val active by remember(settling, originRoot, dockLocal, metrics.scale, density.density) {
+            derivedStateOf {
+                if (settling) {
+                    null
+                } else {
+                    val handle = sharedGesture.handleCentreRoot
+                        ?.let { it - originRoot }
+                        ?: dockLocal
+                    resolveTarget(handle)
+                }
+            }
+        }
         val dangerBlend by animateFloatAsState(
             targetValue = if (active == ExitChoice.DELETE) 1f else 0f,
             animationSpec = spring(dampingRatio = .88f, stiffness = 360f),
@@ -184,8 +191,12 @@ internal fun WorkoutExitOverlay(
             previousHapticChoice = active
         }
 
+        fun liveHandleLocal(): Offset = sharedGesture.handleCentreRoot
+            ?.let { it - originRoot }
+            ?: dockLocal
+
         fun settleHome() {
-            settleStart = stateHandleLocal
+            settleStart = liveHandleLocal()
             settling = true
         }
 
@@ -306,10 +317,19 @@ internal fun WorkoutExitOverlay(
             Box(
                 modifier = Modifier
                     .offset {
+                        // High-frequency drag/settle state is intentionally read in layout rather
+                        // than composition. At 120 Hz this repositions the handle without rebuilding
+                        // the header, targets, text or glass hierarchy for every pointer sample.
+                        val liveHandle = sharedGesture.handleCentreRoot
+                            ?.let { it - originRoot }
+                            ?: dockLocal
+                        val handle = settleStart?.takeIf { settling }?.let { start ->
+                            start + (dockLocal - start) * settleProgress.value
+                        } ?: liveHandle
                         val half = with(density) { handleHitSize.toPx() / 2f }
                         IntOffset(
-                            (handleLocal.x - half).roundToInt(),
-                            (handleLocal.y - half).roundToInt(),
+                            (handle.x - half).roundToInt(),
+                            (handle.y - half).roundToInt(),
                         )
                     }
                     .size(handleHitSize)
