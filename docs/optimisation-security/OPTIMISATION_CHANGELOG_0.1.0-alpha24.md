@@ -121,6 +121,8 @@ Commit: `4fa25b607e820bcd9be283837a18a0828b273e50`
 
 Added `docs/optimisation-security/README.md` defining the versioned maintenance-log convention and separating optimisation/security passes from UI passes.
 
+The initial alpha24 changelog was committed as `acdc47f1ee0711f32900bda58e6c8d4a52a417f5`; that exact head was used for the final implementation validation below.
+
 ## Deliberately deferred
 
 These are known items, not forgotten findings.
@@ -169,11 +171,27 @@ Decision: low-priority follow-up while the tool remains debug/development-orient
 
 ## Validation
 
-The branch uses the repository Android CI workflow. The workflow itself was strengthened during this pass to run unit tests, lint, debug assembly and release assembly on every `agent/**` push.
+Validation head: `acdc47f1ee0711f32900bda58e6c8d4a52a417f5`
 
-Final alpha24 optimisation CI result: **pending at the time this log was first written**. Update this section with the final workflow run and conclusion before merge.
+GitHub Actions Android CI push run **#337** completed successfully on that exact implementation/changelog head.
+
+Successful checks in the strengthened workflow:
+
+- checkout and JDK/Gradle setup;
+- Android SDK 37 installation;
+- generated biological reference-asset verification;
+- `:app:testDebugUnitTest`;
+- `:app:lintDebug`;
+- `:app:assembleDebug`;
+- `:app:assembleRelease`.
+
+The combined test/lint/debug/release step completed successfully, and the overall job concluded `success`.
+
+A prior strengthened run (#333) also passed before the final schema-reporting and total-backup-size commits, giving an additional checkpoint that the pruning and majority of security changes were already healthy independently.
 
 No instrumentation/emulator suite is run by the hosted workflow; N-BIO device acceptance remains a separate on-device/developer verification path.
+
+This validation-record update is documentation-only and intentionally uses a CI-skip commit marker; it does not alter the validated app/build implementation.
 
 ## Rollback strategy
 
