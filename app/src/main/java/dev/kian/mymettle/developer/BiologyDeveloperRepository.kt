@@ -123,7 +123,7 @@ class BiologyDeveloperRepository(
         .toString(2)
 
     private companion object {
-        const val SCHEMA_VERSION = 13
+        const val SCHEMA_VERSION = 14
     }
 }
 
