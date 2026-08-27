@@ -115,7 +115,7 @@ class ExerciseImportContractTest {
     fun malformedProfileIsRejected() {
         val json = exampleJson()
         json.getJSONObject("profile").remove("mechanics")
-        assertFailsWith<ExerciseImportSemanticException> { validator.validate(json) }
+        assertFailsWith<ExerciseImportSemanticException> { validator.validate(json.toString()) }
     }
 
     @Test
@@ -168,7 +168,7 @@ class ExerciseImportContractTest {
         assertTrue(schema.contains("machine_level"))
         assertTrue(guide.contains("ExecutionProfileAuthoringRepository"))
         assertTrue(guide.contains("muscle-local"))
-        assertTrue(guide.contains("DO NOT normalise", ignoreCase = true) || guide.contains("Do not normalise", ignoreCase = true))
+        assertTrue(guide.contains("must never be normalised to 100%", ignoreCase = true))
         assertFalse(schema.contains("Room PK"))
         assertFalse(example.contains("databaseSchemaVersion"))
         assertFalse(example.contains("Lite"))
