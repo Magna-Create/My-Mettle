@@ -19,8 +19,13 @@ import dev.kian.mymettle.developer.ContextDeveloperSnapshot
 import dev.kian.mymettle.developer.NBio6DeviceVerificationReport
 import dev.kian.mymettle.developer.NBio6DeviceVerificationRepository
 import dev.kian.mymettle.developer.NBio6LiteBackupVerificationReport
+import dev.kian.mymettle.developer.NBio7BAcceptanceProgress
+import dev.kian.mymettle.developer.NBio7BAcceptanceReport
+import dev.kian.mymettle.developer.NBio7BAcceptanceRepository
 import dev.kian.mymettle.workout.TrainingMode
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class BiologyDeveloperUiState(
     val loading: Boolean = true,
@@ -33,6 +38,9 @@ data class BiologyDeveloperUiState(
     val nBio6DeviceReport: NBio6DeviceVerificationReport? = null,
     val nBio6LiteVerificationRunning: Boolean = false,
     val nBio6LiteReport: NBio6LiteBackupVerificationReport? = null,
+    val nBio7BAcceptanceRunning: Boolean = false,
+    val nBio7BAcceptanceProgress: NBio7BAcceptanceProgress? = null,
+    val nBio7BAcceptanceReport: NBio7BAcceptanceReport? = null,
     val resetComplete: Boolean = false,
     val message: String? = null,
     val error: String? = null,
@@ -44,6 +52,7 @@ class BiologyDeveloperViewModel(
     private val repository: BiologyDeveloperRepository,
     private val contextDiagnosticsRepository: ContextDeveloperDiagnosticsRepository,
     private val nBio6Verifier: NBio6DeviceVerificationRepository,
+    private val nBio7BAcceptanceRepository: NBio7BAcceptanceRepository,
 ) : ViewModel() {
     var uiState by mutableStateOf(BiologyDeveloperUiState())
         private set
@@ -105,7 +114,7 @@ class BiologyDeveloperViewModel(
     }
 
     fun runNBio6DeviceVerification() {
-        if (uiState.nBio6VerificationRunning || uiState.nBio6LiteVerificationRunning) return
+        if (uiState.nBio6VerificationRunning || uiState.nBio6LiteVerificationRunning || uiState.nBio7BAcceptanceRunning) return
         viewModelScope.launch {
             uiState = uiState.copy(nBio6VerificationRunning = true, error = null)
             runCatching { nBio6Verifier.runAutomatedChecks() }
@@ -120,7 +129,7 @@ class BiologyDeveloperViewModel(
     }
 
     fun verifyLiteBackup(fileName: String, json: String) {
-        if (uiState.nBio6VerificationRunning || uiState.nBio6LiteVerificationRunning) return
+        if (uiState.nBio6VerificationRunning || uiState.nBio6LiteVerificationRunning || uiState.nBio7BAcceptanceRunning) return
         viewModelScope.launch {
             uiState = uiState.copy(nBio6LiteVerificationRunning = true, error = null)
             runCatching { nBio6Verifier.verifyLiteBackup(fileName, json) }
@@ -145,8 +154,45 @@ class BiologyDeveloperViewModel(
         uiState = uiState.copy(message = "N-BIO-6 closure report exported.")
     }
 
+    fun runNBio7BAcceptance() {
+        if (uiState.nBio7BAcceptanceRunning || uiState.nBio6VerificationRunning || uiState.nBio6LiteVerificationRunning) return
+        viewModelScope.launch {
+            uiState = uiState.copy(
+                nBio7BAcceptanceRunning = true,
+                nBio7BAcceptanceProgress = NBio7BAcceptanceProgress(0, 0, "Reading installed Room14 history"),
+                error = null,
+            )
+            runCatching {
+                withContext(Dispatchers.Default) {
+                    nBio7BAcceptanceRepository.run { progress ->
+                        viewModelScope.launch {
+                            uiState = uiState.copy(nBio7BAcceptanceProgress = progress)
+                        }
+                    }
+                }
+            }.onSuccess { report ->
+                uiState = uiState.copy(
+                    nBio7BAcceptanceRunning = false,
+                    nBio7BAcceptanceProgress = null,
+                    nBio7BAcceptanceReport = report,
+                )
+                refresh()
+            }.onFailure { error ->
+                uiState = uiState.copy(nBio7BAcceptanceRunning = false, nBio7BAcceptanceProgress = null)
+                showError(error)
+            }
+        }
+    }
+
+    fun nBio7BAcceptanceJson(): String = uiState.nBio7BAcceptanceReport?.toJson()
+        ?: error("Run N-BIO-7B real-history acceptance before exporting.")
+
+    fun markNBio7BAcceptanceExported() {
+        uiState = uiState.copy(message = "N-BIO-7B acceptance report exported.")
+    }
+
     fun resetDatabase() {
-        if (uiState.task.phase == BiologyTaskPhase.RUNNING) return
+        if (uiState.task.phase == BiologyTaskPhase.RUNNING || uiState.nBio7BAcceptanceRunning) return
         viewModelScope.launch {
             runCatching { DatabaseProvider.resetDevelopmentDatabase(appContext) }
                 .onSuccess { uiState = uiState.copy(resetComplete = true) }
@@ -186,6 +232,7 @@ class BiologyDeveloperViewModelFactory(context: Context) : ViewModelProvider.Fac
             repository = BiologyDeveloperRepository(database),
             contextDiagnosticsRepository = ContextDeveloperDiagnosticsRepository(database),
             nBio6Verifier = NBio6DeviceVerificationRepository(appContext),
+            nBio7BAcceptanceRepository = NBio7BAcceptanceRepository(database),
         ) as T
     }
 }

@@ -82,6 +82,21 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 .onFailure(viewModel::reportError)
         }
     }
+    val nBio7BExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            runCatching {
+                val json = viewModel.nBio7BAcceptanceJson()
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri, "wt")?.bufferedWriter()?.use { it.write(json) }
+                        ?: error("Android could not open the selected N-BIO-7B report file.")
+                }
+            }.onSuccess { viewModel.markNBio7BAcceptanceExported() }
+                .onFailure(viewModel::reportError)
+        }
+    }
     val liteBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
@@ -109,7 +124,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 title = {
                     Column {
                         Text("Biological developer tools", fontWeight = FontWeight.SemiBold)
-                        Text("N‑BIO‑6 observability and closure", style = MaterialTheme.typography.labelMedium)
+                        Text("N‑BIO observability, validation and acceptance", style = MaterialTheme.typography.labelMedium)
                     }
                 },
                 navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
@@ -195,7 +210,8 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                     DebugCard("Lifecycle and diagnostics") {
                         Button(
                             onClick = viewModel::recompute,
-                            enabled = state.task.phase != BiologyTaskPhase.RUNNING && snapshot.routineVersionId != null,
+                            enabled = state.task.phase != BiologyTaskPhase.RUNNING && snapshot.routineVersionId != null &&
+                                !state.nBio7BAcceptanceRunning,
                             modifier = Modifier.fillMaxWidth(),
                         ) { Text("Recompute biological state") }
                         OutlinedButton(
@@ -211,7 +227,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                         ) { Text("Export diagnostic JSON") }
                         OutlinedButton(
                             onClick = { confirmReset = true },
-                            enabled = state.task.phase != BiologyTaskPhase.RUNNING,
+                            enabled = state.task.phase != BiologyTaskPhase.RUNNING && !state.nBio7BAcceptanceRunning,
                             modifier = Modifier.fillMaxWidth(),
                         ) { Text("Reset Native development database") }
                         if (state.task.phase != BiologyTaskPhase.IDLE) {
@@ -226,6 +242,134 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 }
 
                 item {
+                    DebugCard("N‑BIO‑7B dynamic-resistance acceptance") {
+                        Text(
+                            "Explicit foreground acceptance over the installed Room14 history. Runs chronological held-out validation, final shadow fits, persist/reload/delete/full replay checks and raw-evidence invariance. Candidate rows remain non-authoritative SHADOW state.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Button(
+                            onClick = viewModel::runNBio7BAcceptance,
+                            enabled = !state.nBio7BAcceptanceRunning && !state.nBio6VerificationRunning &&
+                                !state.nBio6LiteVerificationRunning && state.task.phase != BiologyTaskPhase.RUNNING,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            if (state.nBio7BAcceptanceRunning) {
+                                CircularProgressIndicator(modifier = Modifier.padding(end = 10.dp))
+                                Text("Running real-history acceptance…")
+                            } else {
+                                Text("Run N-BIO-7B real-history acceptance")
+                            }
+                        }
+                        state.nBio7BAcceptanceProgress?.let { progress ->
+                            DebugLine(
+                                "Progress",
+                                if (progress.totalGroups > 0) "${progress.completedGroups}/${progress.totalGroups}" else "Preparing",
+                            )
+                            Text(progress.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        state.nBio7BAcceptanceReport?.let { report ->
+                            HorizontalDivider()
+                            DebugLine("Device result", if (report.passed) "PASS / ACCEPTANCE OUTPUT COMPLETE" else "REVIEW REQUIRED")
+                            DebugLine("Model verdict", report.finalModelVerdict.storageValue)
+                            DebugLine("Groups", report.groupsDiscovered.toString())
+                            DebugLine("Chronological fits", report.totalChronologicalFits.toString())
+                            DebugLine("Total runtime", "${report.totalElapsedMillis} ms")
+                            DebugLine("Worst group", report.worstProfileElapsedMillis?.let { "$it ms" } ?: "n/a")
+                            DebugLine("Context", report.contextConsumption)
+                            DebugLine("Authority", report.productAuthorityStatus)
+                            report.checks.forEach { check ->
+                                Text(
+                                    "${check.status.storageValue.uppercase()} · ${check.id}",
+                                    fontWeight = FontWeight.Medium,
+                                    color = when (check.status.storageValue) {
+                                        "pass" -> MaterialTheme.colorScheme.primary
+                                        "fail" -> MaterialTheme.colorScheme.error
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                )
+                                Text(check.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            report.profiles.forEach { profile ->
+                                HorizontalDivider()
+                                Text("${profile.label} · ${profile.side}", fontWeight = FontWeight.SemiBold)
+                                DebugLine("Profile version", profile.executionProfileVersionId)
+                                DebugLine(
+                                    "Evidence",
+                                    "${profile.currentEligibleObservations} obs · ${profile.currentIndependentSessions} sessions · ${profile.currentExclusions} excluded",
+                                )
+                                DebugLine(
+                                    "Rep / resistance domain",
+                                    if (profile.repMin != null && profile.repMax != null) {
+                                        "${profile.repMin}–${profile.repMax} reps · ${profile.resistanceMinKg?.let(::formatDebug)}–${profile.resistanceMaxKg?.let(::formatDebug)} kg"
+                                    } else "unresolved",
+                                )
+                                DebugLine("Reference reps", profile.referenceRepetitions?.let(::formatDebug) ?: "unresolved")
+                                profile.frontierAtReference?.let { frontier ->
+                                    DebugLine("Frontier p05/p50/p95", "${formatDebug(frontier.p05)} / ${formatDebug(frontier.p50)} / ${formatDebug(frontier.p95)} kg")
+                                }
+                                profile.slope?.let { slope ->
+                                    DebugLine(
+                                        "Slope p05/p50/p95",
+                                        "${formatDebug(slope.summary.p05)} / ${formatDebug(slope.summary.p50)} / ${formatDebug(slope.summary.p95)} · ${slope.identification.storageValue}",
+                                    )
+                                }
+                                profile.slackScale?.let { slack ->
+                                    DebugLine("Slack scale", "${formatDebug(slack.summary.p50)} · ${slack.identification.storageValue}")
+                                }
+                                profile.noiseScale?.let { noise ->
+                                    DebugLine("Noise scale", "${formatDebug(noise.summary.p50)} · ${noise.identification.storageValue}")
+                                }
+                                DebugLine(
+                                    "Held-out",
+                                    "${profile.validation.evaluableCount}/${profile.validation.heldOutObservationCount} evaluable · ${profile.validation.insufficientEvidenceCount} insufficient · ${profile.validation.modelFailureCount} failed",
+                                )
+                                DebugLine(
+                                    "Predictive coverage",
+                                    profile.validation.candidatePredictiveCoverage?.let { formatDebug(it) } ?: "insufficient / n/a",
+                                )
+                                DebugLine(
+                                    "PIT bins",
+                                    with(profile.validation.candidatePitCalibration) { "$lowCount / $middleCount / $highCount (${sampleCount} total)" },
+                                )
+                                DebugLine(
+                                    "Candidate / benchmark MAE",
+                                    "${profile.validation.candidateDemonstrationMedianMaeKg?.let(::formatDebug) ?: "n/a"} / ${profile.validation.benchmarkLatestAnchorMaeKg?.let(::formatDebug) ?: "n/a"} kg",
+                                )
+                                DebugLine("Verdict", profile.candidateVerdict.storageValue)
+                                DebugLine("Shadow run", profile.shadowRunId ?: "none")
+                                DebugLine("Parameter codec", profile.parameterCodecVersion?.let { "v$it" } ?: "none")
+                                DebugLine("Persist → reload", profile.persistReloadEquivalent?.let { if (it) "PASS" else "FAIL" } ?: "n/a")
+                                DebugLine("Full replay", profile.fullReplayEquivalent?.let { if (it) "PASS" else "FAIL" } ?: "n/a")
+                                DebugLine("Runtime", "${profile.elapsedMillis} ms")
+                                if (profile.predictions.isNotEmpty()) {
+                                    Text("Representative predictions", style = MaterialTheme.typography.titleSmall)
+                                    profile.predictions.forEach { prediction ->
+                                        Text(
+                                            "${formatDebug(prediction.repetitions)} reps · frontier ${formatDebug(prediction.frontier.p50)} kg (${formatDebug(prediction.frontier.p05)}–${formatDebug(prediction.frontier.p95)}) · demonstration ${formatDebug(prediction.demonstrationP50Kg)} kg (${formatDebug(prediction.demonstrationP05Kg)}–${formatDebug(prediction.demonstrationP95Kg)})",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                                profile.limitations.forEach { limitation ->
+                                    Text("• $limitation", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    runCatching { viewModel.nBio7BAcceptanceJson() }
+                                        .onSuccess {
+                                            nBio7BExportLauncher.launch("my-mettle-n-bio-7b-acceptance-${Instant.now().epochSecond}.json")
+                                        }
+                                        .onFailure(viewModel::reportError)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text("Export N-BIO-7B acceptance JSON") }
+                        }
+                    }
+                }
+
+                item {
                     DebugCard("N‑BIO‑6 device acceptance") {
                         Text(
                             "Runs production Room, profile authoring, workout, history and conservative inference paths in isolated databases. Your Native history is not modified.",
@@ -233,7 +377,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                         )
                         Button(
                             onClick = viewModel::runNBio6DeviceVerification,
-                            enabled = !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning,
+                            enabled = !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning && !state.nBio7BAcceptanceRunning,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             if (state.nBio6VerificationRunning) {
@@ -263,7 +407,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                         )
                         OutlinedButton(
                             onClick = { liteBackupLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
-                            enabled = !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning,
+                            enabled = !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning && !state.nBio7BAcceptanceRunning,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(if (state.nBio6LiteVerificationRunning) "Validating reviewed translation…" else "Validate a reviewed Lite translation")
@@ -349,7 +493,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                             DebugLine("Stimulus estimates", inference.stimulusEstimates.size.toString())
                             DebugLine("Muscle states", inference.muscleStates.size.toString())
                             DebugLine("Performance anchors", inference.exerciseTranslationStates.size.toString())
-                            DebugLine("Candidate v7 posterior", "None — 7A foundation only")
+                            DebugLine("Candidate v7 posterior", "Shadow rows are inspected in N-BIO-7B acceptance above")
                             HorizontalDivider()
                             Text("Model/config manifest", style = MaterialTheme.typography.titleSmall)
                             inference.modelConfigs.sortedBy { it.component.storageValue }.forEach { config ->
