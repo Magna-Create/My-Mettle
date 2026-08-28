@@ -62,9 +62,9 @@ data class DynamicHistoricalValidationResult(
 /**
  * HISTORICAL_SEMANTICS adapter over the shared 7B.3 evaluator.
  *
- * For held-out Sk, earlier sessions are reconstructed using only revisions recorded by Sk's
- * completion time. Sk itself is reconstructed at its own completion time, and the entire session is
- * passed to evaluateHeldOutSession as one longitudinal unit. No later correction can leak backwards.
+ * Revision currentness is resolved across the entire supersession graph before profile/side
+ * filtering. Therefore a later correction that changes side or profile semantics can retire the
+ * old observation once it is knowable, but cannot leak backwards before recordedAt.
  */
 class DynamicResistanceHistoricalEvaluator(
     private val evaluator: DynamicResistanceRetrospectiveEvaluator = DynamicResistanceRetrospectiveEvaluator(),
@@ -74,11 +74,14 @@ class DynamicResistanceHistoricalEvaluator(
         side: Laterality,
         revisions: Collection<HistoricalCompletedSetEvidenceRevision>,
     ): DynamicHistoricalValidationResult {
-        val relevant = revisions.filter {
-            it.evidence.executionProfileVersionId == profile.executionProfileVersionId &&
-                it.evidence.laterality == side
-        }
-        val sessions = relevant.groupBy { requireNotNull(it.evidence.sessionId) }.entries
+        val candidateSessionIds = revisions
+            .filter { it.evidence.matches(profile, side) }
+            .map { requireNotNull(it.evidence.sessionId) }
+            .toSet()
+        val sessions = revisions
+            .filter { requireNotNull(it.evidence.sessionId) in candidateSessionIds }
+            .groupBy { requireNotNull(it.evidence.sessionId) }
+            .entries
             .sortedWith(
                 compareBy<Map.Entry<String, List<HistoricalCompletedSetEvidenceRevision>>> { entry ->
                     entry.value.maxOf { it.sessionCompletedAt }
@@ -93,10 +96,13 @@ class DynamicResistanceHistoricalEvaluator(
                 "One session must have one stable completion horizon."
             }
             val trainingRaw = HistoricalObservationRevisionSelector.currentAsOf(
-                relevant.filter { requireNotNull(it.evidence.sessionId) in priorSessionIds },
+                revisions.filter { requireNotNull(it.evidence.sessionId) in priorSessionIds },
                 cutoff,
-            )
-            val heldOutRaw = HistoricalObservationRevisionSelector.currentAsOf(sessionRevisions, cutoff)
+            ).filter { it.matches(profile, side) }
+            val heldOutRaw = HistoricalObservationRevisionSelector.currentAsOf(
+                revisions.filter { requireNotNull(it.evidence.sessionId) == sessionId },
+                cutoff,
+            ).filter { it.matches(profile, side) }
             val trainingProjection = DynamicResistanceEvidenceProjector.project(
                 profile = profile,
                 side = side,
@@ -123,4 +129,9 @@ class DynamicResistanceHistoricalEvaluator(
             chronologicalFitCount = fitCount,
         )
     }
+
+    private fun CompletedSetEvidence.matches(
+        profile: DynamicResistanceProfileSemantics,
+        side: Laterality,
+    ): Boolean = executionProfileVersionId == profile.executionProfileVersionId && laterality == side
 }
