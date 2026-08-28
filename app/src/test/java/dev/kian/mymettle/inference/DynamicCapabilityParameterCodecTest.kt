@@ -4,7 +4,9 @@ import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
 import dev.kian.mymettle.domain.inference.DynamicCapabilityFitWarning
 import dev.kian.mymettle.domain.inference.DynamicFrontierParameterPosterior
 import dev.kian.mymettle.domain.inference.DynamicFrontierPosteriorNode
+import dev.kian.mymettle.domain.inference.DynamicObservationSlackPosterior
 import dev.kian.mymettle.domain.inference.DynamicParameterIdentification
+import dev.kian.mymettle.domain.inference.DynamicSlackPosteriorMass
 import dev.kian.mymettle.domain.inference.DynamicStochasticFrontierFit
 import dev.kian.mymettle.domain.inference.EvidenceFamily
 import dev.kian.mymettle.domain.inference.EvidenceSupport
@@ -20,7 +22,7 @@ import kotlin.test.assertFailsWith
 
 class DynamicCapabilityParameterCodecTest {
     @Test
-    fun `codec round trip preserves joint posterior and predictions`() {
+    fun `codec round trip preserves joint posterior slack and predictions`() {
         val fit = fit()
         val encoded = DynamicCapabilityParameterCodec.encode(fit)
         val decoded = DynamicCapabilityParameterCodec.decode(
@@ -36,6 +38,7 @@ class DynamicCapabilityParameterCodecTest {
         assertEquals(fit.slackScale, decoded.slackScale)
         assertEquals(fit.noiseScale, decoded.noiseScale)
         assertEquals(fit.posteriorNodes, decoded.posteriorNodes)
+        assertEquals(fit.observationSlack, decoded.observationSlack)
         assertEquals(fit.selectedObservationIds, decoded.selectedObservationIds)
         assertEquals(fit.selectedSessionIds, decoded.selectedSessionIds)
         val model = DynamicStochasticFrontierModel()
@@ -92,6 +95,16 @@ class DynamicCapabilityParameterCodecTest {
                 DynamicParameterIdentification.PRIOR_DOMINATED,
                 unit,
             )
+        fun slack(observationId: String, offset: Double) = DynamicObservationSlackPosterior(
+            observationId = observationId,
+            summary = PosteriorSummary(offset, offset + 0.05, offset + 0.10, 0.001),
+            identification = DynamicParameterIdentification.PRIOR_DOMINATED,
+            massPoints = listOf(
+                DynamicSlackPosteriorMass(offset, 0.25),
+                DynamicSlackPosteriorMass(offset + 0.05, 0.50),
+                DynamicSlackPosteriorMass(offset + 0.10, 0.25),
+            ),
+        )
         return DynamicStochasticFrontierFit(
             executionProfileVersionId = ExecutionProfileVersionId("profile:v1"),
             side = Laterality.BILATERAL,
@@ -113,7 +126,7 @@ class DynamicCapabilityParameterCodecTest {
             slope = parameter(0.10, 0.18, 0.26, 0.002, "positive log-resistance per log-repetition ratio"),
             slackScale = parameter(0.08, 0.12, 0.18, 0.001, "log-performance HalfNormal scale"),
             noiseScale = parameter(0.03, 0.05, 0.08, 0.0002, "log-performance Student-t scale"),
-            observationSlack = emptyList(),
+            observationSlack = listOf(slack("obs1", 0.0), slack("obs2", 0.02)),
             selectedObservationIds = listOf("obs1", "obs2"),
             selectedSessionIds = listOf("s1", "s2"),
             approximationVersion = "tensor-grid-midpoint-slack-quadrature-v1",
