@@ -88,7 +88,8 @@ class NBio7BRawHistoryReader(private val database: MyMettleDatabase) {
             SELECT sr.id AS setRecordId, so.id AS observationId, s.id AS sessionId,
                    s.completedAt AS sessionCompletedAt, sr.sessionExerciseId AS sessionExerciseId,
                    so.executionProfileVersionId AS executionProfileVersionId, epv.metricFamily AS metricFamily,
-                   so.side AS side, so.completedAt AS completedAt, so.recordedAt AS recordedAt,
+                   so.side AS side, so.source AS observationSource,
+                   so.completedAt AS completedAt, so.recordedAt AS recordedAt,
                    so.bodyMassContextKg AS observationBodyMassContextKg,
                    s.bodyweightSnapshotKg AS sessionBodyMassSnapshotKg,
                    sr.warmUp AS warmUp, sr.kind AS kind, so.supersedesObservationId AS supersedesObservationId
@@ -120,6 +121,7 @@ class NBio7BRawHistoryReader(private val database: MyMettleDatabase) {
                             ?: cursor.nullableDouble("sessionBodyMassSnapshotKg"),
                         warmUp = cursor.int("warmUp") != 0,
                         kind = cursor.string("kind"),
+                        observationSource = cursor.string("observationSource"),
                         sessionId = cursor.string("sessionId"),
                     ),
                     recordedAt = Instant.parse(cursor.string("recordedAt")),

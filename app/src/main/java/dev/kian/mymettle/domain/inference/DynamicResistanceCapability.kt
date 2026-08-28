@@ -75,6 +75,8 @@ data class DynamicResistanceEvidencePolicy(
     val unresolvedAssistancePolicy: String,
     val unresolvedBodyweightPolicy: String,
     val deviceOrdinalPolicy: String,
+    val unknownLateralityPolicy: String = "exclude_all_unknown_laterality",
+    val eligibleHistoricalUnknownSources: Set<String> = emptySet(),
 ) {
     init {
         require(semanticVersion.isNotBlank())
@@ -88,6 +90,8 @@ data class DynamicResistanceEvidencePolicy(
         require(unresolvedAssistancePolicy.isNotBlank())
         require(unresolvedBodyweightPolicy.isNotBlank())
         require(deviceOrdinalPolicy.isNotBlank())
+        require(unknownLateralityPolicy.isNotBlank())
+        require(eligibleHistoricalUnknownSources.all { it.isNotBlank() })
     }
 
     val familyResistanceCompatibility: String
@@ -117,6 +121,11 @@ data class DynamicResistanceEvidencePolicy(
                 append("assistance=").append(unresolvedAssistancePolicy).append('\n')
                 append("bodyweight=").append(unresolvedBodyweightPolicy).append('\n')
                 append("ordinal=").append(deviceOrdinalPolicy)
+                if (unknownLateralityPolicy != "exclude_all_unknown_laterality" || eligibleHistoricalUnknownSources.isNotEmpty()) {
+                    append('\n').append("unknownLaterality=").append(unknownLateralityPolicy)
+                    append('\n').append("historicalUnknownSources=")
+                        .append(eligibleHistoricalUnknownSources.sorted().joinToString(","))
+                }
             },
         )
     }
@@ -215,6 +224,28 @@ object DynamicResistanceV1Contract {
     )
 }
 
+/**
+ * Corrected evidence policy introduced after the first physical 7B acceptance run showed that
+ * legacy Lite history is explicitly unsided. UNKNOWN remains its own capability stream: it is never
+ * reinterpreted as bilateral and never contributes to LEFT/RIGHT/BILATERAL state. The exception is
+ * restricted to factual source provenance emitted by the legacy importer.
+ */
+object DynamicResistanceV2Contract {
+    const val EVIDENCE_POLICY_VERSION = "n-bio-7b1-dynamic-resistance-evidence-v2"
+    const val LEGACY_UNSIDED_SOURCE = "lite_legacy_v6_import"
+    const val UNKNOWN_LATERALITY_POLICY =
+        "allow_exact_unknown_stream_only_for_explicit_legacy_import_source_and_unknown_profile_mode"
+
+    val contextPolicy: ContextConsumptionPolicy = DynamicResistanceV1Contract.contextPolicy
+
+    val evidencePolicy: DynamicResistanceEvidencePolicy = DynamicResistanceV1Contract.evidencePolicy.copy(
+        semanticVersion = EVIDENCE_POLICY_VERSION,
+        unknownLateralityPolicy = UNKNOWN_LATERALITY_POLICY,
+        eligibleHistoricalUnknownSources = setOf(LEGACY_UNSIDED_SOURCE),
+    )
+}
+
+
 data class DynamicMetricEvidenceAudit(
     val metric: PerformanceMetric,
     val entered: Quantity,
@@ -274,6 +305,7 @@ enum class DynamicResistanceExclusionReason(val storageValue: String) {
     METRIC_FAMILY_RESISTANCE_SEMANTICS_INCOMPATIBLE("metric_family_resistance_semantics_incompatible"),
     WARM_UP_EXCLUDED("warm_up_excluded"),
     LATERALITY_INCOMPATIBLE("laterality_incompatible"),
+    UNKNOWN_LATERALITY_PROVENANCE_INELIGIBLE("unknown_laterality_provenance_ineligible"),
     MISSING_SESSION_ID("missing_session_id"),
     MISSING_REPETITIONS("missing_repetitions"),
     NON_POSITIVE_REPETITIONS("non_positive_repetitions"),

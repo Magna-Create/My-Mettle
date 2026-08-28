@@ -68,3 +68,5 @@ When `PRODUCT_ROADMAP_GATES.md` says `COLLABORATION REQUIRED`, do not silently i
 Do not load both full raw research bodies into ordinary implementation context.
 
 Existing `docs/N_BIO_*.md` files are historical implementation-stage documentation. The vNext files above govern forward work where they conflict.
+
+- **N-BIO-7B.3/4 corrective acceptance:** evidence policy v2 preserves explicitly legacy `UNKNOWN -> UNKNOWN` history as an unsided capability stream; the frozen stochastic model is unchanged. First physical run diagnosed v1 exclusion rather than evaluating the model; corrected physical rerun is the final empirical 7B gate.

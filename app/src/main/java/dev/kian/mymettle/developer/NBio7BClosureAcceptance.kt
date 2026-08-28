@@ -96,7 +96,7 @@ data class NBio7BClosureAcceptanceReport(
             status = when {
                 !backupRoundTrip.candidateRowsMatch -> NBio7BAcceptanceStatus.FAIL
                 backupRoundTrip.candidateRowsPresent -> NBio7BAcceptanceStatus.PASS
-                else -> NBio7BAcceptanceStatus.INSUFFICIENT
+                else -> NBio7BAcceptanceStatus.NOT_EVALUATED
             },
             detail = when {
                 !backupRoundTrip.candidateRowsMatch -> "Candidate SHADOW capability row counts differ after isolated backup restore."
@@ -106,11 +106,28 @@ data class NBio7BClosureAcceptanceReport(
         ),
     )
 
-    val passed: Boolean get() = acceptance.passed && closureChecks.none { it.status == NBio7BAcceptanceStatus.FAIL }
+    val integritySafetyVerdict: NBio7BIntegritySafetyVerdict get() =
+        if (acceptance.integritySafetyVerdict == NBio7BIntegritySafetyVerdict.FAIL ||
+            closureChecks.any { it.status == NBio7BAcceptanceStatus.FAIL }) NBio7BIntegritySafetyVerdict.FAIL
+        else NBio7BIntegritySafetyVerdict.PASS
+
+    val empiricalModelEvaluationVerdict: NBio7BEmpiricalEvaluationVerdict
+        get() = acceptance.empiricalModelEvaluationVerdict
+
+    val overall7BClosureVerdict: NBio7BOverallClosureVerdict get() = when {
+        integritySafetyVerdict == NBio7BIntegritySafetyVerdict.FAIL -> NBio7BOverallClosureVerdict.INTEGRITY_FAILURE
+        acceptance.overall7BClosureVerdict == NBio7BOverallClosureVerdict.REQUIRES_NEW_CANDIDATE ->
+            NBio7BOverallClosureVerdict.REQUIRES_NEW_CANDIDATE
+        acceptance.overall7BClosureVerdict == NBio7BOverallClosureVerdict.READY_FOR_7B_CLOSURE ->
+            NBio7BOverallClosureVerdict.READY_FOR_7B_CLOSURE
+        else -> NBio7BOverallClosureVerdict.PENDING_EMPIRICAL_EVALUATION
+    }
+
+    val passed: Boolean get() = overall7BClosureVerdict == NBio7BOverallClosureVerdict.READY_FOR_7B_CLOSURE
 
     fun toJson(): String {
         val root = JSONObject(acceptance.toJson())
-        root.put("formatVersion", 2)
+        root.put("formatVersion", 3)
         root.put(
             "prescriptionState",
             JSONObject()
@@ -137,6 +154,10 @@ data class NBio7BClosureAcceptanceReport(
         root.put("closureChecks", JSONArray(closureChecks.map { check ->
             JSONObject().put("id", check.id).put("status", check.status.storageValue).put("detail", check.detail)
         }))
+        root.put("verdicts", JSONObject()
+            .put("integritySafety", integritySafetyVerdict.storageValue)
+            .put("empiricalModelEvaluation", empiricalModelEvaluationVerdict.storageValue)
+            .put("overall7BClosure", overall7BClosureVerdict.storageValue))
         root.put("passed", passed)
         return root.toString(2)
     }

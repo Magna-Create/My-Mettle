@@ -556,3 +556,30 @@ A material real-history failure must not be repaired by tuning the same candidat
 ## Next-phase boundary
 
 N-BIO-7C has **not** started. Do not use successful 7B implementation CI as implicit permission to start 7C, promote candidate authority or cross a `PRODUCT_ROADMAP_GATES.md` collaboration boundary.
+
+## 7B.4 corrective evidence policy v2 — legacy unsided history
+
+The first installed-history acceptance run (2026-08-28) was an integrity/safety pass but did not evaluate the stochastic frontier: all discovered resistance groups were `Laterality.UNKNOWN`, so evidence-policy v1 excluded every observation before fitting. This was an integration/evidence-admissibility defect, not an empirical failure of the Half-Normal/Student-t candidate.
+
+The persisted provenance is sufficient to correct this without inventing history. Lite-translated observations are explicitly stored with `source = lite_legacy_v6_import`, and their translated execution-profile versions use `lateralityMode = unknown`. Native manual observations use a different source and unilateral Native entry requires explicit LEFT/RIGHT.
+
+Evidence policy `n-bio-7b1-dynamic-resistance-evidence-v2` therefore permits an **UNKNOWN → UNKNOWN** capability stream only when all of the following hold:
+
+- requested capability side is `UNKNOWN`;
+- factual observation side is `UNKNOWN`;
+- immutable execution-profile laterality mode is `UNKNOWN`;
+- factual observation source is exactly `lite_legacy_v6_import`.
+
+This does **not** reinterpret UNKNOWN as BILATERAL. UNKNOWN observations cannot enter LEFT, RIGHT or BILATERAL capability state. Native `UNKNOWN` observations without the explicit legacy-import provenance remain ineligible. Any future broadening requires another evidence-policy/config identity.
+
+The 7B.2 stochastic mathematics is unchanged: Half-Normal slack, Student-t noise (`df=5`), all priors, session balancing, 12-session statistical window, deterministic tensor grid and extrapolation policy remain frozen. Only the immutable evidence-policy identity/config binding changes.
+
+Acceptance export format v3 reports per-profile and global exclusion-reason counts and separates three verdicts:
+
+- `integritySafety`: raw/prescription/authority/context/FK/backup safety;
+- `empiricalModelEvaluation`: whether the stochastic candidate was actually evaluated and its validation outcome;
+- `overall7BClosure`: whether N-BIO-7B is empirically ready to close.
+
+Candidate-dependent checks with no fitted candidate report `not_evaluated`, never a vacuous pass. The corrected implementation remains `SHADOW`, Room14, context `NONE`, and `BENCHMARK_V0` remains normal product authority.
+
+**Current gate:** corrected 7B.3/4 implementation complete after CI; physical installed-history acceptance must be rerun before empirical N-BIO-7B closure.

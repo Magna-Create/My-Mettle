@@ -10,6 +10,7 @@ import dev.kian.mymettle.domain.inference.DynamicResistanceExclusionReason
 import dev.kian.mymettle.domain.inference.DynamicResistanceProfileSemantics
 import dev.kian.mymettle.domain.inference.DynamicResistanceReferenceRepPolicy
 import dev.kian.mymettle.domain.inference.DynamicResistanceV1Contract
+import dev.kian.mymettle.domain.inference.DynamicResistanceV2Contract
 import dev.kian.mymettle.domain.inference.ProfileLocalResistanceCoordinate
 import dev.kian.mymettle.domain.performance.Laterality
 import dev.kian.mymettle.domain.performance.LateralityMode
@@ -204,24 +205,37 @@ object DynamicResistanceEvidenceProjector {
         side: Laterality,
         evidence: CompletedSetEvidence,
         policy: DynamicResistanceEvidencePolicy,
-    ): DynamicResistanceExclusionReason? = when {
-        evidence.executionProfileVersionId != profile.executionProfileVersionId ->
-            DynamicResistanceExclusionReason.PROFILE_VERSION_MISMATCH
-        evidence.metricFamily != profile.metricFamily || evidence.metricFamily !in policy.eligibleMetricFamilies ->
-            DynamicResistanceExclusionReason.METRIC_FAMILY_INELIGIBLE
-        !policy.acceptsResistanceSemantics(profile.metricFamily, profile.resistanceModel.semantics) ->
-            DynamicResistanceExclusionReason.METRIC_FAMILY_RESISTANCE_SEMANTICS_INCOMPATIBLE
-        policy.warmUpPolicy == dev.kian.mymettle.domain.inference.DynamicResistanceWarmUpPolicy.EXCLUDE && evidence.warmUp ->
-            DynamicResistanceExclusionReason.WARM_UP_EXCLUDED
-        evidence.sessionId == null -> DynamicResistanceExclusionReason.MISSING_SESSION_ID
-        !isSideCompatible(profile.lateralityMode, side, evidence.laterality) ->
-            DynamicResistanceExclusionReason.LATERALITY_INCOMPATIBLE
-        else -> null
+    ): DynamicResistanceExclusionReason? {
+        if (evidence.executionProfileVersionId != profile.executionProfileVersionId) {
+            return DynamicResistanceExclusionReason.PROFILE_VERSION_MISMATCH
+        }
+        if (evidence.metricFamily != profile.metricFamily || evidence.metricFamily !in policy.eligibleMetricFamilies) {
+            return DynamicResistanceExclusionReason.METRIC_FAMILY_INELIGIBLE
+        }
+        if (!policy.acceptsResistanceSemantics(profile.metricFamily, profile.resistanceModel.semantics)) {
+            return DynamicResistanceExclusionReason.METRIC_FAMILY_RESISTANCE_SEMANTICS_INCOMPATIBLE
+        }
+        if (policy.warmUpPolicy == dev.kian.mymettle.domain.inference.DynamicResistanceWarmUpPolicy.EXCLUDE && evidence.warmUp) {
+            return DynamicResistanceExclusionReason.WARM_UP_EXCLUDED
+        }
+        if (evidence.sessionId == null) return DynamicResistanceExclusionReason.MISSING_SESSION_ID
+        return sideCompatibilityExclusion(profile.lateralityMode, side, evidence, policy)
     }
 
-    private fun isSideCompatible(mode: LateralityMode, requestedSide: Laterality, observedSide: Laterality): Boolean {
-        if (requestedSide != observedSide) return false
-        return when (mode) {
+    private fun sideCompatibilityExclusion(
+        mode: LateralityMode,
+        requestedSide: Laterality,
+        evidence: CompletedSetEvidence,
+        policy: DynamicResistanceEvidencePolicy,
+    ): DynamicResistanceExclusionReason? {
+        val observedSide = evidence.laterality
+        if (requestedSide != observedSide) return DynamicResistanceExclusionReason.LATERALITY_INCOMPATIBLE
+        if (observedSide == Laterality.UNKNOWN) {
+            if (mode != LateralityMode.UNKNOWN) return DynamicResistanceExclusionReason.LATERALITY_INCOMPATIBLE
+            return if (evidence.observationSource in policy.eligibleHistoricalUnknownSources) null
+            else DynamicResistanceExclusionReason.UNKNOWN_LATERALITY_PROVENANCE_INELIGIBLE
+        }
+        val compatible = when (mode) {
             LateralityMode.BILATERAL_ONLY -> observedSide == Laterality.BILATERAL
             LateralityMode.UNILATERAL -> observedSide in setOf(Laterality.LEFT, Laterality.RIGHT)
             LateralityMode.ALTERNATING_ALLOWED -> observedSide in setOf(
@@ -233,6 +247,7 @@ object DynamicResistanceEvidenceProjector {
             LateralityMode.NOT_APPLICABLE -> observedSide == Laterality.NOT_APPLICABLE
             LateralityMode.UNKNOWN -> false
         }
+        return if (compatible) null else DynamicResistanceExclusionReason.LATERALITY_INCOMPATIBLE
     }
 }
 

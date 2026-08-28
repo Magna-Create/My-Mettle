@@ -7,11 +7,14 @@ import dev.kian.mymettle.domain.inference.DynamicCapabilityFitRequest
 import dev.kian.mymettle.domain.inference.DynamicCapabilityValidationSummary
 import dev.kian.mymettle.domain.inference.DynamicFrontierParameterPosterior
 import dev.kian.mymettle.domain.inference.DynamicStochasticFrontierFit
+import dev.kian.mymettle.domain.inference.DynamicResistanceV2Contract
+import dev.kian.mymettle.domain.inference.DynamicStochasticFrontierEvidenceV2
 import dev.kian.mymettle.domain.inference.DynamicStochasticFrontierV1
 import dev.kian.mymettle.domain.inference.PosteriorSummary
 import dev.kian.mymettle.domain.performance.Laterality
 import dev.kian.mymettle.engine.inference.DynamicDemonstrationPredictiveEvaluator
 import dev.kian.mymettle.engine.inference.DynamicResistanceHistoricalEvaluator
+import dev.kian.mymettle.engine.inference.DynamicResistanceRetrospectiveEvaluator
 import dev.kian.mymettle.engine.inference.HistoricalObservationRevisionSelector
 import dev.kian.mymettle.engine.performance.DynamicResistanceEvidenceProjector
 import dev.kian.mymettle.engine.performance.DynamicStochasticFrontierModel
@@ -28,6 +31,25 @@ enum class NBio7BAcceptanceStatus(val storageValue: String) {
     PASS("pass"),
     FAIL("fail"),
     INSUFFICIENT("insufficient"),
+    NOT_EVALUATED("not_evaluated"),
+}
+
+enum class NBio7BIntegritySafetyVerdict(val storageValue: String) { PASS("pass"), FAIL("fail") }
+
+enum class NBio7BEmpiricalEvaluationVerdict(val storageValue: String) {
+    NOT_EVALUATED("not_evaluated"),
+    INSUFFICIENT_EVIDENCE("insufficient_evidence"),
+    ACCEPTABLE_FOR_SHADOW("acceptable_for_shadow"),
+    ACCEPTABLE_WITH_LIMITATIONS("acceptable_with_limitations"),
+    REQUIRES_NEW_CANDIDATE("requires_new_candidate"),
+    REJECTED("rejected"),
+}
+
+enum class NBio7BOverallClosureVerdict(val storageValue: String) {
+    PENDING_EMPIRICAL_EVALUATION("pending_empirical_evaluation"),
+    READY_FOR_7B_CLOSURE("ready_for_7b_closure"),
+    REQUIRES_NEW_CANDIDATE("requires_new_candidate"),
+    INTEGRITY_FAILURE("integrity_failure"),
 }
 
 data class NBio7BAcceptanceProgress(
@@ -58,6 +80,7 @@ data class NBio7BProfileAcceptance(
     val currentEligibleObservations: Int,
     val currentIndependentSessions: Int,
     val currentExclusions: Int,
+    val currentExclusionReasonCounts: Map<String, Int>,
     val repMin: Int?,
     val repMax: Int?,
     val resistanceMinKg: Double?,
@@ -76,7 +99,7 @@ data class NBio7BProfileAcceptance(
     val parameterCodecVersion: Int?,
     val persistReloadEquivalent: Boolean?,
     val fullReplayEquivalent: Boolean?,
-    val numericalValidity: Boolean,
+    val numericalValidity: Boolean?,
     val elapsedMillis: Long,
     val limitations: List<String>,
 )
@@ -93,6 +116,7 @@ data class NBio7BAcceptanceReport(
     val benchmarkRunIdBefore: String?,
     val benchmarkRunIdAfter: String?,
     val groupsDiscovered: Int,
+    val globalExclusionReasonCounts: Map<String, Int>,
     val profiles: List<NBio7BProfileAcceptance>,
     val checks: List<NBio7BAcceptanceCheck>,
     val finalModelVerdict: DynamicCapabilityCandidateVerdict,
@@ -101,15 +125,37 @@ data class NBio7BAcceptanceReport(
     val totalElapsedMillis: Long,
     val worstProfileElapsedMillis: Long?,
 ) {
-    val passed: Boolean get() = checks.none { it.status == NBio7BAcceptanceStatus.FAIL } &&
-        finalModelVerdict !in setOf(
-            DynamicCapabilityCandidateVerdict.REJECTED,
-            DynamicCapabilityCandidateVerdict.REQUIRES_NEW_CANDIDATE,
-        )
+    val integritySafetyVerdict: NBio7BIntegritySafetyVerdict get() =
+        if (checks.filter { it.id in INTEGRITY_CHECK_IDS }.any { it.status == NBio7BAcceptanceStatus.FAIL })
+            NBio7BIntegritySafetyVerdict.FAIL else NBio7BIntegritySafetyVerdict.PASS
+
+    val empiricalModelEvaluationVerdict: NBio7BEmpiricalEvaluationVerdict get() = when {
+        totalChronologicalFits == 0 && profiles.none { it.frontierAtReference != null } -> NBio7BEmpiricalEvaluationVerdict.NOT_EVALUATED
+        finalModelVerdict == DynamicCapabilityCandidateVerdict.REJECTED -> NBio7BEmpiricalEvaluationVerdict.REJECTED
+        finalModelVerdict == DynamicCapabilityCandidateVerdict.REQUIRES_NEW_CANDIDATE -> NBio7BEmpiricalEvaluationVerdict.REQUIRES_NEW_CANDIDATE
+        finalModelVerdict == DynamicCapabilityCandidateVerdict.ACCEPTABLE_WITH_LIMITATIONS -> NBio7BEmpiricalEvaluationVerdict.ACCEPTABLE_WITH_LIMITATIONS
+        finalModelVerdict == DynamicCapabilityCandidateVerdict.ACCEPTABLE_FOR_SHADOW -> NBio7BEmpiricalEvaluationVerdict.ACCEPTABLE_FOR_SHADOW
+        else -> NBio7BEmpiricalEvaluationVerdict.INSUFFICIENT_EVIDENCE
+    }
+
+    val overall7BClosureVerdict: NBio7BOverallClosureVerdict get() = when {
+        integritySafetyVerdict == NBio7BIntegritySafetyVerdict.FAIL -> NBio7BOverallClosureVerdict.INTEGRITY_FAILURE
+        empiricalModelEvaluationVerdict in setOf(
+            NBio7BEmpiricalEvaluationVerdict.REJECTED,
+            NBio7BEmpiricalEvaluationVerdict.REQUIRES_NEW_CANDIDATE,
+        ) -> NBio7BOverallClosureVerdict.REQUIRES_NEW_CANDIDATE
+        empiricalModelEvaluationVerdict in setOf(
+            NBio7BEmpiricalEvaluationVerdict.ACCEPTABLE_FOR_SHADOW,
+            NBio7BEmpiricalEvaluationVerdict.ACCEPTABLE_WITH_LIMITATIONS,
+        ) -> NBio7BOverallClosureVerdict.READY_FOR_7B_CLOSURE
+        else -> NBio7BOverallClosureVerdict.PENDING_EMPIRICAL_EVALUATION
+    }
+
+    val passed: Boolean get() = overall7BClosureVerdict == NBio7BOverallClosureVerdict.READY_FOR_7B_CLOSURE
 
     fun toJson(): String = JSONObject()
         .put("format", "my-mettle-n-bio-7b-acceptance")
-        .put("formatVersion", 1)
+        .put("formatVersion", 3)
         .put("generatedAt", generatedAt.toString())
         .put("roomSchemaVersion", roomSchemaVersion)
         .put("executionEnvironment", "installed_native_room14_explicit_developer_action")
@@ -130,11 +176,16 @@ data class NBio7BAcceptanceReport(
         .put("performance", JSONObject()
             .put("groupsDiscovered", groupsDiscovered)
             .put("chronologicalFits", totalChronologicalFits)
+            .put("exclusionReasonCounts", JSONObject(globalExclusionReasonCounts))
             .put("totalElapsedMillis", totalElapsedMillis)
             .put("worstProfileElapsedMillis", worstProfileElapsedMillis ?: JSONObject.NULL))
         .put("checks", JSONArray(checks.map { it.toJson() }))
         .put("profiles", JSONArray(profiles.map { it.toJson() }))
         .put("finalModelVerdict", finalModelVerdict.storageValue)
+        .put("verdicts", JSONObject()
+            .put("integritySafety", integritySafetyVerdict.storageValue)
+            .put("empiricalModelEvaluation", empiricalModelEvaluationVerdict.storageValue)
+            .put("overall7BClosure", overall7BClosureVerdict.storageValue))
         .put("passed", passed)
         .toString(2)
 }
@@ -146,7 +197,7 @@ data class NBio7BAcceptanceReport(
  */
 class NBio7BAcceptanceRepository(
     private val database: MyMettleDatabase,
-    private val model: DynamicStochasticFrontierModel = DynamicStochasticFrontierModel(),
+    private val model: DynamicStochasticFrontierModel = DynamicStochasticFrontierModel(DynamicStochasticFrontierEvidenceV2.config),
     private val clock: () -> Instant = Instant::now,
 ) {
     suspend fun run(
@@ -170,6 +221,10 @@ class NBio7BAcceptanceRepository(
             .sortedWith(compareBy<Pair<String, Laterality>> { it.first }.thenBy { it.second.storageValue })
         val candidateConfig = model.config.toModelConfig(DynamicCapabilityShadowRepository.CANDIDATE_CONFIG_CREATED_AT)
         val shadowRepository = DynamicCapabilityShadowRepository(database, model = model)
+        val historicalEvaluator = DynamicResistanceHistoricalEvaluator(
+            evaluator = DynamicResistanceRetrospectiveEvaluator(model = model),
+            evidencePolicy = DynamicResistanceV2Contract.evidencePolicy,
+        )
         val profileReports = mutableListOf<NBio7BProfileAcceptance>()
 
         groupKeys.forEachIndexed { index, (versionId, side) ->
@@ -177,7 +232,7 @@ class NBio7BAcceptanceRepository(
                 ?: error("History references missing execution profile version $versionId")
             onProgress(NBio7BAcceptanceProgress(index, groupKeys.size, "${descriptor.label} · ${side.storageValue}"))
             val groupStart = System.nanoTime()
-            val historical = DynamicResistanceHistoricalEvaluator().evaluate(
+            val historical = historicalEvaluator.evaluate(
                 profile = descriptor.semantics,
                 side = side,
                 revisions = history.revisions,
@@ -188,12 +243,13 @@ class NBio7BAcceptanceRepository(
                 evidence = currentHeads.filter {
                     it.executionProfileVersionId.value == versionId && it.laterality == side
                 },
+                policy = DynamicResistanceV2Contract.evidencePolicy,
             )
             var fit: DynamicStochasticFrontierFit? = null
             var shadowRunId: String? = null
             var persistReloadEquivalent: Boolean? = null
             var replayEquivalent: Boolean? = null
-            var numericalValidity = true
+            var numericalValidity: Boolean? = null
             val limitations = mutableListOf<String>()
             val predictions = mutableListOf<NBio7BRepresentativePrediction>()
 
@@ -271,6 +327,8 @@ class NBio7BAcceptanceRepository(
                 currentEligibleObservations = currentProjection.evidence.size,
                 currentIndependentSessions = currentProjection.independentSessionCount,
                 currentExclusions = currentProjection.exclusions.size,
+                currentExclusionReasonCounts = currentProjection.exclusions
+                    .groupingBy { it.reason.storageValue }.eachCount().toSortedMap(),
                 repMin = currentProjection.repDomain?.first,
                 repMax = currentProjection.repDomain?.last,
                 resistanceMinKg = currentProjection.resistanceRange?.start,
@@ -328,8 +386,8 @@ class NBio7BAcceptanceRepository(
             ),
             NBio7BAcceptanceCheck(
                 "numeric_validity",
-                if (profileReports.all { it.numericalValidity }) NBio7BAcceptanceStatus.PASS else NBio7BAcceptanceStatus.FAIL,
-                "No fitted representative frontier/demonstration prediction may be NaN, infinite, zero or negative.",
+                aggregateBoolean(profileReports.mapNotNull { it.numericalValidity }),
+                "No fitted representative frontier/demonstration prediction may be NaN, infinite, zero or negative; no fit means NOT_EVALUATED.",
             ),
             NBio7BAcceptanceCheck(
                 "foreign_keys_clean",
@@ -337,6 +395,10 @@ class NBio7BAcceptanceRepository(
                 if (foreignKeysClean) "PRAGMA foreign_key_check returned no violations." else "Foreign-key violations exist after acceptance.",
             ),
         )
+        val globalExclusionReasonCounts = profileReports
+            .flatMap { report -> report.currentExclusionReasonCounts.entries }
+            .groupingBy { it.key }.fold(0) { total, entry -> total + entry.value }
+            .toSortedMap()
         val totalElapsed = (System.nanoTime() - started) / 1_000_000L
         return NBio7BAcceptanceReport(
             generatedAt = clock(),
@@ -350,6 +412,7 @@ class NBio7BAcceptanceRepository(
             benchmarkRunIdBefore = benchmarkBefore,
             benchmarkRunIdAfter = benchmarkAfter,
             groupsDiscovered = groupKeys.size,
+            globalExclusionReasonCounts = globalExclusionReasonCounts,
             profiles = profileReports,
             checks = checks,
             finalModelVerdict = aggregateVerdict(profileReports.map { it.candidateVerdict }),
@@ -361,7 +424,7 @@ class NBio7BAcceptanceRepository(
     }
 
     private fun aggregateBoolean(values: List<Boolean>): NBio7BAcceptanceStatus = when {
-        values.isEmpty() -> NBio7BAcceptanceStatus.INSUFFICIENT
+        values.isEmpty() -> NBio7BAcceptanceStatus.NOT_EVALUATED
         values.all { it } -> NBio7BAcceptanceStatus.PASS
         else -> NBio7BAcceptanceStatus.FAIL
     }
@@ -405,6 +468,13 @@ class NBio7BAcceptanceRepository(
     }
 }
 
+private val INTEGRITY_CHECK_IDS = setOf(
+    "raw_evidence_unchanged",
+    "benchmark_authority_unchanged",
+    "context_consumption_none",
+    "foreign_keys_clean",
+)
+
 private fun NBio7BAcceptanceCheck.toJson(): JSONObject = JSONObject()
     .put("id", id)
     .put("status", status.storageValue)
@@ -419,6 +489,7 @@ private fun NBio7BProfileAcceptance.toJson(): JSONObject = JSONObject()
         .put("eligibleObservations", currentEligibleObservations)
         .put("independentSessions", currentIndependentSessions)
         .put("exclusions", currentExclusions)
+        .put("exclusionReasonCounts", JSONObject(currentExclusionReasonCounts))
         .put("repMin", repMin ?: JSONObject.NULL)
         .put("repMax", repMax ?: JSONObject.NULL)
         .put("resistanceMinKg", resistanceMinKg ?: JSONObject.NULL)
@@ -439,7 +510,7 @@ private fun NBio7BProfileAcceptance.toJson(): JSONObject = JSONObject()
         .put("parameterCodecVersion", parameterCodecVersion ?: JSONObject.NULL)
         .put("persistReloadEquivalent", persistReloadEquivalent ?: JSONObject.NULL)
         .put("fullReplayEquivalent", fullReplayEquivalent ?: JSONObject.NULL))
-    .put("numericalValidity", numericalValidity)
+    .put("numericalValidity", numericalValidity ?: JSONObject.NULL)
     .put("elapsedMillis", elapsedMillis)
     .put("limitations", JSONArray(limitations))
 

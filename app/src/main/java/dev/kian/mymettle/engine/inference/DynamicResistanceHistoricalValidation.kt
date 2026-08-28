@@ -4,6 +4,7 @@ import dev.kian.mymettle.domain.inference.CompletedSetEvidence
 import dev.kian.mymettle.domain.inference.DynamicCapabilityCandidateVerdict
 import dev.kian.mymettle.domain.inference.DynamicCapabilityValidationSummary
 import dev.kian.mymettle.domain.inference.DynamicHeldOutEvaluation
+import dev.kian.mymettle.domain.inference.DynamicResistanceEvidencePolicy
 import dev.kian.mymettle.domain.inference.DynamicResistanceProfileSemantics
 import dev.kian.mymettle.domain.inference.DynamicResistanceV1Contract
 import dev.kian.mymettle.domain.performance.Laterality
@@ -68,6 +69,7 @@ data class DynamicHistoricalValidationResult(
  */
 class DynamicResistanceHistoricalEvaluator(
     private val evaluator: DynamicResistanceRetrospectiveEvaluator = DynamicResistanceRetrospectiveEvaluator(),
+    private val evidencePolicy: DynamicResistanceEvidencePolicy = DynamicResistanceV1Contract.evidencePolicy,
 ) {
     fun evaluate(
         profile: DynamicResistanceProfileSemantics,
@@ -107,13 +109,13 @@ class DynamicResistanceHistoricalEvaluator(
                 profile = profile,
                 side = side,
                 evidence = trainingRaw,
-                policy = DynamicResistanceV1Contract.evidencePolicy,
+                policy = evidencePolicy,
             )
             val heldOutProjection = DynamicResistanceEvidenceProjector.project(
                 profile = profile,
                 side = side,
                 evidence = heldOutRaw,
-                policy = DynamicResistanceV1Contract.evidencePolicy,
+                policy = evidencePolicy,
             )
             if (trainingProjection.evidence.isNotEmpty() && heldOutProjection.evidence.isNotEmpty()) fitCount += 1
             val heldOutResults = evaluator.evaluateHeldOutSession(trainingProjection, heldOutProjection)

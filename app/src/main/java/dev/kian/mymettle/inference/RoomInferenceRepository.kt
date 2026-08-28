@@ -264,6 +264,7 @@ private fun CompletedSetEvidenceRow.toDomain(values: List<PerformanceMetricValue
     metricFamily = MetricFamily.fromStorage(metricFamily),
     laterality = Laterality.fromStorage(side),
     completedAt = Instant.parse(completedAt),
+    observationSource = observationSource,
     metricValues = values,
     bodyMassContextKg = observationBodyMassContextKg ?: sessionBodyMassSnapshotKg,
     warmUp = warmUp,

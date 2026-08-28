@@ -194,6 +194,13 @@ object DynamicStochasticFrontierV1 {
     const val APPROXIMATION_VERSION = "tensor-grid-midpoint-slack-quadrature-v1"
 }
 
+/** Same frozen 7B.2 mathematics, explicitly rebound to corrected evidence-policy v2. */
+object DynamicStochasticFrontierEvidenceV2 {
+    val config: DynamicStochasticFrontierConfig = DynamicStochasticFrontierV1.config.copy(
+        evidencePolicyIdentity = DynamicResistanceV2Contract.evidencePolicy.identity,
+    )
+}
+
 data class DynamicFrontierParameterPosterior(
     val summary: PosteriorSummary,
     val identification: DynamicParameterIdentification,

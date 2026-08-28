@@ -79,6 +79,8 @@ data class CompletedSetEvidence(
     val bodyMassContextKg: Double?,
     val warmUp: Boolean,
     val kind: String,
+    /** Factual source provenance used only by explicitly versioned evidence-admissibility rules. */
+    val observationSource: String = "unknown",
     /** Owning workout session. Added for longitudinal support accounting; it does not alter raw evidence. */
     val sessionId: String? = null,
 ) {
@@ -87,6 +89,7 @@ data class CompletedSetEvidence(
         require(observationId.isNotBlank()) { "Set evidence needs an observation id." }
         require(sessionExerciseId.isNotBlank()) { "Set evidence needs a session-exercise id." }
         require(sessionId == null || sessionId.isNotBlank()) { "Evidence session id cannot be blank." }
+        require(observationSource.isNotBlank()) { "Evidence observation source cannot be blank." }
         require(metricValues.isNotEmpty()) { "Set evidence needs performed metric values." }
         require(metricValues.map { it.metric }.distinct().size == metricValues.size)
         require(bodyMassContextKg == null || bodyMassContextKg > 0.0)
