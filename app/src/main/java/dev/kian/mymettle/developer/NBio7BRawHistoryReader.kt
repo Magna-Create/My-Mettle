@@ -20,6 +20,7 @@ import dev.kian.mymettle.domain.performance.Quantity
 import dev.kian.mymettle.domain.performance.ResistanceModel
 import dev.kian.mymettle.domain.performance.ResistanceSemantics
 import dev.kian.mymettle.domain.performance.UnitId
+import dev.kian.mymettle.engine.inference.DynamicHistoricalAvailabilityV2
 import dev.kian.mymettle.engine.inference.HistoricalCompletedSetEvidenceRevision
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -86,7 +87,8 @@ class NBio7BRawHistoryReader(private val database: MyMettleDatabase) {
         sqlite.query(
             """
             SELECT sr.id AS setRecordId, so.id AS observationId, s.id AS sessionId,
-                   s.completedAt AS sessionCompletedAt, sr.sessionExerciseId AS sessionExerciseId,
+                   s.completedAt AS sessionCompletedAt, s.editedAt AS sessionEditedAt,
+                   sr.sessionExerciseId AS sessionExerciseId,
                    so.executionProfileVersionId AS executionProfileVersionId, epv.metricFamily AS metricFamily,
                    so.side AS side, so.source AS observationSource,
                    so.completedAt AS completedAt, so.recordedAt AS recordedAt,
@@ -107,6 +109,10 @@ class NBio7BRawHistoryReader(private val database: MyMettleDatabase) {
             while (cursor.moveToNext()) {
                 val observationId = cursor.string("observationId")
                 val completedAt = Instant.parse(cursor.string("completedAt"))
+                val nativeRecordedAt = Instant.parse(cursor.string("recordedAt"))
+                val sessionCompletedAt = cursor.nullableString("sessionCompletedAt")?.let(Instant::parse) ?: completedAt
+                val sessionEditedAt = cursor.nullableString("sessionEditedAt")?.let(Instant::parse)
+                val observationSource = cursor.string("observationSource")
                 revisions += HistoricalCompletedSetEvidenceRevision(
                     evidence = CompletedSetEvidence(
                         setRecordId = cursor.string("setRecordId"),
@@ -121,11 +127,16 @@ class NBio7BRawHistoryReader(private val database: MyMettleDatabase) {
                             ?: cursor.nullableDouble("sessionBodyMassSnapshotKg"),
                         warmUp = cursor.int("warmUp") != 0,
                         kind = cursor.string("kind"),
-                        observationSource = cursor.string("observationSource"),
+                        observationSource = observationSource,
                         sessionId = cursor.string("sessionId"),
                     ),
-                    recordedAt = Instant.parse(cursor.string("recordedAt")),
-                    sessionCompletedAt = cursor.nullableString("sessionCompletedAt")?.let(Instant::parse) ?: completedAt,
+                    recordedAt = DynamicHistoricalAvailabilityV2.resolve(
+                        observationSource = observationSource,
+                        nativeRecordedAt = nativeRecordedAt,
+                        sessionCompletedAt = sessionCompletedAt,
+                        sessionEditedAt = sessionEditedAt,
+                    ),
+                    sessionCompletedAt = sessionCompletedAt,
                     supersedesObservationId = cursor.nullableString("supersedesObservationId"),
                 )
             }

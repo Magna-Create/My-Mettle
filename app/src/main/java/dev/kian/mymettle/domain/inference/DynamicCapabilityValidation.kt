@@ -5,7 +5,7 @@ import kotlin.math.abs
 
 /** 7B.3/4 validation is descriptive evaluation policy, not a change to the frozen 7B.2 model. */
 data class DynamicCapabilityValidationPolicy(
-    val protocolVersion: String = "n-bio-7b34-whole-session-heldout-v1",
+    val protocolVersion: String = "n-bio-7b34-whole-session-heldout-source-availability-v2",
     val semanticsMode: InferenceSemanticsMode = InferenceSemanticsMode.HISTORICAL_SEMANTICS,
     val predictiveLowerProbability: Double = 0.05,
     val predictiveUpperProbability: Double = 0.95,

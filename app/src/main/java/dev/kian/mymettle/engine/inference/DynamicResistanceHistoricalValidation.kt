@@ -7,6 +7,7 @@ import dev.kian.mymettle.domain.inference.DynamicHeldOutEvaluation
 import dev.kian.mymettle.domain.inference.DynamicResistanceEvidencePolicy
 import dev.kian.mymettle.domain.inference.DynamicResistanceProfileSemantics
 import dev.kian.mymettle.domain.inference.DynamicResistanceV1Contract
+import dev.kian.mymettle.domain.inference.DynamicResistanceV2Contract
 import dev.kian.mymettle.domain.performance.Laterality
 import dev.kian.mymettle.engine.performance.DynamicResistanceEvidenceProjector
 import java.time.Instant
@@ -27,6 +28,32 @@ data class HistoricalCompletedSetEvidenceRevision(
             "A performed set cannot complete after its owning session completion."
         }
         require(supersedesObservationId == null || supersedesObservationId.isNotBlank())
+    }
+}
+
+/**
+ * Validation-only source-availability policy for migrated history.
+ *
+ * SQLite/Native audit timestamps are never backdated. The raw-history adapter may map the
+ * `recordedAt` carried by a HistoricalCompletedSetEvidenceRevision to the time at which the fact was
+ * knowable in its source system. Ordinary Native observations keep their factual recordedAt. Only
+ * explicitly provenance-marked Lite Legacy imports may use source-session finalisation time.
+ *
+ * A source session edited after completion remains unavailable at the original completion cutoff,
+ * preventing a later edit from leaking backwards into that session's held-out evaluation.
+ */
+object DynamicHistoricalAvailabilityV2 {
+    const val POLICY_ID = "n-bio-7b4-historical-source-availability-v2"
+
+    fun resolve(
+        observationSource: String,
+        nativeRecordedAt: Instant,
+        sessionCompletedAt: Instant,
+        sessionEditedAt: Instant?,
+    ): Instant = if (observationSource == DynamicResistanceV2Contract.LEGACY_UNSIDED_SOURCE) {
+        maxOf(sessionCompletedAt, sessionEditedAt ?: sessionCompletedAt)
+    } else {
+        nativeRecordedAt
     }
 }
 

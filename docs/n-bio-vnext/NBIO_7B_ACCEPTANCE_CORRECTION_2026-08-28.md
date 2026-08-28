@@ -1,0 +1,62 @@
+# N-BIO-7B physical acceptance correction — 2026-08-28
+
+Status: **N-BIO-7B.4 remains empirically open; N-BIO-7C has not started.**
+
+## Physical report result
+
+The corrected evidence-policy v2 physical run proved that the legacy UNKNOWN-laterality repair worked. Installed Room14 history produced current SHADOW frontier fits for 16 of 19 discovered execution-profile-version/side groups, with 141 eligible observations in total.
+
+The integrity/safety boundary remained clean:
+
+- canonical raw workout/performance evidence fingerprint unchanged;
+- BENCHMARK_V0 authority unchanged;
+- context consumption remained NONE;
+- SHADOW persist/reload equivalence passed;
+- full replay equivalence passed;
+- fitted numerical outputs were finite and positive;
+- foreign keys were clean;
+- persisted prescription state was unchanged;
+- Native full-backup round trip reproduced raw evidence, prescriptions and candidate SHADOW rows.
+
+Fourteen exclusions were attributable to missing historical body mass on bodyweight-dependent profiles. Those exclusions remain factual; current body mass must not be projected backwards into historical sessions.
+
+## Remaining zero-holdout diagnosis
+
+Despite successful current fits, the physical report contained zero chronological fits and zero held-out observations for every profile. This was not evidence that the user lacked workout history.
+
+Lite Legacy translation intentionally preserves two different temporal facts:
+
+1. original set/session completion timestamps from the source app; and
+2. Native ingestion/audit time, stored as `set_observation.recordedAt = backup exportedAt`.
+
+The original historical evaluator treated the Native `recordedAt` column as the historical source-availability time. Because the imported observations were ingested on 2026-08-27 while the workouts occurred earlier in August, no imported observation appeared knowable at its own historical workout cutoff. Current fitting therefore worked while whole-session retrospective validation was starved.
+
+## Source-availability correction
+
+Validation now uses explicit policy:
+
+`n-bio-7b4-historical-source-availability-v2`
+
+The correction is deliberately narrow:
+
+- the SQLite `set_observation.recordedAt` value is never modified or backdated;
+- ordinary Native evidence continues to use its factual Native recorded time;
+- only observations whose factual source is exactly `lite_legacy_v6_import` may map to source-session finalisation time in the in-memory historical validation adapter;
+- source availability is `max(session.completedAt, session.editedAt ?: session.completedAt)`;
+- the whole-session holdout cutoff remains `session.completedAt`;
+- therefore a source session edited after completion is conservatively unavailable at that session cutoff and cannot leak the later edit backwards;
+- append-only supersession/currentness logic remains unchanged.
+
+This is a retrospective reconstruction correction only. It does not change the frozen 7B.2 Half-Normal/Student-t mathematics, evidence-policy v2, model priors, session weighting, 12-session current window, context policy, Room schema, raw evidence, prescriptions or product authority.
+
+The held-out protocol identity is now:
+
+`n-bio-7b34-whole-session-heldout-source-availability-v2`
+
+so subsequent exports are distinguishable from the zero-holdout v1 report.
+
+## Gate
+
+After implementation CI passes, physical installed-history acceptance must be run again. A valid next report should show the v2 validation protocol and, where prior source sessions exist for a profile, non-zero chronological/held-out evaluation. The resulting empirical metrics must be reviewed before N-BIO-7B can be closed or a new candidate requested.
+
+Do not start N-BIO-7C, promote SHADOW output, or alter BENCHMARK_V0 authority from this correction.
