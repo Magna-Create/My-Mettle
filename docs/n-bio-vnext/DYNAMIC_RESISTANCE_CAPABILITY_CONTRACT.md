@@ -492,22 +492,23 @@ After real-history SHADOW persistence, the closure runner:
 
 The live installed database is **never restored, cleared or replaced** by this verification. Its backup participation is export-only.
 
-If no installed history produces candidate SHADOW rows, generic backup round-trip can still pass, but candidate-row empirical coverage is reported `INSUFFICIENT` rather than falsely `PASS`.
+If no installed history produces candidate SHADOW rows, generic backup round-trip can still pass, but candidate-row empirical coverage is reported `NOT_EVALUATED` rather than falsely `PASS`.
 
 Separate Android instrumentation also covers a fully FK-valid Room14 dynamic-capability backup fixture with model config/manifest, inference run, `capability_state` and `capability_parameter_state`.
 
-## Acceptance report v2
+## Acceptance report v3
 
 The privacy-bounded export remains:
 
 `kind/format = my-mettle-n-bio-7b-acceptance`
 
-Format v2 extends the base acceptance report with closure-integrity evidence, including:
+Format v3 extends the base acceptance report with closure-integrity and empirical-evaluation evidence, including:
 
 - candidate model/config/protocol identity;
 - Room schema version;
 - context consumption;
 - discovered profile/group counts;
+- per-profile and global evidence exclusion-reason counts;
 - evidence/session/rep/resistance support summaries;
 - fitted frontier/slope/slack/noise summaries and identification labels;
 - representative predictions;
@@ -521,7 +522,9 @@ Format v2 extends the base acceptance report with closure-integrity evidence, in
 - foreign-key integrity;
 - per-profile and total runtime;
 - explicit limitations;
-- combined pass/fail state.
+- separate `integritySafety`, `empiricalModelEvaluation`, and `overall7BClosure` verdicts;
+- `NOT_EVALUATED` for candidate-dependent checks when no fit exists;
+- combined pass/fail state derived from the overall closure verdict.
 
 Raw notes, Health Connect traces and a raw set-by-set history dump are not added to this closure export.
 
