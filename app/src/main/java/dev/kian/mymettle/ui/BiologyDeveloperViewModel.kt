@@ -21,7 +21,8 @@ import dev.kian.mymettle.developer.NBio6DeviceVerificationRepository
 import dev.kian.mymettle.developer.NBio6LiteBackupVerificationReport
 import dev.kian.mymettle.developer.NBio7BAcceptanceProgress
 import dev.kian.mymettle.developer.NBio7BAcceptanceReport
-import dev.kian.mymettle.developer.NBio7BAcceptanceRepository
+import dev.kian.mymettle.developer.NBio7BClosureAcceptanceReport
+import dev.kian.mymettle.developer.NBio7BClosureAcceptanceRunner
 import dev.kian.mymettle.workout.TrainingMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -41,6 +42,7 @@ data class BiologyDeveloperUiState(
     val nBio7BAcceptanceRunning: Boolean = false,
     val nBio7BAcceptanceProgress: NBio7BAcceptanceProgress? = null,
     val nBio7BAcceptanceReport: NBio7BAcceptanceReport? = null,
+    val nBio7BClosureReport: NBio7BClosureAcceptanceReport? = null,
     val resetComplete: Boolean = false,
     val message: String? = null,
     val error: String? = null,
@@ -52,7 +54,7 @@ class BiologyDeveloperViewModel(
     private val repository: BiologyDeveloperRepository,
     private val contextDiagnosticsRepository: ContextDeveloperDiagnosticsRepository,
     private val nBio6Verifier: NBio6DeviceVerificationRepository,
-    private val nBio7BAcceptanceRepository: NBio7BAcceptanceRepository,
+    private val nBio7BClosureRunner: NBio7BClosureAcceptanceRunner,
 ) : ViewModel() {
     var uiState by mutableStateOf(BiologyDeveloperUiState())
         private set
@@ -160,21 +162,26 @@ class BiologyDeveloperViewModel(
             uiState = uiState.copy(
                 nBio7BAcceptanceRunning = true,
                 nBio7BAcceptanceProgress = NBio7BAcceptanceProgress(0, 0, "Reading installed Room14 history"),
+                nBio7BAcceptanceReport = null,
+                nBio7BClosureReport = null,
                 error = null,
             )
             runCatching {
                 withContext(Dispatchers.Default) {
-                    nBio7BAcceptanceRepository.run { progress ->
+                    nBio7BClosureRunner.run { progress ->
                         viewModelScope.launch {
                             uiState = uiState.copy(nBio7BAcceptanceProgress = progress)
                         }
                     }
                 }
-            }.onSuccess { report ->
+            }.onSuccess { closure ->
+                val backupStatus = closure.closureChecks.first { it.id == "native_backup_candidate_rows" }.status.storageValue
                 uiState = uiState.copy(
                     nBio7BAcceptanceRunning = false,
                     nBio7BAcceptanceProgress = null,
-                    nBio7BAcceptanceReport = report,
+                    nBio7BAcceptanceReport = closure.acceptance,
+                    nBio7BClosureReport = closure,
+                    message = "N-BIO-7B acceptance complete; isolated Native backup candidate coverage: $backupStatus.",
                 )
                 refresh()
             }.onFailure { error ->
@@ -184,7 +191,7 @@ class BiologyDeveloperViewModel(
         }
     }
 
-    fun nBio7BAcceptanceJson(): String = uiState.nBio7BAcceptanceReport?.toJson()
+    fun nBio7BAcceptanceJson(): String = uiState.nBio7BClosureReport?.toJson()
         ?: error("Run N-BIO-7B real-history acceptance before exporting.")
 
     fun markNBio7BAcceptanceExported() {
@@ -232,7 +239,7 @@ class BiologyDeveloperViewModelFactory(context: Context) : ViewModelProvider.Fac
             repository = BiologyDeveloperRepository(database),
             contextDiagnosticsRepository = ContextDeveloperDiagnosticsRepository(database),
             nBio6Verifier = NBio6DeviceVerificationRepository(appContext),
-            nBio7BAcceptanceRepository = NBio7BAcceptanceRepository(database),
+            nBio7BClosureRunner = NBio7BClosureAcceptanceRunner(appContext, database),
         ) as T
     }
 }
