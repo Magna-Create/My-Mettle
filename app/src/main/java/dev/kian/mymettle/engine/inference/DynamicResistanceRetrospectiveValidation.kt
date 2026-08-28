@@ -2,8 +2,10 @@ package dev.kian.mymettle.engine.inference
 
 import dev.kian.mymettle.domain.inference.DynamicCapabilityCandidateVerdict
 import dev.kian.mymettle.domain.inference.DynamicCapabilityFitException
+import dev.kian.mymettle.domain.inference.DynamicCapabilityFitRequest
 import dev.kian.mymettle.domain.inference.DynamicCapabilityValidationPolicy
 import dev.kian.mymettle.domain.inference.DynamicCapabilityValidationSummary
+import dev.kian.mymettle.domain.inference.DynamicCapabilityVerdictPolicy
 import dev.kian.mymettle.domain.inference.DynamicDemonstrationPredictive
 import dev.kian.mymettle.domain.inference.DynamicHeldOutEvaluation
 import dev.kian.mymettle.domain.inference.DynamicHeldOutStatus
@@ -12,7 +14,6 @@ import dev.kian.mymettle.domain.inference.DynamicResistanceEvidence
 import dev.kian.mymettle.domain.inference.DynamicResistanceEvidenceProjection
 import dev.kian.mymettle.domain.inference.DynamicStochasticFrontierConfig
 import dev.kian.mymettle.domain.inference.DynamicStochasticFrontierFit
-import dev.kian.mymettle.domain.inference.DynamicCapabilityVerdictPolicy
 import dev.kian.mymettle.engine.performance.DynamicReferenceRepSelector
 import dev.kian.mymettle.engine.performance.DynamicStochasticFrontierModel
 import java.time.Instant
@@ -36,8 +37,11 @@ class DynamicResistanceRetrospectiveEvaluator(
 ) {
     val protocolVersion: String get() = policy.protocolVersion
 
-    fun evaluate(projection: DynamicResistanceEvidenceProjection): DynamicCapabilityValidationSummary {
-        val observations = evaluateObservations(projection)
+    fun evaluate(projection: DynamicResistanceEvidenceProjection): DynamicCapabilityValidationSummary =
+        summarize(evaluateObservations(projection))
+
+    /** Shared summary path for static projections and historical as-of-cutoff evaluation. */
+    fun summarize(observations: List<DynamicHeldOutEvaluation>): DynamicCapabilityValidationSummary {
         val evaluable = observations.filter { it.status == DynamicHeldOutStatus.EVALUABLE }
         val pit = calibration(evaluable.mapNotNull { it.candidatePredictive?.observedCdf })
         val coverage = evaluable.mapNotNull { item ->
@@ -88,93 +92,126 @@ class DynamicResistanceRetrospectiveEvaluator(
             )
         val prior = mutableListOf<DynamicResistanceEvidence>()
         val results = mutableListOf<DynamicHeldOutEvaluation>()
-        sessions.forEach { (sessionId, heldOutSession) ->
+        sessions.forEach { (_, heldOutSession) ->
             val orderedHeldOut = heldOutSession.sortedWith(compareBy<DynamicResistanceEvidence> { it.completedAt }.thenBy { it.observationId })
-            if (prior.isEmpty()) {
-                orderedHeldOut.forEach { heldOut -> results += insufficient(heldOut, sessionId, prior) }
-            } else {
-                val training = prior.sortedWith(compareBy<DynamicResistanceEvidence> { it.completedAt }.thenBy { it.observationId })
-                val reference = DynamicReferenceRepSelector.select(training, model.config.referenceRepPolicy)
-                if (reference == null) {
-                    orderedHeldOut.forEach { heldOut -> results += insufficient(heldOut, sessionId, training) }
-                } else {
-                    val trainingProjection = DynamicResistanceEvidenceProjection(
-                        profile = projection.profile,
-                        side = projection.side,
-                        evidence = training,
-                        exclusions = emptyList(),
-                        referenceRepetitions = reference,
-                        policy = projection.policy,
-                    )
-                    val horizon = training.maxOf { it.completedAt }
-                    try {
-                        val configDefinition = model.config.toModelConfig(configCreatedAt)
-                        val fit = model.fit(
-                            dev.kian.mymettle.domain.inference.DynamicCapabilityFitRequest(
-                                projection = trainingProjection,
-                                inferenceHorizon = horizon,
-                                modelConfig = configDefinition,
-                            ),
-                        )
-                        val predictiveEvaluator = DynamicDemonstrationPredictiveEvaluator(model)
-                        orderedHeldOut.forEach { heldOut ->
-                            val predictive = predictiveEvaluator.evaluate(
-                                fit = fit,
-                                repetitions = heldOut.repetitions.toDouble(),
-                                observedResistanceKg = heldOut.resistance.value,
-                                lowerProbability = policy.predictiveLowerProbability,
-                                upperProbability = policy.predictiveUpperProbability,
-                            )
-                            results += DynamicHeldOutEvaluation(
-                                sessionId = sessionId,
-                                observationId = heldOut.observationId,
-                                heldOutAt = heldOut.completedAt,
-                                repetitions = heldOut.repetitions,
-                                observedResistanceKg = heldOut.resistance.value,
-                                status = DynamicHeldOutStatus.EVALUABLE,
-                                trainingObservationIds = training.map { it.observationId },
-                                trainingSessionIds = training.map { it.sessionId }.distinct(),
-                                trainingEvidenceThrough = horizon,
-                                referenceRepetitions = fit.referenceRepetitions,
-                                candidatePredictive = predictive,
-                                frontierAtOrAboveObservedProbability = frontierAtOrAboveObservedProbability(
-                                    fit,
-                                    heldOut.repetitions.toDouble(),
-                                    heldOut.resistance.value,
-                                ),
-                                benchmarkLatestResistanceAnchorKg = training.maxWithOrNull(
-                                    compareBy<DynamicResistanceEvidence> { it.completedAt }.thenBy { it.observationId },
-                                )?.resistance?.value,
-                            )
-                        }
-                    } catch (failure: DynamicCapabilityFitException) {
-                        orderedHeldOut.forEach { heldOut ->
-                            results += DynamicHeldOutEvaluation(
-                                sessionId = sessionId,
-                                observationId = heldOut.observationId,
-                                heldOutAt = heldOut.completedAt,
-                                repetitions = heldOut.repetitions,
-                                observedResistanceKg = heldOut.resistance.value,
-                                status = DynamicHeldOutStatus.MODEL_FAILURE,
-                                trainingObservationIds = training.map { it.observationId },
-                                trainingSessionIds = training.map { it.sessionId }.distinct(),
-                                trainingEvidenceThrough = horizon,
-                                referenceRepetitions = reference,
-                                candidatePredictive = null,
-                                frontierAtOrAboveObservedProbability = null,
-                                benchmarkLatestResistanceAnchorKg = training.maxWithOrNull(
-                                    compareBy<DynamicResistanceEvidence> { it.completedAt }.thenBy { it.observationId },
-                                )?.resistance?.value,
-                                modelFailureReason = failure.reason.storageValue,
-                            )
-                        }
-                    }
-                }
-            }
+            val trainingProjection = DynamicResistanceEvidenceProjection(
+                profile = projection.profile,
+                side = projection.side,
+                evidence = prior.sortedWith(compareBy<DynamicResistanceEvidence> { it.completedAt }.thenBy { it.observationId }),
+                exclusions = emptyList(),
+                referenceRepetitions = DynamicReferenceRepSelector.select(prior, model.config.referenceRepPolicy),
+                policy = projection.policy,
+            )
+            val heldOutProjection = DynamicResistanceEvidenceProjection(
+                profile = projection.profile,
+                side = projection.side,
+                evidence = orderedHeldOut,
+                exclusions = emptyList(),
+                referenceRepetitions = DynamicReferenceRepSelector.select(orderedHeldOut, model.config.referenceRepPolicy),
+                policy = projection.policy,
+            )
+            results += evaluateHeldOutSession(trainingProjection, heldOutProjection)
             // Whole-session holdout: no member of Sk becomes training evidence until every member was scored.
             prior += orderedHeldOut
         }
         return results
+    }
+
+    /**
+     * Scores exactly one held-out session against a fixed earlier training projection. This is the
+     * reusable primitive needed by HISTORICAL_SEMANTICS when later-recorded corrections must be
+     * resolved as-of each session cutoff rather than projected once using today's revision heads.
+     */
+    fun evaluateHeldOutSession(
+        trainingProjection: DynamicResistanceEvidenceProjection,
+        heldOutProjection: DynamicResistanceEvidenceProjection,
+    ): List<DynamicHeldOutEvaluation> {
+        require(trainingProjection.policy.identity == model.config.evidencePolicyIdentity)
+        require(heldOutProjection.policy.identity == model.config.evidencePolicyIdentity)
+        require(trainingProjection.profile == heldOutProjection.profile)
+        require(trainingProjection.side == heldOutProjection.side)
+        val training = trainingProjection.evidence
+            .sortedWith(compareBy<DynamicResistanceEvidence> { it.completedAt }.thenBy { it.observationId })
+        val heldOut = heldOutProjection.evidence
+            .sortedWith(compareBy<DynamicResistanceEvidence> { it.completedAt }.thenBy { it.observationId })
+        if (heldOut.isEmpty()) return emptyList()
+        val sessionIds = heldOut.map { it.sessionId }.distinct()
+        require(sessionIds.size == 1) { "The chronological validation unit is exactly one whole held-out session." }
+        val sessionId = sessionIds.single()
+        require(training.none { it.sessionId == sessionId }) { "Held-out session evidence cannot enter its own fit." }
+        if (training.isEmpty()) return heldOut.map { insufficient(it, sessionId, training) }
+
+        val reference = DynamicReferenceRepSelector.select(training, model.config.referenceRepPolicy)
+            ?: return heldOut.map { insufficient(it, sessionId, training) }
+        val fixedTrainingProjection = DynamicResistanceEvidenceProjection(
+            profile = trainingProjection.profile,
+            side = trainingProjection.side,
+            evidence = training,
+            exclusions = trainingProjection.exclusions,
+            referenceRepetitions = reference,
+            policy = trainingProjection.policy,
+        )
+        val horizon = training.maxOf { it.completedAt }
+        val benchmark = training.maxWithOrNull(
+            compareBy<DynamicResistanceEvidence> { it.completedAt }.thenBy { it.observationId },
+        )?.resistance?.value
+        return try {
+            val fit = model.fit(
+                DynamicCapabilityFitRequest(
+                    projection = fixedTrainingProjection,
+                    inferenceHorizon = horizon,
+                    modelConfig = model.config.toModelConfig(configCreatedAt),
+                ),
+            )
+            val predictiveEvaluator = DynamicDemonstrationPredictiveEvaluator(model)
+            heldOut.map { observation ->
+                val predictive = predictiveEvaluator.evaluate(
+                    fit = fit,
+                    repetitions = observation.repetitions.toDouble(),
+                    observedResistanceKg = observation.resistance.value,
+                    lowerProbability = policy.predictiveLowerProbability,
+                    upperProbability = policy.predictiveUpperProbability,
+                )
+                DynamicHeldOutEvaluation(
+                    sessionId = sessionId,
+                    observationId = observation.observationId,
+                    heldOutAt = observation.completedAt,
+                    repetitions = observation.repetitions,
+                    observedResistanceKg = observation.resistance.value,
+                    status = DynamicHeldOutStatus.EVALUABLE,
+                    trainingObservationIds = training.map { it.observationId },
+                    trainingSessionIds = training.map { it.sessionId }.distinct(),
+                    trainingEvidenceThrough = horizon,
+                    referenceRepetitions = fit.referenceRepetitions,
+                    candidatePredictive = predictive,
+                    frontierAtOrAboveObservedProbability = frontierAtOrAboveObservedProbability(
+                        fit,
+                        observation.repetitions.toDouble(),
+                        observation.resistance.value,
+                    ),
+                    benchmarkLatestResistanceAnchorKg = benchmark,
+                )
+            }
+        } catch (failure: DynamicCapabilityFitException) {
+            heldOut.map { observation ->
+                DynamicHeldOutEvaluation(
+                    sessionId = sessionId,
+                    observationId = observation.observationId,
+                    heldOutAt = observation.completedAt,
+                    repetitions = observation.repetitions,
+                    observedResistanceKg = observation.resistance.value,
+                    status = DynamicHeldOutStatus.MODEL_FAILURE,
+                    trainingObservationIds = training.map { it.observationId },
+                    trainingSessionIds = training.map { it.sessionId }.distinct(),
+                    trainingEvidenceThrough = horizon,
+                    referenceRepetitions = reference,
+                    candidatePredictive = null,
+                    frontierAtOrAboveObservedProbability = null,
+                    benchmarkLatestResistanceAnchorKg = benchmark,
+                    modelFailureReason = failure.reason.storageValue,
+                )
+            }
+        }
     }
 
     fun verdict(summary: DynamicCapabilityValidationSummary): DynamicCapabilityCandidateVerdict =
