@@ -24,7 +24,7 @@ Use this directory in the following order.
 - [`DEVICE_VERIFICATION.md`](./DEVICE_VERIFICATION.md) — reproducible Termux build and isolated on-device scalar/temporal acceptance procedure.
 - [`CONTEXT_INTERPRETATION_CONTRACT.md`](./CONTEXT_INTERPRETATION_CONTRACT.md) — N-BIO-7A.5 canonical-note ownership, bounded tag ontology, interpreter/fallback/privacy boundary, provenance and zero-effect N-BIO context interface.
 - [`EXERCISE_AUTHORING_CONTRACT.md`](./EXERCISE_AUTHORING_CONTRACT.md) — authoritative protocol for externally proposed exercise/execution/recruitment semantics before they enter the existing Native authoring pathway.
-- [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md) — N-BIO-7B internal checkpoints plus the frozen 7B.1 evidence/coordinate contract and completed 7B.2 stochastic-frontier candidate specification.
+- [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md) — N-BIO-7B evidence/coordinate contract, frozen stochastic-frontier candidate, chronological validation, SHADOW persistence, diagnostics and real-history/device acceptance contract. Implementation is complete; physical installed-history acceptance remains an explicit closure gate.
 - [`exercise-import.schema.json`](./exercise-import.schema.json) — Draft 2020-12 machine-readable structural exchange schema, format v1.
 - [`exercise-import-example.json`](./exercise-import-example.json) — canonical validated authoring example.
 
@@ -34,14 +34,14 @@ Use this directory in the following order.
 7A    complete — probabilistic/posterior + model/config/inference provenance foundation
 7A.5  complete — context interpretation + external exercise-authoring contracts
 7B.1  complete — dynamic-resistance evidence eligibility + coordinate/model contract
-7B.2  complete — stochastic-frontier inference + synthetic/model verification
-7B.3  next explicit phase only — held-out validation + shadow persistence + diagnostics
-7B.4  later — real-data/device acceptance + 7B closure
-later 7C–7G as defined by PLAN.md
+7B.2  complete — frozen stochastic-frontier inference + synthetic/model verification
+7B.3  implementation complete — correction-aware chronological validation + SHADOW persistence + diagnostics
+7B.4  implementation complete — installed-history/device acceptance runner + replay/invariance/backup checks; physical acceptance pending
+later 7C–7G as defined by PLAN.md — 7C has not started
 7F     must also consult PRODUCT_ROADMAP_GATES.md for equipment identity/calibration/session-binding + uncertainty-presentation hooks
 ```
 
-7B.2 is an in-memory/domain mathematical candidate only. Normal candidate/shadow persistence, chronological held-out comparison and expanded production diagnostics remain 7B.3 work and must not be started implicitly.
+The 7B candidate remains **SHADOW only**. Normal workout/prescription authority remains `BENCHMARK_V0`; context consumption remains `NONE`; no candidate result is promoted into normal product behaviour by 7B.3/4 implementation. CI establishes deterministic/synthetic/model, persistence, backup and compile-time correctness, but it cannot substitute for the explicit installed Room14 real-history/device acceptance action. N-BIO-7B must therefore not be described as empirically closed until that exported device report has been reviewed.
 
 Before behaviour-driving N-BIO-8 implementation, `PRODUCT_ROADMAP_GATES.md` requires a dedicated research + product/UX design gate rather than marching directly from N-BIO-7H into an optimiser. Programme intent/priorities, in-workout adaptation, editing/regeneration semantics, equipment setup/feasible-load UX and uncertainty presentation require explicit collaboration.
 
