@@ -21,14 +21,17 @@ data class NBio7BBackupRoundTripResult(
     val rowCount: Int,
     val sourceFingerprint: NBio7BRawEvidenceFingerprint,
     val restoredFingerprint: NBio7BRawEvidenceFingerprint,
+    val sourcePrescriptionFingerprint: NBio7BPrescriptionStateFingerprint,
+    val restoredPrescriptionFingerprint: NBio7BPrescriptionStateFingerprint,
     val sourceCandidateCounts: NBio7BBackupCandidateCounts,
     val restoredCandidateCounts: NBio7BBackupCandidateCounts,
     val foreignKeysClean: Boolean,
 ) {
-    val rawAndPrescriptionStateMatches: Boolean get() = sourceFingerprint == restoredFingerprint
+    val rawEvidenceMatches: Boolean get() = sourceFingerprint == restoredFingerprint
+    val prescriptionStateMatches: Boolean get() = sourcePrescriptionFingerprint == restoredPrescriptionFingerprint
     val candidateRowsMatch: Boolean get() = sourceCandidateCounts == restoredCandidateCounts
     val candidateRowsPresent: Boolean get() = sourceCandidateCounts.hasCandidateRows
-    val passed: Boolean get() = rawAndPrescriptionStateMatches && candidateRowsMatch && foreignKeysClean
+    val passed: Boolean get() = rawEvidenceMatches && prescriptionStateMatches && candidateRowsMatch && foreignKeysClean
 }
 
 /**
@@ -44,6 +47,7 @@ class NBio7BBackupRoundTripVerifier(
 
     suspend fun verify(): NBio7BBackupRoundTripResult {
         val sourceFingerprint = NBio7BRawEvidenceFingerprinter.capture(sourceDatabase)
+        val sourcePrescriptionFingerprint = NBio7BPrescriptionStateFingerprinter.capture(sourceDatabase)
         val sourceCandidateCounts = candidateCounts(sourceDatabase)
         val backupJson = NativeFullBackupRepository(sourceDatabase).exportJson()
 
@@ -53,6 +57,7 @@ class NBio7BBackupRoundTripVerifier(
             isolated.openHelper.writableDatabase
             val restored = NativeFullBackupRepository(isolated).restoreJson(backupJson)
             val restoredFingerprint = NBio7BRawEvidenceFingerprinter.capture(isolated)
+            val restoredPrescriptionFingerprint = NBio7BPrescriptionStateFingerprinter.capture(isolated)
             val restoredCandidateCounts = candidateCounts(isolated)
             val foreignKeysClean = isolated.openHelper.readableDatabase
                 .query("PRAGMA foreign_key_check")
@@ -64,6 +69,8 @@ class NBio7BBackupRoundTripVerifier(
                 rowCount = restored.rowCount,
                 sourceFingerprint = sourceFingerprint,
                 restoredFingerprint = restoredFingerprint,
+                sourcePrescriptionFingerprint = sourcePrescriptionFingerprint,
+                restoredPrescriptionFingerprint = restoredPrescriptionFingerprint,
                 sourceCandidateCounts = sourceCandidateCounts,
                 restoredCandidateCounts = restoredCandidateCounts,
                 foreignKeysClean = foreignKeysClean,
@@ -75,16 +82,25 @@ class NBio7BBackupRoundTripVerifier(
 
     private fun candidateCounts(database: MyMettleDatabase): NBio7BBackupCandidateCounts {
         val sqlite = database.openHelper.readableDatabase
-        val runFilter = "executionMode = 'shadow' AND modelVersion = '${DynamicCapabilityShadowRepository.SHADOW_RUN_MODEL_VERSION}'"
-        val shadowRuns = count(sqlite.query("SELECT COUNT(*) FROM inference_run WHERE $runFilter"))
+        val modelVersion = DynamicCapabilityShadowRepository.SHADOW_RUN_MODEL_VERSION
+        val capabilityFamily = DynamicCapabilityShadowRepository.CAPABILITY_FAMILY
+        val shadowRuns = count(
+            sqlite.query(
+                "SELECT COUNT(*) FROM inference_run WHERE executionMode = 'shadow' AND modelVersion = ?",
+                arrayOf(modelVersion),
+            ),
+        )
         val capabilityStates = count(
             sqlite.query(
                 """
                 SELECT COUNT(*)
                 FROM capability_state AS cs
                 INNER JOIN inference_run AS ir ON ir.id = cs.inferenceRunId
-                WHERE ir.$runFilter AND cs.capabilityFamily = '${DynamicCapabilityShadowRepository.CAPABILITY_FAMILY}'
+                WHERE ir.executionMode = 'shadow'
+                  AND ir.modelVersion = ?
+                  AND cs.capabilityFamily = ?
                 """.trimIndent(),
+                arrayOf(modelVersion, capabilityFamily),
             ),
         )
         val capabilityParameterStates = count(
@@ -93,8 +109,11 @@ class NBio7BBackupRoundTripVerifier(
                 SELECT COUNT(*)
                 FROM capability_parameter_state AS cps
                 INNER JOIN inference_run AS ir ON ir.id = cps.inferenceRunId
-                WHERE ir.$runFilter AND cps.capabilityFamily = '${DynamicCapabilityShadowRepository.CAPABILITY_FAMILY}'
+                WHERE ir.executionMode = 'shadow'
+                  AND ir.modelVersion = ?
+                  AND cps.capabilityFamily = ?
                 """.trimIndent(),
+                arrayOf(modelVersion, capabilityFamily),
             ),
         )
         return NBio7BBackupCandidateCounts(
