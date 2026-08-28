@@ -4,7 +4,9 @@ import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
 import dev.kian.mymettle.domain.inference.DynamicCapabilityFitWarning
 import dev.kian.mymettle.domain.inference.DynamicFrontierParameterPosterior
 import dev.kian.mymettle.domain.inference.DynamicFrontierPosteriorNode
+import dev.kian.mymettle.domain.inference.DynamicObservationSlackPosterior
 import dev.kian.mymettle.domain.inference.DynamicParameterIdentification
+import dev.kian.mymettle.domain.inference.DynamicSlackPosteriorMass
 import dev.kian.mymettle.domain.inference.DynamicStochasticFrontierFit
 import dev.kian.mymettle.domain.inference.ModelConfigId
 import dev.kian.mymettle.domain.inference.PosteriorEstimate
@@ -17,8 +19,8 @@ import java.util.Base64
  * Deterministic versioned codec for the behaviourally meaningful 7B.2 joint posterior.
  *
  * It stores derived parameter/posterior state and evidence identifiers only. Raw load/repetition
- * observations are deliberately not duplicated. Per-observation slack can be reconstructed by full
- * replay from canonical raw evidence when later SetDemand work needs it.
+ * observations are deliberately not duplicated. Per-observation slack is itself derived model state,
+ * so it is encoded explicitly to preserve the live-fit invariant and later SetDemand/replay semantics.
  */
 object DynamicCapabilityParameterCodec {
     const val SCHEMA_VERSION: Int = 1
@@ -53,7 +55,7 @@ object DynamicCapabilityParameterCodec {
                 ).joinToString(",")
             },
         )
-        line("observationSlackPersistence", text("recompute_from_raw_history"))
+        line("observationSlack", fit.observationSlack.joinToString(";") { encodeSlack(it) })
     }.trimEnd('\n')
 
     fun decode(
@@ -80,8 +82,10 @@ object DynamicCapabilityParameterCodec {
 
         val observationIds = decodeList(values.required("selectedObservationIds"))
         val sessionIds = decodeList(values.required("selectedSessionIds"))
+        val observationSlack = decodeSlack(values.required("observationSlack"))
         require(observationIds.size == frontierAtReference.support.observationCount)
         require(sessionIds.distinct().size == frontierAtReference.support.effectiveIndependentSessionCount)
+        require(observationSlack.map { it.observationId }.toSet() == observationIds.toSet())
 
         return DynamicStochasticFrontierFit(
             executionProfileVersionId = executionProfileVersionId,
@@ -100,7 +104,7 @@ object DynamicCapabilityParameterCodec {
             slope = decodeParameter(values.required("slope")),
             slackScale = decodeParameter(values.required("slackScale")),
             noiseScale = decodeParameter(values.required("noiseScale")),
-            observationSlack = emptyList(),
+            observationSlack = observationSlack,
             selectedObservationIds = observationIds,
             selectedSessionIds = sessionIds,
             approximationVersion = untext(values.required("approximationVersion")),
@@ -129,10 +133,7 @@ object DynamicCapabilityParameterCodec {
     private fun decodeParameter(value: String): DynamicFrontierParameterPosterior {
         val parts = value.split(',')
         require(parts.size == 6) { "Malformed dynamic capability parameter posterior." }
-        val identification = untext(parts[4]).let { stored ->
-            DynamicParameterIdentification.entries.firstOrNull { it.storageValue == stored }
-                ?: throw IllegalArgumentException("Unsupported parameter identification $stored")
-        }
+        val identification = identification(untext(parts[4]))
         return DynamicFrontierParameterPosterior(
             summary = PosteriorSummary(
                 credibleLower05 = parts[0].finiteDouble("p05"),
@@ -143,6 +144,45 @@ object DynamicCapabilityParameterCodec {
             identification = identification,
             semanticUnit = untext(parts[5]),
         )
+    }
+
+    private fun encodeSlack(value: DynamicObservationSlackPosterior): String = listOf(
+        text(value.observationId),
+        text(value.identification.storageValue),
+        value.summary.p05,
+        value.summary.p50,
+        value.summary.p95,
+        value.summary.posteriorVariance,
+        text(value.semanticDefinition),
+        value.massPoints.joinToString("|") { "${it.slack}:${it.probability}" },
+    ).joinToString(",")
+
+    private fun decodeSlack(value: String): List<DynamicObservationSlackPosterior> {
+        require(value.isNotBlank()) { "Persisted per-observation slack cannot be empty for a complete fit." }
+        return value.split(';').map { encoded ->
+            val parts = encoded.split(',', limit = 8)
+            require(parts.size == 8) { "Malformed dynamic observation slack posterior." }
+            val mass = parts[7].split('|').map { massEncoded ->
+                val massParts = massEncoded.split(':')
+                require(massParts.size == 2) { "Malformed dynamic observation slack mass." }
+                DynamicSlackPosteriorMass(
+                    slack = massParts[0].finiteDouble("slack"),
+                    probability = massParts[1].finiteDouble("slackProbability"),
+                )
+            }
+            DynamicObservationSlackPosterior(
+                observationId = untext(parts[0]),
+                summary = PosteriorSummary(
+                    credibleLower05 = parts[2].finiteDouble("slackP05"),
+                    estimateMedian = parts[3].finiteDouble("slackP50"),
+                    credibleUpper95 = parts[4].finiteDouble("slackP95"),
+                    posteriorVariance = parts[5].finiteDouble("slackVariance"),
+                ),
+                identification = identification(untext(parts[1])),
+                massPoints = mass,
+                semanticDefinition = untext(parts[6]),
+            )
+        }
     }
 
     private fun decodeNodes(value: String): List<DynamicFrontierPosteriorNode> {
@@ -162,6 +202,10 @@ object DynamicCapabilityParameterCodec {
         require(kotlin.math.abs(weight - 1.0) <= 1e-8) { "Persisted dynamic capability posterior weights must sum to one." }
         return nodes
     }
+
+    private fun identification(stored: String): DynamicParameterIdentification =
+        DynamicParameterIdentification.entries.firstOrNull { it.storageValue == stored }
+            ?: throw IllegalArgumentException("Unsupported parameter identification $stored")
 
     private fun decodeList(value: String): List<String> =
         if (value.isBlank()) emptyList() else value.split(',').map(::untext)
