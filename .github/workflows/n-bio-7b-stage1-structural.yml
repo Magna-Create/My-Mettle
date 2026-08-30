@@ -1,0 +1,318 @@
+name: N-BIO-7B Stage1 Structural
+
+on:
+  push:
+    branches:
+      - agent/n-bio-vnext-inference
+    paths:
+      - .github/workflows/n-bio-7b-stage1-structural.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+      - name: Install Android SDK 37
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Apply structural Stage-1 patch
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import ast, textwrap
+
+          def insert_after(text, needle, addition, count=1):
+              if text.count(needle) < count:
+                  raise SystemExit(f'missing insertion anchor: {needle!r}')
+              return text.replace(needle, needle + addition, count)
+
+          def insert_before_once(text, needle, addition):
+              if needle not in text:
+                  raise SystemExit(f'missing insertion anchor: {needle!r}')
+              return text.replace(needle, addition + needle, 1)
+
+          def replace_once(text, old, new):
+              if old not in text:
+                  raise SystemExit(f'missing replacement anchor: {old!r}')
+              return text.replace(old, new, 1)
+
+          # Reuse the authored new-file bodies from the first scaffold without re-running its brittle replacements.
+          helper = Path('.github/workflows/n-bio-7b-stage1-patch.yml').read_text()
+          marker = "          python3 <<'PY'\n"
+          end = "\n          PY\n          git diff --check"
+          embedded = textwrap.dedent(helper.split(marker, 1)[1].split(end, 1)[0])
+          tree = ast.parse(embedded)
+          literals = {}
+          for node in tree.body:
+              if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+                  name = node.targets[0].id
+                  if name in {'stage1', 'stage1json', 'test', 'rejection'}:
+                      literals[name] = ast.literal_eval(node.value)
+          missing = {'stage1', 'stage1json', 'test', 'rejection'} - literals.keys()
+          if missing:
+              raise SystemExit(f'missing authored literals: {sorted(missing)}')
+
+          Path('app/src/main/java/dev/kian/mymettle/engine/inference/DynamicResistanceStage1Diagnostics.kt').write_text(literals['stage1'])
+          Path('app/src/main/java/dev/kian/mymettle/developer/NBio7BStage1Json.kt').write_text(literals['stage1json'])
+          Path('app/src/test/java/dev/kian/mymettle/engine/inference/DynamicResistanceStage1DiagnosticsTest.kt').write_text(literals['test'])
+          Path('docs/n-bio-vnext/NBIO_7B_CANDIDATE_V1_REJECTION_2026-08-30.md').write_text(literals['rejection'])
+
+          # Held-out event schema: optional additions preserve existing manually-constructed test fixtures.
+          path = Path('app/src/main/java/dev/kian/mymettle/domain/inference/DynamicCapabilityValidation.kt')
+          text = path.read_text()
+          text = insert_after(text,
+              '    val benchmarkLatestResistanceAnchorKg: Double?,\n',
+              '    /** Latent frontier posterior at held-out repetitions; not an observation predictive interval. */\n'
+              '    val candidateFrontierAtRepetitions: PosteriorSummary? = null,\n'
+              '    /** Deterministic CRPS on natural-log resistance scale. */\n'
+              '    val candidateCrpsLogResistance: Double? = null,\n')
+          text = insert_after(text,
+              '        require(benchmarkLatestResistanceAnchorKg == null || benchmarkLatestResistanceAnchorKg > 0.0)\n',
+              '        require(candidateCrpsLogResistance == null || (candidateCrpsLogResistance.isFinite() && candidateCrpsLogResistance >= 0.0))\n')
+          path.write_text(text)
+
+          # Retrospective evaluator: compute frontier snapshot and deterministic CRPS from the already-existing held-out fit.
+          path = Path('app/src/main/java/dev/kian/mymettle/engine/inference/DynamicResistanceRetrospectiveValidation.kt')
+          text = path.read_text()
+          heldout_start = text.index('            heldOut.map { observation ->')
+          ctor = text.index('                DynamicHeldOutEvaluation(', heldout_start)
+          text = text[:ctor] + (
+              '                val frontier = requireNotNull(model.predictFrontier(fit, observation.repetitions.toDouble()).summary)\n'
+              '                val crps = predictiveEvaluator.crpsLogResistance(\n'
+              '                    fit = fit,\n'
+              '                    repetitions = observation.repetitions.toDouble(),\n'
+              '                    observedResistanceKg = observation.resistance.value,\n'
+              '                )\n'
+          ) + text[ctor:]
+          candidate_anchor = '                    candidatePredictive = predictive,\n'
+          candidate_at = text.index(candidate_anchor, heldout_start)
+          insertion_at = candidate_at + len(candidate_anchor)
+          text = text[:insertion_at] + (
+              '                    candidateFrontierAtRepetitions = frontier,\n'
+              '                    candidateCrpsLogResistance = crps,\n'
+          ) + text[insertion_at:]
+          text = insert_after(text,
+              '    private val intervalCache = mutableMapOf<IntervalKey, PredictiveInterval>()\n',
+              '    private val crpsCache = mutableMapOf<CrpsKey, DeterministicCrpsDistribution>()\n'
+              '    private val crpsNoiseQuantiles: DoubleArray by lazy { buildCrpsNoiseQuantiles(config) }\n')
+          text = insert_before_once(text,
+              '    fun cdf(fit: DynamicStochasticFrontierFit, repetitions: Double, resistanceKg: Double): Double {\n',
+              '''    fun crpsLogResistance(
+        fit: DynamicStochasticFrontierFit,
+        repetitions: Double,
+        observedResistanceKg: Double,
+    ): Double {
+        require(repetitions.isFinite() && repetitions > 0.0)
+        require(observedResistanceKg.isFinite() && observedResistanceKg > 0.0)
+        val key = CrpsKey(
+            executionProfileVersionId = fit.executionProfileVersionId.value,
+            side = fit.side.storageValue,
+            inferenceHorizon = fit.inferenceHorizon,
+            modelConfigId = fit.modelConfigId.value,
+            referenceRepetitions = fit.referenceRepetitions,
+            repetitions = repetitions,
+        )
+        val distribution = crpsCache.getOrPut(key) { buildCrpsDistribution(fit, repetitions) }
+        return distribution.score(ln(observedResistanceKg))
+    }
+
+    private fun buildCrpsDistribution(
+        fit: DynamicStochasticFrontierFit,
+        repetitions: Double,
+    ): DeterministicCrpsDistribution {
+        val x = ln(repetitions / fit.referenceRepetitions)
+        val topNodes = fit.posteriorNodes.sortedByDescending { it.posteriorWeight }
+            .take(minOf(config.slackPosteriorTopNodeCount, CRPS_TOP_POSTERIOR_NODES))
+        val topWeight = topNodes.sumOf { it.posteriorWeight }
+        require(topWeight.isFinite() && topWeight > 0.0)
+        val points = ArrayList<WeightedPredictivePoint>(topNodes.size * slackPoints.size * crpsNoiseQuantiles.size)
+        topNodes.forEach { node ->
+            val nodeWeight = node.posteriorWeight / topWeight
+            val frontier = node.logFrontierAtReference - node.slope * x
+            slackPoints.forEach { slack ->
+                val location = frontier - node.slackScale * slack.standardised
+                crpsNoiseQuantiles.forEach { noiseQuantile ->
+                    points += WeightedPredictivePoint(
+                        value = location + node.noiseScale * noiseQuantile,
+                        weight = nodeWeight * slack.probability / crpsNoiseQuantiles.size,
+                    )
+                }
+            }
+        }
+        return DeterministicWeightedCrps.distribution(points)
+    }
+
+''')
+          text = insert_before_once(text,
+              '    private data class IntervalKey(\n',
+              '''    private data class CrpsKey(
+        val executionProfileVersionId: String,
+        val side: String,
+        val inferenceHorizon: Instant,
+        val modelConfigId: String,
+        val referenceRepetitions: Double,
+        val repetitions: Double,
+    )
+
+''')
+          text = insert_after(text,
+              '    companion object {\n',
+              '''        private const val CRPS_TOP_POSTERIOR_NODES = 96
+        private const val CRPS_NOISE_POINTS = 9
+
+        private fun buildCrpsNoiseQuantiles(config: DynamicStochasticFrontierConfig): DoubleArray =
+            DoubleArray(CRPS_NOISE_POINTS) { index ->
+                val probability = (index + 0.5) / CRPS_NOISE_POINTS.toDouble()
+                inverseStudentTCdf(probability, config.studentTDegreesOfFreedom)
+            }
+
+        private fun inverseStudentTCdf(probability: Double, df: Double): Double {
+            require(probability > 0.0 && probability < 1.0)
+            var low = -50.0
+            var high = 50.0
+            repeat(72) {
+                val middle = (low + high) / 2.0
+                if (studentTCdf(middle, df) < probability) low = middle else high = middle
+            }
+            return (low + high) / 2.0
+        }
+
+''')
+          path.write_text(text)
+
+          # Acceptance report + device pathway.
+          path = Path('app/src/main/java/dev/kian/mymettle/developer/NBio7BAcceptanceRepository.kt')
+          text = path.read_text()
+          text = insert_after(text,
+              'import dev.kian.mymettle.engine.inference.DynamicResistanceRetrospectiveEvaluator\n',
+              'import dev.kian.mymettle.engine.inference.DynamicStage1DiagnosticAnalyzer\n'
+              'import dev.kian.mymettle.engine.inference.DynamicStage1DiagnosticSummary\n'
+              'import dev.kian.mymettle.engine.inference.DynamicStage1ProfileDiagnostics\n')
+          text = insert_after(text,
+              '    val validation: DynamicCapabilityValidationSummary,\n',
+              '    val stage1Diagnostics: DynamicStage1ProfileDiagnostics?,\n', count=1)
+          report_marker = 'data class NBio7BAcceptanceReport('
+          report_at = text.index(report_marker)
+          profiles_anchor = '    val profiles: List<NBio7BProfileAcceptance>,\n'
+          profiles_at = text.index(profiles_anchor, report_at)
+          text = text[:profiles_at + len(profiles_anchor)] + '    val stage1Diagnostics: DynamicStage1DiagnosticSummary,\n' + text[profiles_at + len(profiles_anchor):]
+          text = replace_once(text, '.put("formatVersion", 3)', '.put("formatVersion", 4)')
+          text = insert_after(text,
+              '        .put("candidateModelConfigId", candidateModelConfigId)\n',
+              '        .put("candidateV1Status", "REJECTED_EMPIRICAL_CALIBRATION_V1")\n')
+          text = insert_after(text,
+              '        .put("checks", JSONArray(checks.map { it.toJson() }))\n',
+              '        .put("stage1Diagnostics", stage1Diagnostics.toStage1Json())\n')
+          current_projection = '            val currentProjection = DynamicResistanceEvidenceProjector.project('
+          text = insert_before_once(text, current_projection,
+              '''            val stage1Diagnostics = DynamicStage1DiagnosticAnalyzer.profile(
+                profile = descriptor.semantics,
+                side = side,
+                observations = historical.observations,
+                revisions = history.revisions,
+                evidencePolicy = DynamicResistanceV2Contract.evidencePolicy,
+            )
+''')
+          text = insert_after(text,
+              '                validation = historical.summary,\n',
+              '                stage1Diagnostics = stage1Diagnostics,\n')
+          text = insert_before_once(text,
+              '        val totalElapsed = (System.nanoTime() - started) / 1_000_000L\n',
+              '''        val stage1Diagnostics = DynamicStage1DiagnosticAnalyzer.aggregate(
+            profileReports.map { it.stage1Diagnostics },
+        )
+''')
+          # Constructor assignment occurs after aggregate and has one unambiguous profiles field.
+          ctor_marker = '        return NBio7BAcceptanceReport('
+          ctor_at = text.index(ctor_marker)
+          profiles_assignment = '            profiles = profileReports,\n'
+          pa = text.index(profiles_assignment, ctor_at)
+          text = text[:pa + len(profiles_assignment)] + '            stage1Diagnostics = stage1Diagnostics,\n' + text[pa + len(profiles_assignment):]
+          # Per-profile JSON.
+          profile_json_anchor = '    .put("validation", validation.toJson())\n'
+          text = insert_after(text, profile_json_anchor, '    .put("stage1Diagnostics", stage1Diagnostics.toStage1Json())\n')
+          path.write_text(text)
+
+          path = Path('app/src/main/java/dev/kian/mymettle/developer/NBio7BClosureAcceptance.kt')
+          text = path.read_text()
+          text = replace_once(text, 'root.put("formatVersion", 3)', 'root.put("formatVersion", 4)')
+          path.write_text(text)
+
+          # Docs: preserve prior content and append the immutable rejection/diagnostic contract once.
+          path = Path('docs/n-bio-vnext/DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md')
+          text = path.read_text()
+          section = '''
+
+---
+
+# Candidate-v1 empirical rejection and Stage-1 diagnostic gate — 2026-08-30
+
+Candidate v1 is frozen with empirical status `REJECTED_EMPIRICAL_CALIBRATION_V1`. Its central demonstration-median error was roughly competitive with the supported BENCHMARK_V0 latest-anchor metric, but installed-history predictive calibration was unacceptable: coverage was about 56%, PIT was strongly high-skewed and catastrophic lower-bound/frontier contradictions were frequent. No Candidate-v1 hyperparameter is retuned to rescue that result.
+
+Before any Candidate v2 is implemented, Stage 1 must diagnose whether the failure is materially associated with recent prior-only demonstrated-performance direction rather than merely narrow intervals, slack/noise misspecification, rep-domain extrapolation or slope misspecification.
+
+Stage-1 diagnostics are non-behaviour-driving. Recent trend uses a transparent Theil-Sen slope of median natural-log resistance for the same repetition count across up to the latest four prior independent sessions. It requires at least three comparable prior sessions and never consumes the held-out or any future session. This intentionally sacrifices trend availability to avoid conflating rep-zone changes with temporal direction.
+
+Signed residual is `ln(observed resistance / candidate demonstration predictive median)`. Positive values mean Candidate v1 underpredicted the successful demonstration. Sharpness uses `ln(p95/p05)`, avoiding meaningless aggregation of raw kilogram widths across unrelated profiles.
+
+CRPS is reported on natural-log resistance. It is a deterministic approximation to the actual Candidate-v1 predictive mixture, retaining up to the top 96 posterior nodes, the frozen Half-Normal slack quadrature and nine fixed deterministic Student-t quantiles. It scores both calibration and sharpness without random Monte Carlo. BENCHMARK_V0 CRPS remains not applicable because that benchmark defines no probabilistic predictive distribution.
+
+The diagnostic verdict is versioned separately from Candidate v1 and may be `TEMPORAL_LAG_SUPPORTED`, `TEMPORAL_LAG_PLAUSIBLE_BUT_NOT_ISOLATED`, `TEMPORAL_LAG_NOT_SUPPORTED`, or `INSUFFICIENT_DIAGNOSTIC_EVIDENCE`. Candidate-v2 implementation is forbidden until the installed-history Stage-1 report is reviewed and the gate is crossed. Context consumption remains `NONE`; Room14, SHADOW-only candidate persistence and BENCHMARK_V0 authority remain unchanged.
+'''
+          if '# Candidate-v1 empirical rejection and Stage-1 diagnostic gate — 2026-08-30' not in text:
+              text += section
+          path.write_text(text)
+
+          path = Path('docs/n-bio-vnext/README.md')
+          text = path.read_text()
+          text = text.replace(
+              '7B.2  complete — frozen stochastic-frontier inference + synthetic/model verification',
+              '7B.2  Candidate v1 frozen/rejected — stochastic-frontier implementation preserved; installed-history calibration requires a new candidate',
+          )
+          text = text.replace(
+              '7B.4  implementation complete — installed-history/device acceptance runner + replay/invariance/backup checks; physical acceptance pending',
+              '7B.4  Candidate-v1 real-history acceptance complete — integrity/replay/backup passed; Candidate v1 rejected; Stage-1 temporal diagnostic pending before any Candidate v2',
+          )
+          note = '- **Candidate-v1 empirical rejection (2026-08-30):** `REJECTED_EMPIRICAL_CALIBRATION_V1`; Stage-1 temporal diagnostics must be executed/reviewed before the Candidate-v2 gate may open. N-BIO-7C has not started.\n'
+          if note not in text:
+              text += '\n' + note
+          path.write_text(text)
+
+          # Remove all patch scaffolding from the product tree before commit.
+          for workflow in [
+              '.github/workflows/n-bio-7b-stage1-patch.yml',
+              '.github/workflows/n-bio-7b-stage1-retry.yml',
+              '.github/workflows/n-bio-7b-stage1-structural.yml',
+          ]:
+              Path(workflow).unlink(missing_ok=True)
+          PY
+          git diff --check
+      - name: Focused Stage-1 tests and debug APK
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --no-daemon
+      - name: Compile instrumentation APK
+        run: ./gradlew :app:assembleDebugAndroidTest --stacktrace --no-daemon
+      - name: Commit product tree
+        shell: bash
+        run: |
+          git config user.name 'Magna-Create'
+          git config user.email '53941598+Magna-Create@users.noreply.github.com'
+          git add -A
+          git commit -m 'Add N-BIO-7B Candidate-v1 temporal diagnostics'
+          git push origin HEAD:agent/n-bio-vnext-inference
