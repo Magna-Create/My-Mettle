@@ -1,0 +1,919 @@
+name: N-BIO-7B Stage1 Patch
+
+on:
+  push:
+    branches:
+      - agent/n-bio-vnext-inference
+    paths:
+      - .github/workflows/n-bio-7b-stage1-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+      - name: Install Android SDK 37
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Apply Stage-1 diagnostics
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace1(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f"missing patch anchor in {path}: {old[:120]!r}")
+              p.write_text(text.replace(old, new, 1))
+
+          validation = 'app/src/main/java/dev/kian/mymettle/domain/inference/DynamicCapabilityValidation.kt'
+          replace1(validation,
+          '''    val benchmarkLatestResistanceAnchorKg: Double?,
+              val modelFailureReason: String? = null,
+          ) {''',
+          '''    val benchmarkLatestResistanceAnchorKg: Double?,
+              /** Latent frontier posterior at the held-out repetition count; never an observation interval. */
+              val candidateFrontierAtRepetitions: PosteriorSummary? = null,
+              /** Deterministic CRPS on natural-log resistance scale; dimensionless log-ratio semantics. */
+              val candidateCrpsLogResistance: Double? = null,
+              val modelFailureReason: String? = null,
+          ) {''')
+          replace1(validation,
+          '''        require(benchmarkLatestResistanceAnchorKg == null || benchmarkLatestResistanceAnchorKg > 0.0)
+              if (status == DynamicHeldOutStatus.MODEL_FAILURE) require(!modelFailureReason.isNullOrBlank())''',
+          '''        require(benchmarkLatestResistanceAnchorKg == null || benchmarkLatestResistanceAnchorKg > 0.0)
+              require(candidateCrpsLogResistance == null || (candidateCrpsLogResistance.isFinite() && candidateCrpsLogResistance >= 0.0))
+              if (status == DynamicHeldOutStatus.EVALUABLE) require(candidateFrontierAtRepetitions != null)
+              if (status == DynamicHeldOutStatus.MODEL_FAILURE) require(!modelFailureReason.isNullOrBlank())''')
+
+          stage1 = r'''package dev.kian.mymettle.engine.inference
+
+          import dev.kian.mymettle.domain.inference.DynamicCapabilityValidationPolicy
+          import dev.kian.mymettle.domain.inference.DynamicHeldOutEvaluation
+          import dev.kian.mymettle.domain.inference.DynamicHeldOutStatus
+          import dev.kian.mymettle.domain.inference.DynamicResistanceEvidencePolicy
+          import dev.kian.mymettle.domain.inference.DynamicResistanceProfileSemantics
+          import dev.kian.mymettle.domain.performance.Laterality
+          import dev.kian.mymettle.engine.performance.DynamicResistanceEvidenceProjector
+          import kotlin.math.abs
+          import kotlin.math.ln
+          import kotlin.math.max
+          import kotlin.math.sqrt
+
+          data class WeightedPredictivePoint(val value: Double, val weight: Double) {
+              init {
+                  require(value.isFinite())
+                  require(weight.isFinite() && weight >= 0.0)
+              }
+          }
+
+          data class DeterministicCrpsDistribution internal constructor(
+              private val values: DoubleArray,
+              private val weights: DoubleArray,
+              private val halfPairwiseAbsoluteExpectation: Double,
+          ) {
+              fun score(observed: Double): Double {
+                  require(observed.isFinite())
+                  var first = 0.0
+                  for (index in values.indices) first += weights[index] * abs(values[index] - observed)
+                  return max(0.0, first - halfPairwiseAbsoluteExpectation)
+              }
+          }
+
+          object DeterministicWeightedCrps {
+              fun distribution(points: List<WeightedPredictivePoint>): DeterministicCrpsDistribution {
+                  require(points.isNotEmpty())
+                  val total = points.sumOf { it.weight }
+                  require(total.isFinite() && total > 0.0)
+                  val sorted = points.sortedBy { it.value }
+                  val values = DoubleArray(sorted.size)
+                  val weights = DoubleArray(sorted.size)
+                  var prefixWeight = 0.0
+                  var prefixWeightedValue = 0.0
+                  var halfPairwise = 0.0
+                  sorted.forEachIndexed { index, point ->
+                      val weight = point.weight / total
+                      values[index] = point.value
+                      weights[index] = weight
+                      halfPairwise += weight * (point.value * prefixWeight - prefixWeightedValue)
+                      prefixWeight += weight
+                      prefixWeightedValue += weight * point.value
+                  }
+                  return DeterministicCrpsDistribution(values, weights, max(0.0, halfPairwise))
+              }
+          }
+
+          enum class DynamicRecentTrendDirection(val storageValue: String) {
+              UPWARD("upward"), STABLE("stable"), DOWNWARD("downward"), INSUFFICIENT("insufficient")
+          }
+
+          enum class DynamicRepDomainPosition(val storageValue: String) {
+              INSIDE("inside"), BELOW("below"), ABOVE("above"), UNKNOWN("unknown")
+          }
+
+          enum class DynamicStage1TemporalLagVerdict(val storageValue: String) {
+              TEMPORAL_LAG_SUPPORTED("temporal_lag_supported"),
+              TEMPORAL_LAG_PLAUSIBLE_BUT_NOT_ISOLATED("temporal_lag_plausible_but_not_isolated"),
+              TEMPORAL_LAG_NOT_SUPPORTED("temporal_lag_not_supported"),
+              INSUFFICIENT_DIAGNOSTIC_EVIDENCE("insufficient_diagnostic_evidence"),
+          }
+
+          data class DynamicStage1DiagnosticPolicy(
+              val semanticVersion: String = "n-bio-7b-candidate-v1-temporal-diagnostic-v1",
+              val recentTrendSessionWindow: Int = 4,
+              val minimumComparableTrendSessions: Int = 3,
+              val stableTrendAbsoluteLogPerSession: Double = 0.01,
+              val minimumGlobalEvaluableEvents: Int = 30,
+              val minimumTrendClassifiedEvents: Int = 16,
+              val minimumUpwardEvents: Int = 6,
+              val minimumStableEvents: Int = 6,
+              val minimumSerialPairs: Int = 8,
+              val supportUpwardMedianResidual: Double = 0.02,
+              val supportUpwardPositiveRate: Double = 0.65,
+              val supportHighPitRate: Double = 0.50,
+              val supportTrendResidualCorrelation: Double = 0.15,
+              val supportStableResidualContrast: Double = 0.015,
+              val supportStableHighPitContrast: Double = 0.10,
+          )
+
+          data class DynamicStage1EventDiagnostic(
+              val sessionOrdinal: Int,
+              val repetitions: Int,
+              val observedResistanceKg: Double,
+              val priorIndependentSessionCount: Int,
+              val priorRepMin: Int?,
+              val priorRepMax: Int?,
+              val repDomainPosition: DynamicRepDomainPosition,
+              val predictiveP05Kg: Double,
+              val predictiveP50Kg: Double,
+              val predictiveP95Kg: Double,
+              val predictiveLogWidth: Double,
+              val pit: Double,
+              val logPredictiveDensity: Double,
+              val crpsLogResistance: Double,
+              val frontierP05Kg: Double,
+              val frontierP50Kg: Double,
+              val frontierP95Kg: Double,
+              val signedLogResidual: Double,
+              val recentTrendLogPerSession: Double?,
+              val recentTrendDirection: DynamicRecentTrendDirection,
+              val recentTrendComparableSessions: Int,
+              val previousSessionMedianSignedLogResiduals: List<Double>,
+              val priorPositiveResidualSessionStreak: Int,
+              val coveredByPredictiveInterval: Boolean,
+              val catastrophicFrontierContradiction: Boolean,
+          )
+
+          data class DynamicStage1TrendGroupSummary(
+              val count: Int,
+              val meanSignedLogResidual: Double?,
+              val medianSignedLogResidual: Double?,
+              val positiveResidualProportion: Double?,
+              val pitLowCount: Int,
+              val pitMiddleCount: Int,
+              val pitHighCount: Int,
+              val highPitRate: Double?,
+              val predictiveCoverage: Double?,
+              val catastrophicContradictionRate: Double?,
+              val meanPredictiveLogWidth: Double?,
+              val meanCrpsLogResistance: Double?,
+          )
+
+          data class DynamicStage1SerialSummary(
+              val profileSessionCount: Int,
+              val adjacentPairCount: Int,
+              val sameSignAdjacentRate: Double?,
+              val positivePositiveAdjacentRate: Double?,
+              val lag1ResidualCorrelation: Double?,
+              val longestPositiveRun: Int,
+          )
+
+          data class DynamicStage1DiagnosticSummary(
+              val policyId: String,
+              val evaluableEventCount: Int,
+              val meanSignedLogResidual: Double?,
+              val medianSignedLogResidual: Double?,
+              val positiveResidualProportion: Double?,
+              val meanPredictiveLogWidth: Double?,
+              val meanCrpsLogResistance: Double?,
+              val trendClassifiedEventCount: Int,
+              val trendResidualCorrelation: Double?,
+              val byTrend: Map<DynamicRecentTrendDirection, DynamicStage1TrendGroupSummary>,
+              val serial: DynamicStage1SerialSummary,
+              val verdict: DynamicStage1TemporalLagVerdict,
+              val limitations: List<String>,
+          )
+
+          data class DynamicStage1ProfileDiagnostics(
+              val executionProfileVersionId: String,
+              val side: String,
+              val events: List<DynamicStage1EventDiagnostic>,
+              val summary: DynamicStage1DiagnosticSummary,
+          )
+
+          object DynamicStage1DiagnosticAnalyzer {
+              fun profile(
+                  profile: DynamicResistanceProfileSemantics,
+                  side: Laterality,
+                  observations: List<DynamicHeldOutEvaluation>,
+                  revisions: Collection<HistoricalCompletedSetEvidenceRevision>,
+                  evidencePolicy: DynamicResistanceEvidencePolicy,
+                  policy: DynamicStage1DiagnosticPolicy = DynamicStage1DiagnosticPolicy(),
+              ): DynamicStage1ProfileDiagnostics {
+                  val evaluable = observations.filter { it.status == DynamicHeldOutStatus.EVALUABLE }
+                  val orderedSessions = observations.map { it.sessionId }.distinct().sortedBy { sessionId ->
+                      revisions.filter { it.evidence.sessionId == sessionId }.maxOfOrNull { it.sessionCompletedAt }
+                  }
+                  val ordinals = orderedSessions.withIndex().associate { it.value to it.index + 1 }
+                  val base = evaluable.map { event ->
+                      val cutoff = revisions.filter { it.evidence.sessionId == event.sessionId }
+                          .maxOf { it.sessionCompletedAt }
+                      val trainingRaw = HistoricalObservationRevisionSelector.currentAsOf(
+                          revisions.filter { it.evidence.sessionId in event.trainingSessionIds }, cutoff,
+                      ).filter {
+                          it.executionProfileVersionId == profile.executionProfileVersionId && it.laterality == side
+                      }
+                      val projection = DynamicResistanceEvidenceProjector.project(
+                          profile = profile, side = side, evidence = trainingRaw, policy = evidencePolicy,
+                      )
+                      val trendEvidence = projection.evidence
+                          .filter { it.repetitions == event.repetitions }
+                          .groupBy { it.sessionId }
+                          .map { (_, values) ->
+                              values.maxOf { it.completedAt } to median(values.map { ln(it.resistance.value) })
+                          }
+                          .sortedBy { it.first }
+                          .takeLast(policy.recentTrendSessionWindow)
+                          .map { it.second }
+                      val trend = if (trendEvidence.size >= policy.minimumComparableTrendSessions) theilSen(trendEvidence) else null
+                      val direction = classifyTrend(trend, trendEvidence.size, policy)
+                      val predictive = requireNotNull(event.candidatePredictive)
+                      val frontier = requireNotNull(event.candidateFrontierAtRepetitions)
+                      val crps = requireNotNull(event.candidateCrpsLogResistance)
+                      val residual = ln(event.observedResistanceKg / predictive.p50ResistanceKg)
+                      val repDomain = projection.repDomain
+                      val domainPosition = when {
+                          repDomain == null -> DynamicRepDomainPosition.UNKNOWN
+                          event.repetitions < repDomain.first -> DynamicRepDomainPosition.BELOW
+                          event.repetitions > repDomain.last -> DynamicRepDomainPosition.ABOVE
+                          else -> DynamicRepDomainPosition.INSIDE
+                      }
+                      DynamicStage1EventDiagnostic(
+                          sessionOrdinal = requireNotNull(ordinals[event.sessionId]),
+                          repetitions = event.repetitions,
+                          observedResistanceKg = event.observedResistanceKg,
+                          priorIndependentSessionCount = projection.independentSessionCount,
+                          priorRepMin = repDomain?.first,
+                          priorRepMax = repDomain?.last,
+                          repDomainPosition = domainPosition,
+                          predictiveP05Kg = predictive.p05ResistanceKg,
+                          predictiveP50Kg = predictive.p50ResistanceKg,
+                          predictiveP95Kg = predictive.p95ResistanceKg,
+                          predictiveLogWidth = ln(predictive.p95ResistanceKg / predictive.p05ResistanceKg),
+                          pit = predictive.observedCdf,
+                          logPredictiveDensity = predictive.logPredictiveDensity,
+                          crpsLogResistance = crps,
+                          frontierP05Kg = frontier.p05,
+                          frontierP50Kg = frontier.p50,
+                          frontierP95Kg = frontier.p95,
+                          signedLogResidual = residual,
+                          recentTrendLogPerSession = trend,
+                          recentTrendDirection = direction,
+                          recentTrendComparableSessions = trendEvidence.size,
+                          previousSessionMedianSignedLogResiduals = emptyList(),
+                          priorPositiveResidualSessionStreak = 0,
+                          coveredByPredictiveInterval = predictive.contains(event.observedResistanceKg),
+                          catastrophicFrontierContradiction = (event.frontierAtOrAboveObservedProbability ?: 1.0) <
+                              DynamicCapabilityValidationPolicy().descriptiveFrontierContradictionProbability,
+                      )
+                  }
+                  val sessionResiduals = base.groupBy { it.sessionOrdinal }
+                      .mapValues { (_, events) -> median(events.map { it.signedLogResidual }) }
+                      .toSortedMap()
+                  val enriched = base.map { event ->
+                      val previous = sessionResiduals.filterKeys { it < event.sessionOrdinal }.values.toList().takeLast(3)
+                      event.copy(
+                          previousSessionMedianSignedLogResiduals = previous,
+                          priorPositiveResidualSessionStreak = positiveTailStreak(previous),
+                      )
+                  }
+                  val summary = summarize(listOf(enriched), policy)
+                  return DynamicStage1ProfileDiagnostics(
+                      executionProfileVersionId = profile.executionProfileVersionId.value,
+                      side = side.storageValue,
+                      events = enriched.sortedWith(compareBy<DynamicStage1EventDiagnostic> { it.sessionOrdinal }.thenBy { it.repetitions }),
+                      summary = summary,
+                  )
+              }
+
+              fun aggregate(
+                  profiles: List<DynamicStage1ProfileDiagnostics>,
+                  policy: DynamicStage1DiagnosticPolicy = DynamicStage1DiagnosticPolicy(),
+              ): DynamicStage1DiagnosticSummary = summarize(profiles.map { it.events }, policy)
+
+              fun classifyTrend(
+                  slope: Double?,
+                  comparableSessions: Int,
+                  policy: DynamicStage1DiagnosticPolicy = DynamicStage1DiagnosticPolicy(),
+              ): DynamicRecentTrendDirection = when {
+                  slope == null || comparableSessions < policy.minimumComparableTrendSessions -> DynamicRecentTrendDirection.INSUFFICIENT
+                  slope > policy.stableTrendAbsoluteLogPerSession -> DynamicRecentTrendDirection.UPWARD
+                  slope < -policy.stableTrendAbsoluteLogPerSession -> DynamicRecentTrendDirection.DOWNWARD
+                  else -> DynamicRecentTrendDirection.STABLE
+              }
+
+              fun theilSen(values: List<Double>): Double {
+                  require(values.size >= 2)
+                  val slopes = mutableListOf<Double>()
+                  for (left in 0 until values.lastIndex) {
+                      for (right in left + 1 until values.size) {
+                          slopes += (values[right] - values[left]) / (right - left).toDouble()
+                      }
+                  }
+                  return median(slopes)
+              }
+
+              private fun summarize(
+                  profileEvents: List<List<DynamicStage1EventDiagnostic>>,
+                  policy: DynamicStage1DiagnosticPolicy,
+              ): DynamicStage1DiagnosticSummary {
+                  val events = profileEvents.flatten()
+                  val byTrend = DynamicRecentTrendDirection.entries.associateWith { direction ->
+                      trendSummary(events.filter { it.recentTrendDirection == direction })
+                  }
+                  val classified = events.filter { it.recentTrendDirection != DynamicRecentTrendDirection.INSUFFICIENT }
+                  val sessionPairs = profileEvents.flatMap { profile ->
+                      profile.groupBy { it.sessionOrdinal }.toSortedMap().map { (ordinal, items) ->
+                          Triple(ordinal, median(items.map { it.signedLogResidual }), items.mapNotNull { it.recentTrendLogPerSession }.medianOrNull())
+                      }
+                  }
+                  val trendPairs = sessionPairs.mapNotNull { (_, residual, trend) -> trend?.let { it to residual } }
+                  val serial = serialSummary(profileEvents, policy)
+                  val correlation = pearson(trendPairs.map { it.first }, trendPairs.map { it.second }, 8)
+                  val summary = DynamicStage1DiagnosticSummary(
+                      policyId = policy.semanticVersion,
+                      evaluableEventCount = events.size,
+                      meanSignedLogResidual = events.map { it.signedLogResidual }.meanOrNull(),
+                      medianSignedLogResidual = events.map { it.signedLogResidual }.medianOrNull(),
+                      positiveResidualProportion = proportion(events) { it.signedLogResidual > 0.0 },
+                      meanPredictiveLogWidth = events.map { it.predictiveLogWidth }.meanOrNull(),
+                      meanCrpsLogResistance = events.map { it.crpsLogResistance }.meanOrNull(),
+                      trendClassifiedEventCount = classified.size,
+                      trendResidualCorrelation = correlation,
+                      byTrend = byTrend,
+                      serial = serial,
+                      verdict = DynamicStage1TemporalLagVerdict.INSUFFICIENT_DIAGNOSTIC_EVIDENCE,
+                      limitations = emptyList(),
+                  )
+                  val verdict = verdict(summary, policy)
+                  val limitations = buildList {
+                      if (events.size < policy.minimumGlobalEvaluableEvents) add("Too few evaluable held-out demonstrations for the global diagnostic gate.")
+                      if (classified.size < policy.minimumTrendClassifiedEvents) add("Too few held-out demonstrations had at least three comparable prior same-rep sessions for trend classification.")
+                      if ((byTrend[DynamicRecentTrendDirection.STABLE]?.count ?: 0) < policy.minimumStableEvents) add("Stable-history comparison support is limited; temporal lag cannot be cleanly isolated from interval/noise misspecification.")
+                      if (correlation == null) add("Trend/residual correlation is not reported because profile-session support is too small.")
+                      add("Recent trend is diagnostic only: Theil-Sen slope of prior same-rep session median log resistance, maximum four sessions, with no held-out/future evidence.")
+                      add("CRPS uses natural-log resistance and is a deterministic approximation to the candidate predictive mixture; BENCHMARK_V0 has no CRPS because it has no probabilistic predictive distribution.")
+                  }
+                  return summary.copy(verdict = verdict, limitations = limitations)
+              }
+
+              private fun verdict(
+                  summary: DynamicStage1DiagnosticSummary,
+                  policy: DynamicStage1DiagnosticPolicy,
+              ): DynamicStage1TemporalLagVerdict {
+                  if (summary.evaluableEventCount < policy.minimumGlobalEvaluableEvents ||
+                      summary.trendClassifiedEventCount < policy.minimumTrendClassifiedEvents
+                  ) return DynamicStage1TemporalLagVerdict.INSUFFICIENT_DIAGNOSTIC_EVIDENCE
+                  val upward = requireNotNull(summary.byTrend[DynamicRecentTrendDirection.UPWARD])
+                  val stable = requireNotNull(summary.byTrend[DynamicRecentTrendDirection.STABLE])
+                  if (upward.count < policy.minimumUpwardEvents) return DynamicStage1TemporalLagVerdict.INSUFFICIENT_DIAGNOSTIC_EVIDENCE
+                  val upwardSupport = (upward.medianSignedLogResidual ?: Double.NEGATIVE_INFINITY) >= policy.supportUpwardMedianResidual &&
+                      (upward.positiveResidualProportion ?: 0.0) >= policy.supportUpwardPositiveRate &&
+                      (upward.highPitRate ?: 0.0) >= policy.supportHighPitRate
+                  val correlationSupport = (summary.trendResidualCorrelation ?: Double.NEGATIVE_INFINITY) >= policy.supportTrendResidualCorrelation
+                  val stableContrast = stable.count >= policy.minimumStableEvents &&
+                      (upward.medianSignedLogResidual ?: 0.0) - (stable.medianSignedLogResidual ?: 0.0) >= policy.supportStableResidualContrast &&
+                      (upward.highPitRate ?: 0.0) - (stable.highPitRate ?: 0.0) >= policy.supportStableHighPitContrast
+                  val serialSupport = summary.serial.adjacentPairCount >= policy.minimumSerialPairs &&
+                      ((summary.serial.positivePositiveAdjacentRate ?: 0.0) >= 0.40 ||
+                          (summary.serial.lag1ResidualCorrelation ?: 0.0) >= 0.15)
+                  return when {
+                      upwardSupport && correlationSupport && stableContrast && serialSupport -> DynamicStage1TemporalLagVerdict.TEMPORAL_LAG_SUPPORTED
+                      upwardSupport && (correlationSupport || stableContrast || serialSupport) -> DynamicStage1TemporalLagVerdict.TEMPORAL_LAG_PLAUSIBLE_BUT_NOT_ISOLATED
+                      stable.count >= policy.minimumStableEvents && !upwardSupport && (summary.trendResidualCorrelation ?: 0.0) <= 0.0 -> DynamicStage1TemporalLagVerdict.TEMPORAL_LAG_NOT_SUPPORTED
+                      else -> DynamicStage1TemporalLagVerdict.TEMPORAL_LAG_PLAUSIBLE_BUT_NOT_ISOLATED
+                  }
+              }
+
+              private fun trendSummary(events: List<DynamicStage1EventDiagnostic>): DynamicStage1TrendGroupSummary {
+                  val low = events.count { it.pit < 1.0 / 3.0 }
+                  val middle = events.count { it.pit >= 1.0 / 3.0 && it.pit < 2.0 / 3.0 }
+                  val high = events.size - low - middle
+                  return DynamicStage1TrendGroupSummary(
+                      count = events.size,
+                      meanSignedLogResidual = events.map { it.signedLogResidual }.meanOrNull(),
+                      medianSignedLogResidual = events.map { it.signedLogResidual }.medianOrNull(),
+                      positiveResidualProportion = proportion(events) { it.signedLogResidual > 0.0 },
+                      pitLowCount = low,
+                      pitMiddleCount = middle,
+                      pitHighCount = high,
+                      highPitRate = if (events.isEmpty()) null else high.toDouble() / events.size,
+                      predictiveCoverage = proportion(events) { it.coveredByPredictiveInterval },
+                      catastrophicContradictionRate = proportion(events) { it.catastrophicFrontierContradiction },
+                      meanPredictiveLogWidth = events.map { it.predictiveLogWidth }.meanOrNull(),
+                      meanCrpsLogResistance = events.map { it.crpsLogResistance }.meanOrNull(),
+                  )
+              }
+
+              private fun serialSummary(
+                  profileEvents: List<List<DynamicStage1EventDiagnostic>>,
+                  policy: DynamicStage1DiagnosticPolicy,
+              ): DynamicStage1SerialSummary {
+                  val sequences = profileEvents.map { profile ->
+                      profile.groupBy { it.sessionOrdinal }.toSortedMap().values.map { items ->
+                          median(items.map { it.signedLogResidual })
+                      }
+                  }.filter { it.isNotEmpty() }
+                  val pairs = sequences.flatMap { sequence -> sequence.zipWithNext() }
+                  val same = pairs.count { (a, b) -> a * b > 0.0 }
+                  val positivePositive = pairs.count { (a, b) -> a > 0.0 && b > 0.0 }
+                  val lag = if (pairs.size >= policy.minimumSerialPairs) pearson(pairs.map { it.first }, pairs.map { it.second }, policy.minimumSerialPairs) else null
+                  return DynamicStage1SerialSummary(
+                      profileSessionCount = sequences.sumOf { it.size },
+                      adjacentPairCount = pairs.size,
+                      sameSignAdjacentRate = if (pairs.isEmpty()) null else same.toDouble() / pairs.size,
+                      positivePositiveAdjacentRate = if (pairs.isEmpty()) null else positivePositive.toDouble() / pairs.size,
+                      lag1ResidualCorrelation = lag,
+                      longestPositiveRun = sequences.maxOfOrNull { sequence -> longestPositiveRun(sequence) } ?: 0,
+                  )
+              }
+
+              private fun longestPositiveRun(values: List<Double>): Int {
+                  var best = 0
+                  var current = 0
+                  values.forEach { value ->
+                      current = if (value > 0.0) current + 1 else 0
+                      if (current > best) best = current
+                  }
+                  return best
+              }
+
+              private fun positiveTailStreak(values: List<Double>): Int {
+                  var count = 0
+                  for (index in values.indices.reversed()) {
+                      if (values[index] > 0.0) count += 1 else break
+                  }
+                  return count
+              }
+
+              private fun pearson(left: List<Double>, right: List<Double>, minimum: Int): Double? {
+                  if (left.size != right.size || left.size < minimum) return null
+                  val meanLeft = left.average()
+                  val meanRight = right.average()
+                  var covariance = 0.0
+                  var varianceLeft = 0.0
+                  var varianceRight = 0.0
+                  for (index in left.indices) {
+                      val dl = left[index] - meanLeft
+                      val dr = right[index] - meanRight
+                      covariance += dl * dr
+                      varianceLeft += dl * dl
+                      varianceRight += dr * dr
+                  }
+                  if (varianceLeft <= 0.0 || varianceRight <= 0.0) return null
+                  return (covariance / sqrt(varianceLeft * varianceRight)).coerceIn(-1.0, 1.0)
+              }
+
+              private fun median(values: List<Double>): Double = requireNotNull(values.medianOrNull())
+              private fun List<Double>.medianOrNull(): Double? {
+                  if (isEmpty()) return null
+                  val sorted = sorted()
+                  val middle = sorted.size / 2
+                  return if (sorted.size % 2 == 1) sorted[middle] else (sorted[middle - 1] + sorted[middle]) / 2.0
+              }
+              private fun List<Double>.meanOrNull(): Double? = if (isEmpty()) null else average()
+              private fun <T> proportion(values: List<T>, predicate: (T) -> Boolean): Double? =
+                  if (values.isEmpty()) null else values.count(predicate).toDouble() / values.size
+          }
+          '''
+          Path('app/src/main/java/dev/kian/mymettle/engine/inference/DynamicResistanceStage1Diagnostics.kt').write_text(stage1)
+
+          retro = 'app/src/main/java/dev/kian/mymettle/engine/inference/DynamicResistanceRetrospectiveValidation.kt'
+          replace1(retro,
+          '''                val predictive = predictiveEvaluator.evaluate(
+                          fit = fit,
+                          repetitions = observation.repetitions.toDouble(),
+                          observedResistanceKg = observation.resistance.value,
+                          lowerProbability = policy.predictiveLowerProbability,
+                          upperProbability = policy.predictiveUpperProbability,
+                      )
+                      DynamicHeldOutEvaluation(''',
+          '''                val predictive = predictiveEvaluator.evaluate(
+                          fit = fit,
+                          repetitions = observation.repetitions.toDouble(),
+                          observedResistanceKg = observation.resistance.value,
+                          lowerProbability = policy.predictiveLowerProbability,
+                          upperProbability = policy.predictiveUpperProbability,
+                      )
+                      val frontier = requireNotNull(model.predictFrontier(fit, observation.repetitions.toDouble()).summary)
+                      val crps = predictiveEvaluator.crpsLogResistance(
+                          fit = fit,
+                          repetitions = observation.repetitions.toDouble(),
+                          observedResistanceKg = observation.resistance.value,
+                      )
+                      DynamicHeldOutEvaluation(''')
+          replace1(retro,
+          '''                    candidatePredictive = predictive,
+                      frontierAtOrAboveObservedProbability = frontierAtOrAboveObservedProbability(''',
+          '''                    candidatePredictive = predictive,
+                      candidateFrontierAtRepetitions = frontier,
+                      candidateCrpsLogResistance = crps,
+                      frontierAtOrAboveObservedProbability = frontierAtOrAboveObservedProbability(''')
+          replace1(retro,
+          '''    private val slackPoints: List<SlackPoint> = buildSlackPoints(config)
+              private val intervalCache = mutableMapOf<IntervalKey, PredictiveInterval>()''',
+          '''    private val slackPoints: List<SlackPoint> = buildSlackPoints(config)
+              private val intervalCache = mutableMapOf<IntervalKey, PredictiveInterval>()
+              private val crpsCache = mutableMapOf<CrpsKey, DeterministicCrpsDistribution>()
+              private val crpsNoiseQuantiles: DoubleArray by lazy { buildCrpsNoiseQuantiles(config) }''')
+          replace1(retro,
+          '''    fun cdf(fit: DynamicStochasticFrontierFit, repetitions: Double, resistanceKg: Double): Double {''',
+          '''    fun crpsLogResistance(
+                  fit: DynamicStochasticFrontierFit,
+                  repetitions: Double,
+                  observedResistanceKg: Double,
+              ): Double {
+                  require(repetitions.isFinite() && repetitions > 0.0)
+                  require(observedResistanceKg.isFinite() && observedResistanceKg > 0.0)
+                  val key = CrpsKey(
+                      executionProfileVersionId = fit.executionProfileVersionId.value,
+                      side = fit.side.storageValue,
+                      inferenceHorizon = fit.inferenceHorizon,
+                      modelConfigId = fit.modelConfigId.value,
+                      referenceRepetitions = fit.referenceRepetitions,
+                      repetitions = repetitions,
+                  )
+                  val distribution = crpsCache.getOrPut(key) { buildCrpsDistribution(fit, repetitions) }
+                  return distribution.score(ln(observedResistanceKg))
+              }
+
+              private fun buildCrpsDistribution(
+                  fit: DynamicStochasticFrontierFit,
+                  repetitions: Double,
+              ): DeterministicCrpsDistribution {
+                  val x = ln(repetitions / fit.referenceRepetitions)
+                  val topNodes = fit.posteriorNodes.sortedByDescending { it.posteriorWeight }
+                      .take(minOf(config.slackPosteriorTopNodeCount, CRPS_TOP_POSTERIOR_NODES))
+                  val topWeight = topNodes.sumOf { it.posteriorWeight }
+                  require(topWeight.isFinite() && topWeight > 0.0)
+                  val points = ArrayList<WeightedPredictivePoint>(topNodes.size * slackPoints.size * crpsNoiseQuantiles.size)
+                  topNodes.forEach { node ->
+                      val nodeWeight = node.posteriorWeight / topWeight
+                      val frontier = node.logFrontierAtReference - node.slope * x
+                      slackPoints.forEach { slack ->
+                          val location = frontier - node.slackScale * slack.standardised
+                          crpsNoiseQuantiles.forEach { noiseQuantile ->
+                              points += WeightedPredictivePoint(
+                                  value = location + node.noiseScale * noiseQuantile,
+                                  weight = nodeWeight * slack.probability / crpsNoiseQuantiles.size,
+                              )
+                          }
+                      }
+                  }
+                  return DeterministicWeightedCrps.distribution(points)
+              }
+
+              fun cdf(fit: DynamicStochasticFrontierFit, repetitions: Double, resistanceKg: Double): Double {''')
+          replace1(retro,
+          '''    private data class IntervalKey(''',
+          '''    private data class CrpsKey(
+                  val executionProfileVersionId: String,
+                  val side: String,
+                  val inferenceHorizon: Instant,
+                  val modelConfigId: String,
+                  val referenceRepetitions: Double,
+                  val repetitions: Double,
+              )
+
+              private data class IntervalKey(''')
+          replace1(retro,
+          '''    companion object {
+                  private fun buildSlackPoints(config: DynamicStochasticFrontierConfig): List<SlackPoint> {''',
+          '''    companion object {
+                  private const val CRPS_TOP_POSTERIOR_NODES = 96
+                  private const val CRPS_NOISE_POINTS = 9
+
+                  private fun buildCrpsNoiseQuantiles(config: DynamicStochasticFrontierConfig): DoubleArray =
+                      DoubleArray(CRPS_NOISE_POINTS) { index ->
+                          val probability = (index + 0.5) / CRPS_NOISE_POINTS.toDouble()
+                          inverseStudentTCdf(probability, config.studentTDegreesOfFreedom)
+                      }
+
+                  private fun inverseStudentTCdf(probability: Double, df: Double): Double {
+                      require(probability > 0.0 && probability < 1.0)
+                      var low = -50.0
+                      var high = 50.0
+                      repeat(72) {
+                          val middle = (low + high) / 2.0
+                          if (studentTCdf(middle, df) < probability) low = middle else high = middle
+                      }
+                      return (low + high) / 2.0
+                  }
+
+                  private fun buildSlackPoints(config: DynamicStochasticFrontierConfig): List<SlackPoint> {''')
+
+          acceptance = 'app/src/main/java/dev/kian/mymettle/developer/NBio7BAcceptanceRepository.kt'
+          replace1(acceptance,
+          '''import dev.kian.mymettle.engine.inference.DynamicResistanceRetrospectiveEvaluator
+          import dev.kian.mymettle.engine.inference.HistoricalObservationRevisionSelector''',
+          '''import dev.kian.mymettle.engine.inference.DynamicResistanceRetrospectiveEvaluator
+          import dev.kian.mymettle.engine.inference.DynamicStage1DiagnosticAnalyzer
+          import dev.kian.mymettle.engine.inference.DynamicStage1DiagnosticSummary
+          import dev.kian.mymettle.engine.inference.DynamicStage1ProfileDiagnostics
+          import dev.kian.mymettle.engine.inference.HistoricalObservationRevisionSelector''')
+          replace1(acceptance,
+          '''    val validation: DynamicCapabilityValidationSummary,
+              val candidateVerdict: DynamicCapabilityCandidateVerdict,''',
+          '''    val validation: DynamicCapabilityValidationSummary,
+              val stage1Diagnostics: DynamicStage1ProfileDiagnostics? = null,
+              val candidateVerdict: DynamicCapabilityCandidateVerdict,''')
+          replace1(acceptance,
+          '''    val globalExclusionReasonCounts: Map<String, Int>,
+              val profiles: List<NBio7BProfileAcceptance>,''',
+          '''    val globalExclusionReasonCounts: Map<String, Int>,
+              val profiles: List<NBio7BProfileAcceptance>,
+              val stage1Diagnostics: DynamicStage1DiagnosticSummary? = null,''')
+          replace1(acceptance, '.put("formatVersion", 3)', '.put("formatVersion", 4)')
+          replace1(acceptance,
+          '''        .put("candidateModelConfigId", candidateModelConfigId)
+              .put("validationProtocolId", validationProtocolId)''',
+          '''        .put("candidateModelConfigId", candidateModelConfigId)
+              .put("candidateV1Status", "REJECTED_EMPIRICAL_CALIBRATION_V1")
+              .put("validationProtocolId", validationProtocolId)''')
+          replace1(acceptance,
+          '''        .put("checks", JSONArray(checks.map { it.toJson() }))
+              .put("profiles", JSONArray(profiles.map { it.toJson() }))''',
+          '''        .put("checks", JSONArray(checks.map { it.toJson() }))
+              .put("stage1Diagnostics", stage1Diagnostics?.toStage1Json() ?: JSONObject.NULL)
+              .put("profiles", JSONArray(profiles.map { it.toJson() }))''')
+          replace1(acceptance,
+          '''            val historical = historicalEvaluator.evaluate(
+                      profile = descriptor.semantics,
+                      side = side,
+                      revisions = history.revisions,
+                  )
+                  val currentProjection''',
+          '''            val historical = historicalEvaluator.evaluate(
+                      profile = descriptor.semantics,
+                      side = side,
+                      revisions = history.revisions,
+                  )
+                  val stage1Diagnostics = DynamicStage1DiagnosticAnalyzer.profile(
+                      profile = descriptor.semantics,
+                      side = side,
+                      observations = historical.observations,
+                      revisions = history.revisions,
+                      evidencePolicy = DynamicResistanceV2Contract.evidencePolicy,
+                  )
+                  val currentProjection''')
+          replace1(acceptance,
+          '''                validation = historical.summary,
+                      candidateVerdict = historical.verdict,''',
+          '''                validation = historical.summary,
+                      stage1Diagnostics = stage1Diagnostics,
+                      candidateVerdict = historical.verdict,''')
+          replace1(acceptance,
+          '''        val totalElapsed = (System.nanoTime() - started) / 1_000_000L
+              return NBio7BAcceptanceReport(''',
+          '''        val stage1Diagnostics = DynamicStage1DiagnosticAnalyzer.aggregate(
+                  profileReports.mapNotNull { it.stage1Diagnostics },
+              )
+              val totalElapsed = (System.nanoTime() - started) / 1_000_000L
+              return NBio7BAcceptanceReport(''')
+          replace1(acceptance,
+          '''            profiles = profileReports,
+                  checks = checks,''',
+          '''            profiles = profileReports,
+                  stage1Diagnostics = stage1Diagnostics,
+                  checks = checks,''')
+          replace1(acceptance,
+          '''    .put("representativePredictions", JSONArray(predictions.map { it.toJson() }))
+              .put("validation", validation.toJson())''',
+          '''    .put("representativePredictions", JSONArray(predictions.map { it.toJson() }))
+              .put("validation", validation.toJson())
+              .put("stage1Diagnostics", stage1Diagnostics?.toStage1Json() ?: JSONObject.NULL)''')
+
+          stage1json = r'''package dev.kian.mymettle.developer
+
+          import dev.kian.mymettle.engine.inference.DynamicStage1DiagnosticSummary
+          import dev.kian.mymettle.engine.inference.DynamicStage1EventDiagnostic
+          import dev.kian.mymettle.engine.inference.DynamicStage1ProfileDiagnostics
+          import dev.kian.mymettle.engine.inference.DynamicStage1SerialSummary
+          import dev.kian.mymettle.engine.inference.DynamicStage1TrendGroupSummary
+          import org.json.JSONArray
+          import org.json.JSONObject
+
+          internal fun DynamicStage1ProfileDiagnostics.toStage1Json(): JSONObject = JSONObject()
+              .put("executionProfileVersionId", executionProfileVersionId)
+              .put("side", side)
+              .put("summary", summary.toStage1Json())
+              .put("events", JSONArray(events.map { it.toStage1Json() }))
+
+          internal fun DynamicStage1DiagnosticSummary.toStage1Json(): JSONObject = JSONObject()
+              .put("policyId", policyId)
+              .put("evaluableEventCount", evaluableEventCount)
+              .put("meanSignedLogResidual", meanSignedLogResidual ?: JSONObject.NULL)
+              .put("medianSignedLogResidual", medianSignedLogResidual ?: JSONObject.NULL)
+              .put("positiveResidualProportion", positiveResidualProportion ?: JSONObject.NULL)
+              .put("meanPredictiveLogWidth", meanPredictiveLogWidth ?: JSONObject.NULL)
+              .put("meanCrpsLogResistance", meanCrpsLogResistance ?: JSONObject.NULL)
+              .put("trendClassifiedEventCount", trendClassifiedEventCount)
+              .put("trendResidualCorrelation", trendResidualCorrelation ?: JSONObject.NULL)
+              .put("byTrend", JSONObject().also { root -> byTrend.forEach { (key, value) -> root.put(key.storageValue, value.toJson()) } })
+              .put("serial", serial.toJson())
+              .put("verdict", verdict.storageValue)
+              .put("limitations", JSONArray(limitations))
+
+          private fun DynamicStage1EventDiagnostic.toStage1Json(): JSONObject = JSONObject()
+              .put("sessionOrdinal", sessionOrdinal)
+              .put("repetitions", repetitions)
+              .put("observedResistanceKg", observedResistanceKg)
+              .put("priorIndependentSessionCount", priorIndependentSessionCount)
+              .put("priorRepMin", priorRepMin ?: JSONObject.NULL)
+              .put("priorRepMax", priorRepMax ?: JSONObject.NULL)
+              .put("repDomainPosition", repDomainPosition.storageValue)
+              .put("prediction", JSONObject()
+                  .put("p05Kg", predictiveP05Kg).put("p50Kg", predictiveP50Kg).put("p95Kg", predictiveP95Kg)
+                  .put("logWidth", predictiveLogWidth).put("pit", pit)
+                  .put("logPredictiveDensity", logPredictiveDensity).put("crpsLogResistance", crpsLogResistance))
+              .put("frontier", JSONObject().put("p05Kg", frontierP05Kg).put("p50Kg", frontierP50Kg).put("p95Kg", frontierP95Kg))
+              .put("signedLogResidual", signedLogResidual)
+              .put("recentTrend", JSONObject()
+                  .put("logPerSession", recentTrendLogPerSession ?: JSONObject.NULL)
+                  .put("direction", recentTrendDirection.storageValue)
+                  .put("comparablePriorSessions", recentTrendComparableSessions))
+              .put("previousSessionMedianSignedLogResiduals", JSONArray(previousSessionMedianSignedLogResiduals))
+              .put("priorPositiveResidualSessionStreak", priorPositiveResidualSessionStreak)
+              .put("coveredByPredictiveInterval", coveredByPredictiveInterval)
+              .put("catastrophicFrontierContradiction", catastrophicFrontierContradiction)
+
+          private fun DynamicStage1TrendGroupSummary.toJson(): JSONObject = JSONObject()
+              .put("count", count)
+              .put("meanSignedLogResidual", meanSignedLogResidual ?: JSONObject.NULL)
+              .put("medianSignedLogResidual", medianSignedLogResidual ?: JSONObject.NULL)
+              .put("positiveResidualProportion", positiveResidualProportion ?: JSONObject.NULL)
+              .put("pit", JSONObject().put("low", pitLowCount).put("middle", pitMiddleCount).put("high", pitHighCount).put("highRate", highPitRate ?: JSONObject.NULL))
+              .put("predictiveCoverage", predictiveCoverage ?: JSONObject.NULL)
+              .put("catastrophicContradictionRate", catastrophicContradictionRate ?: JSONObject.NULL)
+              .put("meanPredictiveLogWidth", meanPredictiveLogWidth ?: JSONObject.NULL)
+              .put("meanCrpsLogResistance", meanCrpsLogResistance ?: JSONObject.NULL)
+
+          private fun DynamicStage1SerialSummary.toJson(): JSONObject = JSONObject()
+              .put("profileSessionCount", profileSessionCount)
+              .put("adjacentPairCount", adjacentPairCount)
+              .put("sameSignAdjacentRate", sameSignAdjacentRate ?: JSONObject.NULL)
+              .put("positivePositiveAdjacentRate", positivePositiveAdjacentRate ?: JSONObject.NULL)
+              .put("lag1ResidualCorrelation", lag1ResidualCorrelation ?: JSONObject.NULL)
+              .put("longestPositiveRun", longestPositiveRun)
+          '''
+          Path('app/src/main/java/dev/kian/mymettle/developer/NBio7BStage1Json.kt').write_text(stage1json)
+
+          closure = 'app/src/main/java/dev/kian/mymettle/developer/NBio7BClosureAcceptance.kt'
+          replace1(closure, 'root.put("formatVersion", 3)', 'root.put("formatVersion", 4)')
+
+          test = r'''package dev.kian.mymettle.engine.inference
+
+          import org.junit.Assert.assertEquals
+          import org.junit.Assert.assertTrue
+          import org.junit.Test
+
+          class DynamicResistanceStage1DiagnosticsTest {
+              @Test
+              fun `weighted CRPS matches simple deterministic distributions`() {
+                  val point = DeterministicWeightedCrps.distribution(listOf(WeightedPredictivePoint(0.0, 1.0)))
+                  assertEquals(0.0, point.score(0.0), 1e-12)
+                  assertEquals(1.0, point.score(1.0), 1e-12)
+
+                  val twoPoint = DeterministicWeightedCrps.distribution(
+                      listOf(WeightedPredictivePoint(0.0, 0.5), WeightedPredictivePoint(2.0, 0.5)),
+                  )
+                  assertEquals(0.5, twoPoint.score(1.0), 1e-12)
+                  assertEquals(twoPoint.score(0.25), twoPoint.score(1.75), 1e-12)
+              }
+
+              @Test
+              fun `trend diagnostic is directional and sparse history remains insufficient`() {
+                  val policy = DynamicStage1DiagnosticPolicy()
+                  assertTrue(DynamicStage1DiagnosticAnalyzer.theilSen(listOf(0.0, 0.03, 0.06, 0.09)) > 0.0)
+                  assertEquals(
+                      DynamicRecentTrendDirection.UPWARD,
+                      DynamicStage1DiagnosticAnalyzer.classifyTrend(0.03, 4, policy),
+                  )
+                  assertEquals(
+                      DynamicRecentTrendDirection.DOWNWARD,
+                      DynamicStage1DiagnosticAnalyzer.classifyTrend(-0.03, 4, policy),
+                  )
+                  assertEquals(
+                      DynamicRecentTrendDirection.STABLE,
+                      DynamicStage1DiagnosticAnalyzer.classifyTrend(0.005, 4, policy),
+                  )
+                  assertEquals(
+                      DynamicRecentTrendDirection.INSUFFICIENT,
+                      DynamicStage1DiagnosticAnalyzer.classifyTrend(0.04, 2, policy),
+                  )
+              }
+          }
+          '''
+          Path('app/src/test/java/dev/kian/mymettle/engine/inference/DynamicResistanceStage1DiagnosticsTest.kt').write_text(test)
+
+          rejection = r'''# N-BIO-7B Candidate-v1 empirical rejection — 2026-08-30
+
+          Status: `REJECTED_EMPIRICAL_CALIBRATION_V1`
+
+          This is a privacy-bounded aggregate rejection record. The user's raw acceptance JSON is not committed.
+
+          The first genuine installed-history evaluation of `n-bio-7b2-half-normal-student-t-frontier-v1` used the frozen Candidate-v1 configuration without same-history retuning. It produced approximately:
+
+          - 19 dynamic-resistance profile/version groups;
+          - 141 eligible observations;
+          - 44 chronological fits;
+          - 105 evaluable held-out demonstrations;
+          - zero model failures;
+          - predictive coverage about 56.2%;
+          - 27/105 catastrophic frontier contradictions (about 25.7%);
+          - coarse PIT counts 23 low / 18 middle / 64 high;
+          - candidate demonstration-median MAE about 6.90 kg versus about 7.00 kg for the supported BENCHMARK_V0 latest-anchor MAE.
+
+          Interpretation: central point accuracy was roughly competitive, but the probabilistic prediction was unacceptably miscalibrated and systematically pessimistic toward later successful demonstrations. Candidate v1 therefore remains frozen as rejected evidence and must not be rescued by changing its priors, noise/slack family, temporal window, weighting or thresholds under the same identity.
+
+          Stage 1 of the next 7B pass adds event-level residual, sharpness, CRPS, recent-trend and serial-error diagnostics. The temporal-lag hypothesis remains a hypothesis until that diagnostic is executed on installed history; Candidate v2 is gated on that result.
+          '''
+          Path('docs/n-bio-vnext/NBIO_7B_CANDIDATE_V1_REJECTION_2026-08-30.md').write_text(rejection)
+
+          contract = Path('docs/n-bio-vnext/DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md')
+          contract.write_text(contract.read_text() + r'''
+
+          ---
+
+          # Candidate-v1 empirical rejection and Stage-1 diagnostic gate — 2026-08-30
+
+          Candidate v1 is now frozen with empirical status `REJECTED_EMPIRICAL_CALIBRATION_V1`. Its central demonstration-median error was roughly competitive with the supported BENCHMARK_V0 latest-anchor metric, but installed-history predictive calibration was unacceptable: coverage was about 56%, PIT was strongly high-skewed and catastrophic lower-bound/frontier contradictions were frequent. No Candidate-v1 hyperparameter is retuned to rescue that result.
+
+          Before any Candidate v2 is implemented, Stage 1 must diagnose whether the failure is materially associated with recent prior-only demonstrated-performance direction rather than merely narrow intervals, slack/noise misspecification, rep-domain extrapolation or slope misspecification.
+
+          Stage-1 diagnostics are non-behaviour-driving. Recent trend uses a transparent Theil-Sen slope of median natural-log resistance for the same repetition count across up to the latest four prior independent sessions. It requires at least three comparable prior sessions and never consumes the held-out or any future session. This intentionally sacrifices some trend availability to avoid conflating rep-zone changes with temporal direction.
+
+          Signed residual is `ln(observed resistance / candidate demonstration predictive median)`. Positive values mean Candidate v1 underpredicted the successful demonstration. Sharpness uses `ln(p95/p05)`, avoiding meaningless aggregation of raw kilogram widths across unrelated profiles.
+
+          CRPS is reported on natural-log resistance. It is a deterministic approximation to the actual Candidate-v1 predictive mixture, retaining top posterior mass, Half-Normal slack quadrature and fixed deterministic Student-t quantile quadrature. It therefore scores both calibration and sharpness without random Monte Carlo. BENCHMARK_V0 CRPS remains not applicable because that benchmark defines no probabilistic predictive distribution.
+
+          The diagnostic verdict is versioned separately from Candidate v1 and may be `TEMPORAL_LAG_SUPPORTED`, `TEMPORAL_LAG_PLAUSIBLE_BUT_NOT_ISOLATED`, `TEMPORAL_LAG_NOT_SUPPORTED`, or `INSUFFICIENT_DIAGNOSTIC_EVIDENCE`. Candidate-v2 implementation is forbidden until the installed-history Stage-1 report is reviewed and the gate is crossed. Context consumption remains `NONE`; Room14, SHADOW-only candidate persistence and BENCHMARK_V0 authority remain unchanged.
+          ''')
+
+          readme = Path('docs/n-bio-vnext/README.md')
+          text = readme.read_text()
+          text = text.replace(
+              '7B.2  complete — frozen stochastic-frontier inference + synthetic/model verification',
+              '7B.2  Candidate v1 frozen/rejected — stochastic-frontier implementation preserved; installed-history calibration requires a new candidate',
+          )
+          text = text.replace(
+              '7B.4  implementation complete — installed-history/device acceptance runner + replay/invariance/backup checks; physical acceptance pending',
+              '7B.4  Candidate-v1 real-history acceptance complete — integrity/replay/backup passed; Candidate v1 rejected; Stage-1 temporal diagnostic pending before any Candidate v2',
+          )
+          text += '\n- **Candidate-v1 empirical rejection (2026-08-30):** `REJECTED_EMPIRICAL_CALIBRATION_V1`; the new Stage-1 diagnostic export must be reviewed before the Candidate-v2 gate may open. N-BIO-7C has not started.\n'
+          readme.write_text(text)
+
+          # The workflow is scaffolding only and must not survive the product commit.
+          Path('.github/workflows/n-bio-7b-stage1-patch.yml').unlink()
+          PY
+          git diff --check
+      - name: Focused Stage-1 tests and debug APK
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --no-daemon
+      - name: Compile instrumentation APK
+        run: ./gradlew :app:assembleDebugAndroidTest --stacktrace --no-daemon
+      - name: Commit corrected tree
+        shell: bash
+        run: |
+          git config user.name 'Magna-Create'
+          git config user.email '53941598+Magna-Create@users.noreply.github.com'
+          git add -A
+          git commit -m 'Add N-BIO-7B Candidate-v1 temporal diagnostics'
+          git push origin HEAD:agent/n-bio-vnext-inference
