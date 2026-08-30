@@ -71,7 +71,7 @@ enum class DynamicStage1TemporalLagVerdict(val storageValue: String) {
 }
 
 data class DynamicStage1DiagnosticPolicy(
-    val semanticVersion: String = "n-bio-7b-candidate-v1-temporal-diagnostic-v1",
+    val semanticVersion: String = "n-bio-7b-candidate-v1-temporal-diagnostic-v2",
     val recentTrendSessionWindow: Int = 4,
     val minimumComparableTrendSessions: Int = 3,
     val stableTrendAbsoluteLogPerSession: Double = 0.01,
@@ -79,6 +79,7 @@ data class DynamicStage1DiagnosticPolicy(
     val minimumTrendClassifiedEvents: Int = 16,
     val minimumUpwardEvents: Int = 6,
     val minimumStableEvents: Int = 6,
+    val minimumTrendCorrelationPairs: Int = 8,
     val minimumSerialPairs: Int = 8,
     val supportUpwardMedianResidual: Double = 0.02,
     val supportUpwardPositiveRate: Double = 0.65,
@@ -86,7 +87,30 @@ data class DynamicStage1DiagnosticPolicy(
     val supportTrendResidualCorrelation: Double = 0.15,
     val supportStableResidualContrast: Double = 0.015,
     val supportStableHighPitContrast: Double = 0.10,
-)
+    val supportPositivePositiveAdjacentRate: Double = 0.40,
+    val supportSerialLag1ResidualCorrelation: Double = 0.15,
+) {
+    init {
+        require(semanticVersion.isNotBlank())
+        require(minimumComparableTrendSessions >= 2)
+        require(recentTrendSessionWindow >= minimumComparableTrendSessions)
+        require(stableTrendAbsoluteLogPerSession.isFinite() && stableTrendAbsoluteLogPerSession >= 0.0)
+        require(minimumGlobalEvaluableEvents > 0)
+        require(minimumTrendClassifiedEvents > 0)
+        require(minimumUpwardEvents > 0)
+        require(minimumStableEvents > 0)
+        require(minimumTrendCorrelationPairs >= 2)
+        require(minimumSerialPairs >= 1)
+        require(supportUpwardMedianResidual.isFinite())
+        require(supportUpwardPositiveRate in 0.0..1.0)
+        require(supportHighPitRate in 0.0..1.0)
+        require(supportTrendResidualCorrelation in -1.0..1.0)
+        require(supportStableResidualContrast.isFinite())
+        require(supportStableHighPitContrast in 0.0..1.0)
+        require(supportPositivePositiveAdjacentRate in 0.0..1.0)
+        require(supportSerialLag1ResidualCorrelation in -1.0..1.0)
+    }
+}
 
 data class DynamicStage1EventDiagnostic(
     val sessionOrdinal: Int,
@@ -301,7 +325,11 @@ object DynamicStage1DiagnosticAnalyzer {
         }
         val trendPairs = sessionPairs.mapNotNull { (_, residual, trend) -> trend?.let { it to residual } }
         val serial = serialSummary(profileEvents, policy)
-        val correlation = pearson(trendPairs.map { it.first }, trendPairs.map { it.second }, 8)
+        val correlation = pearson(
+            trendPairs.map { it.first },
+            trendPairs.map { it.second },
+            policy.minimumTrendCorrelationPairs,
+        )
         val summary = DynamicStage1DiagnosticSummary(
             policyId = policy.semanticVersion,
             evaluableEventCount = events.size,
@@ -322,7 +350,7 @@ object DynamicStage1DiagnosticAnalyzer {
             if (events.size < policy.minimumGlobalEvaluableEvents) add("Too few evaluable held-out demonstrations for the global diagnostic gate.")
             if (classified.size < policy.minimumTrendClassifiedEvents) add("Too few held-out demonstrations had at least three comparable prior same-rep sessions for trend classification.")
             if ((byTrend[DynamicRecentTrendDirection.STABLE]?.count ?: 0) < policy.minimumStableEvents) add("Stable-history comparison support is limited; temporal lag cannot be cleanly isolated from interval/noise misspecification.")
-            if (correlation == null) add("Trend/residual correlation is not reported because profile-session support is too small.")
+            if (correlation == null) add("Trend/residual correlation is not reported because profile-session support is below the versioned correlation threshold.")
             add("Recent trend is diagnostic only: Theil-Sen slope of prior same-rep session median log resistance, maximum four sessions, with no held-out/future evidence.")
             add("CRPS uses natural-log resistance and is a deterministic approximation to the candidate predictive mixture; BENCHMARK_V0 has no CRPS because it has no probabilistic predictive distribution.")
         }
@@ -347,8 +375,8 @@ object DynamicStage1DiagnosticAnalyzer {
             (upward.medianSignedLogResidual ?: 0.0) - (stable.medianSignedLogResidual ?: 0.0) >= policy.supportStableResidualContrast &&
             (upward.highPitRate ?: 0.0) - (stable.highPitRate ?: 0.0) >= policy.supportStableHighPitContrast
         val serialSupport = summary.serial.adjacentPairCount >= policy.minimumSerialPairs &&
-            ((summary.serial.positivePositiveAdjacentRate ?: 0.0) >= 0.40 ||
-                (summary.serial.lag1ResidualCorrelation ?: 0.0) >= 0.15)
+            ((summary.serial.positivePositiveAdjacentRate ?: 0.0) >= policy.supportPositivePositiveAdjacentRate ||
+                (summary.serial.lag1ResidualCorrelation ?: 0.0) >= policy.supportSerialLag1ResidualCorrelation)
         return when {
             upwardSupport && correlationSupport && stableContrast && serialSupport -> DynamicStage1TemporalLagVerdict.TEMPORAL_LAG_SUPPORTED
             upwardSupport && (correlationSupport || stableContrast || serialSupport) -> DynamicStage1TemporalLagVerdict.TEMPORAL_LAG_PLAUSIBLE_BUT_NOT_ISOLATED
@@ -389,7 +417,9 @@ object DynamicStage1DiagnosticAnalyzer {
         val pairs = sequences.flatMap { sequence -> sequence.zipWithNext() }
         val same = pairs.count { (a, b) -> a * b > 0.0 }
         val positivePositive = pairs.count { (a, b) -> a > 0.0 && b > 0.0 }
-        val lag = if (pairs.size >= policy.minimumSerialPairs) pearson(pairs.map { it.first }, pairs.map { it.second }, policy.minimumSerialPairs) else null
+        val lag = if (pairs.size >= policy.minimumSerialPairs) {
+            pearson(pairs.map { it.first }, pairs.map { it.second }, policy.minimumSerialPairs)
+        } else null
         return DynamicStage1SerialSummary(
             profileSessionCount = sequences.sumOf { it.size },
             adjacentPairCount = pairs.size,
