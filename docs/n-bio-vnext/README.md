@@ -24,7 +24,7 @@ Use this directory in the following order.
 - [`DEVICE_VERIFICATION.md`](./DEVICE_VERIFICATION.md) — reproducible Termux build and isolated on-device scalar/temporal acceptance procedure.
 - [`CONTEXT_INTERPRETATION_CONTRACT.md`](./CONTEXT_INTERPRETATION_CONTRACT.md) — N-BIO-7A.5 canonical-note ownership, bounded tag ontology, interpreter/fallback/privacy boundary, provenance and zero-effect N-BIO context interface.
 - [`EXERCISE_AUTHORING_CONTRACT.md`](./EXERCISE_AUTHORING_CONTRACT.md) — authoritative protocol for externally proposed exercise/execution/recruitment semantics before they enter the existing Native authoring pathway.
-- [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md) — N-BIO-7B evidence/coordinate contract, frozen stochastic-frontier candidate, chronological validation, SHADOW persistence, diagnostics and real-history/device acceptance contract. Implementation is complete; physical installed-history acceptance remains an explicit closure gate.
+- [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md) — N-BIO-7B evidence/coordinate contract, frozen stochastic-frontier Candidate-v1, chronological validation, SHADOW persistence, diagnostics and real-history/device acceptance contract. Candidate-v1 physical acceptance is complete and rejected; Stage-1 temporal-diagnostic implementation is complete, while execution/review of the enriched installed-history report remains the gate before any Candidate v2.
 - [`exercise-import.schema.json`](./exercise-import.schema.json) — Draft 2020-12 machine-readable structural exchange schema, format v1.
 - [`exercise-import-example.json`](./exercise-import-example.json) — canonical validated authoring example.
 
@@ -35,13 +35,13 @@ Use this directory in the following order.
 7A.5  complete — context interpretation + external exercise-authoring contracts
 7B.1  complete — dynamic-resistance evidence eligibility + coordinate/model contract
 7B.2  Candidate v1 frozen/rejected — stochastic-frontier implementation preserved; installed-history calibration requires a new candidate
-7B.3  implementation complete — correction-aware chronological validation + SHADOW persistence + diagnostics
-7B.4  Candidate-v1 real-history acceptance complete — integrity/replay/backup passed; Candidate v1 rejected; Stage-1 temporal diagnostic pending before any Candidate v2
+7B.3  implementation complete — correction-aware chronological validation + SHADOW persistence + event-level temporal diagnostics/CRPS
+7B.4  Candidate-v1 real-history acceptance complete — integrity/replay/backup passed; Candidate v1 rejected; enriched Stage-1 diagnostic execution/review pending before any Candidate v2
 later 7C–7G as defined by PLAN.md — 7C has not started
 7F     must also consult PRODUCT_ROADMAP_GATES.md for equipment identity/calibration/session-binding + uncertainty-presentation hooks
 ```
 
-The 7B candidate remains **SHADOW only**. Normal workout/prescription authority remains `BENCHMARK_V0`; context consumption remains `NONE`; no candidate result is promoted into normal product behaviour by 7B.3/4 implementation. CI establishes deterministic/synthetic/model, persistence, backup and compile-time correctness, but it cannot substitute for the explicit installed Room14 real-history/device acceptance action. N-BIO-7B must therefore not be described as empirically closed until that exported device report has been reviewed.
+The 7B candidate remains **SHADOW only**. Normal workout/prescription authority remains `BENCHMARK_V0`; context consumption remains `NONE`; no candidate result is promoted into normal product behaviour by 7B.3/4 implementation. Candidate-v1 physical acceptance has established a genuine empirical rejection. The next gate is narrower: execute the versioned Stage-1 event-level temporal diagnostic against the same installed Room14 history and review whether temporal lag is materially supported before any Candidate-v2 model is implemented. CI establishes deterministic/model, persistence, backup and compile-time correctness but cannot substitute for that device-history diagnostic.
 
 Before behaviour-driving N-BIO-8 implementation, `PRODUCT_ROADMAP_GATES.md` requires a dedicated research + product/UX design gate rather than marching directly from N-BIO-7H into an optimiser. Programme intent/priorities, in-workout adaptation, editing/regeneration semantics, equipment setup/feasible-load UX and uncertainty presentation require explicit collaboration.
 
@@ -69,6 +69,6 @@ Do not load both full raw research bodies into ordinary implementation context.
 
 Existing `docs/N_BIO_*.md` files are historical implementation-stage documentation. The vNext files above govern forward work where they conflict.
 
-- **N-BIO-7B.3/4 corrective acceptance:** evidence policy v2 preserves explicitly legacy `UNKNOWN -> UNKNOWN` history as an unsided capability stream; the frozen stochastic model is unchanged. First physical run diagnosed v1 exclusion rather than evaluating the model; corrected physical rerun is the final empirical 7B gate.
+- **N-BIO-7B.3/4 corrected physical acceptance:** evidence policy v2 preserves explicitly legacy `UNKNOWN -> UNKNOWN` history as an unsided capability stream. Integrity/replay/backup checks passed on the corrected physical run, while frozen Candidate v1 itself produced `REQUIRES_NEW_CANDIDATE`; that run is rejection evidence rather than a closure pass.
 
-- **Candidate-v1 empirical rejection (2026-08-30):** `REJECTED_EMPIRICAL_CALIBRATION_V1`; Stage-1 temporal diagnostics must be executed/reviewed before the Candidate-v2 gate may open. N-BIO-7C has not started.
+- **Candidate-v1 empirical rejection (2026-08-30):** `REJECTED_EMPIRICAL_CALIBRATION_V1`; central point error was roughly competitive with BENCHMARK_V0 but predictive calibration was unacceptable. The versioned Stage-1 temporal diagnostic must now be executed/reviewed before the Candidate-v2 gate may open. N-BIO-7C has not started.
