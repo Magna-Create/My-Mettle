@@ -21,10 +21,15 @@ import org.json.JSONObject
 class NativeFullBackupRepository(
     private val database: MyMettleDatabase,
 ) {
-    suspend fun exportJson(): String = withContext(Dispatchers.IO) {
+    /**
+     * Normal user exports remain pretty-printed. Internal verification can request compact JSON to
+     * avoid a large additional whitespace/StringBuilder footprint while preserving the exact same
+     * backup schema and values.
+     */
+    suspend fun exportJson(pretty: Boolean = true): String = withContext(Dispatchers.IO) {
         val sqlite = database.openHelper.writableDatabase
         val tables = applicationTables(sqlite)
-        JSONObject()
+        val root = JSONObject()
             .put("kind", BACKUP_KIND)
             .put("formatVersion", FORMAT_VERSION)
             .put("databaseSchemaVersion", schemaVersion(sqlite))
@@ -35,7 +40,7 @@ class NativeFullBackupRepository(
                     tables.forEach { table -> put(exportTable(sqlite, table)) }
                 },
             )
-            .toString(2)
+        if (pretty) root.toString(2) else root.toString()
     }
 
     suspend fun restoreJson(json: String): NativeRestoreResult = withContext(Dispatchers.IO) {

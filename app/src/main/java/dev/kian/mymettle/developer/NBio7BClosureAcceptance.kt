@@ -69,10 +69,16 @@ data class NBio7BClosureAcceptanceReport(
     val prescriptionBefore: NBio7BPrescriptionStateFingerprint,
     val prescriptionAfter: NBio7BPrescriptionStateFingerprint,
     val backupRoundTrip: NBio7BBackupRoundTripResult,
+    val prunedPriorShadowRuns: Int,
 ) {
     val prescriptionStateUnchanged: Boolean get() = prescriptionBefore == prescriptionAfter
 
     val closureChecks: List<NBio7BAcceptanceCheck> get() = listOf(
+        NBio7BAcceptanceCheck(
+            id = "prior_shadow_retention_bounded",
+            status = NBio7BAcceptanceStatus.PASS,
+            detail = "Pruned $prunedPriorShadowRuns prior N-BIO-7B SHADOW acceptance runs before evaluation; current-run derived state is retained only once.",
+        ),
         NBio7BAcceptanceCheck(
             id = "prescription_state_unchanged",
             status = if (prescriptionStateUnchanged) NBio7BAcceptanceStatus.PASS else NBio7BAcceptanceStatus.FAIL,
@@ -129,6 +135,10 @@ data class NBio7BClosureAcceptanceReport(
         val root = JSONObject(acceptance.toJson())
         root.put("formatVersion", 3)
         root.put(
+            "memoryMaintenance",
+            JSONObject().put("prunedPriorShadowRuns", prunedPriorShadowRuns),
+        )
+        root.put(
             "prescriptionState",
             JSONObject()
                 .put("beforeSha256", prescriptionBefore.sha256)
@@ -173,6 +183,8 @@ class NBio7BClosureAcceptanceRunner(
     suspend fun run(
         onProgress: (NBio7BAcceptanceProgress) -> Unit = {},
     ): NBio7BClosureAcceptanceReport {
+        onProgress(NBio7BAcceptanceProgress(0, 0, "Pruning prior N-BIO-7B SHADOW acceptance rows"))
+        val prunedPriorShadowRuns = NBio7BShadowRunJanitor.prunePreviousAcceptanceRuns(database)
         val prescriptionBefore = NBio7BPrescriptionStateFingerprinter.capture(database)
         val acceptance = acceptanceRepository.run(onProgress)
         val prescriptionAfter = NBio7BPrescriptionStateFingerprinter.capture(database)
@@ -189,6 +201,7 @@ class NBio7BClosureAcceptanceRunner(
             prescriptionBefore = prescriptionBefore,
             prescriptionAfter = prescriptionAfter,
             backupRoundTrip = backupRoundTrip,
+            prunedPriorShadowRuns = prunedPriorShadowRuns,
         )
     }
 }

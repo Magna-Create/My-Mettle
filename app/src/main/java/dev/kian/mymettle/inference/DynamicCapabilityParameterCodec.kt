@@ -12,22 +12,74 @@ import dev.kian.mymettle.domain.inference.ModelConfigId
 import dev.kian.mymettle.domain.inference.PosteriorEstimate
 import dev.kian.mymettle.domain.inference.PosteriorSummary
 import dev.kian.mymettle.domain.performance.Laterality
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.time.Instant
 import java.util.Base64
+import java.util.zip.Deflater
+import java.util.zip.DeflaterOutputStream
+import java.util.zip.Inflater
+import java.util.zip.InflaterInputStream
 
 /**
  * Deterministic versioned codec for the behaviourally meaningful 7B.2 joint posterior.
  *
  * It stores derived parameter/posterior state and evidence identifiers only. Raw load/repetition
- * observations are deliberately not duplicated. Per-observation slack is itself derived model state,
- * so it is encoded explicitly to preserve the live-fit invariant and later SetDemand/replay semantics.
+ * observations are deliberately not duplicated. Per-observation slack remains encoded explicitly
+ * so later SetDemand/replay semantics are retained.
+ *
+ * Schema v2 losslessly DEFLATE-compresses the same text payload before Room persistence. The
+ * compression is a storage optimisation only: model/config identity and decoded values are
+ * unchanged. Schema v1 remains readable so existing disposable SHADOW rows fail neither replay nor
+ * explicit cleanup.
  */
 object DynamicCapabilityParameterCodec {
-    const val SCHEMA_VERSION: Int = 1
-    const val CODEC_ID: String = "n-bio-7b34-dynamic-capability-parameters-v1"
+    const val SCHEMA_VERSION: Int = 2
+    const val CODEC_ID: String = "n-bio-7b34-dynamic-capability-parameters-deflate-v2"
+    private const val LEGACY_SCHEMA_VERSION: Int = 1
+    private const val LEGACY_CODEC_ID: String = "n-bio-7b34-dynamic-capability-parameters-v1"
+    private const val COMPRESSED_PREFIX: String = "deflate64:"
+    private const val MAX_DECOMPRESSED_BYTES: Int = 64 * 1024 * 1024
 
-    fun encode(fit: DynamicStochasticFrontierFit): String = buildString {
-        line("codec", CODEC_ID)
+    fun encode(fit: DynamicStochasticFrontierFit): String =
+        COMPRESSED_PREFIX + Base64.getUrlEncoder().withoutPadding().encodeToString(
+            deflate(encodePlain(fit, CODEC_ID).toByteArray(Charsets.UTF_8)),
+        )
+
+    fun decode(
+        parameterSchemaVersion: Int,
+        encodedParameters: String,
+        frontierAtReference: PosteriorEstimate,
+        executionProfileVersionId: ExecutionProfileVersionId,
+        side: Laterality,
+        modelConfigId: ModelConfigId,
+    ): DynamicStochasticFrontierFit {
+        val expectedCodec: String
+        val plain = when (parameterSchemaVersion) {
+            LEGACY_SCHEMA_VERSION -> {
+                expectedCodec = LEGACY_CODEC_ID
+                encodedParameters
+            }
+            SCHEMA_VERSION -> {
+                expectedCodec = CODEC_ID
+                inflate(encodedParameters)
+            }
+            else -> throw IllegalArgumentException(
+                "Unsupported dynamic capability parameter schema $parameterSchemaVersion; recomputation is required.",
+            )
+        }
+        return decodePlain(
+            plain = plain,
+            expectedCodec = expectedCodec,
+            frontierAtReference = frontierAtReference,
+            executionProfileVersionId = executionProfileVersionId,
+            side = side,
+            modelConfigId = modelConfigId,
+        )
+    }
+
+    private fun encodePlain(fit: DynamicStochasticFrontierFit, codecId: String): String = buildString {
+        line("codec", codecId)
         line("inferenceHorizon", fit.inferenceHorizon.toString())
         line("referenceRepetitions", fit.referenceRepetitions.toString())
         line("modelVersion", text(fit.modelVersion))
@@ -58,25 +110,24 @@ object DynamicCapabilityParameterCodec {
         line("observationSlack", fit.observationSlack.joinToString(";") { encodeSlack(it) })
     }.trimEnd('\n')
 
-    fun decode(
-        parameterSchemaVersion: Int,
-        encodedParameters: String,
+    private fun decodePlain(
+        plain: String,
+        expectedCodec: String,
         frontierAtReference: PosteriorEstimate,
         executionProfileVersionId: ExecutionProfileVersionId,
         side: Laterality,
         modelConfigId: ModelConfigId,
     ): DynamicStochasticFrontierFit {
-        require(parameterSchemaVersion == SCHEMA_VERSION) {
-            "Unsupported dynamic capability parameter schema $parameterSchemaVersion; recomputation is required."
-        }
-        val values = encodedParameters.lineSequence()
+        val values = plain.lineSequence()
             .filter { it.isNotBlank() }
             .associate { line ->
                 val split = line.indexOf('=')
                 require(split > 0) { "Malformed dynamic capability parameter line." }
                 line.substring(0, split) to line.substring(split + 1)
             }
-        require(values.required("codec") == CODEC_ID) { "Unsupported dynamic capability parameter codec; recomputation is required." }
+        require(values.required("codec") == expectedCodec) {
+            "Unsupported dynamic capability parameter codec; recomputation is required."
+        }
         require(frontierAtReference.summary != null) { "Persisted dynamic capability requires a known frontier posterior." }
         require(frontierAtReference.provenance.modelConfigId == modelConfigId)
 
@@ -114,6 +165,50 @@ object DynamicCapabilityParameterCodec {
             }.toSet(),
             posteriorNodes = decodeNodes(values.required("posteriorNodes")),
         )
+    }
+
+    private fun deflate(bytes: ByteArray): ByteArray {
+        val output = ByteArrayOutputStream()
+        val deflater = Deflater(Deflater.BEST_SPEED, true)
+        try {
+            DeflaterOutputStream(output, deflater).use { stream -> stream.write(bytes) }
+            return output.toByteArray()
+        } finally {
+            deflater.end()
+        }
+    }
+
+    private fun inflate(encoded: String): String {
+        require(encoded.startsWith(COMPRESSED_PREFIX)) {
+            "Malformed compressed dynamic capability parameter payload."
+        }
+        val compressed = runCatching {
+            Base64.getUrlDecoder().decode(encoded.removePrefix(COMPRESSED_PREFIX))
+        }.getOrElse { throw IllegalArgumentException("Malformed compressed dynamic capability base64.", it) }
+        val inflater = Inflater(true)
+        try {
+            InflaterInputStream(ByteArrayInputStream(compressed), inflater).use { input ->
+                val output = ByteArrayOutputStream(minOf(compressed.size * 4, 1 shl 20))
+                val buffer = ByteArray(16 * 1024)
+                var total = 0
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    total += read
+                    require(total <= MAX_DECOMPRESSED_BYTES) {
+                        "Dynamic capability parameter payload exceeds the supported decompressed size; recomputation is required."
+                    }
+                    output.write(buffer, 0, read)
+                }
+                return output.toString(Charsets.UTF_8.name())
+            }
+        } catch (failure: IllegalArgumentException) {
+            throw failure
+        } catch (failure: Exception) {
+            throw IllegalArgumentException("Malformed compressed dynamic capability parameter payload.", failure)
+        } finally {
+            inflater.end()
+        }
     }
 
     private fun StringBuilder.line(key: String, value: String) {

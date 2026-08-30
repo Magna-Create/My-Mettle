@@ -19,12 +19,15 @@ import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class DynamicCapabilityParameterCodecTest {
     @Test
     fun `codec round trip preserves joint posterior slack and predictions`() {
         val fit = fit()
         val encoded = DynamicCapabilityParameterCodec.encode(fit)
+        assertTrue(encoded.startsWith("deflate64:"))
+        assertEquals(encoded, DynamicCapabilityParameterCodec.encode(fit), "Codec v2 compression must be deterministic.")
         val decoded = DynamicCapabilityParameterCodec.decode(
             parameterSchemaVersion = DynamicCapabilityParameterCodec.SCHEMA_VERSION,
             encodedParameters = encoded,

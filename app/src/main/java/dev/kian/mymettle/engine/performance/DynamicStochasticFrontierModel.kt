@@ -21,6 +21,8 @@ import dev.kian.mymettle.domain.inference.ModelOutputProvenance
 import dev.kian.mymettle.domain.inference.PosteriorEstimate
 import dev.kian.mymettle.domain.inference.PosteriorSummary
 import java.time.Instant
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.exp
@@ -44,6 +46,10 @@ import kotlin.math.sqrt
  * Global parameter uncertainty is approximated on a deterministic tensor grid. Per-observation
  * slack is integrated by deterministic midpoint quadrature. This is an approximation, not exact
  * Bayesian inference and not an exercise-physiology law.
+ *
+ * Grid nodes are independent and are evaluated on a bounded worker pool. Results are written into
+ * deterministic flat indices and all posterior normalisation/reduction remains ordered, so
+ * parallel execution changes wall time only, not the model/config identity or replay semantics.
  */
 class DynamicStochasticFrontierModel(
     val config: DynamicStochasticFrontierConfig = DynamicStochasticFrontierV1.config,
@@ -51,6 +57,9 @@ class DynamicStochasticFrontierModel(
     override val modelVersion: String = config.semanticVersion
 
     private val quadrature: List<SlackQuadraturePoint> = buildSlackQuadrature(config)
+    private val quadratureScratch = object : ThreadLocal<DoubleArray>() {
+        override fun initialValue(): DoubleArray = DoubleArray(config.slackQuadraturePoints)
+    }
 
     override fun fit(request: DynamicCapabilityFitRequest): DynamicStochasticFrontierFit {
         validateRequest(request)
@@ -139,42 +148,57 @@ class DynamicStochasticFrontierModel(
             )
         }
 
-        val rawNodes = ArrayList<RawPosteriorNode>(requestedGridEvaluations.toInt())
-        for (c in cGrid) {
-            for (logSlope in logSlopeGrid) {
-                val slope = exp(logSlope)
-                val logSlopePrior = normalLogDensity(logSlope, ln(config.slopePriorMedian), config.slopePriorLogSd)
-                for (logSlackScale in logSlackScaleGrid) {
-                    val slackScale = exp(logSlackScale)
-                    val logSlackPrior = if (nuisanceLearningUnlocked) {
-                        normalLogDensity(logSlackScale, ln(config.slackScalePriorMedian), config.slackScalePriorLogSd)
-                    } else 0.0
-                    for (logNoiseScale in logNoiseScaleGrid) {
-                        val noiseScale = exp(logNoiseScale)
-                        val logNoisePrior = if (nuisanceLearningUnlocked) {
-                            normalLogDensity(logNoiseScale, ln(config.noiseScalePriorMedian), config.noiseScalePriorLogSd)
+        val rawNodeArray = arrayOfNulls<RawPosteriorNode>(requestedGridEvaluations.toInt())
+        val slopeCount = logSlopeGrid.size
+        val slackCount = logSlackScaleGrid.size
+        val noiseCount = logNoiseScaleGrid.size
+        val tasks = cGrid.indices.map { cIndex ->
+            Callable {
+                val c = cGrid[cIndex]
+                for (slopeIndex in logSlopeGrid.indices) {
+                    val logSlope = logSlopeGrid[slopeIndex]
+                    val slope = exp(logSlope)
+                    val logSlopePrior = normalLogDensity(logSlope, ln(config.slopePriorMedian), config.slopePriorLogSd)
+                    for (slackIndex in logSlackScaleGrid.indices) {
+                        val logSlackScale = logSlackScaleGrid[slackIndex]
+                        val slackScale = exp(logSlackScale)
+                        val logSlackPrior = if (nuisanceLearningUnlocked) {
+                            normalLogDensity(logSlackScale, ln(config.slackScalePriorMedian), config.slackScalePriorLogSd)
                         } else 0.0
+                        for (noiseIndex in logNoiseScaleGrid.indices) {
+                            val logNoiseScale = logNoiseScaleGrid[noiseIndex]
+                            val noiseScale = exp(logNoiseScale)
+                            val logNoisePrior = if (nuisanceLearningUnlocked) {
+                                normalLogDensity(logNoiseScale, ln(config.noiseScalePriorMedian), config.noiseScalePriorLogSd)
+                            } else 0.0
 
-                        var logPosterior = logSlopePrior + logSlackPrior + logNoisePrior
-                        val noiseLogNormalisation = studentTLogNormalisation(
-                            config.studentTDegreesOfFreedom,
-                            noiseScale,
-                        )
-                        for (observation in observations) {
-                            val frontier = c - slope * observation.x
-                            val residual = observation.y - frontier
-                            val logLikelihood = marginalObservationLogDensity(
-                                residual = residual,
-                                slackScale = slackScale,
-                                noiseScale = noiseScale,
-                                noiseLogNormalisation = noiseLogNormalisation,
+                            var logPosterior = logSlopePrior + logSlackPrior + logNoisePrior
+                            val noiseLogNormalisation = studentTLogNormalisation(
+                                config.studentTDegreesOfFreedom,
+                                noiseScale,
                             )
-                            logPosterior += requireNotNull(sessionWeights[observation.evidence.sessionId]) * logLikelihood
+                            for (observation in observations) {
+                                val frontier = c - slope * observation.x
+                                val residual = observation.y - frontier
+                                val logLikelihood = marginalObservationLogDensity(
+                                    residual = residual,
+                                    slackScale = slackScale,
+                                    noiseScale = noiseScale,
+                                    noiseLogNormalisation = noiseLogNormalisation,
+                                )
+                                logPosterior += requireNotNull(sessionWeights[observation.evidence.sessionId]) * logLikelihood
+                            }
+                            val flatIndex = (((cIndex * slopeCount + slopeIndex) * slackCount + slackIndex) * noiseCount) + noiseIndex
+                            rawNodeArray[flatIndex] = RawPosteriorNode(c, slope, slackScale, noiseScale, logPosterior)
                         }
-                        rawNodes += RawPosteriorNode(c, slope, slackScale, noiseScale, logPosterior)
                     }
                 }
+                Unit
             }
+        }
+        FIT_EXECUTOR.invokeAll(tasks).forEach { it.get() }
+        val rawNodes = List(rawNodeArray.size) { index ->
+            requireNotNull(rawNodeArray[index]) { "Parallel posterior node $index was not evaluated." }
         }
 
         val posteriorNodes = normalisePosterior(rawNodes)
@@ -196,10 +220,21 @@ class DynamicStochasticFrontierModel(
 
         val slopeIdentification = slopeIdentification(support, repLogSpan)
         val nuisanceIdentification = nuisanceIdentification(support, nuisanceLearningUnlocked)
+        val topSlackNodes = posteriorNodes
+            .sortedByDescending { it.posteriorWeight }
+            .take(config.slackPosteriorTopNodeCount)
+        val topSlackWeight = topSlackNodes.sumOf { it.posteriorWeight }
+        if (topSlackWeight <= 0.0 || !topSlackWeight.isFinite()) {
+            throw DynamicCapabilityFitException(
+                DynamicCapabilityFitFailureReason.DEGENERATE_POSTERIOR,
+                "Top posterior nodes carry no probability mass for slack inference.",
+            )
+        }
         val observationSlack = observations.map { observation ->
             inferObservationSlack(
                 observation = observation,
-                posteriorNodes = posteriorNodes,
+                topNodes = topSlackNodes,
+                topWeightTotal = topSlackWeight,
                 identification = if (nuisanceLearningUnlocked) {
                     DynamicParameterIdentification.PARTIALLY_LEARNED
                 } else {
@@ -441,22 +476,12 @@ class DynamicStochasticFrontierModel(
 
     private fun inferObservationSlack(
         observation: ModelObservation,
-        posteriorNodes: List<DynamicFrontierPosteriorNode>,
+        topNodes: List<DynamicFrontierPosteriorNode>,
+        topWeightTotal: Double,
         identification: DynamicParameterIdentification,
     ): DynamicObservationSlackPosterior {
-        val top = posteriorNodes
-            .sortedByDescending { it.posteriorWeight }
-            .take(config.slackPosteriorTopNodeCount)
-        val topWeightTotal = top.sumOf { it.posteriorWeight }
-        if (topWeightTotal <= 0.0 || !topWeightTotal.isFinite()) {
-            throw DynamicCapabilityFitException(
-                DynamicCapabilityFitFailureReason.DEGENERATE_POSTERIOR,
-                "Top posterior nodes carry no probability mass for slack inference.",
-            )
-        }
-
-        val mass = ArrayList<DynamicSlackPosteriorMass>(top.size * quadrature.size)
-        for (node in top) {
+        val mass = ArrayList<DynamicSlackPosteriorMass>(topNodes.size * quadrature.size)
+        for (node in topNodes) {
             val frontier = node.logFrontierAtReference - node.slope * observation.x
             val residual = observation.y - frontier
             val noiseNorm = studentTLogNormalisation(config.studentTDegreesOfFreedom, node.noiseScale)
@@ -494,15 +519,26 @@ class DynamicStochasticFrontierModel(
         noiseScale: Double,
         noiseLogNormalisation: Double,
     ): Double {
-        val terms = quadrature.map { point ->
-            point.logPriorMass + studentTLogDensity(
+        val scratch = requireNotNull(quadratureScratch.get())
+        var maximum = Double.NEGATIVE_INFINITY
+        for (index in quadrature.indices) {
+            val point = quadrature[index]
+            val term = point.logPriorMass + studentTLogDensity(
                 residual + slackScale * point.standardisedSlack,
                 config.studentTDegreesOfFreedom,
                 noiseScale,
                 noiseLogNormalisation,
             )
+            scratch[index] = term
+            if (term.isFinite() && term > maximum) maximum = term
         }
-        return logSumExp(terms)
+        if (!maximum.isFinite()) return Double.NEGATIVE_INFINITY
+        var scaledTotal = 0.0
+        for (index in quadrature.indices) {
+            val term = scratch[index]
+            if (term.isFinite()) scaledTotal += exp(term - maximum)
+        }
+        return maximum + ln(scaledTotal)
     }
 
     private fun slopeIdentification(
@@ -624,6 +660,15 @@ class DynamicStochasticFrontierModel(
     )
 
     companion object {
+        const val FIT_PARALLELISM = 3
+
+        private val FIT_EXECUTOR = Executors.newFixedThreadPool(FIT_PARALLELISM) { runnable ->
+            Thread(runnable, "n-bio-7b-grid").apply {
+                isDaemon = true
+                priority = Thread.NORM_PRIORITY - 1
+            }
+        }
+
         private fun buildSlackQuadrature(config: DynamicStochasticFrontierConfig): List<SlackQuadraturePoint> {
             val width = config.slackQuadratureMaximumSd / config.slackQuadraturePoints.toDouble()
             return List(config.slackQuadraturePoints) { index ->

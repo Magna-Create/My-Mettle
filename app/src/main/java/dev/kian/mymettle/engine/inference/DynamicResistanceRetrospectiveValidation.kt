@@ -246,9 +246,13 @@ class DynamicResistanceRetrospectiveEvaluator(
     ): Double {
         val x = ln(repetitions / fit.referenceRepetitions)
         val observedLog = ln(observedResistanceKg)
-        return fit.posteriorNodes.filter {
-            it.logFrontierAtReference - it.slope * x >= observedLog
-        }.sumOf { it.posteriorWeight }.coerceIn(0.0, 1.0)
+        var probability = 0.0
+        for (node in fit.posteriorNodes) {
+            if (node.logFrontierAtReference - node.slope * x >= observedLog) {
+                probability += node.posteriorWeight
+            }
+        }
+        return probability.coerceIn(0.0, 1.0)
     }
 
     private fun calibration(values: List<Double>): DynamicPitCalibration {
@@ -269,6 +273,7 @@ class DynamicDemonstrationPredictiveEvaluator(
 ) {
     private val config: DynamicStochasticFrontierConfig get() = model.config
     private val slackPoints: List<SlackPoint> = buildSlackPoints(config)
+    private val intervalCache = mutableMapOf<IntervalKey, PredictiveInterval>()
 
     fun evaluate(
         fit: DynamicStochasticFrontierFit,
@@ -280,10 +285,27 @@ class DynamicDemonstrationPredictiveEvaluator(
         require(repetitions.isFinite() && repetitions > 0.0)
         require(observedResistanceKg.isFinite() && observedResistanceKg > 0.0)
         require(lowerProbability in 0.0..1.0 && upperProbability in 0.0..1.0 && upperProbability > lowerProbability)
+        val key = IntervalKey(
+            executionProfileVersionId = fit.executionProfileVersionId.value,
+            side = fit.side.storageValue,
+            inferenceHorizon = fit.inferenceHorizon,
+            modelConfigId = fit.modelConfigId.value,
+            referenceRepetitions = fit.referenceRepetitions,
+            repetitions = repetitions,
+            lowerProbability = lowerProbability,
+            upperProbability = upperProbability,
+        )
+        val interval = intervalCache.getOrPut(key) {
+            PredictiveInterval(
+                lower = quantile(fit, repetitions, lowerProbability),
+                median = quantile(fit, repetitions, 0.5),
+                upper = quantile(fit, repetitions, upperProbability),
+            )
+        }
         return DynamicDemonstrationPredictive(
-            p05ResistanceKg = quantile(fit, repetitions, lowerProbability),
-            p50ResistanceKg = quantile(fit, repetitions, 0.5),
-            p95ResistanceKg = quantile(fit, repetitions, upperProbability),
+            p05ResistanceKg = interval.lower,
+            p50ResistanceKg = interval.median,
+            p95ResistanceKg = interval.upper,
             observedCdf = cdf(fit, repetitions, observedResistanceKg),
             logPredictiveDensity = model.demonstrationLogPredictiveDensity(fit, repetitions, observedResistanceKg),
         )
@@ -319,6 +341,23 @@ class DynamicDemonstrationPredictiveEvaluator(
         }
         return exp((low + high) / 2.0)
     }
+
+    private data class IntervalKey(
+        val executionProfileVersionId: String,
+        val side: String,
+        val inferenceHorizon: Instant,
+        val modelConfigId: String,
+        val referenceRepetitions: Double,
+        val repetitions: Double,
+        val lowerProbability: Double,
+        val upperProbability: Double,
+    )
+
+    private data class PredictiveInterval(
+        val lower: Double,
+        val median: Double,
+        val upper: Double,
+    )
 
     private data class SlackPoint(val standardised: Double, val probability: Double)
 

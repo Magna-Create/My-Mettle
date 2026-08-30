@@ -38,6 +38,10 @@ data class NBio7BBackupRoundTripResult(
  * Exports the installed Native database, restores that JSON into an isolated in-memory Room14
  * database, and compares only non-sensitive fingerprints/counts. The installed database is never
  * restored, cleared, or otherwise mutated by this verifier.
+ *
+ * The internal round-trip deliberately uses compact JSON. Human-facing Native backups retain their
+ * pretty-printed default; compact mode only avoids a large transient indentation/StringBuilder
+ * footprint during this memory-constrained acceptance check.
  */
 class NBio7BBackupRoundTripVerifier(
     context: Context,
@@ -49,7 +53,7 @@ class NBio7BBackupRoundTripVerifier(
         val sourceFingerprint = NBio7BRawEvidenceFingerprinter.capture(sourceDatabase)
         val sourcePrescriptionFingerprint = NBio7BPrescriptionStateFingerprinter.capture(sourceDatabase)
         val sourceCandidateCounts = candidateCounts(sourceDatabase)
-        val backupJson = NativeFullBackupRepository(sourceDatabase).exportJson()
+        val backupJson = NativeFullBackupRepository(sourceDatabase).exportJson(pretty = false)
 
         val isolated = Room.inMemoryDatabaseBuilder(appContext, MyMettleDatabase::class.java).build()
         return try {
