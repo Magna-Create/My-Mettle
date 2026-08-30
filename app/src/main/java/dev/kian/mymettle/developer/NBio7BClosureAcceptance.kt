@@ -133,7 +133,7 @@ data class NBio7BClosureAcceptanceReport(
 
     fun toJson(): String {
         val root = JSONObject(acceptance.toJson())
-        root.put("formatVersion", 3)
+        root.put("formatVersion", 4)
         root.put(
             "memoryMaintenance",
             JSONObject().put("prunedPriorShadowRuns", prunedPriorShadowRuns),

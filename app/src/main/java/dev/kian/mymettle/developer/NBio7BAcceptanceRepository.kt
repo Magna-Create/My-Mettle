@@ -15,6 +15,9 @@ import dev.kian.mymettle.domain.performance.Laterality
 import dev.kian.mymettle.engine.inference.DynamicDemonstrationPredictiveEvaluator
 import dev.kian.mymettle.engine.inference.DynamicResistanceHistoricalEvaluator
 import dev.kian.mymettle.engine.inference.DynamicResistanceRetrospectiveEvaluator
+import dev.kian.mymettle.engine.inference.DynamicStage1DiagnosticAnalyzer
+import dev.kian.mymettle.engine.inference.DynamicStage1DiagnosticSummary
+import dev.kian.mymettle.engine.inference.DynamicStage1ProfileDiagnostics
 import dev.kian.mymettle.engine.inference.HistoricalObservationRevisionSelector
 import dev.kian.mymettle.engine.performance.DynamicResistanceEvidenceProjector
 import dev.kian.mymettle.engine.performance.DynamicStochasticFrontierModel
@@ -93,6 +96,7 @@ data class NBio7BProfileAcceptance(
     val warnings: List<String>,
     val predictions: List<NBio7BRepresentativePrediction>,
     val validation: DynamicCapabilityValidationSummary,
+    val stage1Diagnostics: DynamicStage1ProfileDiagnostics?,
     val candidateVerdict: DynamicCapabilityCandidateVerdict,
     val chronologicalFitCount: Int,
     val shadowRunId: String?,
@@ -118,6 +122,7 @@ data class NBio7BAcceptanceReport(
     val groupsDiscovered: Int,
     val globalExclusionReasonCounts: Map<String, Int>,
     val profiles: List<NBio7BProfileAcceptance>,
+    val stage1Diagnostics: DynamicStage1DiagnosticSummary,
     val checks: List<NBio7BAcceptanceCheck>,
     val finalModelVerdict: DynamicCapabilityCandidateVerdict,
     val productAuthorityStatus: String,
@@ -155,12 +160,13 @@ data class NBio7BAcceptanceReport(
 
     fun toJson(): String = JSONObject()
         .put("format", "my-mettle-n-bio-7b-acceptance")
-        .put("formatVersion", 3)
+        .put("formatVersion", 4)
         .put("generatedAt", generatedAt.toString())
         .put("roomSchemaVersion", roomSchemaVersion)
         .put("executionEnvironment", "installed_native_room14_explicit_developer_action")
         .put("candidateModelVersion", candidateModelVersion)
         .put("candidateModelConfigId", candidateModelConfigId)
+        .put("candidateV1Status", "REJECTED_EMPIRICAL_CALIBRATION_V1")
         .put("validationProtocolId", validationProtocolId)
         .put("contextConsumption", contextConsumption)
         .put("rawEvidence", JSONObject()
@@ -180,6 +186,7 @@ data class NBio7BAcceptanceReport(
             .put("totalElapsedMillis", totalElapsedMillis)
             .put("worstProfileElapsedMillis", worstProfileElapsedMillis ?: JSONObject.NULL))
         .put("checks", JSONArray(checks.map { it.toJson() }))
+        .put("stage1Diagnostics", stage1Diagnostics.toStage1Json())
         .put("profiles", JSONArray(profiles.map { it.toJson() }))
         .put("finalModelVerdict", finalModelVerdict.storageValue)
         .put("verdicts", JSONObject()
@@ -236,6 +243,13 @@ class NBio7BAcceptanceRepository(
                 profile = descriptor.semantics,
                 side = side,
                 revisions = history.revisions,
+            )
+            val stage1Diagnostics = DynamicStage1DiagnosticAnalyzer.profile(
+                profile = descriptor.semantics,
+                side = side,
+                observations = historical.observations,
+                revisions = history.revisions,
+                evidencePolicy = DynamicResistanceV2Contract.evidencePolicy,
             )
             val currentProjection = DynamicResistanceEvidenceProjector.project(
                 profile = descriptor.semantics,
@@ -341,6 +355,7 @@ class NBio7BAcceptanceRepository(
                 warnings = fit?.warnings.orEmpty().map { it.storageValue }.sorted(),
                 predictions = predictions,
                 validation = historical.summary,
+                stage1Diagnostics = stage1Diagnostics,
                 candidateVerdict = historical.verdict,
                 chronologicalFitCount = historical.chronologicalFitCount,
                 shadowRunId = shadowRunId,
@@ -399,6 +414,9 @@ class NBio7BAcceptanceRepository(
             .flatMap { report -> report.currentExclusionReasonCounts.entries }
             .groupingBy { it.key }.fold(0) { total, entry -> total + entry.value }
             .toSortedMap()
+        val stage1Diagnostics = DynamicStage1DiagnosticAnalyzer.aggregate(
+            profileReports.mapNotNull { it.stage1Diagnostics },
+        )
         val totalElapsed = (System.nanoTime() - started) / 1_000_000L
         return NBio7BAcceptanceReport(
             generatedAt = clock(),
@@ -414,6 +432,7 @@ class NBio7BAcceptanceRepository(
             groupsDiscovered = groupKeys.size,
             globalExclusionReasonCounts = globalExclusionReasonCounts,
             profiles = profileReports,
+            stage1Diagnostics = stage1Diagnostics,
             checks = checks,
             finalModelVerdict = aggregateVerdict(profileReports.map { it.candidateVerdict }),
             productAuthorityStatus = "BENCHMARK_V0_REMAINS_AUTHORITATIVE; candidate rows are SHADOW only",
@@ -503,6 +522,7 @@ private fun NBio7BProfileAcceptance.toJson(): JSONObject = JSONObject()
         .put("warnings", JSONArray(warnings)))
     .put("representativePredictions", JSONArray(predictions.map { it.toJson() }))
     .put("validation", validation.toJson())
+    .put("stage1Diagnostics", stage1Diagnostics?.toStage1Json() ?: JSONObject.NULL)
     .put("candidateVerdict", candidateVerdict.storageValue)
     .put("chronologicalFitCount", chronologicalFitCount)
     .put("persistence", JSONObject()

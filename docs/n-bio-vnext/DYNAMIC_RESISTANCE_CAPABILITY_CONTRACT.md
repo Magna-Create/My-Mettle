@@ -586,3 +586,20 @@ Acceptance export format v3 reports per-profile and global exclusion-reason coun
 Candidate-dependent checks with no fitted candidate report `not_evaluated`, never a vacuous pass. The corrected implementation remains `SHADOW`, Room14, context `NONE`, and `BENCHMARK_V0` remains normal product authority.
 
 **Current gate:** corrected 7B.3/4 implementation complete after CI; physical installed-history acceptance must be rerun before empirical N-BIO-7B closure.
+
+
+---
+
+# Candidate-v1 empirical rejection and Stage-1 diagnostic gate — 2026-08-30
+
+Candidate v1 is frozen with empirical status `REJECTED_EMPIRICAL_CALIBRATION_V1`. Its central demonstration-median error was roughly competitive with the supported BENCHMARK_V0 latest-anchor metric, but installed-history predictive calibration was unacceptable: coverage was about 56%, PIT was strongly high-skewed and catastrophic lower-bound/frontier contradictions were frequent. No Candidate-v1 hyperparameter is retuned to rescue that result.
+
+Before any Candidate v2 is implemented, Stage 1 must diagnose whether the failure is materially associated with recent prior-only demonstrated-performance direction rather than merely narrow intervals, slack/noise misspecification, rep-domain extrapolation or slope misspecification.
+
+Stage-1 diagnostics are non-behaviour-driving. Recent trend uses a transparent Theil-Sen slope of median natural-log resistance for the same repetition count across up to the latest four prior independent sessions. It requires at least three comparable prior sessions and never consumes the held-out or any future session. This intentionally sacrifices trend availability to avoid conflating rep-zone changes with temporal direction.
+
+Signed residual is `ln(observed resistance / candidate demonstration predictive median)`. Positive values mean Candidate v1 underpredicted the successful demonstration. Sharpness uses `ln(p95/p05)`, avoiding meaningless aggregation of raw kilogram widths across unrelated profiles.
+
+CRPS is reported on natural-log resistance. It is a deterministic approximation to the actual Candidate-v1 predictive mixture, retaining up to the top 96 posterior nodes, the frozen Half-Normal slack quadrature and nine fixed deterministic Student-t quantiles. It scores both calibration and sharpness without random Monte Carlo. BENCHMARK_V0 CRPS remains not applicable because that benchmark defines no probabilistic predictive distribution.
+
+The diagnostic verdict is versioned separately from Candidate v1 and may be `TEMPORAL_LAG_SUPPORTED`, `TEMPORAL_LAG_PLAUSIBLE_BUT_NOT_ISOLATED`, `TEMPORAL_LAG_NOT_SUPPORTED`, or `INSUFFICIENT_DIAGNOSTIC_EVIDENCE`. Candidate-v2 implementation is forbidden until the installed-history Stage-1 report is reviewed and the gate is crossed. Context consumption remains `NONE`; Room14, SHADOW-only candidate persistence and BENCHMARK_V0 authority remain unchanged.

@@ -76,6 +76,10 @@ data class DynamicHeldOutEvaluation(
     val frontierAtOrAboveObservedProbability: Double?,
     /** Existing BENCHMARK_V0 same-profile latest resistance anchor. Point-like only; no fake distribution. */
     val benchmarkLatestResistanceAnchorKg: Double?,
+    /** Latent frontier posterior at held-out repetitions; not an observation predictive interval. */
+    val candidateFrontierAtRepetitions: PosteriorSummary? = null,
+    /** Deterministic CRPS on natural-log resistance scale. */
+    val candidateCrpsLogResistance: Double? = null,
     val modelFailureReason: String? = null,
 ) {
     init {
@@ -86,6 +90,7 @@ data class DynamicHeldOutEvaluation(
         require(status == DynamicHeldOutStatus.EVALUABLE || candidatePredictive == null)
         require(frontierAtOrAboveObservedProbability == null || frontierAtOrAboveObservedProbability in 0.0..1.0)
         require(benchmarkLatestResistanceAnchorKg == null || benchmarkLatestResistanceAnchorKg > 0.0)
+        require(candidateCrpsLogResistance == null || (candidateCrpsLogResistance.isFinite() && candidateCrpsLogResistance >= 0.0))
         if (status == DynamicHeldOutStatus.MODEL_FAILURE) require(!modelFailureReason.isNullOrBlank())
     }
 }

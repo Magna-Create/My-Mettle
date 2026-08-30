@@ -172,6 +172,12 @@ class DynamicResistanceRetrospectiveEvaluator(
                     lowerProbability = policy.predictiveLowerProbability,
                     upperProbability = policy.predictiveUpperProbability,
                 )
+                val frontier = requireNotNull(model.predictFrontier(fit, observation.repetitions.toDouble()).summary)
+                val crps = predictiveEvaluator.crpsLogResistance(
+                    fit = fit,
+                    repetitions = observation.repetitions.toDouble(),
+                    observedResistanceKg = observation.resistance.value,
+                )
                 DynamicHeldOutEvaluation(
                     sessionId = sessionId,
                     observationId = observation.observationId,
@@ -184,6 +190,8 @@ class DynamicResistanceRetrospectiveEvaluator(
                     trainingEvidenceThrough = horizon,
                     referenceRepetitions = fit.referenceRepetitions,
                     candidatePredictive = predictive,
+                    candidateFrontierAtRepetitions = frontier,
+                    candidateCrpsLogResistance = crps,
                     frontierAtOrAboveObservedProbability = frontierAtOrAboveObservedProbability(
                         fit,
                         observation.repetitions.toDouble(),
@@ -274,6 +282,8 @@ class DynamicDemonstrationPredictiveEvaluator(
     private val config: DynamicStochasticFrontierConfig get() = model.config
     private val slackPoints: List<SlackPoint> = buildSlackPoints(config)
     private val intervalCache = mutableMapOf<IntervalKey, PredictiveInterval>()
+    private val crpsCache = mutableMapOf<CrpsKey, DeterministicCrpsDistribution>()
+    private val crpsNoiseQuantiles: DoubleArray by lazy { buildCrpsNoiseQuantiles(config) }
 
     fun evaluate(
         fit: DynamicStochasticFrontierFit,
@@ -311,6 +321,51 @@ class DynamicDemonstrationPredictiveEvaluator(
         )
     }
 
+    fun crpsLogResistance(
+        fit: DynamicStochasticFrontierFit,
+        repetitions: Double,
+        observedResistanceKg: Double,
+    ): Double {
+        require(repetitions.isFinite() && repetitions > 0.0)
+        require(observedResistanceKg.isFinite() && observedResistanceKg > 0.0)
+        val key = CrpsKey(
+            executionProfileVersionId = fit.executionProfileVersionId.value,
+            side = fit.side.storageValue,
+            inferenceHorizon = fit.inferenceHorizon,
+            modelConfigId = fit.modelConfigId.value,
+            referenceRepetitions = fit.referenceRepetitions,
+            repetitions = repetitions,
+        )
+        val distribution = crpsCache.getOrPut(key) { buildCrpsDistribution(fit, repetitions) }
+        return distribution.score(ln(observedResistanceKg))
+    }
+
+    private fun buildCrpsDistribution(
+        fit: DynamicStochasticFrontierFit,
+        repetitions: Double,
+    ): DeterministicCrpsDistribution {
+        val x = ln(repetitions / fit.referenceRepetitions)
+        val topNodes = fit.posteriorNodes.sortedByDescending { it.posteriorWeight }
+            .take(minOf(config.slackPosteriorTopNodeCount, CRPS_TOP_POSTERIOR_NODES))
+        val topWeight = topNodes.sumOf { it.posteriorWeight }
+        require(topWeight.isFinite() && topWeight > 0.0)
+        val points = ArrayList<WeightedPredictivePoint>(topNodes.size * slackPoints.size * crpsNoiseQuantiles.size)
+        topNodes.forEach { node ->
+            val nodeWeight = node.posteriorWeight / topWeight
+            val frontier = node.logFrontierAtReference - node.slope * x
+            slackPoints.forEach { slack ->
+                val location = frontier - node.slackScale * slack.standardised
+                crpsNoiseQuantiles.forEach { noiseQuantile ->
+                    points += WeightedPredictivePoint(
+                        value = location + node.noiseScale * noiseQuantile,
+                        weight = nodeWeight * slack.probability / crpsNoiseQuantiles.size,
+                    )
+                }
+            }
+        }
+        return DeterministicWeightedCrps.distribution(points)
+    }
+
     fun cdf(fit: DynamicStochasticFrontierFit, repetitions: Double, resistanceKg: Double): Double {
         require(repetitions.isFinite() && repetitions > 0.0)
         require(resistanceKg.isFinite() && resistanceKg > 0.0)
@@ -342,6 +397,15 @@ class DynamicDemonstrationPredictiveEvaluator(
         return exp((low + high) / 2.0)
     }
 
+    private data class CrpsKey(
+        val executionProfileVersionId: String,
+        val side: String,
+        val inferenceHorizon: Instant,
+        val modelConfigId: String,
+        val referenceRepetitions: Double,
+        val repetitions: Double,
+    )
+
     private data class IntervalKey(
         val executionProfileVersionId: String,
         val side: String,
@@ -362,6 +426,26 @@ class DynamicDemonstrationPredictiveEvaluator(
     private data class SlackPoint(val standardised: Double, val probability: Double)
 
     companion object {
+        private const val CRPS_TOP_POSTERIOR_NODES = 96
+        private const val CRPS_NOISE_POINTS = 9
+
+        private fun buildCrpsNoiseQuantiles(config: DynamicStochasticFrontierConfig): DoubleArray =
+            DoubleArray(CRPS_NOISE_POINTS) { index ->
+                val probability = (index + 0.5) / CRPS_NOISE_POINTS.toDouble()
+                inverseStudentTCdf(probability, config.studentTDegreesOfFreedom)
+            }
+
+        private fun inverseStudentTCdf(probability: Double, df: Double): Double {
+            require(probability > 0.0 && probability < 1.0)
+            var low = -50.0
+            var high = 50.0
+            repeat(72) {
+                val middle = (low + high) / 2.0
+                if (studentTCdf(middle, df) < probability) low = middle else high = middle
+            }
+            return (low + high) / 2.0
+        }
+
         private fun buildSlackPoints(config: DynamicStochasticFrontierConfig): List<SlackPoint> {
             val width = config.slackQuadratureMaximumSd / config.slackQuadraturePoints
             val raw = List(config.slackQuadraturePoints) { index ->

@@ -34,9 +34,9 @@ Use this directory in the following order.
 7A    complete — probabilistic/posterior + model/config/inference provenance foundation
 7A.5  complete — context interpretation + external exercise-authoring contracts
 7B.1  complete — dynamic-resistance evidence eligibility + coordinate/model contract
-7B.2  complete — frozen stochastic-frontier inference + synthetic/model verification
+7B.2  Candidate v1 frozen/rejected — stochastic-frontier implementation preserved; installed-history calibration requires a new candidate
 7B.3  implementation complete — correction-aware chronological validation + SHADOW persistence + diagnostics
-7B.4  implementation complete — installed-history/device acceptance runner + replay/invariance/backup checks; physical acceptance pending
+7B.4  Candidate-v1 real-history acceptance complete — integrity/replay/backup passed; Candidate v1 rejected; Stage-1 temporal diagnostic pending before any Candidate v2
 later 7C–7G as defined by PLAN.md — 7C has not started
 7F     must also consult PRODUCT_ROADMAP_GATES.md for equipment identity/calibration/session-binding + uncertainty-presentation hooks
 ```
@@ -70,3 +70,5 @@ Do not load both full raw research bodies into ordinary implementation context.
 Existing `docs/N_BIO_*.md` files are historical implementation-stage documentation. The vNext files above govern forward work where they conflict.
 
 - **N-BIO-7B.3/4 corrective acceptance:** evidence policy v2 preserves explicitly legacy `UNKNOWN -> UNKNOWN` history as an unsided capability stream; the frozen stochastic model is unchanged. First physical run diagnosed v1 exclusion rather than evaluating the model; corrected physical rerun is the final empirical 7B gate.
+
+- **Candidate-v1 empirical rejection (2026-08-30):** `REJECTED_EMPIRICAL_CALIBRATION_V1`; Stage-1 temporal diagnostics must be executed/reviewed before the Candidate-v2 gate may open. N-BIO-7C has not started.
