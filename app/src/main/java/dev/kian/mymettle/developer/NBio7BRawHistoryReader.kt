@@ -46,7 +46,10 @@ data class NBio7BRawEvidenceFingerprint(
 )
 
 /** Reads only canonical Room14 workout/performance evidence needed by 7B acceptance. */
-class NBio7BRawHistoryReader(private val database: MyMettleDatabase) {
+class NBio7BRawHistoryReader(
+    private val database: MyMettleDatabase,
+    private val historicalAvailabilityResolver: (String, Instant, Instant, Instant?) -> Instant = DynamicHistoricalAvailabilityV2::resolve,
+) {
     fun read(): NBio7BRawHistory {
         val sqlite = database.openHelper.readableDatabase
         val metricsByObservation = linkedMapOf<String, MutableList<PerformanceMetricValue>>()
@@ -130,11 +133,11 @@ class NBio7BRawHistoryReader(private val database: MyMettleDatabase) {
                         observationSource = observationSource,
                         sessionId = cursor.string("sessionId"),
                     ),
-                    recordedAt = DynamicHistoricalAvailabilityV2.resolve(
-                        observationSource = observationSource,
-                        nativeRecordedAt = nativeRecordedAt,
-                        sessionCompletedAt = sessionCompletedAt,
-                        sessionEditedAt = sessionEditedAt,
+                    recordedAt = historicalAvailabilityResolver(
+                        observationSource,
+                        nativeRecordedAt,
+                        sessionCompletedAt,
+                        sessionEditedAt,
                     ),
                     sessionCompletedAt = sessionCompletedAt,
                     supersedesObservationId = cursor.nullableString("supersedesObservationId"),
