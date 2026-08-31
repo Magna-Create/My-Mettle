@@ -18,6 +18,8 @@ data class NativeBackupUiState(
     val restoring: Boolean = false,
     val exportedGeneration: Int = 0,
     val completedGeneration: Int = 0,
+    val restoredTableCount: Int? = null,
+    val restoredRowCount: Int? = null,
     val error: String? = null,
 )
 
@@ -58,7 +60,12 @@ class NativeBackupViewModel(
     fun restoreBackup(uri: Uri) {
         if (uiState.exporting || uiState.restoring) return
         viewModelScope.launch {
-            uiState = uiState.copy(restoring = true, error = null)
+            uiState = uiState.copy(
+                restoring = true,
+                restoredTableCount = null,
+                restoredRowCount = null,
+                error = null,
+            )
             runCatching {
                 val json = withContext(Dispatchers.IO) {
                     appContext.contentResolver.openInputStream(uri)
@@ -67,16 +74,27 @@ class NativeBackupViewModel(
                         ?: error("Could not open the selected My Mettle Native backup.")
                 }
                 backups.restoreJson(json)
-            }.onSuccess {
+            }.onSuccess { result ->
+                // Restore uses raw SupportSQLiteDatabase statements. Explicitly refresh Room's
+                // invalidation tracker so repositories cannot keep serving the pre-restore view.
+                DatabaseProvider.get(appContext).invalidationTracker.refreshAsync()
                 uiState = uiState.copy(
                     restoring = false,
                     completedGeneration = uiState.completedGeneration + 1,
+                    restoredTableCount = result.tableCount,
+                    restoredRowCount = result.rowCount,
                     error = null,
                 )
             }.onFailure { error ->
                 uiState = uiState.copy(
                     restoring = false,
-                    error = error.message ?: error::class.java.simpleName,
+                    error = buildString {
+                        append(error.message ?: error::class.java.simpleName)
+                        error.cause?.message?.takeIf { it.isNotBlank() }?.let { cause ->
+                            append("\nCause: ")
+                            append(cause)
+                        }
+                    },
                 )
             }
         }
