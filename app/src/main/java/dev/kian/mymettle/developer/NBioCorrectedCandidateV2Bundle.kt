@@ -1,8 +1,11 @@
 package dev.kian.mymettle.developer
 
+import dev.kian.mymettle.domain.inference.DynamicResistanceProfileSemantics
 import dev.kian.mymettle.domain.inference.DynamicResistanceV3Contract
 import dev.kian.mymettle.domain.inference.DynamicStochasticFrontierEvidenceV3
 import dev.kian.mymettle.domain.inference.DynamicTrendFrontierEvidenceV3
+import dev.kian.mymettle.domain.performance.Laterality
+import dev.kian.mymettle.engine.inference.DynamicHistoricalAvailabilityV3
 import dev.kian.mymettle.engine.inference.DynamicTrendAdaptiveSparseConfig
 import dev.kian.mymettle.engine.inference.DynamicTrendAdaptiveSparseSolver
 import dev.kian.mymettle.engine.inference.DynamicTrendCandidateV2Solver
@@ -10,6 +13,8 @@ import dev.kian.mymettle.engine.inference.DynamicTrendConditionalLaplaceSolverAd
 import dev.kian.mymettle.engine.inference.DynamicTrendDenseReferenceSolverAdapter
 import dev.kian.mymettle.engine.inference.DynamicTrendSolverHistoricalBakeoff
 import dev.kian.mymettle.engine.inference.DynamicTrendSolverHistoricalBakeoffCorrected
+import dev.kian.mymettle.engine.inference.DynamicTrendSolverHistoricalBakeoffResult
+import dev.kian.mymettle.engine.inference.HistoricalCompletedSetEvidenceRevision
 import dev.kian.mymettle.engine.performance.DynamicStochasticFrontierModel
 import dev.kian.mymettle.engine.performance.DynamicTrendDenseReferenceConfig
 import dev.kian.mymettle.engine.performance.DynamicTrendDenseReferenceModel
@@ -44,14 +49,24 @@ object NBioCorrectedCandidateV2Bundle {
         DynamicTrendFrontierModel(mathematicalConfig),
     )
 
-    fun historicalBakeoff(
+    fun evaluateHistorical(
         solvers: List<DynamicTrendCandidateV2Solver>,
-    ): DynamicTrendSolverHistoricalBakeoffCorrected = DynamicTrendSolverHistoricalBakeoffCorrected(
-        solvers = solvers,
-        delegate = DynamicTrendSolverHistoricalBakeoff(
+        profile: DynamicResistanceProfileSemantics,
+        side: Laterality,
+        revisions: Collection<HistoricalCompletedSetEvidenceRevision>,
+    ): DynamicTrendSolverHistoricalBakeoffResult {
+        val result = DynamicTrendSolverHistoricalBakeoffCorrected(
             solvers = solvers,
-            v1Model = DynamicStochasticFrontierModel(baseConfig),
-            evidencePolicy = evidencePolicy,
-        ),
-    )
+            delegate = DynamicTrendSolverHistoricalBakeoff(
+                solvers = solvers,
+                v1Model = DynamicStochasticFrontierModel(baseConfig),
+                evidencePolicy = evidencePolicy,
+            ),
+        ).evaluate(profile, side, revisions)
+        return result.copy(
+            protocolVersion = result.protocolVersion +
+                "|availability=${DynamicHistoricalAvailabilityV3.POLICY_ID}" +
+                "|evidence=${DynamicResistanceV3Contract.EVIDENCE_POLICY_VERSION}",
+        )
+    }
 }
