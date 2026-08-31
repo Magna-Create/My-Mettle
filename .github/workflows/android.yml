@@ -71,6 +71,13 @@ jobs:
           test -f app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/14.json
           grep -q '"version": 14' app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/14.json
 
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-mettle-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
       - name: Upload Room schemas
         uses: actions/upload-artifact@v4
         with:
