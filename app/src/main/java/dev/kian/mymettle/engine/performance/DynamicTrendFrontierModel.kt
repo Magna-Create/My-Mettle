@@ -4,6 +4,7 @@ import dev.kian.mymettle.domain.inference.DynamicCapabilityFitException
 import dev.kian.mymettle.domain.inference.DynamicCapabilityFitFailureReason
 import dev.kian.mymettle.domain.inference.DynamicCapabilityFitRequest
 import dev.kian.mymettle.domain.inference.DynamicCapabilityFitWarning
+import dev.kian.mymettle.domain.inference.DynamicCapabilityModel
 import dev.kian.mymettle.domain.inference.DynamicFrontierParameterPosterior
 import dev.kian.mymettle.domain.inference.DynamicFrontierPosteriorNode
 import dev.kian.mymettle.domain.inference.DynamicObservationSlackPosterior
@@ -25,35 +26,40 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.ln1p
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Deterministic Candidate-v2 importance/quadrature extension of the frozen Candidate-v1 posterior.
+ * Deterministic Candidate-v2 conditional-Laplace extension of the frozen Candidate-v1 posterior.
  *
- * Candidate v1 is first fitted unchanged and acts as the proposal distribution at g=0. Candidate v2
- * expands a deterministic, high-posterior-mass subset of that joint c/b/sigma posterior across a
- * five-point Gauss-Hermite representation of g~Normal(0, sigma_g). Importance weights are exactly
- * proportional to L(g)/L(g=0) for the retained proposal nodes. This preserves joint frontier/slope/
- * nuisance/trend dependence without constructing a full new c*b*g*sigma tensor product.
+ * Every frozen-v1 joint posterior node is retained as proposal support. For each node, Candidate v2
+ * evaluates the unchanged observation likelihood at g=0 and at one symmetric finite-difference pair
+ * around zero. A second-order likelihood expansion combines analytically with the proper Normal(0,
+ * sigma_g) prior, yielding a conditional Gaussian posterior for g and a deterministic marginal
+ * evidence correction for that v1 node. Five-point normal quadrature then propagates that conditional
+ * g distribution into the full c/b/sigma/g posterior without further likelihood evaluations.
  *
- * If fewer than three independent sessions exist, g is fixed exactly to zero and the complete v1
- * posterior is retained, so sparse-history Candidate v2 collapses to Candidate-v1 behaviour.
+ * This is an explicit deterministic Laplace approximation, not MCMC and not a physiological law.
+ * It avoids both a new full tensor dimension and the support bias that would come from retaining only
+ * the highest-probability v1 nodes. If local curvature is numerically invalid for more than the
+ * versioned posterior-mass tolerance, fitting fails rather than silently changing the proposal.
+ *
+ * With fewer than three independent sessions, g is fixed exactly to zero and every v1 posterior node
+ * is retained, making sparse-history Candidate v2 exactly collapse to Candidate-v1 behaviour.
  */
 class DynamicTrendFrontierModel(
     val config: DynamicTrendFrontierConfig = DynamicTrendFrontierV2.config,
     private val baseModel: DynamicStochasticFrontierModel = DynamicStochasticFrontierModel(config.baseConfig),
-) {
-    val modelVersion: String get() = config.semanticVersion
+) : DynamicCapabilityModel<DynamicTrendFrontierFit> {
+    override val modelVersion: String get() = config.semanticVersion
 
     private val slackQuadrature = buildSlackQuadrature(config.baseConfig)
     private val slackScratch = object : ThreadLocal<DoubleArray>() {
         override fun initialValue(): DoubleArray = DoubleArray(config.baseConfig.slackQuadraturePoints)
     }
 
-    fun fit(request: DynamicCapabilityFitRequest): DynamicTrendFrontierFit {
+    override fun fit(request: DynamicCapabilityFitRequest): DynamicTrendFrontierFit {
         validateRequest(request)
         val baseConfigDefinition = config.baseConfig.toModelConfig(request.modelConfig.createdAt)
         val baseFit = baseModel.fit(
@@ -98,7 +104,7 @@ class DynamicTrendFrontierModel(
 
         val learnTrend = baseFit.support.effectiveIndependentSessionCount >= config.trendMinimumIndependentSessionsToLearn
         val rawNodes: List<RawTrendNode>
-        val baseMassCaptured: Double
+        val validBaseMass: Double
         if (!learnTrend) {
             rawNodes = baseFit.posteriorNodes.map { node ->
                 RawTrendNode(
@@ -110,42 +116,56 @@ class DynamicTrendFrontierModel(
                     logWeight = if (node.posteriorWeight > 0.0) ln(node.posteriorWeight) else Double.NEGATIVE_INFINITY,
                 )
             }
-            baseMassCaptured = 1.0
+            validBaseMass = 1.0
         } else {
-            val proposal = selectBaseProposal(baseFit.posteriorNodes)
-            baseMassCaptured = proposal.capturedMass
-            if (baseMassCaptured < config.importanceMinimumBasePosteriorMass) {
-                throw DynamicCapabilityFitException(
-                    DynamicCapabilityFitFailureReason.NUMERICAL_BUDGET_EXCEEDED,
-                    "Candidate v2 retained only $baseMassCaptured of frozen-v1 posterior mass; minimum is ${config.importanceMinimumBasePosteriorMass}.",
-                )
-            }
-            val trendPoints = gaussHermiteTrendPoints(config.trendPriorSdLogResistancePerSession)
-            val chunks = proposal.nodes.chunked(max(1, (proposal.nodes.size + FIT_PARALLELISM - 1) / FIT_PARALLELISM))
+            val delta = config.trendLaplaceFiniteDifferenceStep
+            val chunks = baseFit.posteriorNodes.chunked(max(1, (baseFit.posteriorNodes.size + FIT_PARALLELISM - 1) / FIT_PARALLELISM))
             val tasks = chunks.map { chunk ->
                 Callable {
-                    val local = ArrayList<RawTrendNode>(chunk.size * trendPoints.size)
+                    val localNodes = ArrayList<RawTrendNode>(chunk.size * config.trendPosteriorQuadraturePoints)
+                    var localValidMass = 0.0
                     chunk.forEach { baseNode ->
                         if (baseNode.posteriorWeight <= 0.0) return@forEach
-                        val logLikelihoodAtZero = logLikelihood(baseNode, 0.0, observations)
-                        trendPoints.forEach { point ->
-                            val logLikelihood = if (point.trend == 0.0) logLikelihoodAtZero
-                            else logLikelihood(baseNode, point.trend, observations)
-                            local += RawTrendNode(
+                        val zero = logLikelihood(baseNode, 0.0, observations)
+                        val plus = logLikelihood(baseNode, delta, observations)
+                        val minus = logLikelihood(baseNode, -delta, observations)
+                        if (!zero.isFinite() || !plus.isFinite() || !minus.isFinite()) return@forEach
+                        val score = (plus - minus) / (2.0 * delta)
+                        val curvature = (plus - 2.0 * zero + minus) / (delta * delta)
+                        val priorVariance = config.trendPriorSdLogResistancePerSession.pow(2)
+                        val precision = 1.0 / priorVariance - curvature
+                        if (!score.isFinite() || !curvature.isFinite() || !precision.isFinite() || precision <= 0.0) return@forEach
+                        val variance = 1.0 / precision
+                        val mean = score / precision
+                        val sd = sqrt(variance)
+                        if (!mean.isFinite() || !sd.isFinite() || sd <= 0.0) return@forEach
+                        val logMarginalRatio = -ln(config.trendPriorSdLogResistancePerSession) -
+                            0.5 * ln(precision) + 0.5 * score * score / precision
+                        if (!logMarginalRatio.isFinite()) return@forEach
+                        localValidMass += baseNode.posteriorWeight
+                        normalQuadrature(mean, sd).forEach { point ->
+                            localNodes += RawTrendNode(
                                 logFrontierAtLatestSession = baseNode.logFrontierAtReference,
                                 slope = baseNode.slope,
-                                frontierTrend = point.trend,
+                                frontierTrend = point.value,
                                 slackScale = baseNode.slackScale,
                                 noiseScale = baseNode.noiseScale,
-                                logWeight = ln(baseNode.posteriorWeight) + ln(point.priorMass) +
-                                    (logLikelihood - logLikelihoodAtZero),
+                                logWeight = ln(baseNode.posteriorWeight) + logMarginalRatio + ln(point.mass),
                             )
                         }
                     }
-                    local
+                    LaplaceChunk(localNodes, localValidMass)
                 }
             }
-            rawNodes = FIT_EXECUTOR.invokeAll(tasks).flatMap { it.get() }
+            val chunksOut = FIT_EXECUTOR.invokeAll(tasks).map { it.get() }
+            rawNodes = chunksOut.flatMap { it.nodes }
+            validBaseMass = chunksOut.sumOf { it.validBaseMass }.coerceIn(0.0, 1.0)
+            if (validBaseMass < config.laplaceMinimumValidBasePosteriorMass) {
+                throw DynamicCapabilityFitException(
+                    DynamicCapabilityFitFailureReason.DEGENERATE_POSTERIOR,
+                    "Candidate v2 conditional Laplace update retained only $validBaseMass of frozen-v1 posterior mass; minimum is ${config.laplaceMinimumValidBasePosteriorMass}.",
+                )
+            }
         }
 
         val posteriorNodes = normalise(rawNodes)
@@ -159,9 +179,7 @@ class DynamicTrendFrontierModel(
         val frontierSummary = weightedSummary(
             posteriorNodes.map { WeightedValue(exp(it.logFrontierAtLatestSession), it.posteriorWeight) },
         )
-        val trendSummary = weightedSummary(
-            posteriorNodes.map { WeightedValue(it.frontierTrend, it.posteriorWeight) },
-        )
+        val trendSummary = weightedSummary(posteriorNodes.map { WeightedValue(it.frontierTrend, it.posteriorWeight) })
         val trendIdentification = trendIdentification(baseFit.support.effectiveIndependentSessionCount, trendSummary)
         val topSlackNodes = posteriorNodes.sortedByDescending { it.posteriorWeight }
             .take(config.baseConfig.slackPosteriorTopNodeCount)
@@ -178,9 +196,10 @@ class DynamicTrendFrontierModel(
 
         val warnings = buildSet {
             add("approximate_posterior")
+            add("conditional_laplace_frontier_trend")
             add("model_development_retrospective_candidate")
             if (!learnTrend) add("frontier_trend_fixed_zero_sparse_history")
-            if (learnTrend && baseMassCaptured < config.importanceTargetBasePosteriorMass) add("importance_base_mass_below_target")
+            if (learnTrend && validBaseMass < 1.0 - 1e-12) add("conditional_laplace_discarded_invalid_base_mass")
             if (trendIdentification == DynamicParameterIdentification.PRIOR_DOMINATED) add("frontier_trend_prior_dominated")
             baseFit.warnings.forEach { add("inherited_v1:${it.storageValue}") }
         }
@@ -222,22 +241,15 @@ class DynamicTrendFrontierModel(
             selectedObservationIds = baseFit.selectedObservationIds,
             selectedSessionIds = baseFit.selectedSessionIds,
             approximationVersion = config.approximationVersion,
-            basePosteriorMassCaptured = baseMassCaptured,
+            laplaceValidBasePosteriorMass = validBaseMass,
+            laplaceFiniteDifferenceStep = config.trendLaplaceFiniteDifferenceStep,
             posteriorEffectiveNodeCount = effectiveNodeCount,
             warnings = warnings,
             posteriorNodes = posteriorNodes,
         )
     }
 
-    /**
-     * Projects the v2 joint posterior to an explicit independent-session offset and returns a
-     * v1-compatible numerical view. This reuses the frozen Candidate-v1 predictive machinery while
-     * retaining joint c/g covariance: every posterior node is transformed before any summary.
-     */
-    fun projectToSessionOffset(
-        fit: DynamicTrendFrontierFit,
-        sessionOffset: Double,
-    ): DynamicStochasticFrontierFit {
+    fun projectToSessionOffset(fit: DynamicTrendFrontierFit, sessionOffset: Double): DynamicStochasticFrontierFit {
         require(sessionOffset.isFinite())
         val projectedNodes = fit.posteriorNodes.map { node ->
             DynamicFrontierPosteriorNode(
@@ -248,10 +260,7 @@ class DynamicTrendFrontierModel(
                 posteriorWeight = node.posteriorWeight,
             )
         }
-        val frontierSummary = weightedSummary(
-            projectedNodes.map { WeightedValue(exp(it.logFrontierAtReference), it.posteriorWeight) },
-        )
-        val provenance = fit.frontierAtLatestSession.provenance
+        val frontierSummary = weightedSummary(projectedNodes.map { WeightedValue(exp(it.logFrontierAtReference), it.posteriorWeight) })
         return DynamicStochasticFrontierFit(
             executionProfileVersionId = fit.executionProfileVersionId,
             side = fit.side,
@@ -265,7 +274,7 @@ class DynamicTrendFrontierModel(
             observedRepMax = fit.observedRepMax,
             observedResistanceMinKg = fit.observedResistanceMinKg,
             observedResistanceMaxKg = fit.observedResistanceMaxKg,
-            frontierAtReference = PosteriorEstimate(frontierSummary, fit.support, provenance),
+            frontierAtReference = PosteriorEstimate(frontierSummary, fit.support, fit.frontierAtLatestSession.provenance),
             slope = fit.slope,
             slackScale = fit.slackScale,
             noiseScale = fit.noiseScale,
@@ -278,11 +287,11 @@ class DynamicTrendFrontierModel(
         )
     }
 
-    fun predictFrontier(
-        fit: DynamicTrendFrontierFit,
-        repetitions: Double,
-        sessionOffset: Double = 0.0,
-    ): PosteriorEstimate = baseModel.predictFrontier(projectToSessionOffset(fit, sessionOffset), repetitions)
+    override fun predictFrontier(fit: DynamicTrendFrontierFit, repetitions: Double): PosteriorEstimate =
+        predictFrontier(fit, repetitions, 0.0)
+
+    fun predictFrontier(fit: DynamicTrendFrontierFit, repetitions: Double, sessionOffset: Double): PosteriorEstimate =
+        baseModel.predictFrontier(projectToSessionOffset(fit, sessionOffset), repetitions)
 
     fun basePredictiveModel(): DynamicStochasticFrontierModel = baseModel
 
@@ -302,28 +311,7 @@ class DynamicTrendFrontierModel(
         }
     }
 
-    private fun selectBaseProposal(nodes: List<DynamicFrontierPosteriorNode>): ProposalSelection {
-        val indexed = nodes.withIndex().sortedWith(
-            compareByDescending<IndexedValue<DynamicFrontierPosteriorNode>> { it.value.posteriorWeight }
-                .thenBy { it.index },
-        )
-        val selected = ArrayList<DynamicFrontierPosteriorNode>()
-        var mass = 0.0
-        val minimum = min(config.importanceMinimumBaseNodes, indexed.size)
-        for (indexedNode in indexed) {
-            if (selected.size >= config.importanceMaximumBaseNodes) break
-            selected += indexedNode.value
-            mass += indexedNode.value.posteriorWeight
-            if (selected.size >= minimum && mass >= config.importanceTargetBasePosteriorMass) break
-        }
-        return ProposalSelection(selected, mass.coerceIn(0.0, 1.0))
-    }
-
-    private fun logLikelihood(
-        node: DynamicFrontierPosteriorNode,
-        trend: Double,
-        observations: List<TrendObservation>,
-    ): Double {
+    private fun logLikelihood(node: DynamicFrontierPosteriorNode, trend: Double, observations: List<TrendObservation>): Double {
         val noiseNormalisation = studentTLogNormalisation(config.baseConfig.studentTDegreesOfFreedom, node.noiseScale)
         var total = 0.0
         observations.forEach { observation ->
@@ -392,13 +380,13 @@ class DynamicTrendFrontierModel(
     private fun normalise(rawNodes: List<RawTrendNode>): List<DynamicTrendFrontierPosteriorNode> {
         val finite = rawNodes.filter { it.logWeight.isFinite() }
         if (finite.isEmpty()) {
-            throw DynamicCapabilityFitException(DynamicCapabilityFitFailureReason.NON_FINITE_POSTERIOR, "Candidate v2 produced no finite importance node.")
+            throw DynamicCapabilityFitException(DynamicCapabilityFitFailureReason.NON_FINITE_POSTERIOR, "Candidate v2 produced no finite posterior node.")
         }
         val maxLog = finite.maxOf { it.logWeight }
         val weights = rawNodes.map { if (it.logWeight.isFinite()) exp(it.logWeight - maxLog) else 0.0 }
         val total = weights.sum()
         if (!total.isFinite() || total <= 0.0) {
-            throw DynamicCapabilityFitException(DynamicCapabilityFitFailureReason.NON_FINITE_POSTERIOR, "Candidate v2 importance normalisation failed.")
+            throw DynamicCapabilityFitException(DynamicCapabilityFitFailureReason.NON_FINITE_POSTERIOR, "Candidate v2 posterior normalisation failed.")
         }
         return rawNodes.mapIndexed { index, node ->
             DynamicTrendFrontierPosteriorNode(
@@ -485,10 +473,10 @@ class DynamicTrendFrontierModel(
         val sessionWeight: Double,
     )
 
-    private data class TrendQuadraturePoint(val trend: Double, val priorMass: Double)
+    private data class NormalQuadraturePoint(val value: Double, val mass: Double)
     private data class SlackQuadraturePoint(val standardisedSlack: Double, val logPriorMass: Double)
-    private data class ProposalSelection(val nodes: List<DynamicFrontierPosteriorNode>, val capturedMass: Double)
     private data class WeightedValue(val value: Double, val weight: Double)
+    private data class LaplaceChunk(val nodes: List<RawTrendNode>, val validBaseMass: Double)
     private data class RawTrendNode(
         val logFrontierAtLatestSession: Double,
         val slope: Double,
@@ -506,12 +494,25 @@ class DynamicTrendFrontierModel(
                 priority = Thread.NORM_PRIORITY - 1
             }
         }
+        private val STANDARD_NORMAL_GH5_Z = doubleArrayOf(
+            -2.8569700138728056,
+            -1.355626179974266,
+            0.0,
+            1.355626179974266,
+            2.8569700138728056,
+        )
+        private val STANDARD_NORMAL_GH5_WEIGHT = doubleArrayOf(
+            0.0112574113277207,
+            0.2220759220056126,
+            0.5333333333333333,
+            0.2220759220056126,
+            0.0112574113277207,
+        )
 
-        private fun gaussHermiteTrendPoints(sd: Double): List<TrendQuadraturePoint> {
-            val z = doubleArrayOf(-2.8569700138728056, -1.355626179974266, 0.0, 1.355626179974266, 2.8569700138728056)
-            val weight = doubleArrayOf(0.0112574113277207, 0.2220759220056126, 0.5333333333333333, 0.2220759220056126, 0.0112574113277207)
-            return z.indices.map { TrendQuadraturePoint(z[it] * sd, weight[it]) }
-        }
+        private fun normalQuadrature(mean: Double, sd: Double): List<NormalQuadraturePoint> =
+            STANDARD_NORMAL_GH5_Z.indices.map { index ->
+                NormalQuadraturePoint(mean + STANDARD_NORMAL_GH5_Z[index] * sd, STANDARD_NORMAL_GH5_WEIGHT[index])
+            }
 
         private fun buildSlackQuadrature(config: dev.kian.mymettle.domain.inference.DynamicStochasticFrontierConfig): List<SlackQuadraturePoint> {
             val width = config.slackQuadratureMaximumSd / config.slackQuadraturePoints.toDouble()
