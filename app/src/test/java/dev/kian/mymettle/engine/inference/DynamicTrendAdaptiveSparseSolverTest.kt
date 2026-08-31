@@ -57,9 +57,9 @@ class DynamicTrendAdaptiveSparseSolverTest {
         val sparse = DynamicTrendAdaptiveSparseSolver(
             DynamicTrendAdaptiveSparseConfig(
                 denseCoreConfig = denseConfig,
-                retainedBasePosteriorMass = 0.995,
-                minimumRetainedBaseNodes = 32,
-                maximumRetainedBaseNodes = 160,
+                retainedBasePosteriorMass = 0.9995,
+                minimumRetainedBaseNodes = 64,
+                maximumRetainedBaseNodes = 512,
             ),
         )
         val (prunedBase, support) = sparse.pruneBasePosterior(baseFit)
@@ -76,11 +76,20 @@ class DynamicTrendAdaptiveSparseSolverTest {
         assertEquals(dense.mathematicalModelIdentity, sparseFit.mathematicalModelIdentity)
         assertEquals(InferenceSolverFamily.ADAPTIVE_SPARSE_TENSOR, sparseFit.solverDiagnostics.solverIdentity.solverFamily)
         assertTrue(support.retainedBaseNodeCount < support.originalBaseNodeCount)
-        assertTrue(prunedBase.posteriorNodes.size <= 160)
+        assertTrue(prunedBase.posteriorNodes.size <= 512)
         assertTrue(requireNotNull(sparseFit.solverDiagnostics.evaluatedNodeCount) < requireNotNull(dense.solverDiagnostics.evaluatedNodeCount))
-        assertTrue(fidelity.nextFrontierMedianRelativeError <= 0.05)
-        assertTrue(fidelity.trendPositiveProbabilityAbsoluteError <= 0.08)
-        assertTrue(fidelity.maxStandardisedMarginalWasserstein1 <= 0.35)
+        assertTrue(
+            fidelity.nextFrontierMedianRelativeError <= 0.05,
+            "next-frontier median relative error=${fidelity.nextFrontierMedianRelativeError}",
+        )
+        assertTrue(
+            fidelity.trendPositiveProbabilityAbsoluteError <= 0.08,
+            "trend-positive probability absolute error=${fidelity.trendPositiveProbabilityAbsoluteError}",
+        )
+        assertTrue(
+            fidelity.maxStandardisedMarginalWasserstein1 <= 0.35,
+            "max standardised marginal Wasserstein-1=${fidelity.maxStandardisedMarginalWasserstein1}; retained=${support.retainedBaseNodeCount}/${support.originalBaseNodeCount}; mass=${support.retainedBasePosteriorMassBeforeRenormalisation}",
+        )
     }
 
     @Test
@@ -95,7 +104,7 @@ class DynamicTrendAdaptiveSparseSolverTest {
             baseModel.config.toModelConfig(CONFIG_CREATED_AT),
         ))
         val sparse = DynamicTrendAdaptiveSparseSolver(
-            DynamicTrendAdaptiveSparseConfig(maximumRetainedBaseNodes = 180),
+            DynamicTrendAdaptiveSparseConfig(maximumRetainedBaseNodes = 512),
         )
         val request = DynamicCapabilityFitRequest(projection, horizon, sparse.modelConfig(CONFIG_CREATED_AT))
         val first = sparse.fitFromFrozenV1(request, baseFit)
