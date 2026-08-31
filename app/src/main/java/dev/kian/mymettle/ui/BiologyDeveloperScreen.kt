@@ -97,6 +97,21 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 .onFailure(viewModel::reportError)
         }
     }
+    val adaptiveInferenceExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            runCatching {
+                val json = viewModel.adaptiveInferenceJson()
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri, "wt")?.bufferedWriter()?.use { it.write(json) }
+                        ?: error("Android could not open the selected adaptive-inference report file.")
+                }
+            }.onSuccess { viewModel.markAdaptiveInferenceExported() }
+                .onFailure(viewModel::reportError)
+        }
+    }
     val liteBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
@@ -211,7 +226,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                         Button(
                             onClick = viewModel::recompute,
                             enabled = state.task.phase != BiologyTaskPhase.RUNNING && snapshot.routineVersionId != null &&
-                                !state.nBio7BAcceptanceRunning,
+                                !state.nBio7BAcceptanceRunning && !state.adaptiveInferenceRunning,
                             modifier = Modifier.fillMaxWidth(),
                         ) { Text("Recompute biological state") }
                         OutlinedButton(
@@ -227,7 +242,8 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                         ) { Text("Export diagnostic JSON") }
                         OutlinedButton(
                             onClick = { confirmReset = true },
-                            enabled = state.task.phase != BiologyTaskPhase.RUNNING && !state.nBio7BAcceptanceRunning,
+                            enabled = state.task.phase != BiologyTaskPhase.RUNNING && !state.nBio7BAcceptanceRunning &&
+                                !state.adaptiveInferenceRunning,
                             modifier = Modifier.fillMaxWidth(),
                         ) { Text("Reset Native development database") }
                         if (state.task.phase != BiologyTaskPhase.IDLE) {
@@ -249,8 +265,9 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                         )
                         Button(
                             onClick = viewModel::runNBio7BAcceptance,
-                            enabled = !state.nBio7BAcceptanceRunning && !state.nBio6VerificationRunning &&
-                                !state.nBio6LiteVerificationRunning && state.task.phase != BiologyTaskPhase.RUNNING,
+                            enabled = !state.nBio7BAcceptanceRunning && !state.adaptiveInferenceRunning &&
+                                !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning &&
+                                state.task.phase != BiologyTaskPhase.RUNNING,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             if (state.nBio7BAcceptanceRunning) {
@@ -370,6 +387,98 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 }
 
                 item {
+                    DebugCard("N‑BIO Adaptive Inference acceptance") {
+                        Text(
+                            "Single N-BIO-7B.X physical acceptance over installed Room14 history. Compares dense Candidate-v2, same-mathematics adaptive sparse and conditional-Laplace solvers against the same frozen Candidate-v1 proposal, with corrected median-MAE evaluation, persistence/replay checks, solver-substrate benchmarks and safety fingerprints. No product authority is changed.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Button(
+                            onClick = viewModel::runAdaptiveInferenceAcceptance,
+                            enabled = !state.adaptiveInferenceRunning && !state.nBio7BAcceptanceRunning &&
+                                !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning &&
+                                state.task.phase != BiologyTaskPhase.RUNNING,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            if (state.adaptiveInferenceRunning) {
+                                CircularProgressIndicator(modifier = Modifier.padding(end = 10.dp))
+                                Text("Running adaptive-inference acceptance…")
+                            } else {
+                                Text("Run N-BIO Adaptive Inference Acceptance")
+                            }
+                        }
+                        state.adaptiveInferenceProgress?.let { progress ->
+                            DebugLine(
+                                "Progress",
+                                if (progress.totalGroups > 0) "${progress.completedGroups}/${progress.totalGroups}" else "Preparing",
+                            )
+                            Text(progress.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        state.adaptiveInferenceReport?.let { report ->
+                            HorizontalDivider()
+                            DebugLine("Safety", if (report.safetyPassed) "PASS" else "FAIL / REVIEW REQUIRED")
+                            DebugLine("Build", "${report.appIdentity.versionName} (${report.appIdentity.versionCode})")
+                            DebugLine("Device", "${report.deviceIdentity.manufacturer} ${report.deviceIdentity.model} · SDK ${report.deviceIdentity.sdkInt}")
+                            DebugLine("Room", "v${report.roomSchemaVersion}")
+                            DebugLine("Groups", report.profiles.size.toString())
+                            DebugLine("Total runtime", "${report.totalElapsedMillis} ms")
+                            DebugLine("Sequential reuse", report.sequentialReuseAssessment.verdict.storageValue)
+                            report.profiles.forEach { profile ->
+                                HorizontalDivider()
+                                Text("${profile.label} · ${profile.side}", fontWeight = FontWeight.SemiBold)
+                                DebugLine("Profile version", profile.executionProfileVersionId)
+                                DebugLine("Evidence", "${profile.eligibleObservationCount} obs · ${profile.independentSessionCount} sessions")
+                                DebugLine("Chronological fits", profile.chronologicalFitCount.toString())
+                                DebugLine(
+                                    "Current runtime",
+                                    "dense ${profile.currentFitElapsedMillisDense?.let { "$it ms" } ?: "n/a"} · sparse ${profile.currentFitElapsedMillisSparse?.let { "$it ms" } ?: "n/a"} · Laplace ${profile.currentFitElapsedMillisLaplace?.let { "$it ms" } ?: "n/a"}",
+                                )
+                                profile.denseVsSparsePosteriorFidelity?.let { fidelity ->
+                                    DebugLine(
+                                        "Dense ↔ sparse fidelity",
+                                        "frontier ${formatDebug(fidelity.nextFrontierMedianRelativeError)} · trend ${formatDebug(fidelity.trendPositiveProbabilityAbsoluteError)} · W1 ${formatDebug(fidelity.maxStandardisedMarginalWasserstein1)}",
+                                    )
+                                }
+                                profile.denseVsLaplacePosteriorFidelity?.let { fidelity ->
+                                    DebugLine(
+                                        "Dense ↔ Laplace fidelity",
+                                        "frontier ${formatDebug(fidelity.nextFrontierMedianRelativeError)} · trend ${formatDebug(fidelity.trendPositiveProbabilityAbsoluteError)} · W1 ${formatDebug(fidelity.maxStandardisedMarginalWasserstein1)}",
+                                    )
+                                }
+                                profile.bakeoff.candidates.forEach { candidate ->
+                                    DebugLine(
+                                        candidate.solverIdentity.solverFamily.storageValue,
+                                        candidate.developmentComparisonAgainstV1.verdict.storageValue,
+                                    )
+                                }
+                                DebugLine(
+                                    "Persist/reload",
+                                    "dense ${profile.densePersistReloadEquivalent ?: "n/a"} · sparse ${profile.sparsePersistReloadEquivalent ?: "n/a"} · Laplace ${profile.laplacePersistReloadEquivalent ?: "n/a"}",
+                                )
+                                DebugLine(
+                                    "Full replay",
+                                    "dense ${profile.denseReplayEquivalent ?: "n/a"} · sparse ${profile.sparseReplayEquivalent ?: "n/a"} · Laplace ${profile.laplaceReplayEquivalent ?: "n/a"}",
+                                )
+                                profile.limitations.forEach { limitation ->
+                                    Text("• $limitation", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    runCatching { viewModel.adaptiveInferenceJson() }
+                                        .onSuccess {
+                                            adaptiveInferenceExportLauncher.launch(
+                                                "my-mettle-n-bio-adaptive-inference-${Instant.now().epochSecond}.json",
+                                            )
+                                        }
+                                        .onFailure(viewModel::reportError)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text("Export adaptive-inference acceptance JSON") }
+                        }
+                    }
+                }
+
+                item {
                     DebugCard("N‑BIO‑6 device acceptance") {
                         Text(
                             "Runs production Room, profile authoring, workout, history and conservative inference paths in isolated databases. Your Native history is not modified.",
@@ -377,7 +486,8 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                         )
                         Button(
                             onClick = viewModel::runNBio6DeviceVerification,
-                            enabled = !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning && !state.nBio7BAcceptanceRunning,
+                            enabled = !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning &&
+                                !state.nBio7BAcceptanceRunning && !state.adaptiveInferenceRunning,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             if (state.nBio6VerificationRunning) {
@@ -407,7 +517,8 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                         )
                         OutlinedButton(
                             onClick = { liteBackupLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
-                            enabled = !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning && !state.nBio7BAcceptanceRunning,
+                            enabled = !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning &&
+                                !state.nBio7BAcceptanceRunning && !state.adaptiveInferenceRunning,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(if (state.nBio6LiteVerificationRunning) "Validating reviewed translation…" else "Validate a reviewed Lite translation")
