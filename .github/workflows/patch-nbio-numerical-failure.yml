@@ -33,6 +33,11 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app/src/main/java/dev/kian/mymettle/engine/inference/DynamicTrendSolverHistoricalBakeoff.kt app/build.gradle.kts
-          git commit -m "Harden adaptive bakeoff numerical failure reporting"
+          git add \
+            app/src/main/java/dev/kian/mymettle/engine/performance/DynamicTrendFrontierModel.kt \
+            app/src/main/java/dev/kian/mymettle/engine/inference/DynamicTrendPosteriorFidelity.kt \
+            app/src/main/java/dev/kian/mymettle/developer/NBioAdaptiveInferenceAcceptance.kt \
+            app/src/test/java/dev/kian/mymettle/engine/performance/DynamicTrendFrontierModelTest.kt \
+            app/src/test/java/dev/kian/mymettle/engine/inference/DynamicTrendPosteriorFidelityTest.kt
+          git commit -m "Fail closed on unstable Candidate-v2 projections"
           git push origin HEAD:agent/n-bio-vnext-inference
