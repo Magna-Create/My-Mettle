@@ -85,9 +85,9 @@ object PrequentialWeightedIntervalScore {
         val lower = ln(p05ResistanceKg)
         val median = ln(p50ResistanceKg)
         val upper = ln(p95ResistanceKg)
-        val intervalScore = (upper - lower) +
-            if (y < lower) 2.0 / alpha * (lower - y) else 0.0 +
-            if (y > upper) 2.0 / alpha * (y - upper) else 0.0
+        val lowerPenalty = if (y < lower) 2.0 / alpha * (lower - y) else 0.0
+        val upperPenalty = if (y > upper) 2.0 / alpha * (y - upper) else 0.0
+        val intervalScore = (upper - lower) + lowerPenalty + upperPenalty
         val medianWeight = 0.5
         val intervalWeight = alpha / 2.0
         return (medianWeight * abs(y - median) + intervalWeight * intervalScore) / 1.5
