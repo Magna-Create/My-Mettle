@@ -1,0 +1,65 @@
+name: Temporary adaptive acceptance runtime patch
+
+on:
+  push:
+    branches:
+      - agent/n-bio-vnext-inference
+    paths:
+      - tools/adaptive_acceptance_runtime_patch.py
+      - .github/workflows/tmp_adaptive_acceptance_runtime_patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: agent/n-bio-vnext-inference
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "Magna-Create"
+          git config user.email "53941598+Magna-Create@users.noreply.github.com"
+
+      - name: Apply bounded runtime patch
+        run: python3 tools/adaptive_acceptance_runtime_patch.py
+
+      - name: Check patch hygiene
+        run: git diff --check
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Install Android SDK 37
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Focused unit and APK verification
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --no-daemon
+
+      - name: Remove temporary patch scaffolding
+        run: |
+          rm tools/adaptive_acceptance_runtime_patch.py
+          rm .github/workflows/tmp_adaptive_acceptance_runtime_patch.yml
+
+      - name: Commit and push product patch
+        run: |
+          git add -A
+          git commit -m "Bound adaptive inference acceptance runtime"
+          git push origin HEAD:agent/n-bio-vnext-inference
