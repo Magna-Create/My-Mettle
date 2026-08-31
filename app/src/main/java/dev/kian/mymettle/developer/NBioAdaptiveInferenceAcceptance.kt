@@ -2,19 +2,24 @@ package dev.kian.mymettle.developer
 
 import android.content.Context
 import android.os.Debug
-import android.os.Process
 import dev.kian.mymettle.data.local.MyMettleDatabase
+import dev.kian.mymettle.domain.inference.DynamicCapabilityFitRequest
+import dev.kian.mymettle.domain.inference.DynamicResistanceEvidenceProjection
 import dev.kian.mymettle.domain.inference.DynamicResistanceV2Contract
+import dev.kian.mymettle.domain.inference.DynamicStochasticFrontierFit
+import dev.kian.mymettle.domain.inference.DynamicTrendFrontierFit
 import dev.kian.mymettle.domain.inference.DynamicTrendFrontierV2
-import dev.kian.mymettle.domain.performance.Laterality
+import dev.kian.mymettle.domain.inference.PosteriorEstimate
+import dev.kian.mymettle.engine.inference.DynamicTrendCandidateV2Solver
+import dev.kian.mymettle.engine.inference.DynamicTrendConditionalLaplaceSolverAdapter
 import dev.kian.mymettle.engine.inference.DynamicTrendDenseReferenceSolverAdapter
-import dev.kian.mymettle.engine.inference.DynamicTrendLaplaceSolverAdapter
 import dev.kian.mymettle.engine.inference.DynamicTrendPosteriorFidelity
 import dev.kian.mymettle.engine.inference.DynamicTrendPosteriorFidelityResult
 import dev.kian.mymettle.engine.inference.DynamicTrendSolverHistoricalBakeoff
 import dev.kian.mymettle.engine.inference.DynamicTrendSolverHistoricalBakeoffResult
 import dev.kian.mymettle.engine.inference.HistoricalObservationRevisionSelector
 import dev.kian.mymettle.engine.performance.DynamicResistanceEvidenceProjector
+import dev.kian.mymettle.engine.performance.DynamicStochasticFrontierModel
 import dev.kian.mymettle.inference.DynamicTrendCapabilityParameterCodec
 import dev.kian.mymettle.inference.DynamicTrendCapabilityShadowRepository
 import java.time.Instant
@@ -74,53 +79,79 @@ data class NBioAdaptiveInferenceAcceptanceReport(
         .put("contextConsumption", DynamicTrendFrontierV2.config.contextConsumption)
         .put("candidateV1Status", "FROZEN_REJECTED_EMPIRICAL_CALIBRATION")
         .put("candidateV2Status", "DEVELOPMENT_CANDIDATE_NOT_PRODUCT_AUTHORITY")
-        .put("candidateV2MathematicalModel", JSONObject()
-            .put("family", DynamicTrendFrontierV2.mathematicalModelIdentity.family)
-            .put("semanticVersion", DynamicTrendFrontierV2.mathematicalModelIdentity.semanticVersion)
-            .put("definition", DynamicTrendFrontierV2.mathematicalModelIdentity.definition))
-        .put("solvers", JSONArray(listOf(
-            DynamicTrendDenseReferenceSolverAdapter().solverIdentity.toJson(),
-            DynamicTrendLaplaceSolverAdapter().solverIdentity.toJson(),
-        )))
-        .put("rawEvidence", JSONObject()
-            .put("beforeSha256", rawFingerprintBefore.sha256)
-            .put("afterSha256", rawFingerprintAfter.sha256)
-            .put("unchanged", rawEvidenceUnchanged)
-            .put("tableRowCounts", JSONObject(rawFingerprintAfter.tableRowCounts)))
-        .put("prescriptionState", JSONObject()
-            .put("beforeSha256", prescriptionBefore.sha256)
-            .put("afterSha256", prescriptionAfter.sha256)
-            .put("unchanged", prescriptionsUnchanged)
-            .put("tableRowCounts", JSONObject(prescriptionAfter.tableRowCounts)))
-        .put("benchmarkAuthority", JSONObject()
-            .put("beforeRunId", benchmarkRunIdBefore ?: JSONObject.NULL)
-            .put("afterRunId", benchmarkRunIdAfter ?: JSONObject.NULL)
-            .put("unchanged", benchmarkAuthorityUnchanged)
-            .put("authority", "BENCHMARK_V0"))
-        .put("memory", JSONObject()
-            .put("javaHeapUsedBeforeBytes", javaHeapUsedBeforeBytes)
-            .put("javaHeapUsedAfterBytes", javaHeapUsedAfterBytes)
-            .put("nativeHeapBeforeBytes", nativeHeapBeforeBytes)
-            .put("nativeHeapAfterBytes", nativeHeapAfterBytes)
-            .put("note", "process-level snapshots bound the acceptance harness; per-kernel peak RAM requires profiler/device instrumentation"))
+        .put(
+            "candidateV2MathematicalModel",
+            JSONObject()
+                .put("family", DynamicTrendFrontierV2.mathematicalModelIdentity.family)
+                .put("semanticVersion", DynamicTrendFrontierV2.mathematicalModelIdentity.semanticVersion)
+                .put("definition", DynamicTrendFrontierV2.mathematicalModelIdentity.definition),
+        )
+        .put(
+            "solvers",
+            JSONArray(
+                listOf(
+                    DynamicTrendDenseReferenceSolverAdapter().solverIdentity.toJson(),
+                    DynamicTrendConditionalLaplaceSolverAdapter().solverIdentity.toJson(),
+                ),
+            ),
+        )
+        .put(
+            "rawEvidence",
+            JSONObject()
+                .put("beforeSha256", rawFingerprintBefore.sha256)
+                .put("afterSha256", rawFingerprintAfter.sha256)
+                .put("unchanged", rawEvidenceUnchanged)
+                .put("tableRowCounts", JSONObject(rawFingerprintAfter.tableRowCounts)),
+        )
+        .put(
+            "prescriptionState",
+            JSONObject()
+                .put("beforeSha256", prescriptionBefore.sha256)
+                .put("afterSha256", prescriptionAfter.sha256)
+                .put("unchanged", prescriptionsUnchanged)
+                .put("tableRowCounts", JSONObject(prescriptionAfter.tableRowCounts)),
+        )
+        .put(
+            "benchmarkAuthority",
+            JSONObject()
+                .put("beforeRunId", benchmarkRunIdBefore ?: JSONObject.NULL)
+                .put("afterRunId", benchmarkRunIdAfter ?: JSONObject.NULL)
+                .put("unchanged", benchmarkAuthorityUnchanged)
+                .put("authority", "BENCHMARK_V0"),
+        )
+        .put(
+            "memory",
+            JSONObject()
+                .put("javaHeapUsedBeforeBytes", javaHeapUsedBeforeBytes)
+                .put("javaHeapUsedAfterBytes", javaHeapUsedAfterBytes)
+                .put("nativeHeapBeforeBytes", nativeHeapBeforeBytes)
+                .put("nativeHeapAfterBytes", nativeHeapAfterBytes)
+                .put("note", "Process snapshots bound the acceptance harness; per-kernel peak RAM requires profiler/device instrumentation."),
+        )
         .put("performance", JSONObject().put("totalElapsedMillis", totalElapsedMillis))
         .put("profiles", JSONArray(profiles.map { it.toJson() }))
-        .put("nativeBackupRoundTrip", JSONObject()
-            .put("schemaVersion", backupRoundTrip.schemaVersion)
-            .put("rawEvidenceMatches", backupRoundTrip.rawEvidenceMatches)
-            .put("prescriptionStateMatches", backupRoundTrip.prescriptionStateMatches)
-            .put("candidateRowsMatch", backupRoundTrip.candidateRowsMatch)
-            .put("foreignKeysClean", backupRoundTrip.foreignKeysClean)
-            .put("passed", backupRoundTrip.passed))
-        .put("architectureSubstrates", JSONObject()
-            .put("denseSequentialTensor", "IMPLEMENTED_GENERIC_REFERENCE_SUBSTRATE")
-            .put("adaptiveSparseTensor", "IMPLEMENTED_GENERIC_CHALLENGER_SUBSTRATE")
-            .put("lowRank", "VIABILITY_SCREEN_IMPLEMENTED_NOT_AUTOMATICALLY_PRODUCTION")
-            .put("sigmaPoint", "IMPLEMENTED_GENERIC_FAST_CHALLENGER_NOT_YET_CANDIDATE_V2_ADAPTER")
-            .put("factorDependencyIndex", "IMPLEMENTED_MINIMUM_INVALIDATION_ABSTRACTION")
-            .put("nativeCpu", "DEVICE_PROFILING_REQUIRED_BEFORE_KERNEL_PORT")
-            .put("vulkan", "NOT_RUN_UNTIL_CPU_PROFILE_JUSTIFIES_DATA_PARALLEL_KERNEL")
-            .put("liteRtNpu", "PLATFORM_AUDIT_REQUIRED_NOT_ASSUMED_GENERAL_BAYES_BACKEND"))
+        .put(
+            "nativeBackupRoundTrip",
+            JSONObject()
+                .put("schemaVersion", backupRoundTrip.schemaVersion)
+                .put("rawEvidenceMatches", backupRoundTrip.rawEvidenceMatches)
+                .put("prescriptionStateMatches", backupRoundTrip.prescriptionStateMatches)
+                .put("candidateRowsMatch", backupRoundTrip.candidateRowsMatch)
+                .put("foreignKeysClean", backupRoundTrip.foreignKeysClean)
+                .put("passed", backupRoundTrip.passed),
+        )
+        .put(
+            "architectureSubstrates",
+            JSONObject()
+                .put("denseSequentialTensor", "IMPLEMENTED_GENERIC_REFERENCE_SUBSTRATE")
+                .put("adaptiveSparseTensor", "IMPLEMENTED_GENERIC_CHALLENGER_SUBSTRATE")
+                .put("lowRank", "VIABILITY_SCREEN_IMPLEMENTED_NOT_AUTOMATICALLY_PRODUCTION")
+                .put("sigmaPoint", "IMPLEMENTED_GENERIC_FAST_CHALLENGER_NOT_YET_CANDIDATE_V2_ADAPTER")
+                .put("factorDependencyIndex", "IMPLEMENTED_MINIMUM_INVALIDATION_ABSTRACTION")
+                .put("nativeCpu", "DEVICE_PROFILING_REQUIRED_BEFORE_KERNEL_PORT")
+                .put("vulkan", "NOT_RUN_UNTIL_CPU_PROFILE_JUSTIFIES_DATA_PARALLEL_KERNEL")
+                .put("liteRtNpu", "PLATFORM_AUDIT_REQUIRED_NOT_ASSUMED_GENERAL_BAYES_BACKEND"),
+        )
         .put("safetyPassed", safetyPassed)
         .put("productAuthorityChanged", false)
         .put("normalWorkoutBehaviourChanged", false)
@@ -129,12 +160,13 @@ data class NBioAdaptiveInferenceAcceptanceReport(
 }
 
 /**
- * One foreground Biological Developer action over the installed Room14 history.
+ * One foreground Biological Developer action over installed Room14 history.
  *
- * It intentionally labels all historical predictive results DEVELOPMENT evidence. Dense Candidate-v2
- * is the same-math reference; conditional-Laplace is a solver challenger. Both are persisted only as
- * SHADOW derived state and immediately replay-checked. The action never updates normal prescriptions
- * or BENCHMARK_V0 product authority.
+ * Historical predictive results are DEVELOPMENT evidence. Dense Candidate-v2 is the same-math
+ * reference; conditional-Laplace is the approximation challenger. At every current-state comparison
+ * both solvers receive the exact same deterministic frozen-v1 posterior. Both persist only SHADOW
+ * derived state and are immediately replay-checked. Normal prescriptions and BENCHMARK_V0 are never
+ * updated by this runner.
  */
 class NBioAdaptiveInferenceAcceptanceRunner(
     private val context: Context,
@@ -156,16 +188,24 @@ class NBioAdaptiveInferenceAcceptanceRunner(
         val raw = historyReader.read()
         val currentAsKnown = HistoricalObservationRevisionSelector.currentAsOf(raw.revisions, Instant.MAX)
         val groups = raw.profiles.values.flatMap { descriptor ->
-            currentAsKnown.filter { it.executionProfileVersionId == descriptor.semantics.executionProfileVersionId }
+            currentAsKnown
+                .filter { it.executionProfileVersionId == descriptor.semantics.executionProfileVersionId }
                 .map { it.laterality }
                 .distinct()
                 .map { side -> descriptor to side }
         }
         val denseSolver = DynamicTrendDenseReferenceSolverAdapter()
-        val laplaceSolver = DynamicTrendLaplaceSolverAdapter()
+        val laplaceSolver = DynamicTrendConditionalLaplaceSolverAdapter()
         val results = mutableListOf<NBioAdaptiveProfileResult>()
+
         groups.forEachIndexed { index, (descriptor, side) ->
-            onProgress(NBio7BAcceptanceProgress(index, groups.size, "Adaptive inference · ${descriptor.label} · ${side.storageValue}"))
+            onProgress(
+                NBio7BAcceptanceProgress(
+                    index,
+                    groups.size,
+                    "Adaptive inference · ${descriptor.label} · ${side.storageValue}",
+                ),
+            )
             val projection = DynamicResistanceEvidenceProjector.project(
                 descriptor.semantics,
                 side,
@@ -177,55 +217,12 @@ class NBioAdaptiveInferenceAcceptanceRunner(
                 side,
                 raw.revisions,
             )
-            var denseFitElapsed: Long? = null
-            var laplaceFitElapsed: Long? = null
-            var fidelity: DynamicTrendPosteriorFidelityResult? = null
-            var densePersist: Boolean? = null
-            var laplacePersist: Boolean? = null
-            var denseReplay: Boolean? = null
-            var laplaceReplay: Boolean? = null
-            val limitations = mutableListOf<String>()
-            if (projection.evidence.isNotEmpty()) {
-                val horizon = projection.evidence.maxOf { it.completedAt }
-                val denseFit = runCatching {
-                    lateinit var fit: dev.kian.mymettle.domain.inference.DynamicTrendFrontierFit
-                    denseFitElapsed = measureTimeMillis {
-                        fit = denseSolver.fit(
-                            dev.kian.mymettle.domain.inference.DynamicCapabilityFitRequest(
-                                projection,
-                                horizon,
-                                denseSolver.modelConfig(CONFIG_CREATED_AT),
-                            ),
-                        )
-                    }
-                    fit
-                }.getOrNull()
-                val laplaceFit = runCatching {
-                    lateinit var fit: dev.kian.mymettle.domain.inference.DynamicTrendFrontierFit
-                    laplaceFitElapsed = measureTimeMillis {
-                        fit = laplaceSolver.fit(
-                            dev.kian.mymettle.domain.inference.DynamicCapabilityFitRequest(
-                                projection,
-                                horizon,
-                                laplaceSolver.modelConfig(CONFIG_CREATED_AT),
-                            ),
-                        )
-                    }
-                    fit
-                }.getOrNull()
-                if (denseFit != null && laplaceFit != null) {
-                    fidelity = DynamicTrendPosteriorFidelity.compare(denseFit, laplaceFit)
-                    val reps = denseFit.referenceRepetitions
-                    densePersist = persistReloadEquivalent(userProfileId, denseSolver, denseFit, reps)
-                    laplacePersist = persistReloadEquivalent(userProfileId, laplaceSolver, laplaceFit, reps)
-                    denseReplay = replayEquivalent(denseSolver, projection, horizon, denseFit, reps)
-                    laplaceReplay = replayEquivalent(laplaceSolver, projection, horizon, laplaceFit, reps)
-                } else {
-                    limitations += "One or both Candidate-v2 current fits failed; inspect historical bake-off diagnostics rather than treating missing state as a pass."
-                }
-            } else {
-                limitations += "No current eligible dynamic-resistance evidence for this profile/side under evidence-policy v2."
-            }
+            val current = evaluateCurrentProfile(
+                userProfileId = userProfileId,
+                projection = projection,
+                denseSolver = denseSolver,
+                laplaceSolver = laplaceSolver,
+            )
             results += NBioAdaptiveProfileResult(
                 executionProfileVersionId = descriptor.semantics.executionProfileVersionId.value,
                 label = descriptor.label,
@@ -234,16 +231,17 @@ class NBioAdaptiveInferenceAcceptanceRunner(
                 independentSessionCount = projection.independentSessionCount,
                 chronologicalFitCount = bakeoff.chronologicalFitCount,
                 bakeoff = bakeoff,
-                currentPosteriorFidelity = fidelity,
-                densePersistReloadEquivalent = densePersist,
-                laplacePersistReloadEquivalent = laplacePersist,
-                denseReplayEquivalent = denseReplay,
-                laplaceReplayEquivalent = laplaceReplay,
-                currentFitElapsedMillisDense = denseFitElapsed,
-                currentFitElapsedMillisLaplace = laplaceFitElapsed,
-                limitations = limitations,
+                currentPosteriorFidelity = current.fidelity,
+                densePersistReloadEquivalent = current.densePersist,
+                laplacePersistReloadEquivalent = current.laplacePersist,
+                denseReplayEquivalent = current.denseReplay,
+                laplaceReplayEquivalent = current.laplaceReplay,
+                currentFitElapsedMillisDense = current.denseElapsed,
+                currentFitElapsedMillisLaplace = current.laplaceElapsed,
+                limitations = current.limitations,
             )
         }
+
         onProgress(NBio7BAcceptanceProgress(groups.size, groups.size, "Verifying Native backup and safety fingerprints"))
         val backup = backupVerifier.verify()
         val rawAfter = NBio7BRawEvidenceFingerprinter.capture(database)
@@ -251,7 +249,7 @@ class NBioAdaptiveInferenceAcceptanceRunner(
         val benchmarkAfter = database.inferenceDao().latestInferenceRun(userProfileId)?.id
         return NBioAdaptiveInferenceAcceptanceReport(
             generatedAt = Instant.now(),
-            roomSchemaVersion = MyMettleDatabase.SCHEMA_VERSION,
+            roomSchemaVersion = currentRoomSchemaVersion(),
             rawFingerprintBefore = rawBefore,
             rawFingerprintAfter = rawAfter,
             prescriptionBefore = prescriptionBefore,
@@ -268,10 +266,80 @@ class NBioAdaptiveInferenceAcceptanceRunner(
         )
     }
 
+    private suspend fun evaluateCurrentProfile(
+        userProfileId: String,
+        projection: DynamicResistanceEvidenceProjection,
+        denseSolver: DynamicTrendCandidateV2Solver,
+        laplaceSolver: DynamicTrendCandidateV2Solver,
+    ): CurrentProfileEvaluation {
+        if (projection.evidence.isEmpty()) {
+            return CurrentProfileEvaluation(
+                limitations = listOf("No current eligible dynamic-resistance evidence for this profile/side under evidence-policy v2."),
+            )
+        }
+        val horizon = projection.evidence.maxOf { it.completedAt }
+        val frozenV1 = runCatching { fitFrozenV1(projection, horizon) }.getOrElse {
+            return CurrentProfileEvaluation(
+                limitations = listOf("Current frozen Candidate-v1 proposal failed; Candidate-v2 current-state fidelity/persistence/replay are NOT_EVALUATED: ${it.message}"),
+            )
+        }
+        val requestDense = DynamicCapabilityFitRequest(projection, horizon, denseSolver.modelConfig(CONFIG_CREATED_AT))
+        val requestLaplace = DynamicCapabilityFitRequest(projection, horizon, laplaceSolver.modelConfig(CONFIG_CREATED_AT))
+
+        var denseElapsed: Long? = null
+        var laplaceElapsed: Long? = null
+        var denseFit: DynamicTrendFrontierFit? = null
+        var laplaceFit: DynamicTrendFrontierFit? = null
+        val limitations = mutableListOf<String>()
+        runCatching {
+            denseElapsed = measureTimeMillis { denseFit = denseSolver.fitFromFrozenV1(requestDense, frozenV1) }
+        }.onFailure { limitations += "Dense-reference current fit failed: ${it.message}" }
+        runCatching {
+            laplaceElapsed = measureTimeMillis { laplaceFit = laplaceSolver.fitFromFrozenV1(requestLaplace, frozenV1) }
+        }.onFailure { limitations += "Conditional-Laplace current fit failed: ${it.message}" }
+
+        val dense = denseFit
+        val laplace = laplaceFit
+        if (dense == null || laplace == null) {
+            limitations += "One or both current Candidate-v2 fits are unavailable; fidelity/persistence/replay remain NOT_EVALUATED rather than vacuous PASS."
+            return CurrentProfileEvaluation(
+                denseElapsed = denseElapsed,
+                laplaceElapsed = laplaceElapsed,
+                limitations = limitations,
+            )
+        }
+
+        val reps = dense.referenceRepetitions
+        return CurrentProfileEvaluation(
+            fidelity = DynamicTrendPosteriorFidelity.compare(dense, laplace),
+            densePersist = persistReloadEquivalent(userProfileId, denseSolver, dense, reps),
+            laplacePersist = persistReloadEquivalent(userProfileId, laplaceSolver, laplace, reps),
+            denseReplay = replayEquivalent(denseSolver, projection, horizon, dense, reps),
+            laplaceReplay = replayEquivalent(laplaceSolver, projection, horizon, laplace, reps),
+            denseElapsed = denseElapsed,
+            laplaceElapsed = laplaceElapsed,
+            limitations = limitations,
+        )
+    }
+
+    private fun fitFrozenV1(
+        projection: DynamicResistanceEvidenceProjection,
+        horizon: Instant,
+    ): DynamicStochasticFrontierFit {
+        val model = DynamicStochasticFrontierModel(DynamicTrendFrontierV2.config.baseConfig)
+        return model.fit(
+            DynamicCapabilityFitRequest(
+                projection = projection,
+                inferenceHorizon = horizon,
+                modelConfig = model.config.toModelConfig(CONFIG_CREATED_AT),
+            ),
+        )
+    }
+
     private suspend fun persistReloadEquivalent(
         userProfileId: String,
-        solver: dev.kian.mymettle.engine.inference.DynamicTrendCandidateV2Solver,
-        fit: dev.kian.mymettle.domain.inference.DynamicTrendFrontierFit,
+        solver: DynamicTrendCandidateV2Solver,
+        fit: DynamicTrendFrontierFit,
         repetitions: Double,
     ): Boolean {
         val repository = DynamicTrendCapabilityShadowRepository(database, solver)
@@ -288,44 +356,61 @@ class NBioAdaptiveInferenceAcceptanceRunner(
     }
 
     private fun replayEquivalent(
-        solver: dev.kian.mymettle.engine.inference.DynamicTrendCandidateV2Solver,
-        projection: dev.kian.mymettle.domain.inference.DynamicResistanceEvidenceProjection,
+        solver: DynamicTrendCandidateV2Solver,
+        projection: DynamicResistanceEvidenceProjection,
         horizon: Instant,
-        original: dev.kian.mymettle.domain.inference.DynamicTrendFrontierFit,
+        original: DynamicTrendFrontierFit,
         repetitions: Double,
     ): Boolean {
-        val replayed = solver.fit(
-            dev.kian.mymettle.domain.inference.DynamicCapabilityFitRequest(
-                projection,
-                horizon,
-                solver.modelConfig(CONFIG_CREATED_AT),
+        val frozenV1 = fitFrozenV1(projection, horizon)
+        val replayed = solver.fitFromFrozenV1(
+            DynamicCapabilityFitRequest(
+                projection = projection,
+                inferenceHorizon = horizon,
+                modelConfig = solver.modelConfig(CONFIG_CREATED_AT),
             ),
+            frozenV1,
         )
         return DynamicTrendCapabilityParameterCodec.encode(original) == DynamicTrendCapabilityParameterCodec.encode(replayed) &&
             summariesEquivalent(solverPrediction(solver, original, repetitions), solverPrediction(solver, replayed, repetitions))
     }
 
     private fun solverPrediction(
-        solver: dev.kian.mymettle.engine.inference.DynamicTrendCandidateV2Solver,
-        fit: dev.kian.mymettle.domain.inference.DynamicTrendFrontierFit,
+        solver: DynamicTrendCandidateV2Solver,
+        fit: DynamicTrendFrontierFit,
         repetitions: Double,
-    ) = dev.kian.mymettle.engine.performance.DynamicStochasticFrontierModel(solver.baseConfig)
+    ): PosteriorEstimate = DynamicStochasticFrontierModel(solver.baseConfig)
         .predictFrontier(solver.projectToNextSession(fit), repetitions)
 
-    private fun summariesEquivalent(
-        left: dev.kian.mymettle.domain.inference.PosteriorEstimate,
-        right: dev.kian.mymettle.domain.inference.PosteriorEstimate,
-    ): Boolean {
+    private fun summariesEquivalent(left: PosteriorEstimate, right: PosteriorEstimate): Boolean {
         val a = left.summary ?: return right.summary == null
         val b = right.summary ?: return false
         return listOf(a.p05 to b.p05, a.p50 to b.p50, a.p95 to b.p95, a.posteriorVariance to b.posteriorVariance)
             .all { (x, y) -> kotlin.math.abs(x - y) <= 1e-10 * kotlin.math.max(1.0, kotlin.math.abs(x)) }
     }
 
+    private fun currentRoomSchemaVersion(): Int = database.openHelper.readableDatabase
+        .query("PRAGMA user_version")
+        .use { cursor ->
+            check(cursor.moveToFirst()) { "Room database did not report PRAGMA user_version." }
+            cursor.getInt(0)
+        }
+
     private fun usedJavaHeap(): Long {
         val runtime = Runtime.getRuntime()
         return runtime.totalMemory() - runtime.freeMemory()
     }
+
+    private data class CurrentProfileEvaluation(
+        val fidelity: DynamicTrendPosteriorFidelityResult? = null,
+        val densePersist: Boolean? = null,
+        val laplacePersist: Boolean? = null,
+        val denseReplay: Boolean? = null,
+        val laplaceReplay: Boolean? = null,
+        val denseElapsed: Long? = null,
+        val laplaceElapsed: Long? = null,
+        val limitations: List<String> = emptyList(),
+    )
 
     companion object {
         private val CONFIG_CREATED_AT = Instant.parse("2026-08-31T00:00:00Z")
@@ -346,28 +431,44 @@ private fun NBioAdaptiveProfileResult.toJson(): JSONObject = JSONObject()
     .put("eligibleObservationCount", eligibleObservationCount)
     .put("independentSessionCount", independentSessionCount)
     .put("chronologicalFitCount", chronologicalFitCount)
-    .put("currentFitRuntimeMillis", JSONObject()
-        .put("denseReference", currentFitElapsedMillisDense ?: JSONObject.NULL)
-        .put("conditionalLaplace", currentFitElapsedMillisLaplace ?: JSONObject.NULL))
-    .put("persistenceReplay", JSONObject()
-        .put("densePersistReloadEquivalent", densePersistReloadEquivalent ?: JSONObject.NULL)
-        .put("laplacePersistReloadEquivalent", laplacePersistReloadEquivalent ?: JSONObject.NULL)
-        .put("denseFullReplayEquivalent", denseReplayEquivalent ?: JSONObject.NULL)
-        .put("laplaceFullReplayEquivalent", laplaceReplayEquivalent ?: JSONObject.NULL))
+    .put(
+        "currentFitRuntimeMillis",
+        JSONObject()
+            .put("denseReference", currentFitElapsedMillisDense ?: JSONObject.NULL)
+            .put("conditionalLaplace", currentFitElapsedMillisLaplace ?: JSONObject.NULL),
+    )
+    .put(
+        "persistenceReplay",
+        JSONObject()
+            .put("densePersistReloadEquivalent", densePersistReloadEquivalent ?: JSONObject.NULL)
+            .put("laplacePersistReloadEquivalent", laplacePersistReloadEquivalent ?: JSONObject.NULL)
+            .put("denseFullReplayEquivalent", denseReplayEquivalent ?: JSONObject.NULL)
+            .put("laplaceFullReplayEquivalent", laplaceReplayEquivalent ?: JSONObject.NULL),
+    )
     .put("v1", bakeoff.v1PredictiveMetrics.toJson(bakeoff.v1ValidationSummary, bakeoff.v1Verdict.storageValue, bakeoff.v1FitElapsedMillis))
-    .put("candidateV2Solvers", JSONArray(bakeoff.candidates.map { candidate ->
-        candidate.predictiveMetrics.toJson(
-            candidate.validationSummary,
-            candidate.developmentComparisonAgainstV1.verdict.storageValue,
-            candidate.extensionWallElapsedMillis,
-        ).put("solver", candidate.solverIdentity.toJson())
-            .put("absoluteValidationVerdict", candidate.absoluteValidationVerdict.storageValue)
-            .put("developmentComparison", JSONObject()
-                .put("crpsRelativeImprovement", candidate.developmentComparisonAgainstV1.crpsRelativeImprovement ?: JSONObject.NULL)
-                .put("absoluteBiasRelativeImprovement", candidate.developmentComparisonAgainstV1.absoluteBiasRelativeImprovement ?: JSONObject.NULL)
-                .put("widthRatio", candidate.developmentComparisonAgainstV1.widthRatio ?: JSONObject.NULL)
-                .put("maeRatio", candidate.developmentComparisonAgainstV1.maeRatio ?: JSONObject.NULL))
-    }))
+    .put(
+        "candidateV2Solvers",
+        JSONArray(
+            bakeoff.candidates.map { candidate ->
+                candidate.predictiveMetrics
+                    .toJson(
+                        candidate.validationSummary,
+                        candidate.developmentComparisonAgainstV1.verdict.storageValue,
+                        candidate.extensionWallElapsedMillis,
+                    )
+                    .put("solver", candidate.solverIdentity.toJson())
+                    .put("absoluteValidationVerdict", candidate.absoluteValidationVerdict.storageValue)
+                    .put(
+                        "developmentComparison",
+                        JSONObject()
+                            .put("crpsRelativeImprovement", candidate.developmentComparisonAgainstV1.crpsRelativeImprovement ?: JSONObject.NULL)
+                            .put("absoluteSignedBiasRelativeImprovement", candidate.developmentComparisonAgainstV1.absoluteSignedBiasRelativeImprovement ?: JSONObject.NULL)
+                            .put("predictiveLogWidthRatio", candidate.developmentComparisonAgainstV1.predictiveLogWidthRatio ?: JSONObject.NULL)
+                            .put("medianMaeRatio", candidate.developmentComparisonAgainstV1.medianMaeRatio ?: JSONObject.NULL),
+                    )
+            },
+        ),
+    )
     .put("currentPosteriorFidelity", currentPosteriorFidelity?.toJson() ?: JSONObject.NULL)
     .put("limitations", JSONArray(limitations))
 
@@ -384,10 +485,13 @@ private fun dev.kian.mymettle.engine.inference.DynamicTrendSolverPredictiveMetri
     .put("positiveResidualProportion", distribution.positiveResidualProportion ?: JSONObject.NULL)
     .put("coverage", distribution.coverage ?: JSONObject.NULL)
     .put("pitHighRate", distribution.pitHighRate ?: JSONObject.NULL)
-    .put("pitBins", JSONObject()
-        .put("low", validation.candidatePitCalibration.lowCount)
-        .put("middle", validation.candidatePitCalibration.middleCount)
-        .put("high", validation.candidatePitCalibration.highCount))
+    .put(
+        "pitBins",
+        JSONObject()
+            .put("low", validation.candidatePitCalibration.lowCount)
+            .put("middle", validation.candidatePitCalibration.middleCount)
+            .put("high", validation.candidatePitCalibration.highCount),
+    )
     .put("catastrophicContradictionRate", distribution.catastrophicContradictionRate ?: JSONObject.NULL)
     .put("meanCrpsLogResistance", distribution.meanCrpsLogResistance ?: JSONObject.NULL)
     .put("meanWeightedIntervalScoreLogResistance", meanWeightedIntervalScoreLogResistance ?: JSONObject.NULL)
@@ -406,17 +510,22 @@ private fun DynamicTrendPosteriorFidelityResult.toJson(): JSONObject = JSONObjec
     .put("nextFrontierMedianRelativeError", nextFrontierMedianRelativeError)
     .put("maxStandardisedMarginalWasserstein1", maxStandardisedMarginalWasserstein1)
     .put("maxCovarianceCorrelationScaleError", maxCovarianceCorrelationScaleError ?: JSONObject.NULL)
-    .put("marginals", JSONArray(marginals.map { marginal ->
-        JSONObject()
-            .put("parameter", marginal.parameter)
-            .put("referenceP05", marginal.referenceP05)
-            .put("referenceP50", marginal.referenceP50)
-            .put("referenceP95", marginal.referenceP95)
-            .put("candidateP05", marginal.candidateP05)
-            .put("candidateP50", marginal.candidateP50)
-            .put("candidateP95", marginal.candidateP95)
-            .put("referenceVariance", marginal.referenceVariance)
-            .put("candidateVariance", marginal.candidateVariance)
-            .put("quantileWasserstein1", marginal.quantileWasserstein1)
-            .put("standardisedQuantileWasserstein1", marginal.standardisedQuantileWasserstein1)
-    }))
+    .put(
+        "marginals",
+        JSONArray(
+            marginals.map { marginal ->
+                JSONObject()
+                    .put("parameter", marginal.parameter)
+                    .put("referenceP05", marginal.referenceP05)
+                    .put("referenceP50", marginal.referenceP50)
+                    .put("referenceP95", marginal.referenceP95)
+                    .put("candidateP05", marginal.candidateP05)
+                    .put("candidateP50", marginal.candidateP50)
+                    .put("candidateP95", marginal.candidateP95)
+                    .put("referenceVariance", marginal.referenceVariance)
+                    .put("candidateVariance", marginal.candidateVariance)
+                    .put("quantileWasserstein1", marginal.quantileWasserstein1)
+                    .put("standardisedQuantileWasserstein1", marginal.standardisedQuantileWasserstein1)
+            },
+        ),
+    )
