@@ -251,9 +251,18 @@ class DynamicTrendFrontierModel(
 
     fun projectToSessionOffset(fit: DynamicTrendFrontierFit, sessionOffset: Double): DynamicStochasticFrontierFit {
         require(sessionOffset.isFinite())
+        val minimumLogResistance = ln(config.baseConfig.numericalMinimumResistanceKg)
+        val maximumLogResistance = ln(config.baseConfig.numericalMaximumResistanceKg)
         val projectedNodes = fit.posteriorNodes.map { node ->
+            val projectedLogFrontier = node.logFrontierAtLatestSession + node.frontierTrend * sessionOffset
+            if (!projectedLogFrontier.isFinite() || projectedLogFrontier !in minimumLogResistance..maximumLogResistance) {
+                throw DynamicCapabilityFitException(
+                    DynamicCapabilityFitFailureReason.NON_FINITE_POSTERIOR,
+                    "Conditional-Laplace Candidate-v2 projection left the configured numerical resistance domain; approximation is unavailable for this horizon.",
+                )
+            }
             DynamicFrontierPosteriorNode(
-                logFrontierAtReference = node.logFrontierAtLatestSession + node.frontierTrend * sessionOffset,
+                logFrontierAtReference = projectedLogFrontier,
                 slope = node.slope,
                 slackScale = node.slackScale,
                 noiseScale = node.noiseScale,

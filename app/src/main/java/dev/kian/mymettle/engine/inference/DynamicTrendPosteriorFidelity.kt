@@ -218,6 +218,9 @@ object DynamicTrendPosteriorFidelity {
 
     private fun weightedSummary(values: List<WeightedValue>): Summary {
         require(values.isNotEmpty())
+        require(values.all { it.value.isFinite() && it.weight.isFinite() && it.weight >= 0.0 }) {
+            "Posterior fidelity summary requires finite values and non-negative finite weights."
+        }
         val total = values.sumOf { it.weight }
         require(total > 0.0 && total.isFinite())
         val normalised = values.map { WeightedValue(it.value, it.weight / total) }

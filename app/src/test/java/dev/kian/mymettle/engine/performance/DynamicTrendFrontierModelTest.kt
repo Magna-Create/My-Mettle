@@ -3,6 +3,8 @@ package dev.kian.mymettle.engine.performance
 import dev.kian.mymettle.domain.exercise.EntryBasis
 import dev.kian.mymettle.domain.exercise.ExecutionProfileId
 import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
+import dev.kian.mymettle.domain.inference.DynamicCapabilityFitException
+import dev.kian.mymettle.domain.inference.DynamicCapabilityFitFailureReason
 import dev.kian.mymettle.domain.inference.DynamicCapabilityFitRequest
 import dev.kian.mymettle.domain.inference.DynamicMetricEvidenceAudit
 import dev.kian.mymettle.domain.inference.DynamicParameterIdentification
@@ -27,6 +29,7 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class DynamicTrendFrontierModelTest {
@@ -122,6 +125,19 @@ class DynamicTrendFrontierModelTest {
         val fit = fitDense(evidence)
         assertTrue(abs(fit.frontierTrend.summary.p50) <= 0.025)
         assertTrue(fit.slope.summary.p50 > 0.10)
+    }
+
+    @Test
+    fun `conditional Laplace projection fails closed outside numerical resistance domain`() {
+        val stable = fitDense(generated(sessions = 5, trend = 0.03, repsBySession = { listOf(8) }))
+        val pathological = stable.copy(
+            posteriorNodes = stable.posteriorNodes.map { it.copy(frontierTrend = 800.0) },
+        )
+        val model = DynamicTrendFrontierModel(TEST_MATH_CONFIG)
+        val failure = assertFailsWith<DynamicCapabilityFitException> {
+            model.projectToSessionOffset(pathological, 1.0)
+        }
+        assertEquals(DynamicCapabilityFitFailureReason.NON_FINITE_POSTERIOR, failure.reason)
     }
 
     @Test

@@ -101,7 +101,7 @@ data class NBioAdaptiveInferenceAcceptanceReport(
 
     fun toJson(): String = JSONObject()
         .put("format", "my-mettle-n-bio-adaptive-inference-acceptance")
-        .put("formatVersion", 5)
+        .put("formatVersion", 6)
         .put("generatedAt", generatedAt.toString())
         .put("mission", "N-BIO-7B.X_ADAPTIVE_INFERENCE_ARCHITECTURE_CONSOLIDATION")
         .put("evidenceClass", "RETROSPECTIVE_DEVELOPMENT")
@@ -484,13 +484,20 @@ class NBioAdaptiveInferenceAcceptanceRunner(
             limitations += "Selected dense oracle fit is unavailable; approximation fidelity is NOT_EVALUATED rather than vacuous PASS."
         }
 
+        val sparseFidelity = if (dense != null && sparse != null) {
+            runCatching { DynamicTrendPosteriorFidelity.compare(dense, sparse) }
+                .onFailure { limitations += "Adaptive-sparse posterior-fidelity comparison failed: ${it.message}" }
+                .getOrNull()
+        } else null
+        val laplaceFidelity = if (dense != null && laplace != null) {
+            runCatching { DynamicTrendPosteriorFidelity.compare(dense, laplace) }
+                .onFailure { limitations += "Conditional-Laplace posterior-fidelity comparison failed: ${it.message}" }
+                .getOrNull()
+        } else null
+
         return CurrentProfileEvaluation(
-            sparseFidelity = if (dense != null && sparse != null) {
-                runCatching { DynamicTrendPosteriorFidelity.compare(dense, sparse) }.getOrNull()
-            } else null,
-            laplaceFidelity = if (dense != null && laplace != null) {
-                runCatching { DynamicTrendPosteriorFidelity.compare(dense, laplace) }.getOrNull()
-            } else null,
+            sparseFidelity = sparseFidelity,
+            laplaceFidelity = laplaceFidelity,
             densePersist = densePersist,
             sparsePersist = sparsePersist,
             laplacePersist = laplacePersist,

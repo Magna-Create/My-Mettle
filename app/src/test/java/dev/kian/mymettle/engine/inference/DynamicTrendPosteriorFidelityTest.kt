@@ -24,6 +24,7 @@ import java.time.Instant
 import kotlin.math.ln
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class DynamicTrendPosteriorFidelityTest {
@@ -35,6 +36,15 @@ class DynamicTrendPosteriorFidelityTest {
         assertEquals(0.0, result.nextFrontierMedianRelativeError, 0.0)
         assertEquals(0.0, result.maxStandardisedMarginalWasserstein1, 0.0)
         assertEquals(0.0, result.maxCovarianceCorrelationScaleError ?: 0.0, 0.0)
+    }
+
+    @Test
+    fun `non finite challenger forecast fails fidelity comparison closed`() {
+        val reference = fixture("reference", listOf(-0.02, 0.04))
+        val pathological = fixture("pathological", listOf(800.0, 810.0))
+        assertFailsWith<IllegalArgumentException> {
+            DynamicTrendPosteriorFidelity.compare(reference, pathological)
+        }
     }
 
     @Test
