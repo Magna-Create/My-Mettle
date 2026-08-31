@@ -18,6 +18,10 @@ import dev.kian.mymettle.engine.inference.DynamicTrendPosteriorFidelityResult
 import dev.kian.mymettle.engine.inference.DynamicTrendSolverHistoricalBakeoff
 import dev.kian.mymettle.engine.inference.DynamicTrendSolverHistoricalBakeoffResult
 import dev.kian.mymettle.engine.inference.HistoricalObservationRevisionSelector
+import dev.kian.mymettle.engine.inference.InferenceSolverRuntimeSummary
+import dev.kian.mymettle.engine.inference.InferenceSolverSubstrateBenchmark
+import dev.kian.mymettle.engine.inference.InferenceSolverSubstrateBenchmarkResult
+import dev.kian.mymettle.engine.inference.LowRankPosteriorScreenResult
 import dev.kian.mymettle.engine.performance.DynamicResistanceEvidenceProjector
 import dev.kian.mymettle.engine.performance.DynamicStochasticFrontierModel
 import dev.kian.mymettle.inference.DynamicTrendCapabilityParameterCodec
@@ -56,6 +60,7 @@ data class NBioAdaptiveInferenceAcceptanceReport(
     val benchmarkRunIdBefore: String?,
     val benchmarkRunIdAfter: String?,
     val profiles: List<NBioAdaptiveProfileResult>,
+    val solverSubstrateBenchmark: InferenceSolverSubstrateBenchmarkResult,
     val backupRoundTrip: NBio7BBackupRoundTripResult,
     val javaHeapUsedBeforeBytes: Long,
     val javaHeapUsedAfterBytes: Long,
@@ -70,7 +75,7 @@ data class NBioAdaptiveInferenceAcceptanceReport(
 
     fun toJson(): String = JSONObject()
         .put("format", "my-mettle-n-bio-adaptive-inference-acceptance")
-        .put("formatVersion", 1)
+        .put("formatVersion", 2)
         .put("generatedAt", generatedAt.toString())
         .put("mission", "N-BIO-7B.X_ADAPTIVE_INFERENCE_ARCHITECTURE_CONSOLIDATION")
         .put("evidenceClass", "RETROSPECTIVE_DEVELOPMENT")
@@ -87,7 +92,7 @@ data class NBioAdaptiveInferenceAcceptanceReport(
                 .put("definition", DynamicTrendFrontierV2.mathematicalModelIdentity.definition),
         )
         .put(
-            "solvers",
+            "candidateV2Solvers",
             JSONArray(
                 listOf(
                     DynamicTrendDenseReferenceSolverAdapter().solverIdentity.toJson(),
@@ -130,6 +135,7 @@ data class NBioAdaptiveInferenceAcceptanceReport(
         )
         .put("performance", JSONObject().put("totalElapsedMillis", totalElapsedMillis))
         .put("profiles", JSONArray(profiles.map { it.toJson() }))
+        .put("solverSubstrateBenchmark", solverSubstrateBenchmark.toJson())
         .put(
             "nativeBackupRoundTrip",
             JSONObject()
@@ -143,14 +149,14 @@ data class NBioAdaptiveInferenceAcceptanceReport(
         .put(
             "architectureSubstrates",
             JSONObject()
-                .put("denseSequentialTensor", "IMPLEMENTED_GENERIC_REFERENCE_SUBSTRATE")
-                .put("adaptiveSparseTensor", "IMPLEMENTED_GENERIC_CHALLENGER_SUBSTRATE")
-                .put("lowRank", "VIABILITY_SCREEN_IMPLEMENTED_NOT_AUTOMATICALLY_PRODUCTION")
-                .put("sigmaPoint", "IMPLEMENTED_GENERIC_FAST_CHALLENGER_NOT_YET_CANDIDATE_V2_ADAPTER")
+                .put("denseSequentialTensor", "IMPLEMENTED_AND_DEVICE_BENCHMARKED_ON_SHARED_DYNAMIC_FIXTURE")
+                .put("adaptiveSparseTensor", "IMPLEMENTED_AND_DEVICE_BENCHMARKED_ON_SHARED_DYNAMIC_FIXTURE")
+                .put("lowRank", "VIABILITY_SCREEN_DEVICE_BENCHMARKED_NOT_AUTOMATICALLY_PRODUCTION")
+                .put("sigmaPoint", "IMPLEMENTED_AND_DEVICE_BENCHMARKED_ON_SHARED_DYNAMIC_FIXTURE_NOT_YET_CANDIDATE_V2_ADAPTER")
                 .put("factorDependencyIndex", "IMPLEMENTED_MINIMUM_INVALIDATION_ABSTRACTION")
-                .put("nativeCpu", "DEVICE_PROFILING_REQUIRED_BEFORE_KERNEL_PORT")
+                .put("nativeCpu", "DEVICE_PROFILE_CANDIDATE_V2_FIRST;NO_KERNEL_PORT_WITHOUT_HOTSPOT_EVIDENCE")
                 .put("vulkan", "NOT_RUN_UNTIL_CPU_PROFILE_JUSTIFIES_DATA_PARALLEL_KERNEL")
-                .put("liteRtNpu", "PLATFORM_AUDIT_REQUIRED_NOT_ASSUMED_GENERAL_BAYES_BACKEND"),
+                .put("liteRtNpu", "NOT_CURRENTLY_JUSTIFIED_FOR_ARBITRARY_BAYESIAN_KERNELS;MODEL_GRAPH_REQUIRED"),
         )
         .put("safetyPassed", safetyPassed)
         .put("productAuthorityChanged", false)
@@ -202,7 +208,7 @@ class NBioAdaptiveInferenceAcceptanceRunner(
             onProgress(
                 NBio7BAcceptanceProgress(
                     index,
-                    groups.size,
+                    groups.size + 2,
                     "Adaptive inference · ${descriptor.label} · ${side.storageValue}",
                 ),
             )
@@ -242,7 +248,9 @@ class NBioAdaptiveInferenceAcceptanceRunner(
             )
         }
 
-        onProgress(NBio7BAcceptanceProgress(groups.size, groups.size, "Verifying Native backup and safety fingerprints"))
+        onProgress(NBio7BAcceptanceProgress(groups.size, groups.size + 2, "Benchmarking inference solver substrates"))
+        val solverSubstrateBenchmark = InferenceSolverSubstrateBenchmark.run()
+        onProgress(NBio7BAcceptanceProgress(groups.size + 1, groups.size + 2, "Verifying Native backup and safety fingerprints"))
         val backup = backupVerifier.verify()
         val rawAfter = NBio7BRawEvidenceFingerprinter.capture(database)
         val prescriptionAfter = NBio7BPrescriptionStateFingerprinter.capture(database)
@@ -257,6 +265,7 @@ class NBioAdaptiveInferenceAcceptanceRunner(
             benchmarkRunIdBefore = benchmarkBefore,
             benchmarkRunIdAfter = benchmarkAfter,
             profiles = results,
+            solverSubstrateBenchmark = solverSubstrateBenchmark,
             backupRoundTrip = backup,
             javaHeapUsedBeforeBytes = javaBefore,
             javaHeapUsedAfterBytes = usedJavaHeap(),
@@ -529,3 +538,41 @@ private fun DynamicTrendPosteriorFidelityResult.toJson(): JSONObject = JSONObjec
             },
         ),
     )
+
+private fun InferenceSolverSubstrateBenchmarkResult.toJson(): JSONObject = JSONObject()
+    .put("benchmarkVersion", benchmarkVersion)
+    .put("evidenceClass", "SOLVER_SUBSTRATE_SYNTHETIC_NOT_CANDIDATE_V2_VALIDATION")
+    .put("mathematicalModelIdentity", mathematicalModelIdentity)
+    .put("gridNodeCount", gridNodeCount)
+    .put("observationCount", observationCount)
+    .put("denseSequentialRuntime", denseRuntime.toJson())
+    .put("adaptiveSparseRuntime", sparseRuntime.toJson())
+    .put("sigmaPointRuntime", sigmaPointRuntime.toJson())
+    .put("denseIncrementalReplayEquivalent", denseIncrementalReplayEquivalent)
+    .put("sparseRetainedNodeCount", sparseRetainedNodeCount)
+    .put("sparseLevelQuantileMaxAbsoluteError", sparseLevelQuantileMaxAbsoluteError)
+    .put("sparseDriftQuantileMaxAbsoluteError", sparseDriftQuantileMaxAbsoluteError)
+    .put("sparseMeanMaxAbsoluteError", sparseMeanMaxAbsoluteError)
+    .put("sparseCovarianceMaxAbsoluteError", sparseCovarianceMaxAbsoluteError)
+    .put("sigmaPointMeanMaxAbsoluteError", sigmaPointMeanMaxAbsoluteError)
+    .put("sigmaPointCovarianceMaxAbsoluteError", sigmaPointCovarianceMaxAbsoluteError)
+    .put("denseEffectiveNodeCount", denseEffectiveNodeCount)
+    .put("sparseEffectiveNodeCount", sparseEffectiveNodeCount)
+    .put("sigmaPointEffectiveNodeCount", sigmaPointEffectiveNodeCount)
+    .put("lowRankScreens", JSONArray(lowRankScreens.map { it.toJson() }))
+
+private fun InferenceSolverRuntimeSummary.toJson(): JSONObject = JSONObject()
+    .put("medianNanos", medianNanos)
+    .put("p95Nanos", p95Nanos)
+    .put("repetitions", repetitions)
+
+private fun LowRankPosteriorScreenResult.toJson(): JSONObject = JSONObject()
+    .put("rows", rows)
+    .put("columns", columns)
+    .put("requestedRank", requestedRank)
+    .put("compressionRatio", compressionRatio)
+    .put("l1ProbabilityError", l1ProbabilityError)
+    .put("maxRowMarginalError", maxRowMarginalError)
+    .put("maxColumnMarginalError", maxColumnMarginalError)
+    .put("klDenseToApprox", klDenseToApprox)
+    .put("useful", useful)
