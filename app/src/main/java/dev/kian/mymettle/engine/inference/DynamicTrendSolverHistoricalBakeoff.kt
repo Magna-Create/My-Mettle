@@ -232,10 +232,30 @@ class DynamicTrendSolverHistoricalBakeoff(
             }
             val baseFit = requireNotNull(frozenV1)
             var v1Scored: List<DynamicHeldOutEvaluation> = emptyList()
+            var v1ScoringFailureReason: String? = null
             v1ScoreMillis += measureTimeMillis {
-                v1Scored = score(baseFit, heldOut, sessionId, training, horizon, benchmark)
+                try {
+                    v1Scored = score(baseFit, heldOut, sessionId, training, horizon, benchmark)
+                } catch (failure: DynamicCapabilityFitException) {
+                    v1ScoringFailureReason = failure.reason.storageValue
+                } catch (failure: IllegalArgumentException) {
+                    v1ScoringFailureReason = "numerical_invariant:${failure.message ?: "illegal_argument"}"
+                }
             }
-            v1Results += v1Scored
+            v1Results += if (v1ScoringFailureReason == null) {
+                v1Scored
+            } else {
+                heldOut.map {
+                    modelFailure(
+                        it,
+                        sessionId,
+                        training,
+                        reference,
+                        benchmark,
+                        "v1_scoring:${requireNotNull(v1ScoringFailureReason)}",
+                    )
+                }
+            }
 
             solvers.forEach { solver ->
                 var fit: DynamicTrendFrontierFit? = null
@@ -278,13 +298,33 @@ class DynamicTrendSolverHistoricalBakeoff(
                     )
                 } else {
                     val fitted = requireNotNull(fit)
-                    val projected = solver.projectToNextSession(fitted)
                     var scored: List<DynamicHeldOutEvaluation> = emptyList()
+                    var evaluationFailureReason: String? = null
                     val scoreMillis = measureTimeMillis {
-                        scored = score(projected, heldOut, sessionId, training, horizon, benchmark)
+                        try {
+                            val projected = solver.projectToNextSession(fitted)
+                            scored = score(projected, heldOut, sessionId, training, horizon, benchmark)
+                        } catch (failure: DynamicCapabilityFitException) {
+                            evaluationFailureReason = failure.reason.storageValue
+                        } catch (failure: IllegalArgumentException) {
+                            evaluationFailureReason = "numerical_invariant:${failure.message ?: "illegal_argument"}"
+                        }
                     }
                     scoringMillis.getValue(solver)[0] += scoreMillis
-                    candidateResults.getValue(solver) += scored
+                    if (evaluationFailureReason == null) {
+                        candidateResults.getValue(solver) += scored
+                    } else {
+                        candidateResults.getValue(solver) += heldOut.map {
+                            modelFailure(
+                                it,
+                                sessionId,
+                                training,
+                                reference,
+                                benchmark,
+                                "candidate_projection_or_scoring:${requireNotNull(evaluationFailureReason)}",
+                            )
+                        }
+                    }
                     diagnostics.getValue(solver) += DynamicTrendSolverSessionDiagnostic(
                         sessionId = sessionId,
                         priorIndependentSessionCount = fitted.support.effectiveIndependentSessionCount,
@@ -297,7 +337,7 @@ class DynamicTrendSolverHistoricalBakeoff(
                         evaluatedNodeCount = fitted.solverDiagnostics.evaluatedNodeCount,
                         solverRuntimeNanos = fitted.solverDiagnostics.updateRuntimeNanos,
                         wallElapsedMillis = fitMillis,
-                        approximationFailure = fitted.solverDiagnostics.approximationFailure,
+                        approximationFailure = evaluationFailureReason ?: fitted.solverDiagnostics.approximationFailure,
                         fitFailureReason = null,
                     )
                 }
