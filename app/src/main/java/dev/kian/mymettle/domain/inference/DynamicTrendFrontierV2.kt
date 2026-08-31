@@ -6,21 +6,23 @@ import java.time.Instant
 import kotlin.math.abs
 
 /**
- * N-BIO-7B development Candidate v2.
+ * N-BIO-7B development Candidate v2 mathematical family.
  *
- * This is deliberately NOT physiology. The added parameter [frontierTrend] is only the statistical
- * trajectory of the execution-profile frontier per independent-session ordinal under this model.
- * It is not strength growth, recovery, adaptation, fatigue, detraining, or Development state.
- *
- * Observation model inherited unchanged from the frozen/rejected Candidate v1:
+ * This is deliberately NOT physiology. [frontierTrend] is only the statistical trajectory of the
+ * execution-profile frontier per independent-session ordinal under this mathematical model. It is
+ * not strength growth, recovery, adaptation, fatigue, detraining, SkillState or Development.
  *
  *   y_s = c_0 + g*z_s - b*x_s - u_s + epsilon_s
  *   u_s ~ HalfNormal(sigma_u)
  *   epsilon_s ~ StudentT(df=5, 0, sigma_e)
  *
- * where the latest selected training session has z=0, older selected sessions are -1,-2,..., and
- * the next independent-session forecast is evaluated at z=+1. All Candidate-v1 slope, slack/noise,
- * session weighting, evidence, temporal-window, and rep-extrapolation assumptions are inherited.
+ * The latest selected training session has z=0, older selected sessions are -1,-2,..., and the next
+ * independent-session forecast is z=+1. Candidate-v1 evidence, slope/slack/noise priors, session
+ * weighting, temporal window and rep extrapolation are inherited unchanged.
+ *
+ * Historical note: [toModelConfig] is the pre-consolidation Candidate-v2 CONDITIONAL-LAPLACE
+ * composite config. It remains immutable/readable. N-BIO-7B.X introduces independent mathematical
+ * and solver identities rather than silently rewriting this existing config fingerprint.
  */
 data class DynamicTrendFrontierConfig(
     val semanticVersion: String = "n-bio-7b2-half-normal-student-t-session-trend-frontier-v2",
@@ -31,11 +33,8 @@ data class DynamicTrendFrontierConfig(
     val trendDataInformedMinimumIndependentSessions: Int = 6,
     val trendPriorDominatedPosteriorSdFraction: Double = 0.95,
     val trendDataInformedPosteriorSdFraction: Double = 0.80,
-    /** Symmetric finite-difference displacement expressed as a fraction of the trend prior SD. */
     val trendLaplaceFiniteDifferenceSdFraction: Double = 0.50,
-    /** Deterministic normal quadrature used only to propagate each conditional Laplace posterior. */
     val trendPosteriorQuadraturePoints: Int = 5,
-    /** Fail rather than silently discard substantial frozen-v1 proposal mass when local Laplace curvature is invalid. */
     val laplaceMinimumValidBasePosteriorMass: Double = 0.995,
     val nextIndependentSessionOffset: Double = 1.0,
     val approximationVersion: String = "v1-joint-posterior-conditional-laplace-fd-gh5-trend-v1",
@@ -48,7 +47,7 @@ data class DynamicTrendFrontierConfig(
         require(trendPriorDominatedPosteriorSdFraction in 0.0..1.0)
         require(trendDataInformedPosteriorSdFraction in 0.0..trendPriorDominatedPosteriorSdFraction)
         require(trendLaplaceFiniteDifferenceSdFraction in 0.1..1.0)
-        require(trendPosteriorQuadraturePoints == 5) { "Candidate v2 freezes five-point normal posterior quadrature." }
+        require(trendPosteriorQuadraturePoints == 5)
         require(laplaceMinimumValidBasePosteriorMass in 0.95..1.0)
         require(nextIndependentSessionOffset == 1.0)
         require(baseConfig.contextConsumption.startsWith("NONE:"))
@@ -59,6 +58,7 @@ data class DynamicTrendFrontierConfig(
     val trendLaplaceFiniteDifferenceStep: Double
         get() = trendPriorSdLogResistancePerSession * trendLaplaceFiniteDifferenceSdFraction
 
+    /** Historical pre-consolidation composite config: math + conditional-Laplace approximation. */
     fun toModelConfig(createdAt: Instant): ModelConfigDefinition {
         val inherited = baseConfig.toModelConfig(createdAt)
         return ModelConfigDefinition.create(
@@ -107,6 +107,36 @@ object DynamicTrendFrontierV2 {
     const val MODEL_VERSION = "n-bio-7b2-half-normal-student-t-session-trend-frontier-v2"
     const val DEVELOPMENT_EVALUATION_LABEL = "MODEL_DEVELOPMENT_RETROSPECTIVE_EVALUATION"
     const val STATUS = "PROVISIONAL_DEVELOPMENT_CANDIDATE_REQUIRES_FRESH_CONFIRMATION"
+
+    val mathematicalModelIdentity: InferenceMathematicalModelIdentity = mathematicalIdentity(config)
+
+    val conditionalLaplaceSolverIdentity = InferenceSolverIdentity(
+        solverFamily = InferenceSolverFamily.SEQUENTIAL_LAPLACE,
+        semanticVersion = "candidate-v2-conditional-laplace-v1",
+        computeBackend = InferenceComputeBackend.KOTLIN_JVM,
+        deterministicReplay = true,
+        approximationDefinition = config.approximationVersion,
+    )
+
+    fun mathematicalIdentity(value: DynamicTrendFrontierConfig): InferenceMathematicalModelIdentity =
+        InferenceMathematicalModelIdentity(
+            family = "dynamic_profile_local_frontier",
+            semanticVersion = "candidate-v2-linear-session-trend-math-v1",
+            definition = listOf(
+                "y=c+g*z-b*x-u+epsilon",
+                "trendCoordinate=${value.trendCoordinateVersion}",
+                "trendPrior=normal(0,${value.trendPriorSdLogResistancePerSession})",
+                "trendUnlock=${value.trendMinimumIndependentSessionsToLearn}",
+                "slopePrior=lognormal(${value.baseConfig.slopePriorMedian},${value.baseConfig.slopePriorLogSd})",
+                "slack=half_normal(${value.baseConfig.slackScalePriorMedian},${value.baseConfig.slackScalePriorLogSd})",
+                "noise=student_t_df_${value.baseConfig.studentTDegreesOfFreedom}",
+                "noisePrior=${value.baseConfig.noiseScalePriorMedian},${value.baseConfig.noiseScalePriorLogSd}",
+                "sessionWeight=${value.baseConfig.withinSessionPolicy.storageValue}",
+                "window=${value.baseConfig.recentIndependentSessionWindow}",
+                "evidence=${value.baseConfig.evidencePolicyIdentity}",
+                "context=${value.baseConfig.contextConsumption}",
+            ).joinToString(";"),
+        )
 }
 
 data class DynamicTrendFrontierPosteriorNode(
@@ -149,11 +179,18 @@ data class DynamicTrendFrontierFit(
     val selectedObservationIds: List<String>,
     val selectedSessionIds: List<String>,
     val approximationVersion: String,
-    val laplaceValidBasePosteriorMass: Double,
-    val laplaceFiniteDifferenceStep: Double,
+    /** Populated only by the historical conditional-Laplace solver. */
+    val laplaceValidBasePosteriorMass: Double?,
+    /** Populated only by the historical conditional-Laplace solver. */
+    val laplaceFiniteDifferenceStep: Double?,
     val posteriorEffectiveNodeCount: Double,
     val warnings: Set<String>,
     val posteriorNodes: List<DynamicTrendFrontierPosteriorNode>,
+    val mathematicalModelIdentity: InferenceMathematicalModelIdentity = DynamicTrendFrontierV2.mathematicalModelIdentity,
+    val solverDiagnostics: InferenceSolverDiagnostics = InferenceSolverDiagnostics(
+        solverIdentity = DynamicTrendFrontierV2.conditionalLaplaceSolverIdentity,
+        posteriorRepresentation = InferencePosteriorRepresentation.WEIGHTED_DENSE_NODES,
+    ),
 ) : DynamicCapabilityFit {
     init {
         require(referenceRepetitions.isFinite() && referenceRepetitions > 0.0)
@@ -167,8 +204,8 @@ data class DynamicTrendFrontierFit(
         require(selectedObservationIds.distinct().size == selectedObservationIds.size)
         require(selectedSessionIds.distinct().size == support.effectiveIndependentSessionCount)
         require(observationSlack.map { it.observationId }.toSet() == selectedObservationIds.toSet())
-        require(laplaceValidBasePosteriorMass.isFinite() && laplaceValidBasePosteriorMass in 0.0..1.0)
-        require(laplaceFiniteDifferenceStep.isFinite() && laplaceFiniteDifferenceStep > 0.0)
+        require(laplaceValidBasePosteriorMass == null || laplaceValidBasePosteriorMass.isFinite() && laplaceValidBasePosteriorMass in 0.0..1.0)
+        require(laplaceFiniteDifferenceStep == null || laplaceFiniteDifferenceStep.isFinite() && laplaceFiniteDifferenceStep > 0.0)
         require(posteriorEffectiveNodeCount.isFinite() && posteriorEffectiveNodeCount > 0.0)
         require(posteriorNodes.isNotEmpty())
         val weightSum = posteriorNodes.sumOf { it.posteriorWeight }
