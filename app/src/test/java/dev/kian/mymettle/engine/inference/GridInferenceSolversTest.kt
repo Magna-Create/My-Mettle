@@ -5,7 +5,6 @@ import java.time.Duration
 import java.time.Instant
 import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.test.Test
@@ -74,7 +73,7 @@ class GridInferenceSolversTest {
         assertTrue(mean(negative) < -0.20)
     }
 
-    private class GaussianRandomWalkProblem : FixedGridDynamicInferenceProblem<Double> {
+    private inner class GaussianRandomWalkProblem : FixedGridDynamicInferenceProblem<Double> {
         override val mathematicalModelIdentity = InferenceMathematicalModelIdentity(
             family = "solver_test_random_walk",
             semanticVersion = "v1",
