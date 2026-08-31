@@ -11,6 +11,7 @@ import dev.kian.mymettle.domain.inference.DynamicResistanceEvidenceProjection
 import dev.kian.mymettle.domain.inference.DynamicResistanceProfileSemantics
 import dev.kian.mymettle.domain.inference.DynamicResistanceV2Contract
 import dev.kian.mymettle.domain.inference.DynamicTrendFrontierV2
+import dev.kian.mymettle.domain.inference.InferenceSolverFamily
 import dev.kian.mymettle.domain.inference.ProfileLocalResistanceCoordinate
 import dev.kian.mymettle.domain.performance.Laterality
 import dev.kian.mymettle.domain.performance.LateralityMode
@@ -30,21 +31,21 @@ import kotlin.test.assertTrue
 
 class DynamicTrendFrontierModelTest {
     @Test
-    fun `sparse history fixes trend to zero and collapses exactly to frozen v1`() {
+    fun `sparse history fixes trend to zero and dense v2 collapses exactly to frozen v1`() {
         val evidence = generated(sessions = 2, trend = 0.08, repsBySession = { listOf(8) })
         val projection = projection(evidence)
         val horizon = evidence.maxOf { it.completedAt }
-        val v1 = DynamicStochasticFrontierModel(TEST_CONFIG.baseConfig)
+        val v1 = DynamicStochasticFrontierModel(TEST_MATH_CONFIG.baseConfig)
         val v1Fit = v1.fit(DynamicCapabilityFitRequest(
             projection,
             horizon,
-            TEST_CONFIG.baseConfig.toModelConfig(CONFIG_CREATED_AT),
+            TEST_MATH_CONFIG.baseConfig.toModelConfig(CONFIG_CREATED_AT),
         ))
-        val v2 = DynamicTrendFrontierModel(TEST_CONFIG)
-        val v2Fit = v2.fit(DynamicCapabilityFitRequest(
+        val dense = DynamicTrendDenseReferenceModel(TEST_DENSE_CONFIG)
+        val v2Fit = dense.fit(DynamicCapabilityFitRequest(
             projection,
             horizon,
-            v2.config.toModelConfig(CONFIG_CREATED_AT),
+            dense.solverConfig.toModelConfig(CONFIG_CREATED_AT),
         ))
         assertEquals(DynamicParameterIdentification.FIXED_BY_CONFIG, v2Fit.frontierTrend.identification)
         assertEquals(0.0, v2Fit.frontierTrend.summary.p50, 0.0)
@@ -54,31 +55,28 @@ class DynamicTrendFrontierModelTest {
 
     @Test
     fun `flat capability keeps strongly shrunk trend near zero`() {
-        val fit = fitV2(generated(sessions = 5, trend = 0.0, repsBySession = { listOf(6, 8, 12) }))
+        val fit = fitDense(generated(sessions = 5, trend = 0.0, repsBySession = { listOf(6, 8, 12) }))
         assertTrue(abs(fit.frontierTrend.summary.p50) <= 0.02)
-        val model = DynamicTrendFrontierModel(TEST_CONFIG)
-        val current = model.predictFrontier(fit, 8.0, 0.0).summary!!
-        val next = model.predictFrontier(fit, 8.0, 1.0).summary!!
+        val current = DENSE_MODEL.predictFrontier(fit, 8.0, 0.0).summary!!
+        val next = DENSE_MODEL.predictFrontier(fit, 8.0, 1.0).summary!!
         assertTrue(abs(ln(next.p50 / current.p50)) <= 0.03)
     }
 
     @Test
     fun `upward trend is learned and next-session frontier moves upward`() {
-        val fit = fitV2(generated(sessions = 5, trend = 0.055, repsBySession = { listOf(6, 8, 12) }))
+        val fit = fitDense(generated(sessions = 5, trend = 0.055, repsBySession = { listOf(6, 8, 12) }))
         assertTrue(fit.frontierTrend.summary.p50 > 0.01)
-        val model = DynamicTrendFrontierModel(TEST_CONFIG)
-        val current = model.predictFrontier(fit, 8.0, 0.0).summary!!
-        val next = model.predictFrontier(fit, 8.0, 1.0).summary!!
+        val current = DENSE_MODEL.predictFrontier(fit, 8.0, 0.0).summary!!
+        val next = DENSE_MODEL.predictFrontier(fit, 8.0, 1.0).summary!!
         assertTrue(next.p50 > current.p50)
     }
 
     @Test
     fun `downward trend can be learned without positive-growth bias`() {
-        val fit = fitV2(generated(sessions = 5, trend = -0.055, repsBySession = { listOf(6, 8, 12) }))
+        val fit = fitDense(generated(sessions = 5, trend = -0.055, repsBySession = { listOf(6, 8, 12) }))
         assertTrue(fit.frontierTrend.summary.p50 < -0.01)
-        val model = DynamicTrendFrontierModel(TEST_CONFIG)
-        val current = model.predictFrontier(fit, 8.0, 0.0).summary!!
-        val next = model.predictFrontier(fit, 8.0, 1.0).summary!!
+        val current = DENSE_MODEL.predictFrontier(fit, 8.0, 0.0).summary!!
+        val next = DENSE_MODEL.predictFrontier(fit, 8.0, 1.0).summary!!
         assertTrue(next.p50 < current.p50)
     }
 
@@ -95,8 +93,8 @@ class DynamicTrendFrontierModelTest {
                 )) }
             }
         }
-        val singleFit = fitV2(onePerSession)
-        val duplicateFit = fitV2(duplicated)
+        val singleFit = fitDense(onePerSession)
+        val duplicateFit = fitDense(duplicated)
         assertEquals(4, duplicateFit.support.effectiveIndependentSessionCount)
         assertEquals(singleFit.frontierTrend.summary.p50, duplicateFit.frontierTrend.summary.p50, 1e-10)
         assertEquals(singleFit.frontierTrend.summary.posteriorVariance, duplicateFit.frontierTrend.summary.posteriorVariance, 1e-10)
@@ -109,7 +107,7 @@ class DynamicTrendFrontierModelTest {
         evidence[target] = evidence[target].copy(
             resistance = evidence[target].resistance.copy(value = evidence[target].resistance.value * 0.65),
         )
-        val fit = fitV2(evidence)
+        val fit = fitDense(evidence)
         assertTrue(fit.frontierTrend.summary.p50 > -0.03)
     }
 
@@ -121,19 +119,25 @@ class DynamicTrendFrontierModelTest {
             slope = 0.24,
             repsBySession = { session -> if (session % 2 == 0) listOf(6, 8) else listOf(8, 12) },
         )
-        val fit = fitV2(evidence)
+        val fit = fitDense(evidence)
         assertTrue(abs(fit.frontierTrend.summary.p50) <= 0.025)
         assertTrue(fit.slope.summary.p50 > 0.10)
     }
 
     @Test
-    fun `candidate v2 config has new immutable identity while inheriting frozen v1 observation architecture`() {
-        val v2 = DynamicTrendFrontierV2.config.toModelConfig(CONFIG_CREATED_AT)
+    fun `math identity is shared while dense and conditional Laplace solver identities are distinct`() {
+        val legacyComposite = DynamicTrendFrontierV2.config.toModelConfig(CONFIG_CREATED_AT)
         val v1 = DynamicTrendFrontierV2.config.baseConfig.toModelConfig(CONFIG_CREATED_AT)
-        assertTrue(v2.id != v1.id)
-        assertTrue(v2.canonicalConfigPayload.contains(v1.id.value))
-        assertTrue(v2.canonicalConfigPayload.contains("normal(mean=0,sd=0.04)"))
-        assertTrue(v2.canonicalConfigPayload.contains("second_order_laplace_about_zero"))
+        val denseComposite = TEST_DENSE_CONFIG.toModelConfig(CONFIG_CREATED_AT)
+        assertTrue(legacyComposite.id != v1.id)
+        assertTrue(denseComposite.id != legacyComposite.id)
+        assertEquals(
+            DynamicTrendFrontierV2.mathematicalIdentity(TEST_MATH_CONFIG),
+            TEST_DENSE_CONFIG.mathematicalModelIdentity,
+        )
+        assertEquals(InferenceSolverFamily.DENSE_TENSOR_REFERENCE, TEST_DENSE_CONFIG.solverIdentity.solverFamily)
+        assertEquals(InferenceSolverFamily.SEQUENTIAL_LAPLACE, DynamicTrendFrontierV2.conditionalLaplaceSolverIdentity.solverFamily)
+        assertTrue(DynamicTrendFrontierV2.mathematicalModelIdentity.identity.contains("trendPrior=normal(0,0.04)"))
         assertEquals(5.0, DynamicTrendFrontierV2.config.baseConfig.studentTDegreesOfFreedom)
         assertEquals(0.12, DynamicTrendFrontierV2.config.baseConfig.slackScalePriorMedian)
         assertEquals(0.05, DynamicTrendFrontierV2.config.baseConfig.noiseScalePriorMedian)
@@ -142,14 +146,12 @@ class DynamicTrendFrontierModelTest {
         assertTrue(DynamicTrendFrontierV2.config.contextConsumption.startsWith("NONE:"))
     }
 
-    private fun fitV2(evidence: List<DynamicResistanceEvidence>): dev.kian.mymettle.domain.inference.DynamicTrendFrontierFit {
-        val model = DynamicTrendFrontierModel(TEST_CONFIG)
-        return model.fit(DynamicCapabilityFitRequest(
+    private fun fitDense(evidence: List<DynamicResistanceEvidence>): dev.kian.mymettle.domain.inference.DynamicTrendFrontierFit =
+        DENSE_MODEL.fit(DynamicCapabilityFitRequest(
             projection = projection(evidence),
             inferenceHorizon = evidence.maxOf { it.completedAt },
-            modelConfig = model.config.toModelConfig(CONFIG_CREATED_AT),
+            modelConfig = DENSE_MODEL.solverConfig.toModelConfig(CONFIG_CREATED_AT),
         ))
-    }
 
     private fun generated(
         sessions: Int,
@@ -226,8 +228,8 @@ class DynamicTrendFrontierModelTest {
         private const val DAY_SECONDS = 86_400L
         private val BASE = Instant.parse("2026-01-01T00:00:00Z")
         private val CONFIG_CREATED_AT = Instant.parse("2026-08-27T00:00:00Z")
-        /** Production config is frozen separately; behavioural fixtures use smaller deterministic grids only to keep CI bounded. */
-        private val TEST_CONFIG = DynamicTrendFrontierV2.config.copy(
+        /** Production Candidate-v2 math is unchanged; behavioural fixtures use smaller v1 grids only to keep CI bounded. */
+        private val TEST_MATH_CONFIG = DynamicTrendFrontierV2.config.copy(
             baseConfig = DynamicTrendFrontierV2.config.baseConfig.copy(
                 frontierGridPoints = 13,
                 slopeGridPoints = 7,
@@ -235,6 +237,12 @@ class DynamicTrendFrontierModelTest {
                 slackPosteriorTopNodeCount = 32,
             ),
         )
+        private val TEST_DENSE_CONFIG = DynamicTrendDenseReferenceConfig(
+            mathematicalConfig = TEST_MATH_CONFIG,
+            trendGridPoints = 17,
+            trendGridPriorSdRadius = 4.0,
+        )
+        private val DENSE_MODEL = DynamicTrendDenseReferenceModel(TEST_DENSE_CONFIG)
         private val PROFILE = DynamicResistanceProfileSemantics(
             executionProfileVersionId = ExecutionProfileVersionId("synthetic-trend-profile:v1"),
             executionProfileId = ExecutionProfileId("synthetic-trend-profile"),
