@@ -1,0 +1,101 @@
+from pathlib import Path
+
+p = Path('app/src/main/java/dev/kian/mymettle/engine/inference/DynamicTrendSolverHistoricalBakeoff.kt')
+s = p.read_text()
+
+old = '''            var frozenV1: dev.kian.mymettle.domain.inference.DynamicStochasticFrontierFit? = null
+            var v1Failure: DynamicCapabilityFitException? = null
+            v1FitMillis += measureTimeMillis {
+                try {
+                    frozenV1 = v1Model.fit(
+                        DynamicCapabilityFitRequest(
+                            fixedTraining,
+                            horizon,
+                            v1Model.config.toModelConfig(configCreatedAt),
+                        ),
+                    )
+                } catch (failure: DynamicCapabilityFitException) {
+                    v1Failure = failure
+                }
+            }
+            if (frozenV1 == null) {
+                val reason = requireNotNull(v1Failure).reason.storageValue
+'''
+new = '''            var frozenV1: dev.kian.mymettle.domain.inference.DynamicStochasticFrontierFit? = null
+            var v1FailureReason: String? = null
+            v1FitMillis += measureTimeMillis {
+                try {
+                    frozenV1 = v1Model.fit(
+                        DynamicCapabilityFitRequest(
+                            fixedTraining,
+                            horizon,
+                            v1Model.config.toModelConfig(configCreatedAt),
+                        ),
+                    )
+                } catch (failure: DynamicCapabilityFitException) {
+                    v1FailureReason = failure.reason.storageValue
+                } catch (failure: IllegalArgumentException) {
+                    v1FailureReason = "numerical_invariant:${failure.message ?: "illegal_argument"}"
+                }
+            }
+            if (frozenV1 == null) {
+                val reason = requireNotNull(v1FailureReason)
+'''
+if old not in s:
+    raise SystemExit('v1 anchor not found')
+s = s.replace(old, new, 1)
+
+old = '''                var fit: DynamicTrendFrontierFit? = null
+                var fitFailure: DynamicCapabilityFitException? = null
+                val fitMillis = measureTimeMillis {
+                    try {
+                        fit = solver.fitFromFrozenV1(
+                            DynamicCapabilityFitRequest(
+                                fixedTraining,
+                                horizon,
+                                solver.modelConfig(configCreatedAt),
+                            ),
+                            baseFit,
+                        )
+                    } catch (failure: DynamicCapabilityFitException) {
+                        fitFailure = failure
+                    }
+                }
+                extensionMillis.getValue(solver)[0] += fitMillis
+                if (fit == null) {
+                    val reason = requireNotNull(fitFailure).reason.storageValue
+'''
+new = '''                var fit: DynamicTrendFrontierFit? = null
+                var fitFailureReason: String? = null
+                val fitMillis = measureTimeMillis {
+                    try {
+                        fit = solver.fitFromFrozenV1(
+                            DynamicCapabilityFitRequest(
+                                fixedTraining,
+                                horizon,
+                                solver.modelConfig(configCreatedAt),
+                            ),
+                            baseFit,
+                        )
+                    } catch (failure: DynamicCapabilityFitException) {
+                        fitFailureReason = failure.reason.storageValue
+                    } catch (failure: IllegalArgumentException) {
+                        fitFailureReason = "numerical_invariant:${failure.message ?: "illegal_argument"}"
+                    }
+                }
+                extensionMillis.getValue(solver)[0] += fitMillis
+                if (fit == null) {
+                    val reason = requireNotNull(fitFailureReason)
+'''
+if old not in s:
+    raise SystemExit('candidate anchor not found')
+s = s.replace(old, new, 1)
+p.write_text(s)
+
+g = Path('app/build.gradle.kts')
+t = g.read_text()
+if 'versionName = "0.1.0-alpha27"' not in t:
+    raise SystemExit('alpha27 version anchor not found')
+t = t.replace('versionCode = 26', 'versionCode = 27', 1)
+t = t.replace('versionName = "0.1.0-alpha27"', 'versionName = "0.1.0-alpha28"', 1)
+g.write_text(t)
