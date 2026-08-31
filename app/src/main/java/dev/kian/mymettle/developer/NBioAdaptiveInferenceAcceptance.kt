@@ -7,20 +7,15 @@ import dev.kian.mymettle.BuildConfig
 import dev.kian.mymettle.data.local.MyMettleDatabase
 import dev.kian.mymettle.domain.inference.DynamicCapabilityFitRequest
 import dev.kian.mymettle.domain.inference.DynamicResistanceEvidenceProjection
-import dev.kian.mymettle.domain.inference.DynamicResistanceV2Contract
 import dev.kian.mymettle.domain.inference.DynamicStochasticFrontierFit
 import dev.kian.mymettle.domain.inference.DynamicTrendFrontierFit
-import dev.kian.mymettle.domain.inference.DynamicTrendFrontierV2
 import dev.kian.mymettle.domain.inference.PosteriorEstimate
 import dev.kian.mymettle.engine.inference.CandidateV2SequentialReuseAssessment
-import dev.kian.mymettle.engine.inference.DynamicTrendAdaptiveSparseSolver
+import dev.kian.mymettle.engine.inference.DynamicHistoricalAvailabilityV3
 import dev.kian.mymettle.engine.inference.DynamicTrendCandidateV2Solver
-import dev.kian.mymettle.engine.inference.DynamicTrendConditionalLaplaceSolverAdapter
-import dev.kian.mymettle.engine.inference.DynamicTrendDenseReferenceSolverAdapter
 import dev.kian.mymettle.engine.inference.DynamicTrendPosteriorFidelity
 import dev.kian.mymettle.engine.inference.DynamicTrendPosteriorFidelityResult
 import dev.kian.mymettle.engine.inference.DynamicTrendSequentialReuseAssessment
-import dev.kian.mymettle.engine.inference.DynamicTrendSolverHistoricalBakeoffCorrected
 import dev.kian.mymettle.engine.inference.DynamicTrendSolverHistoricalBakeoffResult
 import dev.kian.mymettle.engine.inference.HistoricalObservationRevisionSelector
 import dev.kian.mymettle.engine.inference.InferenceSolverRuntimeSummary
@@ -102,10 +97,11 @@ data class NBioAdaptiveInferenceAcceptanceReport(
     val prescriptionsUnchanged get() = prescriptionBefore == prescriptionAfter
     val benchmarkAuthorityUnchanged get() = benchmarkRunIdBefore == benchmarkRunIdAfter
     val safetyPassed get() = rawEvidenceUnchanged && prescriptionsUnchanged && benchmarkAuthorityUnchanged && backupRoundTrip.passed
+    val scientificEvaluationNonVacuous get() = profiles.any { it.eligibleObservationCount > 0 }
 
     fun toJson(): String = JSONObject()
         .put("format", "my-mettle-n-bio-adaptive-inference-acceptance")
-        .put("formatVersion", 4)
+        .put("formatVersion", 5)
         .put("generatedAt", generatedAt.toString())
         .put("mission", "N-BIO-7B.X_ADAPTIVE_INFERENCE_ARCHITECTURE_CONSOLIDATION")
         .put("evidenceClass", "RETROSPECTIVE_DEVELOPMENT")
@@ -113,23 +109,34 @@ data class NBioAdaptiveInferenceAcceptanceReport(
         .put("roomSchemaVersion", roomSchemaVersion)
         .put("app", appIdentity.toJson())
         .put("device", deviceIdentity.toJson())
-        .put("contextConsumption", DynamicTrendFrontierV2.config.contextConsumption)
+        .put("contextConsumption", NBioCorrectedCandidateV2Bundle.mathematicalConfig.contextConsumption)
         .put("candidateV1Status", "FROZEN_REJECTED_EMPIRICAL_CALIBRATION")
         .put("candidateV2Status", "DEVELOPMENT_CANDIDATE_NOT_PRODUCT_AUTHORITY")
         .put(
+            "evidencePolicy",
+            JSONObject()
+                .put("semanticVersion", NBioCorrectedCandidateV2Bundle.evidencePolicy.semanticVersion)
+                .put("identity", NBioCorrectedCandidateV2Bundle.evidencePolicy.identity)
+                .put("historicalAvailabilityPolicyId", DynamicHistoricalAvailabilityV3.POLICY_ID)
+                .put(
+                    "eligibleHistoricalUnknownSources",
+                    JSONArray(NBioCorrectedCandidateV2Bundle.evidencePolicy.eligibleHistoricalUnknownSources.sorted()),
+                ),
+        )
+        .put(
             "candidateV2MathematicalModel",
             JSONObject()
-                .put("family", DynamicTrendFrontierV2.mathematicalModelIdentity.family)
-                .put("semanticVersion", DynamicTrendFrontierV2.mathematicalModelIdentity.semanticVersion)
-                .put("definition", DynamicTrendFrontierV2.mathematicalModelIdentity.definition),
+                .put("family", NBioCorrectedCandidateV2Bundle.mathematicalModelIdentity.family)
+                .put("semanticVersion", NBioCorrectedCandidateV2Bundle.mathematicalModelIdentity.semanticVersion)
+                .put("definition", NBioCorrectedCandidateV2Bundle.mathematicalModelIdentity.definition),
         )
         .put(
             "candidateV2Solvers",
             JSONArray(
                 listOf(
-                    DynamicTrendDenseReferenceSolverAdapter().solverIdentity.toJson(),
-                    DynamicTrendAdaptiveSparseSolver().solverIdentity.toJson(),
-                    DynamicTrendConditionalLaplaceSolverAdapter().solverIdentity.toJson(),
+                    NBioCorrectedCandidateV2Bundle.denseSolver().solverIdentity.toJson(),
+                    NBioCorrectedCandidateV2Bundle.sparseSolver().solverIdentity.toJson(),
+                    NBioCorrectedCandidateV2Bundle.laplaceSolver().solverIdentity.toJson(),
                 ),
             ),
         )
@@ -203,6 +210,7 @@ data class NBioAdaptiveInferenceAcceptanceReport(
                 .put("liteRtNpu", "NOT_CURRENTLY_JUSTIFIED_FOR_ARBITRARY_BAYESIAN_KERNELS;MODEL_GRAPH_REQUIRED"),
         )
         .put("safetyPassed", safetyPassed)
+        .put("scientificEvaluationNonVacuous", scientificEvaluationNonVacuous)
         .put("productAuthorityChanged", false)
         .put("normalWorkoutBehaviourChanged", false)
         .put("nBio7CStarted", false)
@@ -221,7 +229,10 @@ data class NBioAdaptiveInferenceAcceptanceReport(
 class NBioAdaptiveInferenceAcceptanceRunner(
     private val context: Context,
     private val database: MyMettleDatabase,
-    private val historyReader: NBio7BRawHistoryReader = NBio7BRawHistoryReader(database),
+    private val historyReader: NBio7BRawHistoryReader = NBio7BRawHistoryReader(
+        database,
+        DynamicHistoricalAvailabilityV3::resolve,
+    ),
     private val backupVerifier: NBio7BBackupRoundTripVerifier = NBio7BBackupRoundTripVerifier(context, database),
 ) {
     suspend fun run(
@@ -244,9 +255,9 @@ class NBioAdaptiveInferenceAcceptanceRunner(
                 .distinct()
                 .map { side -> descriptor to side }
         }
-        val denseSolver = DynamicTrendDenseReferenceSolverAdapter()
-        val sparseSolver = DynamicTrendAdaptiveSparseSolver()
-        val laplaceSolver = DynamicTrendConditionalLaplaceSolverAdapter()
+        val denseSolver = NBioCorrectedCandidateV2Bundle.denseSolver()
+        val sparseSolver = NBioCorrectedCandidateV2Bundle.sparseSolver()
+        val laplaceSolver = NBioCorrectedCandidateV2Bundle.laplaceSolver()
         val projectedGroups = groups.map { (descriptor, side) ->
             Triple(
                 descriptor,
@@ -255,12 +266,30 @@ class NBioAdaptiveInferenceAcceptanceRunner(
                     descriptor.semantics,
                     side,
                     currentAsKnown,
-                    DynamicResistanceV2Contract.evidencePolicy,
+                    NBioCorrectedCandidateV2Bundle.evidencePolicy,
                 ),
             )
         }
+        val projectedEligibleCount = projectedGroups.sumOf { it.third.evidence.size }
+        if (currentAsKnown.isNotEmpty() && projectedGroups.isNotEmpty() && projectedEligibleCount == 0) {
+            val sourceCounts = currentAsKnown.groupingBy { it.observationSource }.eachCount().toSortedMap()
+            val exclusionCounts = projectedGroups
+                .flatMap { it.third.exclusions }
+                .groupingBy { it.reason.storageValue }
+                .eachCount()
+                .toSortedMap()
+            error(
+                "Adaptive inference scientific evaluation is vacuous: ${currentAsKnown.size} current raw observations " +
+                    "across ${projectedGroups.size} profile/side groups projected to zero eligible evidence under " +
+                    "${NBioCorrectedCandidateV2Bundle.evidencePolicy.semanticVersion}; " +
+                    "sources=$sourceCounts exclusions=$exclusionCounts",
+            )
+        }
         val denseReferenceKeys = projectedGroups
-            .filter { it.third.independentSessionCount >= DynamicTrendFrontierV2.config.trendMinimumIndependentSessionsToLearn }
+            .filter {
+                it.third.independentSessionCount >=
+                    NBioCorrectedCandidateV2Bundle.mathematicalConfig.trendMinimumIndependentSessionsToLearn
+            }
             .sortedWith(
                 compareByDescending<Triple<NBio7BProfileDescriptor, dev.kian.mymettle.domain.performance.Laterality, DynamicResistanceEvidenceProjection>> {
                     it.third.independentSessionCount
@@ -286,12 +315,11 @@ class NBioAdaptiveInferenceAcceptanceRunner(
                     "Adaptive inference · ${descriptor.label} · ${side.storageValue} · full-history sparse + Laplace",
                 ),
             )
-            val bakeoff = DynamicTrendSolverHistoricalBakeoffCorrected(
-                listOf(sparseSolver, laplaceSolver),
-            ).evaluate(
-                descriptor.semantics,
-                side,
-                raw.revisions,
+            val bakeoff = NBioCorrectedCandidateV2Bundle.evaluateHistorical(
+                solvers = listOf(sparseSolver, laplaceSolver),
+                profile = descriptor.semantics,
+                side = side,
+                revisions = raw.revisions,
             )
             onProgress(
                 NBio7BAcceptanceProgress(
@@ -376,7 +404,7 @@ class NBioAdaptiveInferenceAcceptanceRunner(
     ): CurrentProfileEvaluation {
         if (projection.evidence.isEmpty()) {
             return CurrentProfileEvaluation(
-                limitations = listOf("No current eligible dynamic-resistance evidence for this profile/side under evidence-policy v2."),
+                limitations = listOf("No current eligible dynamic-resistance evidence for this profile/side under corrected evidence-policy v3."),
             )
         }
         val horizon = projection.evidence.maxOf { it.completedAt }
@@ -480,7 +508,7 @@ class NBioAdaptiveInferenceAcceptanceRunner(
         projection: DynamicResistanceEvidenceProjection,
         horizon: Instant,
     ): DynamicStochasticFrontierFit {
-        val model = DynamicStochasticFrontierModel(DynamicTrendFrontierV2.config.baseConfig)
+        val model = DynamicStochasticFrontierModel(NBioCorrectedCandidateV2Bundle.baseConfig)
         return model.fit(
             DynamicCapabilityFitRequest(
                 projection = projection,
