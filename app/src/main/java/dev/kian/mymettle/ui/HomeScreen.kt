@@ -108,7 +108,11 @@ fun HomeScreen(
                 restoring = backupState.restoring,
                 onRestoreBackup = {
                     if (!backupState.restoring) {
-                        restoreLauncher.launch(arrayOf("application/json", "text/json", "text/plain"))
+                        // Browser/download providers can register valid .json backups as
+                        // application/octet-stream. The repository already performs strict
+                        // kind/format/schema validation after selection, so do not let Android's
+                        // MIME metadata prevent a valid portable backup from reaching restoreJson().
+                        restoreLauncher.launch(arrayOf("*/*"))
                     }
                 },
                 onOpenSettings = onOpenSettings,
