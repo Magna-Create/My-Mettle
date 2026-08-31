@@ -81,7 +81,13 @@ class AdaptiveInferenceContractsTest {
 
     @Test
     fun `action policy is structurally separate and fabricates no load reps or RIR proxy`() {
-        val support = EvidenceSupport.empty(EvidenceFamily.DYNAMIC_RESISTANCE)
+        val support = EvidenceSupport(
+            observationCount = 0,
+            effectiveIndependentSessionCount = 0,
+            firstEvidenceAt = null,
+            lastEvidenceAt = null,
+            evidenceFamily = EvidenceFamily("dynamic_resistance"),
+        )
         val capability = PosteriorEstimate(
             summary = null,
             support = support,
