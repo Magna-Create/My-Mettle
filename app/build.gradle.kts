@@ -14,8 +14,8 @@ android {
         applicationId = "dev.kian.mymettle"
         minSdk = 28
         targetSdk = 36
-        versionCode = 24
-        versionName = "0.1.0-alpha25"
+        versionCode = 25
+        versionName = "0.1.0-alpha26"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true

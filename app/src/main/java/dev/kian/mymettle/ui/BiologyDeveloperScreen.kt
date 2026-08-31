@@ -389,7 +389,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 item {
                     DebugCard("N‑BIO Adaptive Inference acceptance") {
                         Text(
-                            "Single N-BIO-7B.X physical acceptance over installed Room14 history. Compares dense Candidate-v2, same-mathematics adaptive sparse and conditional-Laplace solvers against the same frozen Candidate-v1 proposal, with corrected median-MAE evaluation, persistence/replay checks, solver-substrate benchmarks and safety fingerprints. No product authority is changed.",
+                            "Single N-BIO-7B.X physical acceptance over installed Room14 history. Full chronology compares same-mathematics adaptive sparse and conditional-Laplace Candidate-v2 solvers; the expensive dense tensor remains a bounded high-fidelity oracle on the richest current profile/side posteriors. Includes corrected median-MAE evaluation, shared replay, solver-substrate benchmarks and safety fingerprints. No product authority is changed.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Button(

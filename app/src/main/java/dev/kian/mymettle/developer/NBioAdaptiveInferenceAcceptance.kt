@@ -36,6 +36,8 @@ import kotlin.system.measureTimeMillis
 import org.json.JSONArray
 import org.json.JSONObject
 
+private const val DENSE_REFERENCE_SAMPLE_LIMIT = 2
+
 data class NBioAdaptiveAppIdentity(
     val applicationId: String,
     val versionName: String,
@@ -59,6 +61,7 @@ data class NBioAdaptiveProfileResult(
     val eligibleObservationCount: Int,
     val independentSessionCount: Int,
     val chronologicalFitCount: Int,
+    val denseReferenceSampled: Boolean,
     val bakeoff: DynamicTrendSolverHistoricalBakeoffResult,
     val denseVsSparsePosteriorFidelity: DynamicTrendPosteriorFidelityResult?,
     val denseVsLaplacePosteriorFidelity: DynamicTrendPosteriorFidelityResult?,
@@ -102,7 +105,7 @@ data class NBioAdaptiveInferenceAcceptanceReport(
 
     fun toJson(): String = JSONObject()
         .put("format", "my-mettle-n-bio-adaptive-inference-acceptance")
-        .put("formatVersion", 3)
+        .put("formatVersion", 4)
         .put("generatedAt", generatedAt.toString())
         .put("mission", "N-BIO-7B.X_ADAPTIVE_INFERENCE_ARCHITECTURE_CONSOLIDATION")
         .put("evidenceClass", "RETROSPECTIVE_DEVELOPMENT")
@@ -129,6 +132,14 @@ data class NBioAdaptiveInferenceAcceptanceReport(
                     DynamicTrendConditionalLaplaceSolverAdapter().solverIdentity.toJson(),
                 ),
             ),
+        )
+        .put(
+            "denseReferenceSampling",
+            JSONObject()
+                .put("strategy", "CURRENT_POSTERIOR_TOP_SUPPORT_PROFILE_SIDE_V1")
+                .put("maximumSampledProfileSides", DENSE_REFERENCE_SAMPLE_LIMIT)
+                .put("historicalDenseScoring", false)
+                .put("reason", "Dense Candidate-v2 remains the high-fidelity oracle, but full-history dense scoring is intentionally bounded after physical alpha25 exposed multi-minute single-profile runtime. Full chronology uses same-mathematics adaptive-sparse plus conditional-Laplace; dense fidelity is sampled on the richest current profile/side posteriors."),
         )
         .put("candidateV2SequentialReuseAssessment", sequentialReuseAssessment.toJson())
         .put(
@@ -180,7 +191,7 @@ data class NBioAdaptiveInferenceAcceptanceReport(
         .put(
             "architectureSubstrates",
             JSONObject()
-                .put("denseCandidateV2Reference", "IMPLEMENTED_CURRENT_HISTORY_DEVICE_ACCEPTANCE")
+                .put("denseCandidateV2Reference", "IMPLEMENTED_BOUNDED_CURRENT_POSTERIOR_ORACLE;FULL_HISTORICAL_DENSE_SCORING_DISABLED_AFTER_DEVICE_RUNTIME_EVIDENCE")
                 .put("adaptiveSparseCandidateV2", "IMPLEMENTED_CURRENT_HISTORY_DEVICE_ACCEPTANCE_SAME_MATHEMATICS_APPROXIMATION")
                 .put("conditionalLaplaceCandidateV2", "IMPLEMENTED_CURRENT_HISTORY_DEVICE_ACCEPTANCE_APPROXIMATION_CHALLENGER")
                 .put("denseSequentialTensor", "IMPLEMENTED_DEVICE_BENCHMARKED_GENERIC_SUBSTRATE;NOT_EQUIVALENT_TO_CURRENT_V2_BATCH_REFERENCE")
@@ -236,28 +247,62 @@ class NBioAdaptiveInferenceAcceptanceRunner(
         val denseSolver = DynamicTrendDenseReferenceSolverAdapter()
         val sparseSolver = DynamicTrendAdaptiveSparseSolver()
         val laplaceSolver = DynamicTrendConditionalLaplaceSolverAdapter()
+        val projectedGroups = groups.map { (descriptor, side) ->
+            Triple(
+                descriptor,
+                side,
+                DynamicResistanceEvidenceProjector.project(
+                    descriptor.semantics,
+                    side,
+                    currentAsKnown,
+                    DynamicResistanceV2Contract.evidencePolicy,
+                ),
+            )
+        }
+        val denseReferenceKeys = projectedGroups
+            .filter { it.third.independentSessionCount >= DynamicTrendFrontierV2.config.trendMinimumIndependentSessionsToLearn }
+            .sortedWith(
+                compareByDescending<Triple<NBio7BProfileDescriptor, dev.kian.mymettle.domain.performance.Laterality, DynamicResistanceEvidenceProjection>> {
+                    it.third.independentSessionCount
+                }.thenByDescending { it.third.evidence.size },
+            )
+            .take(DENSE_REFERENCE_SAMPLE_LIMIT)
+            .map { "${it.first.semantics.executionProfileVersionId.value}|${it.second.storageValue}" }
+            .toSet()
+        // Run inexpensive/full-history challengers first so physical progress is visible quickly;
+        // the bounded dense oracle samples are deliberately pushed to the tail of the action.
+        val orderedGroups = projectedGroups.sortedBy { group ->
+            if ("${group.first.semantics.executionProfileVersionId.value}|${group.second.storageValue}" in denseReferenceKeys) 1 else 0
+        }
         val results = mutableListOf<NBioAdaptiveProfileResult>()
 
-        groups.forEachIndexed { index, (descriptor, side) ->
+        orderedGroups.forEachIndexed { index, (descriptor, side, projection) ->
+            val key = "${descriptor.semantics.executionProfileVersionId.value}|${side.storageValue}"
+            val includeDenseReference = key in denseReferenceKeys
             onProgress(
                 NBio7BAcceptanceProgress(
                     index,
-                    groups.size + 2,
-                    "Adaptive inference · ${descriptor.label} · ${side.storageValue}",
+                    orderedGroups.size + 2,
+                    "Adaptive inference · ${descriptor.label} · ${side.storageValue} · full-history sparse + Laplace",
                 ),
             )
-            val projection = DynamicResistanceEvidenceProjector.project(
-                descriptor.semantics,
-                side,
-                currentAsKnown,
-                DynamicResistanceV2Contract.evidencePolicy,
-            )
             val bakeoff = DynamicTrendSolverHistoricalBakeoffCorrected(
-                listOf(denseSolver, sparseSolver, laplaceSolver),
+                listOf(sparseSolver, laplaceSolver),
             ).evaluate(
                 descriptor.semantics,
                 side,
                 raw.revisions,
+            )
+            onProgress(
+                NBio7BAcceptanceProgress(
+                    index,
+                    orderedGroups.size + 2,
+                    if (includeDenseReference) {
+                        "Adaptive inference · ${descriptor.label} · ${side.storageValue} · current posterior + bounded dense oracle"
+                    } else {
+                        "Adaptive inference · ${descriptor.label} · ${side.storageValue} · current posterior checks"
+                    },
+                ),
             )
             val current = evaluateCurrentProfile(
                 userProfileId = userProfileId,
@@ -265,6 +310,7 @@ class NBioAdaptiveInferenceAcceptanceRunner(
                 denseSolver = denseSolver,
                 sparseSolver = sparseSolver,
                 laplaceSolver = laplaceSolver,
+                includeDenseReference = includeDenseReference,
             )
             results += NBioAdaptiveProfileResult(
                 executionProfileVersionId = descriptor.semantics.executionProfileVersionId.value,
@@ -273,6 +319,7 @@ class NBioAdaptiveInferenceAcceptanceRunner(
                 eligibleObservationCount = projection.evidence.size,
                 independentSessionCount = projection.independentSessionCount,
                 chronologicalFitCount = bakeoff.chronologicalFitCount,
+                denseReferenceSampled = includeDenseReference,
                 bakeoff = bakeoff,
                 denseVsSparsePosteriorFidelity = current.sparseFidelity,
                 denseVsLaplacePosteriorFidelity = current.laplaceFidelity,
@@ -289,9 +336,9 @@ class NBioAdaptiveInferenceAcceptanceRunner(
             )
         }
 
-        onProgress(NBio7BAcceptanceProgress(groups.size, groups.size + 2, "Benchmarking inference solver substrates"))
+        onProgress(NBio7BAcceptanceProgress(orderedGroups.size, orderedGroups.size + 2, "Benchmarking inference solver substrates"))
         val solverSubstrateBenchmark = InferenceSolverSubstrateBenchmark.run()
-        onProgress(NBio7BAcceptanceProgress(groups.size + 1, groups.size + 2, "Verifying Native backup and safety fingerprints"))
+        onProgress(NBio7BAcceptanceProgress(orderedGroups.size + 1, orderedGroups.size + 2, "Verifying Native backup and safety fingerprints"))
         val backup = backupVerifier.verify()
         val rawAfter = NBio7BRawEvidenceFingerprinter.capture(database)
         val prescriptionAfter = NBio7BPrescriptionStateFingerprinter.capture(database)
@@ -325,6 +372,7 @@ class NBioAdaptiveInferenceAcceptanceRunner(
         denseSolver: DynamicTrendCandidateV2Solver,
         sparseSolver: DynamicTrendCandidateV2Solver,
         laplaceSolver: DynamicTrendCandidateV2Solver,
+        includeDenseReference: Boolean,
     ): CurrentProfileEvaluation {
         if (projection.evidence.isEmpty()) {
             return CurrentProfileEvaluation(
@@ -337,9 +385,11 @@ class NBioAdaptiveInferenceAcceptanceRunner(
                 limitations = listOf("Current frozen Candidate-v1 proposal failed; Candidate-v2 current-state fidelity/persistence/replay are NOT_EVALUATED: ${it.message}"),
             )
         }
-        val requestDense = DynamicCapabilityFitRequest(projection, horizon, denseSolver.modelConfig(CONFIG_CREATED_AT))
         val requestSparse = DynamicCapabilityFitRequest(projection, horizon, sparseSolver.modelConfig(CONFIG_CREATED_AT))
         val requestLaplace = DynamicCapabilityFitRequest(projection, horizon, laplaceSolver.modelConfig(CONFIG_CREATED_AT))
+        val requestDense = if (includeDenseReference) {
+            DynamicCapabilityFitRequest(projection, horizon, denseSolver.modelConfig(CONFIG_CREATED_AT))
+        } else null
 
         var denseElapsed: Long? = null
         var sparseElapsed: Long? = null
@@ -349,32 +399,29 @@ class NBioAdaptiveInferenceAcceptanceRunner(
         var laplaceFit: DynamicTrendFrontierFit? = null
         val limitations = mutableListOf<String>()
         runCatching {
-            denseElapsed = measureTimeMillis { denseFit = denseSolver.fitFromFrozenV1(requestDense, frozenV1) }
-        }.onFailure { limitations += "Dense-reference current fit failed: ${it.message}" }
-        runCatching {
             sparseElapsed = measureTimeMillis { sparseFit = sparseSolver.fitFromFrozenV1(requestSparse, frozenV1) }
         }.onFailure { limitations += "Adaptive-sparse current fit failed: ${it.message}" }
         runCatching {
             laplaceElapsed = measureTimeMillis { laplaceFit = laplaceSolver.fitFromFrozenV1(requestLaplace, frozenV1) }
         }.onFailure { limitations += "Conditional-Laplace current fit failed: ${it.message}" }
-
-        val dense = denseFit
-        if (dense == null) {
-            limitations += "Dense Candidate-v2 reference is unavailable; approximation fidelity/persistence/replay are NOT_EVALUATED rather than vacuous PASS."
-            return CurrentProfileEvaluation(
-                denseElapsed = denseElapsed,
-                sparseElapsed = sparseElapsed,
-                laplaceElapsed = laplaceElapsed,
-                limitations = limitations,
-            )
+        if (includeDenseReference) {
+            runCatching {
+                denseElapsed = measureTimeMillis { denseFit = denseSolver.fitFromFrozenV1(requireNotNull(requestDense), frozenV1) }
+            }.onFailure { limitations += "Dense-reference sampled current fit failed: ${it.message}" }
+        } else {
+            limitations += "Dense reference intentionally not run for this profile/side; physical acceptance samples only the $DENSE_REFERENCE_SAMPLE_LIMIT richest trend-enabled current posteriors after alpha25 exposed multi-minute dense runtime."
         }
 
-        val reps = dense.referenceRepetitions
+        val dense = denseFit
         val sparse = sparseFit
         val laplace = laplaceFit
-        val densePersist = runCatching { persistReloadEquivalent(userProfileId, denseSolver, dense, reps) }
-            .onFailure { limitations += "Dense persist/reload check failed: ${it.message}" }
-            .getOrNull()
+        val reps = (dense ?: sparse ?: laplace)?.referenceRepetitions ?: frozenV1.referenceRepetitions
+
+        val densePersist = dense?.let { fit ->
+            runCatching { persistReloadEquivalent(userProfileId, denseSolver, fit, reps) }
+                .onFailure { limitations += "Dense persist/reload check failed: ${it.message}" }
+                .getOrNull()
+        }
         val sparsePersist = sparse?.let { fit ->
             runCatching { persistReloadEquivalent(userProfileId, sparseSolver, fit, reps) }
                 .onFailure { limitations += "Adaptive-sparse persist/reload check failed: ${it.message}" }
@@ -385,23 +432,37 @@ class NBioAdaptiveInferenceAcceptanceRunner(
                 .onFailure { limitations += "Conditional-Laplace persist/reload check failed: ${it.message}" }
                 .getOrNull()
         }
-        val denseReplay = runCatching { replayEquivalent(denseSolver, projection, horizon, dense, reps) }
-            .onFailure { limitations += "Dense full replay check failed: ${it.message}" }
+
+        val replayFrozenV1 = runCatching { fitFrozenV1(projection, horizon) }
+            .onFailure { limitations += "Shared Candidate-v1 replay proposal failed: ${it.message}" }
             .getOrNull()
-        val sparseReplay = sparse?.let { fit ->
-            runCatching { replayEquivalent(sparseSolver, projection, horizon, fit, reps) }
+        val denseReplay = if (dense != null && replayFrozenV1 != null) {
+            runCatching { replayEquivalent(denseSolver, projection, horizon, dense, reps, replayFrozenV1) }
+                .onFailure { limitations += "Dense full replay check failed: ${it.message}" }
+                .getOrNull()
+        } else null
+        val sparseReplay = if (sparse != null && replayFrozenV1 != null) {
+            runCatching { replayEquivalent(sparseSolver, projection, horizon, sparse, reps, replayFrozenV1) }
                 .onFailure { limitations += "Adaptive-sparse full replay check failed: ${it.message}" }
                 .getOrNull()
-        }
-        val laplaceReplay = laplace?.let { fit ->
-            runCatching { replayEquivalent(laplaceSolver, projection, horizon, fit, reps) }
+        } else null
+        val laplaceReplay = if (laplace != null && replayFrozenV1 != null) {
+            runCatching { replayEquivalent(laplaceSolver, projection, horizon, laplace, reps, replayFrozenV1) }
                 .onFailure { limitations += "Conditional-Laplace full replay check failed: ${it.message}" }
                 .getOrNull()
+        } else null
+
+        if (includeDenseReference && dense == null) {
+            limitations += "Selected dense oracle fit is unavailable; approximation fidelity is NOT_EVALUATED rather than vacuous PASS."
         }
 
         return CurrentProfileEvaluation(
-            sparseFidelity = sparse?.let { runCatching { DynamicTrendPosteriorFidelity.compare(dense, it) }.getOrNull() },
-            laplaceFidelity = laplace?.let { runCatching { DynamicTrendPosteriorFidelity.compare(dense, it) }.getOrNull() },
+            sparseFidelity = if (dense != null && sparse != null) {
+                runCatching { DynamicTrendPosteriorFidelity.compare(dense, sparse) }.getOrNull()
+            } else null,
+            laplaceFidelity = if (dense != null && laplace != null) {
+                runCatching { DynamicTrendPosteriorFidelity.compare(dense, laplace) }.getOrNull()
+            } else null,
             densePersist = densePersist,
             sparsePersist = sparsePersist,
             laplacePersist = laplacePersist,
@@ -454,8 +515,8 @@ class NBioAdaptiveInferenceAcceptanceRunner(
         horizon: Instant,
         original: DynamicTrendFrontierFit,
         repetitions: Double,
+        frozenV1: DynamicStochasticFrontierFit,
     ): Boolean {
-        val frozenV1 = fitFrozenV1(projection, horizon)
         val replayed = solver.fitFromFrozenV1(
             DynamicCapabilityFitRequest(
                 projection = projection,
@@ -568,6 +629,7 @@ private fun NBioAdaptiveProfileResult.toJson(): JSONObject = JSONObject()
     .put("eligibleObservationCount", eligibleObservationCount)
     .put("independentSessionCount", independentSessionCount)
     .put("chronologicalFitCount", chronologicalFitCount)
+    .put("denseReferenceSampled", denseReferenceSampled)
     .put("retrospectiveProtocolVersion", bakeoff.protocolVersion)
     .put(
         "currentFitRuntimeMillis",
