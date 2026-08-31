@@ -190,7 +190,7 @@ class DynamicTrendSolverHistoricalBakeoff(
             )?.resistance?.value
 
             var frozenV1: dev.kian.mymettle.domain.inference.DynamicStochasticFrontierFit? = null
-            var v1Failure: DynamicCapabilityFitException? = null
+            var v1FailureReason: String? = null
             v1FitMillis += measureTimeMillis {
                 try {
                     frozenV1 = v1Model.fit(
@@ -201,11 +201,13 @@ class DynamicTrendSolverHistoricalBakeoff(
                         ),
                     )
                 } catch (failure: DynamicCapabilityFitException) {
-                    v1Failure = failure
+                    v1FailureReason = failure.reason.storageValue
+                } catch (failure: IllegalArgumentException) {
+                    v1FailureReason = "numerical_invariant:${failure.message ?: "illegal_argument"}"
                 }
             }
             if (frozenV1 == null) {
-                val reason = requireNotNull(v1Failure).reason.storageValue
+                val reason = requireNotNull(v1FailureReason)
                 val failed = heldOut.map { modelFailure(it, sessionId, training, reference, benchmark, reason) }
                 v1Results += failed
                 solvers.forEach { solver ->
@@ -237,7 +239,7 @@ class DynamicTrendSolverHistoricalBakeoff(
 
             solvers.forEach { solver ->
                 var fit: DynamicTrendFrontierFit? = null
-                var fitFailure: DynamicCapabilityFitException? = null
+                var fitFailureReason: String? = null
                 val fitMillis = measureTimeMillis {
                     try {
                         fit = solver.fitFromFrozenV1(
@@ -249,12 +251,14 @@ class DynamicTrendSolverHistoricalBakeoff(
                             baseFit,
                         )
                     } catch (failure: DynamicCapabilityFitException) {
-                        fitFailure = failure
+                        fitFailureReason = failure.reason.storageValue
+                    } catch (failure: IllegalArgumentException) {
+                        fitFailureReason = "numerical_invariant:${failure.message ?: "illegal_argument"}"
                     }
                 }
                 extensionMillis.getValue(solver)[0] += fitMillis
                 if (fit == null) {
-                    val reason = requireNotNull(fitFailure).reason.storageValue
+                    val reason = requireNotNull(fitFailureReason)
                     candidateResults.getValue(solver) += heldOut.map {
                         modelFailure(it, sessionId, training, reference, benchmark, reason)
                     }
