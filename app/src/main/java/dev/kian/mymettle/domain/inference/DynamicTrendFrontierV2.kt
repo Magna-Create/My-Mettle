@@ -31,13 +31,14 @@ data class DynamicTrendFrontierConfig(
     val trendDataInformedMinimumIndependentSessions: Int = 6,
     val trendPriorDominatedPosteriorSdFraction: Double = 0.95,
     val trendDataInformedPosteriorSdFraction: Double = 0.80,
-    val trendQuadraturePoints: Int = 5,
-    val importanceTargetBasePosteriorMass: Double = 0.995,
-    val importanceMinimumBasePosteriorMass: Double = 0.98,
-    val importanceMinimumBaseNodes: Int = 64,
-    val importanceMaximumBaseNodes: Int = 512,
+    /** Symmetric finite-difference displacement expressed as a fraction of the trend prior SD. */
+    val trendLaplaceFiniteDifferenceSdFraction: Double = 0.50,
+    /** Deterministic normal quadrature used only to propagate each conditional Laplace posterior. */
+    val trendPosteriorQuadraturePoints: Int = 5,
+    /** Fail rather than silently discard substantial frozen-v1 proposal mass when local Laplace curvature is invalid. */
+    val laplaceMinimumValidBasePosteriorMass: Double = 0.995,
     val nextIndependentSessionOffset: Double = 1.0,
-    val approximationVersion: String = "v1-posterior-top-mass-importance-gh5-trend-v1",
+    val approximationVersion: String = "v1-joint-posterior-conditional-laplace-fd-gh5-trend-v1",
 ) {
     init {
         require(semanticVersion.isNotBlank() && trendCoordinateVersion.isNotBlank() && approximationVersion.isNotBlank())
@@ -46,24 +47,24 @@ data class DynamicTrendFrontierConfig(
         require(trendDataInformedMinimumIndependentSessions >= trendMinimumIndependentSessionsToLearn)
         require(trendPriorDominatedPosteriorSdFraction in 0.0..1.0)
         require(trendDataInformedPosteriorSdFraction in 0.0..trendPriorDominatedPosteriorSdFraction)
-        require(trendQuadraturePoints == 5) { "Candidate v2 freezes five-point Gauss-Hermite trend quadrature." }
-        require(importanceTargetBasePosteriorMass in 0.0..1.0)
-        require(importanceMinimumBasePosteriorMass in 0.0..importanceTargetBasePosteriorMass)
-        require(importanceMinimumBaseNodes > 0)
-        require(importanceMaximumBaseNodes >= importanceMinimumBaseNodes)
+        require(trendLaplaceFiniteDifferenceSdFraction in 0.1..1.0)
+        require(trendPosteriorQuadraturePoints == 5) { "Candidate v2 freezes five-point normal posterior quadrature." }
+        require(laplaceMinimumValidBasePosteriorMass in 0.95..1.0)
         require(nextIndependentSessionOffset == 1.0)
         require(baseConfig.contextConsumption.startsWith("NONE:"))
     }
 
     val evidencePolicyIdentity: String get() = baseConfig.evidencePolicyIdentity
     val contextConsumption: String get() = baseConfig.contextConsumption
+    val trendLaplaceFiniteDifferenceStep: Double
+        get() = trendPriorSdLogResistancePerSession * trendLaplaceFiniteDifferenceSdFraction
 
     fun toModelConfig(createdAt: Instant): ModelConfigDefinition {
         val inherited = baseConfig.toModelConfig(createdAt)
         return ModelConfigDefinition.create(
             component = InferenceModelComponent.DYNAMIC_CAPABILITY,
             modelFamily = "stochastic_frontier_session_trend",
-            modelName = "half_normal_slack_student_t_noise_importance_trend",
+            modelName = "half_normal_slack_student_t_noise_conditional_laplace_trend",
             semanticVersion = semanticVersion,
             configSchemaVersion = 1,
             parameters = mapOf(
@@ -88,12 +89,10 @@ data class DynamicTrendFrontierConfig(
                 "trendLearningUnlock" to "sessions>=$trendMinimumIndependentSessionsToLearn",
                 "trendDataInformed" to "sessions>=$trendDataInformedMinimumIndependentSessions,posteriorSd<=${trendDataInformedPosteriorSdFraction}*priorSd",
                 "trendPriorDominated" to "posteriorSd>=${trendPriorDominatedPosteriorSdFraction}*priorSd",
-                "trendQuadrature" to "gauss_hermite_$trendQuadraturePoints",
+                "trendConditionalApproximation" to "second_order_laplace_about_zero;finiteDifferenceStep=${trendLaplaceFiniteDifferenceStep}",
+                "trendPosteriorQuadrature" to "gauss_hermite_$trendPosteriorQuadraturePoints",
+                "laplaceMinimumValidBasePosteriorMass" to laplaceMinimumValidBasePosteriorMass.toString(),
                 "nextIndependentSessionOffset" to nextIndependentSessionOffset.toString(),
-                "importanceTargetBasePosteriorMass" to importanceTargetBasePosteriorMass.toString(),
-                "importanceMinimumBasePosteriorMass" to importanceMinimumBasePosteriorMass.toString(),
-                "importanceMinimumBaseNodes" to importanceMinimumBaseNodes.toString(),
-                "importanceMaximumBaseNodes" to importanceMaximumBaseNodes.toString(),
                 "approximationVersion" to approximationVersion,
                 "successfulSetSemantics" to DynamicResistanceSuccessfulSetSemantics.LOWER_BOUND_DEMONSTRATION.storageValue,
                 "contextConsumption" to contextConsumption,
@@ -150,7 +149,8 @@ data class DynamicTrendFrontierFit(
     val selectedObservationIds: List<String>,
     val selectedSessionIds: List<String>,
     val approximationVersion: String,
-    val basePosteriorMassCaptured: Double,
+    val laplaceValidBasePosteriorMass: Double,
+    val laplaceFiniteDifferenceStep: Double,
     val posteriorEffectiveNodeCount: Double,
     val warnings: Set<String>,
     val posteriorNodes: List<DynamicTrendFrontierPosteriorNode>,
@@ -167,7 +167,8 @@ data class DynamicTrendFrontierFit(
         require(selectedObservationIds.distinct().size == selectedObservationIds.size)
         require(selectedSessionIds.distinct().size == support.effectiveIndependentSessionCount)
         require(observationSlack.map { it.observationId }.toSet() == selectedObservationIds.toSet())
-        require(basePosteriorMassCaptured.isFinite() && basePosteriorMassCaptured in 0.0..1.0)
+        require(laplaceValidBasePosteriorMass.isFinite() && laplaceValidBasePosteriorMass in 0.0..1.0)
+        require(laplaceFiniteDifferenceStep.isFinite() && laplaceFiniteDifferenceStep > 0.0)
         require(posteriorEffectiveNodeCount.isFinite() && posteriorEffectiveNodeCount > 0.0)
         require(posteriorNodes.isNotEmpty())
         val weightSum = posteriorNodes.sumOf { it.posteriorWeight }
