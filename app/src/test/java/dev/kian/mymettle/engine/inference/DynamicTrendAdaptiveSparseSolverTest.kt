@@ -158,6 +158,9 @@ class DynamicTrendAdaptiveSparseSolverTest {
                     evidenceGranularity = "set",
                 ),
             ),
+            warmUp = false,
+            setKind = "working",
+            evidencePolicyIdentity = DynamicResistanceV2Contract.evidencePolicy.identity,
         )
     }
 
@@ -170,11 +173,14 @@ class DynamicTrendAdaptiveSparseSolverTest {
             executionProfileId = ExecutionProfileId("adaptive-sparse-test-profile"),
             metricFamily = MetricFamily.DYNAMIC_RESISTANCE,
             resistanceModel = ResistanceModel(
+                modelVersion = "test-resistance-v1",
                 semantics = ResistanceSemantics.EXTERNAL,
+                bodyweightCoefficient = 0.0,
                 externalLoadCoefficient = 1.0,
+                assistanceCoefficient = 0.0,
             ),
             entryBasis = EntryBasis.TOTAL,
-            lateralityMode = LateralityMode.BILATERAL,
+            lateralityMode = LateralityMode.BILATERAL_ONLY,
         )
     }
 }
