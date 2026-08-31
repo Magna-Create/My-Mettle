@@ -26,6 +26,15 @@ jobs:
           git config user.name "Magna-Create"
           git config user.email "53941598+Magna-Create@users.noreply.github.com"
 
+      - name: Repair screen-anchor spelling in temporary patch script
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path("tools/adaptive_acceptance_runtime_patch.py")
+          text = path.read_text()
+          text = text.replace("Single N‑BIO‑7B.X physical acceptance", "Single N-BIO-7B.X physical acceptance")
+          path.write_text(text)
+
       - name: Apply bounded runtime patch
         run: python3 tools/adaptive_acceptance_runtime_patch.py
 
