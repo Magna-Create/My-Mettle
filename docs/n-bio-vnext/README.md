@@ -5,70 +5,104 @@ Use this directory in the following order.
 ## Authority
 
 1. [`PLAN.md`](./PLAN.md) — overarching phase/architecture/acceptance contract.
-2. [`CORE_MODEL_DETAIL.md`](./CORE_MODEL_DETAIL.md) — normative detailed N-BIO-7/N-BIO-8 mathematical and behavioural supplement. Where temporal research explicitly changed a boundary, `PLAN.md` wins; otherwise this detail remains required.
-3. [`PRODUCT_ROADMAP_GATES.md`](./PRODUCT_ROADMAP_GATES.md) — authoritative additive product/research/collaboration gates for late N-BIO-7 equipment intelligence, uncertainty communication, N-BIO-8 research/UX design, N-BIO-9 recomputation lifecycle and Native database-safety behaviour. When it marks `COLLABORATION REQUIRED`, stop before behaviour-driving implementation and involve Kian rather than silently choosing product policy.
+2. [`ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md`](./ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md) — authoritative additive supplement for N-BIO inference architecture, solver strategy, dynamic latent-state naming, capability-vs-action-policy separation, hierarchical personalisation, prequential evaluation and later decision architecture. Where older planning assumes stationary/batch capability, one universal inference backend, tensor inference as inherently non-sequential, predetermined biological latent-state labels, or capability and action selection as one distribution, this supplement governs.
+3. [`CORE_MODEL_DETAIL.md`](./CORE_MODEL_DETAIL.md) — normative detailed N-BIO-7/N-BIO-8 mathematical and behavioural supplement except where superseded by the adaptive-inference supplement or later explicit PLAN corrections.
+4. [`PRODUCT_ROADMAP_GATES.md`](./PRODUCT_ROADMAP_GATES.md) — authoritative additive product/research/collaboration gates for late N-BIO-7 equipment intelligence, uncertainty communication, N-BIO-8 research/UX design, N-BIO-9 recomputation lifecycle and Native database-safety behaviour. When it marks `COLLABORATION REQUIRED`, stop before behaviour-driving implementation and involve Kian rather than silently choosing product policy.
+
+`ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md` does not authorise N-BIO-7C, later biological-state implementations, V8 prescription behaviour or normal-user UX changes. It corrects the inference architecture used to reach those later gates.
 
 ## Core biological/performance research
 
-4. [`RESEARCH_GUIDE.md`](./RESEARCH_GUIDE.md) — implementation-facing evaluation/navigation.
-5. [`RESEARCH_RAW.md`](./RESEARCH_RAW.md) — preserved core DeepResearch source.
+5. [`RESEARCH_GUIDE.md`](./RESEARCH_GUIDE.md) — implementation-facing evaluation/navigation.
+6. [`RESEARCH_RAW.md`](./RESEARCH_RAW.md) — preserved core DeepResearch source.
 
 ## Temporal / Health Connect / conditioning / HR research
 
-6. [`RESEARCH_HEALTH_TEMPORAL_GUIDE.md`](./RESEARCH_HEALTH_TEMPORAL_GUIDE.md) — implementation-facing evaluation/navigation.
-7. [`RESEARCH_HEALTH_TEMPORAL_RAW.md`](./RESEARCH_HEALTH_TEMPORAL_RAW.md) — raw-report index and integrity metadata; links seven verbatim storage parts.
+7. [`RESEARCH_HEALTH_TEMPORAL_GUIDE.md`](./RESEARCH_HEALTH_TEMPORAL_GUIDE.md) — implementation-facing evaluation/navigation.
+8. [`RESEARCH_HEALTH_TEMPORAL_RAW.md`](./RESEARCH_HEALTH_TEMPORAL_RAW.md) — raw-report index and integrity metadata; links seven verbatim storage parts.
 
 ## Implementation contracts and notes
 
-- [`TEMPORAL_FOUNDATION.md`](./TEMPORAL_FOUNDATION.md) — concrete N-BIO-6 Room 12 storage, scope, codec, revision and compatibility decisions.
+- [`TEMPORAL_FOUNDATION.md`](./TEMPORAL_FOUNDATION.md) — concrete N-BIO-6 temporal storage, scope, codec, revision and compatibility decisions. The live development database has since advanced to Room14; historical schema numbers in this document describe the stage at which the contract was introduced.
 - [`DEVICE_VERIFICATION.md`](./DEVICE_VERIFICATION.md) — reproducible Termux build and isolated on-device scalar/temporal acceptance procedure.
 - [`CONTEXT_INTERPRETATION_CONTRACT.md`](./CONTEXT_INTERPRETATION_CONTRACT.md) — N-BIO-7A.5 canonical-note ownership, bounded tag ontology, interpreter/fallback/privacy boundary, provenance and zero-effect N-BIO context interface.
 - [`EXERCISE_AUTHORING_CONTRACT.md`](./EXERCISE_AUTHORING_CONTRACT.md) — authoritative protocol for externally proposed exercise/execution/recruitment semantics before they enter the existing Native authoring pathway.
-- [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md) — N-BIO-7B evidence/coordinate contract, frozen stochastic-frontier Candidate-v1, chronological validation, SHADOW persistence, diagnostics and real-history/device acceptance contract. Candidate-v1 physical acceptance is complete and rejected; Stage-1 temporal-diagnostic implementation is complete, while execution/review of the enriched installed-history report remains the gate before any Candidate v2.
+- [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md) — N-BIO-7B evidence/coordinate contract, frozen Candidate-v1 record, chronological validation, SHADOW persistence and Candidate-v2 development evidence. Read it together with the adaptive-inference supplement for current capability/policy and solver semantics.
+- [`INFERENCE_BACKEND_AUDIT.md`](./INFERENCE_BACKEND_AUDIT.md) — current Android numerical-backend audit and profiling-first JVM/native/SIMD/Vulkan/LiteRT decision ladder.
 - [`exercise-import.schema.json`](./exercise-import.schema.json) — Draft 2020-12 machine-readable structural exchange schema, format v1.
 - [`exercise-import-example.json`](./exercise-import-example.json) — canonical validated authoring example.
 
-## Current N-BIO-7 phase order
+## Current N-BIO-7 status
 
 ```text
-7A    complete — probabilistic/posterior + model/config/inference provenance foundation
-7A.5  complete — context interpretation + external exercise-authoring contracts
-7B.1  complete — dynamic-resistance evidence eligibility + coordinate/model contract
-7B.2  Candidate v1 frozen/rejected — stochastic-frontier implementation preserved; installed-history calibration requires a new candidate
-7B.3  implementation complete — correction-aware chronological validation + SHADOW persistence + event-level temporal diagnostics/CRPS
-7B.4  Candidate-v1 real-history acceptance complete — integrity/replay/backup passed; Candidate v1 rejected; enriched Stage-1 diagnostic execution/review pending before any Candidate v2
-later 7C–7G as defined by PLAN.md — 7C has not started
-7F     must also consult PRODUCT_ROADMAP_GATES.md for equipment identity/calibration/session-binding + uncertainty-presentation hooks
+7A      complete — probabilistic/posterior + model/config/inference provenance foundation
+7A.5    complete — context interpretation + external exercise-authoring contracts
+7B.1    complete — dynamic-resistance evidence eligibility + coordinate/model contract
+7B.2    Candidate v1 frozen/rejected — implementation retained as historical/reference evidence
+7B.3/4  complete as historical validation infrastructure — correction-aware chronology, SHADOW persistence, diagnostics, installed-history acceptance
+7B.X    ACTIVE — Adaptive Inference Architecture Consolidation; one consolidated mission, not a ladder of invented 7B.5/7B.6 phases
+7C      NOT STARTED
 ```
 
-The 7B candidate remains **SHADOW only**. Normal workout/prescription authority remains `BENCHMARK_V0`; context consumption remains `NONE`; no candidate result is promoted into normal product behaviour by 7B.3/4 implementation. Candidate-v1 physical acceptance has established a genuine empirical rejection. The next gate is narrower: execute the versioned Stage-1 event-level temporal diagnostic against the same installed Room14 history and review whether temporal lag is materially supported before any Candidate-v2 model is implemented. CI establishes deterministic/model, persistence, backup and compile-time correctness but cannot substitute for that device-history diagnostic.
+### Candidate-v1 record
 
-Before behaviour-driving N-BIO-8 implementation, `PRODUCT_ROADMAP_GATES.md` requires a dedicated research + product/UX design gate rather than marching directly from N-BIO-7H into an optimiser. Programme intent/priorities, in-workout adaptation, editing/regeneration semantics, equipment setup/feasible-load UX and uncertainty presentation require explicit collaboration.
+Candidate v1 is frozen as `REJECTED_EMPIRICAL_CALIBRATION_V1`. The installed-history acceptance established a genuine empirical rejection: the latent capability frontier was materially better centred than the working-set demonstration predictive, while predictive calibration remained unacceptable. Preserve the model and its tests; do not mutate it to repair later candidates.
 
-N-BIO-9 remains the later product/integration phase for broader context UX, explicit reannotation/data controls, Nano rollout/download management, notification/dashboard consumers, Health Connect/HR experiments and Analysis Export. The note-annotation architecture itself begins in 7A.5, not N-BIO-9. N-BIO-9 must additionally consult the recomputation/model-upgrade UX gates in `PRODUCT_ROADMAP_GATES.md`.
+### Candidate-v2 status
+
+Candidate v2 has been implemented as a bounded **development experiment**, not product authority. It adds a neutral statistical frontier trajectory to the frozen v1 base and deliberately does not label that trajectory development, recovery, fatigue, skill or biological growth.
+
+The valid same-mathematics Candidate-v2 solver comparison currently consists of:
+
+```text
+DENSE full-support trend-grid reference
+vs
+CONDITIONAL-LAPLACE approximation
+```
+
+Both receive the same frozen-v1 proposal when directly compared. Generic dense-sequential-grid, adaptive-sparse-grid, low-rank-screen and Gaussian sigma-point implementations also exist as solver-architecture substrates, but they are not to be misreported as Candidate-v2-equivalent solvers unless a mathematical adapter makes their state/transition/likelihood problem genuinely identical.
+
+The consolidated **N-BIO Adaptive Inference Acceptance** developer action is the current installed-Room14 evidence gate. It combines Candidate-v2 retrospective/current-state solver evidence with a separately labelled synthetic same-problem solver-substrate benchmark and exports one privacy-bounded JSON. Historical results remain development evidence; fresh future workouts are stronger confirmatory evidence.
+
+## Product and safety authority during 7B.X
+
+All current candidates remain **SHADOW / CANDIDATE** only.
+
+- Normal workout/prescription authority remains `BENCHMARK_V0`.
+- Context consumption remains `NONE` for the current dynamic candidate.
+- No RIR/RPE value may be fabricated.
+- Raw performance evidence remains immutable and separate from derived inference.
+- Semantic metadata beats statistical changepoint suspicion when a real execution boundary is known.
+- Room remains 14 unless a genuine semantic impossibility requires another migration.
+- N-BIO-7C exercise-family capability work is not authorised by 7B.X.
+
+Before behaviour-driving N-BIO-8 implementation, `PRODUCT_ROADMAP_GATES.md` still requires the dedicated research + product/UX design gate. Programme intent/priorities, in-workout adaptation, editing/regeneration semantics, equipment setup/feasible-load UX and uncertainty presentation require explicit collaboration.
+
+N-BIO-9 remains the later product/integration phase for broader context UX, explicit reannotation/data controls, Nano rollout/download management, notification/dashboard consumers, Health Connect/HR experiments and Analysis Export. N-BIO-9 must additionally consult the recomputation/model-upgrade UX gates in `PRODUCT_ROADMAP_GATES.md`.
 
 Native Cutover must consult the database compatibility, downgrade protection, migration-safety and recovery-UX gates in `PRODUCT_ROADMAP_GATES.md` before destructive migration is removed and the first permanent Native schema is declared.
 
 ## Reading rule
 
-For a normal task:
+For inference work during N-BIO-7B.X:
 
 ```text
 PLAN.md
-→ relevant CORE_MODEL_DETAIL.md section if implementing N-BIO-7/8
-→ PRODUCT_ROADMAP_GATES.md whenever entering late-7 equipment translation, N-BIO-8, N-BIO-9 intelligence/recompute UX or Native Cutover
-→ relevant research guide section
-→ relevant implementation contract when crossing a stored semantic boundary
-→ only targeted raw research when exact evidence/equations/platform wording are needed
-→ current source code
+→ ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md
+→ relevant CORE_MODEL_DETAIL.md section where not superseded
+→ DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md for current 7B evidence/model history
+→ PRODUCT_ROADMAP_GATES.md whenever crossing a product/research collaboration gate
+→ relevant research guide
+→ targeted raw research only when exact evidence/equations/platform wording are needed
+→ current source code and immutable model/config identities
 ```
 
-When `PRODUCT_ROADMAP_GATES.md` says `COLLABORATION REQUIRED`, do not silently infer a final UX/product policy from backend capability. Explicitly remind Kian of the planned research/design gate and ask whether to research, define the interaction contract, or design/provide the relevant Figma flow before implementation.
+For later non-inference work, start with `PLAN.md` and follow the relevant authority links above.
+
+When `PRODUCT_ROADMAP_GATES.md` says `COLLABORATION REQUIRED`, do not silently infer a final UX/product policy from backend capability. Explicitly involve Kian before behaviour-driving implementation.
 
 Do not load both full raw research bodies into ordinary implementation context.
 
-Existing `docs/N_BIO_*.md` files are historical implementation-stage documentation. The vNext files above govern forward work where they conflict.
+Existing `docs/N_BIO_*.md` files remain historical implementation-stage documentation. The vNext authority stack above governs forward work where they conflict.
 
-- **N-BIO-7B.3/4 corrected physical acceptance:** evidence policy v2 preserves explicitly legacy `UNKNOWN -> UNKNOWN` history as an unsided capability stream. Integrity/replay/backup checks passed on the corrected physical run, while frozen Candidate v1 itself produced `REQUIRES_NEW_CANDIDATE`; that run is rejection evidence rather than a closure pass.
-
-- **Candidate-v1 empirical rejection (2026-08-30):** `REJECTED_EMPIRICAL_CALIBRATION_V1`; central point error was roughly competitive with BENCHMARK_V0 but predictive calibration was unacceptable. The versioned Stage-1 temporal diagnostic must now be executed/reviewed before the Candidate-v2 gate may open. N-BIO-7C has not started.
+N-BIO-7C has not started.
