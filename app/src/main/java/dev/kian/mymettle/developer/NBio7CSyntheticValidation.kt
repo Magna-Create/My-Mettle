@@ -27,6 +27,7 @@ import dev.kian.mymettle.engine.performance.NonDynamicAdaptiveSparseSolver
 import dev.kian.mymettle.engine.performance.NonDynamicCapabilityEvidenceProjector
 import dev.kian.mymettle.engine.performance.NonDynamicDenseReferenceSolver
 import java.time.Instant
+import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.max
@@ -185,8 +186,8 @@ object NBio7CSyntheticValidation {
         checks["frontier_truth_in_sparse_90pct_interval"] = truthFrontier in frontier.p05..frontier.p95
         checks["frontier_truth_in_dense_90pct_interval"] = truthFrontier in denseFrontier.p05..denseFrontier.p95
         if (truthSlope != null) {
-            checks["slope_truth_in_sparse_90pct_interval"] = truthSlope in requireNotNull(sparse.slope).summary.p05..sparse.slope.summary.p95
-            checks["slope_truth_in_dense_90pct_interval"] = truthSlope in requireNotNull(dense.slope).summary.p05..dense.slope.summary.p95
+            checks["slope_truth_in_sparse_90pct_interval"] = containsWithFloatingPointTolerance(requireNotNull(sparse.slope).summary, truthSlope)
+            checks["slope_truth_in_dense_90pct_interval"] = containsWithFloatingPointTolerance(requireNotNull(dense.slope).summary, truthSlope)
         }
         when (scenario) {
             Scenario.UPWARD -> checks["trajectory_direction_recovered"] = sparseTrajectory.p50 > 0.0
@@ -340,6 +341,12 @@ object NBio7CSyntheticValidation {
 
     private fun metric(metric: PerformanceMetric, value: Double, unit: UnitId) =
         PerformanceMetricValue(metric = metric, entered = Quantity(value, unit))
+
+    private fun containsWithFloatingPointTolerance(summary: PosteriorSummary, truth: Double): Boolean {
+        val scale = maxOf(1.0, abs(truth), abs(summary.p05), abs(summary.p95))
+        val tolerance = 1e-12 * scale
+        return truth >= summary.p05 - tolerance && truth <= summary.p95 + tolerance
+    }
 
     private fun relativeWidth(summary: PosteriorSummary): Double =
         (summary.p95 - summary.p05) / max(1e-12, summary.p50)

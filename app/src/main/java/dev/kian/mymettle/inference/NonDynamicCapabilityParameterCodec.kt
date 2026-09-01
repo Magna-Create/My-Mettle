@@ -61,26 +61,26 @@ object NonDynamicCapabilityParameterCodec {
         DataInputStream(ByteArrayInputStream(bytes)).use { input ->
             require(input.readUtf8String() == MAGIC)
             val storedProfile = ExecutionProfileVersionId(input.readUtf8String())
-            val storedSide = Laterality.entries.first { it.storageValue == input.readUtf8String() }
-            val family = MetricFamily.entries.first { it.storageValue == input.readUtf8String() }
+            val storedSide = input.readStoredEnum(Laterality.entries) { it.storageValue }
+            val family = input.readStoredEnum(MetricFamily.entries) { it.storageValue }
             val horizon = Instant.parse(input.readUtf8String())
             val reference = input.readNullableDouble()
-            val canonicalUnit = UnitId.entries.first { it.storageValue == input.readUtf8String() }
+            val canonicalUnit = input.readStoredEnum(UnitId.entries) { it.storageValue }
             val storedConfigId = ModelConfigId(input.readUtf8String())
             require(storedProfile == executionProfileVersionId && storedSide == side && storedConfigId == modelConfigId) {
                 "N-BIO-7C codec envelope does not match persisted capability-state identity."
             }
             val math = InferenceMathematicalModelIdentity(input.readUtf8String(), input.readUtf8String(), input.readUtf8String())
             val solverIdentity = InferenceSolverIdentity(
-                solverFamily = InferenceSolverFamily.entries.first { it.storageValue == input.readUtf8String() },
+                solverFamily = input.readStoredEnum(InferenceSolverFamily.entries) { it.storageValue },
                 semanticVersion = input.readUtf8String(),
-                computeBackend = InferenceComputeBackend.entries.first { it.storageValue == input.readUtf8String() },
+                computeBackend = input.readStoredEnum(InferenceComputeBackend.entries) { it.storageValue },
                 deterministicReplay = input.readBoolean(),
                 approximationDefinition = input.readUtf8String(),
             )
             val diagnostics = InferenceSolverDiagnostics(
                 solverIdentity = solverIdentity,
-                posteriorRepresentation = InferencePosteriorRepresentation.entries.first { it.storageValue == input.readUtf8String() },
+                posteriorRepresentation = input.readStoredEnum(InferencePosteriorRepresentation.entries) { it.storageValue },
                 evaluatedNodeCount = input.readNullableLong(),
                 effectiveNodeCount = input.readNullableDouble(),
                 updateRuntimeNanos = input.readNullableLong(),
@@ -227,9 +227,15 @@ object NonDynamicCapabilityParameterCodec {
         if (value != null) writeParameterPosterior(value)
     }
 
+    private fun <T> DataInputStream.readStoredEnum(values: Iterable<T>, storageValue: (T) -> String): T {
+        val encoded = readUtf8String()
+        return values.firstOrNull { storageValue(it) == encoded }
+            ?: throw IllegalArgumentException("Unsupported N-BIO-7C encoded enum value '$encoded'.")
+    }
+
     private fun DataInputStream.readParameterPosterior(): NonDynamicParameterPosterior = NonDynamicParameterPosterior(
         summary = PosteriorSummary(readDouble(), readDouble(), readDouble(), readDouble()),
-        identification = DynamicParameterIdentification.entries.first { it.storageValue == readUtf8String() },
+        identification = readStoredEnum(DynamicParameterIdentification.entries) { it.storageValue },
         semanticUnit = readUtf8String(),
     )
 
