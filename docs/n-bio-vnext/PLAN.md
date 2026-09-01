@@ -66,7 +66,7 @@ Changes to equations, latent dimensions, priors, likelihoods, pooling, regime ha
 7. **Context is typed and gated.** Current N-BIO-7B dynamic candidates consume `NONE`; sleep/HRV/illness/stress/notes cannot be used to rescue them.
 8. **Derived inference is rebuildable.** Deleting candidate state cannot cascade into raw evidence.
 9. **Product authority is explicit.** SHADOW/CANDIDATE runs do not alter normal prescriptions, workout UX or `BENCHMARK_V0` authority.
-10. **Room migrations require semantics, not convenience.** Room14 remains sufficient for current 7B.X model/solver state.
+10. **Room migrations require semantics, not convenience.** Room14 remains sufficient for the completed 7B.X model/solver state and the current 7C capability mission.
 11. **Backup/replay are acceptance gates.** Full Native backup remains generic; model/solver state must reload and raw evidence must replay within documented tolerance.
 12. **Collaboration gates remain mandatory.** `PRODUCT_ROADMAP_GATES.md` is not superseded by backend capability.
 
@@ -223,7 +223,7 @@ prior(k+1)
 posterior(k+1)
 ```
 
-The production decision is empirical. Dense tensor may remain reference-only, a sparse tensor may become a rich solver, a Gaussian/Laplace approximation may become a live solver, or tensor inference may remain production if optimisation makes its scientific advantage worth the cost.
+Solver selection remains empirical per mathematical model. For the completed N-BIO-7B.X Candidate-v2 decision specifically, **Adaptive Sparse is selected for forward inference, Dense is retained as the deterministic high-fidelity reference/oracle, and Conditional Laplace is rejected as the production solver while remaining available only as a diagnostic/research challenger where useful.** This solver/backend decision does not promote Candidate-v2 mathematics to normal product authority.
 
 A dual-solver architecture is permitted only with explicit provenance/precedence so two posteriors cannot become contradictory co-authorities.
 
@@ -256,7 +256,7 @@ Track at minimum where the predictive representation supports them:
 
 Historical data already inspected during development remains development evidence. Fresh future workouts provide the strongest confirmatory evidence.
 
-## 12. N-BIO-7B record and current mission
+## 12. N-BIO-7B record and completed 7B.X mission
 
 ### Candidate v1
 
@@ -268,40 +268,41 @@ The important retained discovery is that its latent capability frontier could be
 
 ### Candidate v2
 
-Candidate v2 is a bounded development experiment adding a neutral statistical frontier trajectory to the frozen v1 base. Its trajectory is not labelled biological development.
+Candidate v2 is the bounded development experiment that added a neutral statistical frontier trajectory to the frozen v1 base. Its trajectory is not labelled biological development.
 
-The same-mathematics solver bake-off currently compares the dense full-support trend-grid reference with the conditional-Laplace approximation. Both receive the same frozen-v1 proposal at a historical/current comparison cutoff.
+During 7B.X development, the same-mathematics comparison used the Dense full-support trend-grid reference and Conditional-Laplace approximation, while Adaptive Sparse was validated against Dense as the forward representation. The corrected physical acceptance established the final solver decision: Adaptive Sparse remains sufficiently faithful for forward Candidate-v2 inference with an explicitly recorded difficult-history upper-tail limitation; Dense remains the high-fidelity oracle; Conditional Laplace correctly fails closed on unstable projections but is not robust enough for production use.
 
-Generic sequential dense-grid, adaptive sparse-grid, low-rank-screen and Gaussian sigma-point implementations are solver-architecture substrates. They are not Candidate-v2 solvers merely because they share an interface; a Candidate-v2 comparison is valid only when mathematical identity, priors, transition, likelihood, horizon and observations are genuinely identical.
+Generic sequential dense-grid, low-rank-screen and Gaussian sigma-point implementations remain solver-architecture substrates. They are not automatically Candidate-v2-equivalent solvers merely because they share an interface; a Candidate-v2 comparison is valid only when mathematical identity, priors, transition, likelihood, horizon and observations are genuinely identical.
 
 ### N-BIO-7B.X — Adaptive Inference Architecture Consolidation
 
-This is one consolidated mission. Do not invent 7B.5/7B.6/7B.7 roadmap phases.
+**Status: COMPLETE.** Do not invent 7B.5/7B.6/7B.7 roadmap phases.
 
-The mission covers Candidate-v2 closure, capability/policy separation, dynamic-state contracts, semantic regimes, hierarchy contracts, solver competition, proper-scoring evaluation, persistence/replay, performance profiling and a production/reference/reanalysis/backend recommendation.
+The completed mission covers Candidate-v2 closure, capability/policy separation, dynamic-state contracts, semantic regimes, hierarchy contracts, solver competition, proper-scoring evaluation, persistence/replay, performance profiling and the production/reference/reanalysis/backend recommendation. Its physical checkpoint is preserved in [`NBIO_7BX_ADAPTIVE_ACCEPTANCE_CHECKPOINT_2026-09-01.md`](./NBIO_7BX_ADAPTIVE_ACCEPTANCE_CHECKPOINT_2026-09-01.md).
 
-Do **not** begin N-BIO-7C inside this mission.
+N-BIO-7C is a separate subsequent mission and must not be retroactively folded into 7B.X.
 
 ## 13. Current device acceptance gate
 
-The single Biological Developer action is:
+The active consolidated Biological Developer action is:
 
-**N-BIO Adaptive Inference Acceptance**
+**Run N-BIO 7C Capability Acceptance**
 
-It operates on installed Room14 data and exports one privacy-bounded JSON containing:
+It operates on installed Room14 data for `LOADED_HOLD`, `DURATION_ONLY` and `REPEATED_CONTRACTION` and exports one privacy-bounded structural/pre-validation JSON containing:
 
-- model/solver identities;
-- profile/side counts;
-- Candidate-v2 historical predictive bake-off;
-- current posterior-fidelity comparison;
-- persistence/reload and delete-derived/replay checks;
-- solver runtime diagnostics;
-- a separately labelled synthetic same-problem dense/sequential/sparse/sigma/low-rank substrate benchmark;
-- raw-evidence/prescription/benchmark-authority fingerprints;
-- Native backup round-trip;
-- memory/process snapshots and limitations.
+- family/model/solver identities;
+- exact profile-version/side evidence counts and exclusions;
+- synthetic latent-truth pre-validation;
+- Adaptive-Sparse versus Dense posterior/query fidelity where evaluable;
+- persistence/reload, delete-derived and deterministic full-replay checks;
+- per-stage runtime diagnostics;
+- raw-evidence, prescription-state and `BENCHMARK_V0` authority fingerprints;
+- Native Room14 backup/restore candidate-row verification and foreign-key integrity;
+- explicit limitations, structural verdict and PD-001 empirical-accuracy status.
 
-The synthetic solver-substrate benchmark is feasibility evidence, not Candidate-v2 validation.
+The gate may establish structural closure only. Under PD-001, insufficient real longitudinal evidence remains `EMPIRICAL_ACCURACY_PENDING` / `NOT_EVALUATED_REAL_HISTORY`; synthetic recovery or structural success must not be relabelled as empirical human calibration.
+
+The earlier **N-BIO Adaptive Inference Acceptance** action is retained as historical/developer evidence for the completed 7B.X mission, not the active 7C closure gate.
 
 ## 14. Numerical backend policy
 
