@@ -1,0 +1,69 @@
+name: Patch N-BIO documentation status
+
+on:
+  push:
+    branches:
+      - "agent/n-bio-vnext-inference"
+    paths:
+      - ".github/workflows/patch-nbio-doc-status.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/n-bio-vnext-inference
+          fetch-depth: 0
+      - name: Align completed 7B.X and active 7C documentation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          dynamic = Path('docs/n-bio-vnext/DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md')
+          text = dynamic.read_text()
+          replacements = {
+              'Status: **Candidate v1 frozen/rejected; Candidate v2 implemented as a bounded development experiment; N-BIO-7B.X adaptive-inference consolidation active; physical adaptive-inference acceptance pending.**':
+              'Status: **Candidate v1 frozen/rejected; N-BIO-7B.X adaptive-inference consolidation complete. Adaptive Sparse is the selected forward Candidate-v2 solver, Dense is retained as the bounded high-fidelity oracle, Conditional Laplace is rejected for production, and N-BIO-7C is active under PD-001.**',
+              '''The valid same-mathematics comparison currently includes:\n\n1. **Dense reference** — complete frozen-v1 posterior support crossed with a deterministic trend grid; high-fidelity Kotlin/JVM reference.\n2. **Conditional Laplace** — fast approximation over the same Candidate-v2 mathematical model and same frozen-v1 proposal.\n\nAt each direct comparison cutoff, v1 is fitted once and the identical frozen posterior is supplied to both v2 solvers. Timing of the v2 extension is recorded separately from the shared v1 proposal cost.''':
+              '''The completed same-mathematics comparison includes:\n\n1. **Dense reference** — complete frozen-v1 posterior support crossed with a deterministic trend grid; retained as the bounded high-fidelity Kotlin/JVM oracle.\n2. **Adaptive Sparse** — deterministic posterior-support pruning over the identical Candidate-v2 mathematics; selected as the forward live Candidate-v2 inference representation.\n3. **Conditional Laplace** — continuous approximation over the same Candidate-v2 mathematical model; rejected for production because installed-history acceptance exposed material posterior/failure instability.\n\nAt each direct comparison cutoff, v1 is fitted once and the identical frozen posterior is supplied to the Candidate-v2 solvers. Timing of the v2 extension is recorded separately from the shared v1 proposal cost.''',
+              '''Candidate v2 remains a **development candidate** until the consolidated installed-device acceptance report is executed and reviewed.\n\nIts current verdict is therefore:\n\n`INCONCLUSIVE_PENDING_ADAPTIVE_INFERENCE_ACCEPTANCE`\n\nA future result may be PASS, FAIL or remain INCONCLUSIVE. The broader adaptive architecture must not be distorted merely to promote v2.''':
+              '''Candidate v2 remains **SHADOW / development evidence rather than product authority**, but the N-BIO-7B.X solver decision is closed. Installed-history acceptance selected Adaptive Sparse for forward Candidate-v2 inference, retained Dense as the high-fidelity oracle, and rejected Conditional Laplace for production. Fresh future workouts remain the strongest confirmatory evidence and may justify a future mathematical candidate without reopening the closed solver result by default.''',
+              'Candidate v2\'s actual same-math fast approximation is currently conditional Laplace. A generic sigma-point success on a Gaussian fixture is not evidence that sigma points preserve the real Candidate-v2 one-sided/heavy-tail posterior.':
+              'Candidate v2\'s accepted forward same-math approximation is Adaptive Sparse. Conditional Laplace remains implemented as a rejected challenger for diagnostic/regression evidence; a generic sigma-point success on a Gaussian fixture is not evidence that sigma points preserve the real Candidate-v2 one-sided/heavy-tail posterior.',
+              'Candidate-v2 dense-vs-Laplace current-state diagnostics explicitly record posterior fidelity and solver identities.':
+              'Candidate-v2 current-state diagnostics explicitly record Dense-vs-Adaptive-Sparse fidelity and, where numerically available, Dense-vs-Conditional-Laplace fidelity with separate solver identities.',
+              '- dense/Laplace solver identities;': '- Dense/Adaptive-Sparse/Conditional-Laplace solver identities;',
+              'N-BIO-7C has not started.': 'N-BIO-7B.X is complete. N-BIO-7C is the active consolidated capability-family mission under PD-001; N-BIO-7D has not started.',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'missing DYNAMIC contract anchor: {old[:90]}')
+              text = text.replace(old, new, 1)
+          dynamic.write_text(text)
+
+          readme = Path('docs/n-bio-vnext/README.md')
+          r = readme.read_text()
+          old = '''The valid same-mathematics Candidate-v2 solver comparison currently consists of:\n\n```text\nDENSE full-support trend-grid reference\nvs\nCONDITIONAL-LAPLACE approximation\n```\n\nBoth receive the same frozen-v1 proposal when directly compared. Generic dense-sequential-grid, adaptive-sparse-grid, low-rank-screen and Gaussian sigma-point implementations also exist as solver-architecture substrates, but they are not to be misreported as Candidate-v2-equivalent solvers unless a mathematical adapter makes their state/transition/likelihood problem genuinely identical.\n\nThe consolidated **N-BIO Adaptive Inference Acceptance** developer action is the current installed-Room14 evidence gate. It combines Candidate-v2 retrospective/current-state solver evidence with a separately labelled synthetic same-problem solver-substrate benchmark and exports one privacy-bounded JSON. Historical results remain development evidence; fresh future workouts are stronger confirmatory evidence.'''
+          new = '''The completed same-mathematics Candidate-v2 solver comparison uses **Dense** as the bounded high-fidelity oracle, **Adaptive Sparse** as the selected forward inference representation, and **Conditional Laplace** as a rejected approximation challenger. All direct Candidate-v2 comparisons receive the same frozen-v1 proposal and share the corrected mathematical identity. Generic dense-sequential-grid, low-rank-screen and Gaussian sigma-point implementations remain solver-architecture substrates unless a mathematical adapter makes them genuinely Candidate-v2-equivalent.\n\nThe consolidated **N-BIO Adaptive Inference Acceptance** installed-Room14 evidence established that solver decision while preserving SHADOW/development-only authority. Historical results remain development evidence; fresh future workouts are stronger confirmatory evidence.'''
+          if old not in r:
+              raise SystemExit('missing README Candidate-v2 status anchor')
+          readme.write_text(r.replace(old, new, 1))
+          PY
+      - name: Check documentation
+        run: |
+          git diff --check
+          ! grep -Fq 'INCONCLUSIVE_PENDING_ADAPTIVE_INFERENCE_ACCEPTANCE' docs/n-bio-vnext/DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md
+          ! grep -Fq 'N-BIO-7C has not started.' docs/n-bio-vnext/DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md
+          grep -Fq 'Adaptive Sparse is the selected forward Candidate-v2 solver' docs/n-bio-vnext/DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md
+          grep -Fq 'Adaptive Sparse' docs/n-bio-vnext/README.md
+      - name: Commit documentation repair
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/n-bio-vnext/DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md docs/n-bio-vnext/README.md
+          git commit -m "Align N-BIO 7B.X closure documentation"
+          git push origin HEAD:agent/n-bio-vnext-inference
