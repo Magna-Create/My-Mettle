@@ -1,0 +1,38 @@
+name: Patch N-BIO-7C codec UTF8 helper names
+
+on:
+  push:
+    branches: [agent/n-bio-vnext-inference]
+    paths:
+      - '.github/workflows/patch-nbio7c-codec-utf8-names.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/n-bio-vnext-inference
+      - name: Rename codec helpers unambiguously
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/dev/kian/mymettle/inference/NonDynamicCapabilityParameterCodec.kt')
+          s = p.read_text()
+          s = s.replace('writeString', 'writeUtf8String')
+          s = s.replace('readString', 'readUtf8String')
+          p.write_text(s)
+          PY
+      - name: Commit patch and remove workflow
+        shell: bash
+        run: |
+          rm .github/workflows/patch-nbio7c-codec-utf8-names.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/dev/kian/mymettle/inference/NonDynamicCapabilityParameterCodec.kt .github/workflows/patch-nbio7c-codec-utf8-names.yml
+          git commit -m 'Disambiguate N-BIO-7C UTF-8 codec helpers'
+          git push origin HEAD:agent/n-bio-vnext-inference
