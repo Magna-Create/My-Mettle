@@ -325,7 +325,7 @@ Do not port backup/acceptance overhead and claim inference improved. Model compu
 
 ## 15. Persistence and replay
 
-Room remains **14** during 7B.X unless a genuine semantic impossibility is demonstrated.
+Room remains **14** through the current N-BIO-7C mission unless a genuine semantic impossibility is demonstrated.
 
 Reuse existing inference run/model config/manifest/capability/parameter-state storage where semantically sufficient.
 
@@ -369,9 +369,10 @@ N-BIO-7A.5 complete — context interpretation + exercise-authoring boundaries
 N-BIO-7B.1 complete — dynamic-resistance evidence/coordinate contract
 N-BIO-7B.2 Candidate v1 frozen/rejected
 N-BIO-7B.3/4 historical validation + installed-history acceptance infrastructure complete
-N-BIO-7B.X ACTIVE — adaptive inference architecture consolidation
-N-BIO-7C   NOT STARTED
-later 7C–7G retain their intended product/domain destinations but must consume this corrected inference architecture
+N-BIO-7B.X complete — corrected adaptive-inference consolidation; Sparse selected, Dense oracle retained, Laplace rejected production
+N-BIO-7C   ACTIVE — loaded-hold, duration-only and repeated-contraction structural/pre-validation under NON_DYNAMIC_CAPABILITY_CONTRACT.md
+PD-001     OPEN — empirical human calibration postponed where longitudinal evidence is insufficient; downstream quarantine remains binding
+later 7D–7G retain their intended product/domain destinations and must consume the corrected inference/7C contracts without treating PD-001 as a pass
 N-BIO-8   later constrained programme-resolution/decision layer; collaboration gates mandatory
 N-BIO-9   later context/Health/intelligence/data integration
 Native Cutover last

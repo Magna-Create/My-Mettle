@@ -1,6 +1,6 @@
 # N-BIO-7C — Non-dynamic Same-profile Capability Contract
 
-Status: **N-BIO-7C ACTIVE — candidate models pre-registered before implementation.**
+Status: **N-BIO-7C ACTIVE — structural/pre-validation implementation; empirical calibration quarantined by PD-001.**
 
 This is the normative contract for the single consolidated N-BIO-7C mission covering `LOADED_HOLD`, `DURATION_ONLY` and `REPEATED_CONTRACTION`. It consumes the completed N-BIO-7B.X adaptive-inference architecture. It does not reopen the 7B.X solver decision and does not authorise N-BIO-7D or later biological/product work.
 
@@ -256,4 +256,16 @@ Real history uses whole-session chronological evaluation only where sufficient. 
 
 N-BIO-7C remains SHADOW/developer inference foundation. `BENCHMARK_V0` remains normal product authority. No normal workout/prescription/order/prefill or normal-user capability display changes are authorised.
 
-N-BIO-7D SetDemand/dose work and every later biological/translation/conditioning/V8 feature remain strictly out of scope.
+N-BIO-7D SetDemand/dose work and every later biological/translation/conditioning/V8 feature remain strictly out of scope while this 7C mission is active.
+
+## 16. PD-001 amended closure rule
+
+`POSTPONED_DEVELOPMENT.md` entry **PD-001** is authoritative for the empirical-status boundary. N-BIO-7C may close its initial architecture mission when the structural/pre-validation gate is complete even if current longitudinal history cannot support meaningful calibration of these three family-specific numerical models.
+
+The hard, non-deferrable closure requirements remain semantic/family/laterality correctness; immutable identities; lower-bound and capability/action-policy separation; synthetic latent-truth recovery; adversarial boundaries; widening extrapolation uncertainty; Adaptive-Sparse fidelity/stability against Dense; persistence/reload/delete/full replay; Native backup and Room14 integrity; raw/prescription/product-authority invariance; typed fail-closed numerical behaviour; documentation; and exact-head CI.
+
+Where semantically valid longitudinal history is insufficient, family/profile empirical status is **`EMPIRICAL_ACCURACY_PENDING`** or **`NOT_EVALUATED_REAL_HISTORY`**, never `PASS`. Synthetic latent-truth validation proves implementation against the declared candidate mathematics; it does not prove real-human accuracy of equations, priors, process volatility, slack/noise assumptions or far-domain extrapolation.
+
+Until PD-001 is later closed, 7C numerical outputs remain quarantined from normal-user authority and downstream phases may consume only the contracts/interfaces without inferring empirical validation from a finite posterior. Raw evidence and immutable model versions remain replayable for later candidate refinement.
+
+N-BIO-7D is not authorised until this amended 7C structural closure is complete.

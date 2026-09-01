@@ -326,19 +326,25 @@ private class NonDynamicLogFrontierCore(
             }
         }
         val x = if (input == null) 0.0 else ln(input / requireNotNull(fit.referenceCoordinate))
-        val logDomainMin = ln(config.outputPriorMinimum)
-        val logDomainMax = ln(config.outputPriorMaximum)
+        val safeExpLogMin = ln(Double.MIN_NORMAL)
+        val safeExpLogMax = ln(Double.MAX_VALUE)
         val logValues = fit.posteriorNodes.map { node ->
             val value = node.logFrontierAtReference + node.trajectory * offset - (node.slope ?: 0.0) * x
-            if (!value.isFinite() || value !in logDomainMin..logDomainMax) {
+            if (!value.isFinite() || value !in safeExpLogMin..safeExpLogMax) {
                 throw NonDynamicCapabilityFitException(
                     NonDynamicFitFailureReason.NON_FINITE_POSTERIOR,
-                    "7C ${fit.family.storageValue} query left the configured numerical output domain; prediction is unavailable.",
+                    "7C ${fit.family.storageValue} query cannot be represented safely in finite positive output space.",
                 )
             }
             WeightedValue(value, node.posteriorWeight)
         }
         val direct = summary(logValues.map { WeightedValue(exp(it.value), it.weight) })
+        if (direct.p50 !in config.outputPriorMinimum..config.outputPriorMaximum) {
+            throw NonDynamicCapabilityFitException(
+                NonDynamicFitFailureReason.NON_FINITE_POSTERIOR,
+                "7C ${fit.family.storageValue} query median left the configured numerical output domain; prediction is unavailable.",
+            )
+        }
         val inputDistance = if (input == null || fit.observedInputMin == null || fit.observedInputMax == null) 0.0 else when {
             input < fit.observedInputMin -> ln(fit.observedInputMin / input)
             input > fit.observedInputMax -> ln(input / fit.observedInputMax)
@@ -364,6 +370,12 @@ private class NonDynamicLogFrontierCore(
         val approximateLower = exp(meanLog - z90 * totalLogSd)
         val approximateUpper = exp(meanLog + z90 * totalLogSd)
         val approximateVariance = (exp(totalLogVariance) - 1.0) * exp(2.0 * meanLog + totalLogVariance)
+        if (!approximateLower.isFinite() || !approximateUpper.isFinite() || !approximateVariance.isFinite()) {
+            throw NonDynamicCapabilityFitException(
+                NonDynamicFitFailureReason.NON_FINITE_POSTERIOR,
+                "7C ${fit.family.storageValue} extrapolation uncertainty became non-finite; prediction is unavailable.",
+            )
+        }
         val widened = PosteriorSummary(
             credibleLower05 = min(direct.p05, approximateLower),
             estimateMedian = direct.p50,

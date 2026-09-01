@@ -28,6 +28,8 @@ Use this directory in the following order.
 - [`CONTEXT_INTERPRETATION_CONTRACT.md`](./CONTEXT_INTERPRETATION_CONTRACT.md) — N-BIO-7A.5 canonical-note ownership, bounded tag ontology, interpreter/fallback/privacy boundary, provenance and zero-effect N-BIO context interface.
 - [`EXERCISE_AUTHORING_CONTRACT.md`](./EXERCISE_AUTHORING_CONTRACT.md) — authoritative protocol for externally proposed exercise/execution/recruitment semantics before they enter the existing Native authoring pathway.
 - [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md) — N-BIO-7B evidence/coordinate contract, frozen Candidate-v1 record, chronological validation, SHADOW persistence and Candidate-v2 development evidence. Read it together with the adaptive-inference supplement for current capability/policy and solver semantics.
+- [`NON_DYNAMIC_CAPABILITY_CONTRACT.md`](./NON_DYNAMIC_CAPABILITY_CONTRACT.md) — normative N-BIO-7C loaded-hold, duration-only and repeated-contraction capability contract.
+- [`POSTPONED_DEVELOPMENT.md`](./POSTPONED_DEVELOPMENT.md) — deferred-validation register; PD-001 permits 7C structural closure while explicitly quarantining unearned empirical claims.
 - [`INFERENCE_BACKEND_AUDIT.md`](./INFERENCE_BACKEND_AUDIT.md) — current Android numerical-backend audit and profiling-first JVM/native/SIMD/Vulkan/LiteRT decision ladder.
 - [`exercise-import.schema.json`](./exercise-import.schema.json) — Draft 2020-12 machine-readable structural exchange schema, format v1.
 - [`exercise-import-example.json`](./exercise-import-example.json) — canonical validated authoring example.
@@ -40,8 +42,8 @@ Use this directory in the following order.
 7B.1    complete — dynamic-resistance evidence eligibility + coordinate/model contract
 7B.2    Candidate v1 frozen/rejected — implementation retained as historical/reference evidence
 7B.3/4  complete as historical validation infrastructure — correction-aware chronology, SHADOW persistence, diagnostics, installed-history acceptance
-7B.X    ACTIVE — Adaptive Inference Architecture Consolidation; one consolidated mission, not a ladder of invented 7B.5/7B.6 phases
-7C      NOT STARTED
+7B.X    complete — Adaptive Sparse selected for forward Candidate-v2 inference; Dense retained oracle; Conditional Laplace rejected production
+7C      ACTIVE — loaded-hold, duration-only and repeated-contraction structural/pre-validation; PD-001 empirical accuracy pending where evidence is insufficient
 ```
 
 ### Candidate-v1 record
@@ -105,4 +107,4 @@ Do not load both full raw research bodies into ordinary implementation context.
 
 Existing `docs/N_BIO_*.md` files remain historical implementation-stage documentation. The vNext authority stack above governs forward work where they conflict.
 
-N-BIO-7C has not started.
+N-BIO-7C is the active consolidated capability-family mission; N-BIO-7D has not started.

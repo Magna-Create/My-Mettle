@@ -55,9 +55,13 @@ class NonDynamicCapabilityAdversarialTest {
         }
         val one = fit(profile, single)
         val two = fit(profile, replicated)
-        assertEquals(one.frontierAtReference.summary, two.frontierAtReference.summary)
-        assertEquals(one.slope!!.summary, two.slope!!.summary)
-        assertEquals(one.trajectory.summary, two.trajectory.summary)
+        assertEquals(5, one.support.effectiveIndependentSessionCount)
+        assertEquals(5, two.support.effectiveIndependentSessionCount)
+        assertEquals(5, one.support.observationCount)
+        assertEquals(10, two.support.observationCount)
+        assertSummaryClose(requireNotNull(one.frontierAtReference.summary), requireNotNull(two.frontierAtReference.summary))
+        assertSummaryClose(requireNotNull(one.slope).summary, requireNotNull(two.slope).summary)
+        assertSummaryClose(one.trajectory.summary, two.trajectory.summary)
     }
 
     @Test
@@ -113,6 +117,23 @@ class NonDynamicCapabilityAdversarialTest {
             setOf(NonDynamicExclusionReason.WARM_UP_EXCLUDED, NonDynamicExclusionReason.LATERALITY_INCOMPATIBLE),
             projection.exclusions.map { it.reason }.toSet(),
         )
+    }
+
+    private fun assertSummaryClose(
+        left: dev.kian.mymettle.domain.inference.PosteriorSummary,
+        right: dev.kian.mymettle.domain.inference.PosteriorSummary,
+    ) {
+        listOf(
+            left.p05 to right.p05,
+            left.p50 to right.p50,
+            left.p95 to right.p95,
+            left.posteriorVariance to right.posteriorVariance,
+        ).forEach { (a, b) ->
+            assertTrue(
+                kotlin.math.abs(a - b) <= 1e-10 * kotlin.math.max(1.0, kotlin.math.max(kotlin.math.abs(a), kotlin.math.abs(b))),
+                "same-session replication changed posterior: $a vs $b",
+            )
+        }
     }
 
     private fun fit(profile: NonDynamicProfileSemantics, evidence: List<CompletedSetEvidence>) =

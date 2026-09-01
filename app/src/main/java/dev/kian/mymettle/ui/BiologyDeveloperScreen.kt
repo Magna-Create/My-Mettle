@@ -112,6 +112,21 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 .onFailure(viewModel::reportError)
         }
     }
+    val nBio7CCapabilityExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            runCatching {
+                val json = viewModel.nBio7CCapabilityJson()
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri, "wt")?.bufferedWriter()?.use { it.write(json) }
+                        ?: error("Android could not open the selected N-BIO-7C report file.")
+                }
+            }.onSuccess { viewModel.markNBio7CCapabilityExported() }
+                .onFailure(viewModel::reportError)
+        }
+    }
     val liteBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
@@ -226,7 +241,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                         Button(
                             onClick = viewModel::recompute,
                             enabled = state.task.phase != BiologyTaskPhase.RUNNING && snapshot.routineVersionId != null &&
-                                !state.nBio7BAcceptanceRunning && !state.adaptiveInferenceRunning,
+                                !state.nBio7BAcceptanceRunning && !state.adaptiveInferenceRunning && !state.nBio7CCapabilityRunning,
                             modifier = Modifier.fillMaxWidth(),
                         ) { Text("Recompute biological state") }
                         OutlinedButton(
@@ -267,7 +282,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                             onClick = viewModel::runNBio7BAcceptance,
                             enabled = !state.nBio7BAcceptanceRunning && !state.adaptiveInferenceRunning &&
                                 !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning &&
-                                state.task.phase != BiologyTaskPhase.RUNNING,
+                                !state.nBio7CCapabilityRunning && state.task.phase != BiologyTaskPhase.RUNNING,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             if (state.nBio7BAcceptanceRunning) {
@@ -396,7 +411,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                             onClick = viewModel::runAdaptiveInferenceAcceptance,
                             enabled = !state.adaptiveInferenceRunning && !state.nBio7BAcceptanceRunning &&
                                 !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning &&
-                                state.task.phase != BiologyTaskPhase.RUNNING,
+                                !state.nBio7CCapabilityRunning && state.task.phase != BiologyTaskPhase.RUNNING,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             if (state.adaptiveInferenceRunning) {
@@ -479,6 +494,76 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 }
 
                 item {
+                    DebugCard("N-BIO-7C capability acceptance") {
+                        Text(
+                            "One consolidated structural/pre-validation action for loaded holds, duration-only and repeated-contraction capability. Runs synthetic latent-truth recovery, audits installed Room14 history, compares Adaptive Sparse with Dense, verifies SHADOW persistence/delete/replay and Native backup safety. PD-001 keeps empirical accuracy explicitly pending where longitudinal evidence is insufficient.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Button(
+                            onClick = viewModel::runNBio7CCapabilityAcceptance,
+                            enabled = !state.nBio7CCapabilityRunning && !state.nBio7BAcceptanceRunning &&
+                                !state.adaptiveInferenceRunning && !state.nBio6VerificationRunning &&
+                                !state.nBio6LiteVerificationRunning && state.task.phase != BiologyTaskPhase.RUNNING,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            if (state.nBio7CCapabilityRunning) {
+                                CircularProgressIndicator(modifier = Modifier.padding(end = 10.dp))
+                                Text("Running N-BIO-7C capability acceptance…")
+                            } else {
+                                Text("Run N-BIO 7C Capability Acceptance")
+                            }
+                        }
+                        state.nBio7CCapabilityProgress?.let { progress ->
+                            DebugLine("Progress", if (progress.totalGroups > 0) "${progress.completedGroups}/${progress.totalGroups}" else "Preparing")
+                            Text(progress.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        state.nBio7CCapabilityReport?.let { report ->
+                            HorizontalDivider()
+                            DebugLine("Structural pre-validation", report.structuralVerdict.storageValue)
+                            DebugLine("Empirical accuracy", report.empiricalAccuracyStatus.storageValue)
+                            DebugLine("Overall", report.overallVerdict.storageValue)
+                            DebugLine("Room", "v${report.roomSchemaVersion}")
+                            DebugLine("Synthetic", if (report.synthetic.passed) "PASS" else "FAIL")
+                            DebugLine("Raw evidence", if (report.rawEvidenceUnchanged) "UNCHANGED" else "CHANGED")
+                            DebugLine("Prescriptions", if (report.prescriptionStateUnchanged) "UNCHANGED" else "CHANGED")
+                            DebugLine("BENCHMARK authority", if (report.benchmarkAuthorityUnchanged) "UNCHANGED" else "CHANGED")
+                            DebugLine("Native backup", if (report.backupRoundTrip.passed) "PASS" else "FAIL")
+                            DebugLine("Total runtime", "${report.totalElapsedMillis} ms")
+                            report.familyReports.forEach { family ->
+                                HorizontalDivider()
+                                Text(family.family.storageValue, fontWeight = FontWeight.SemiBold)
+                                DebugLine("Structural", family.structuralVerdict.storageValue)
+                                DebugLine("Empirical", family.empiricalAccuracyStatus.storageValue)
+                                DebugLine("Profiles", family.definedExecutionProfileVersions.toString())
+                                DebugLine("Real evidence", "${family.currentEligibleObservations} obs · ${family.independentSessions} sessions")
+                            }
+                            report.profileReports.forEach { profile ->
+                                HorizontalDivider()
+                                Text("${profile.label} · ${profile.side}", fontWeight = FontWeight.SemiBold)
+                                DebugLine("Family", profile.family.storageValue)
+                                DebugLine("Evidence", "${profile.eligibleObservations} obs · ${profile.independentSessions} sessions")
+                                DebugLine("Empirical", profile.empiricalAccuracyStatus.storageValue)
+                                DebugLine("Persist/reload", profile.persistReloadEquivalent?.let { if (it) "PASS" else "FAIL" } ?: "n/a")
+                                DebugLine("Delete-derived", profile.deleteDerivedConfirmed?.let { if (it) "PASS" else "FAIL" } ?: "n/a")
+                                DebugLine("Full replay", profile.fullReplayEquivalent?.let { if (it) "PASS" else "FAIL" } ?: "n/a")
+                                profile.numericalFailure?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                                profile.limitations.forEach { limitation ->
+                                    Text("• $limitation", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    runCatching { viewModel.nBio7CCapabilityJson() }
+                                        .onSuccess { nBio7CCapabilityExportLauncher.launch("my-mettle-n-bio-7c-capability-${Instant.now().epochSecond}.json") }
+                                        .onFailure(viewModel::reportError)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text("Export N-BIO-7C capability JSON") }
+                        }
+                    }
+                }
+
+                item {
                     DebugCard("N‑BIO‑6 device acceptance") {
                         Text(
                             "Runs production Room, profile authoring, workout, history and conservative inference paths in isolated databases. Your Native history is not modified.",
@@ -487,7 +572,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                         Button(
                             onClick = viewModel::runNBio6DeviceVerification,
                             enabled = !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning &&
-                                !state.nBio7BAcceptanceRunning && !state.adaptiveInferenceRunning,
+                                !state.nBio7BAcceptanceRunning && !state.adaptiveInferenceRunning && !state.nBio7CCapabilityRunning,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             if (state.nBio6VerificationRunning) {
@@ -518,7 +603,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                         OutlinedButton(
                             onClick = { liteBackupLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
                             enabled = !state.nBio6VerificationRunning && !state.nBio6LiteVerificationRunning &&
-                                !state.nBio7BAcceptanceRunning && !state.adaptiveInferenceRunning,
+                                !state.nBio7BAcceptanceRunning && !state.adaptiveInferenceRunning && !state.nBio7CCapabilityRunning,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(if (state.nBio6LiteVerificationRunning) "Validating reviewed translation…" else "Validate a reviewed Lite translation")

@@ -82,6 +82,26 @@ class NonDynamicCapabilityParameterCodecTest {
     }
 
     @Test
+    fun `codec supports operational strings beyond modified UTF ceiling`() {
+        val fit = fitDurationHistory()
+        val longNote = "x".repeat(70_000)
+        val expanded = fit.copy(
+            solverDiagnostics = fit.solverDiagnostics.copy(notes = fit.solverDiagnostics.notes + longNote),
+        )
+        val encoded = NonDynamicCapabilityParameterCodec.encode(expanded)
+        val decoded = NonDynamicCapabilityParameterCodec.decode(
+            parameterSchemaVersion = NonDynamicCapabilityParameterCodec.SCHEMA_VERSION,
+            encodedParameters = encoded,
+            frontierAtReference = expanded.frontierAtReference,
+            executionProfileVersionId = expanded.executionProfileVersionId,
+            side = expanded.side,
+            modelConfigId = expanded.modelConfigId,
+        )
+        assertTrue(longNote in decoded.solverDiagnostics.notes)
+        assertTrue(NonDynamicCapabilityParameterCodec.scientificallyEquivalent(expanded, decoded))
+    }
+
+    @Test
     fun `unknown future codec fails closed`() {
         val fit = fitDurationHistory()
         assertFailsWith<IllegalArgumentException> {
