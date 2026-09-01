@@ -26,13 +26,11 @@ import dev.kian.mymettle.domain.performance.ResistanceSemantics
 import dev.kian.mymettle.domain.performance.UnitId
 import dev.kian.mymettle.engine.inference.NonDynamicPosteriorFidelity
 import java.time.Instant
-import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class NonDynamicCapabilityModelTest {
@@ -308,7 +306,7 @@ class NonDynamicCapabilityModelTest {
             if (duration != null) add(metric(PerformanceMetric.DURATION, duration, UnitId.SECOND))
             if (cadence != null) add(metric(PerformanceMetric.CADENCE, cadence, UnitId.EVENTS_PER_MINUTE))
         }
-        val suffix = "${profile.executionProfileVersionId.value}_${session}_$ordinal_${values.joinToString("_") { it.metric.storageValue }}"
+        val suffix = "${profile.executionProfileVersionId.value}_${session}_${ordinal}_${values.joinToString("_") { it.metric.storageValue }}"
         return CompletedSetEvidence(
             setRecordId = "set_$suffix",
             observationId = "obs_$suffix",
