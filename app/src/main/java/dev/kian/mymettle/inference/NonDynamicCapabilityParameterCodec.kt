@@ -59,42 +59,42 @@ object NonDynamicCapabilityParameterCodec {
         require(encodedParameters.startsWith(PREFIX)) { "Unsupported N-BIO-7C parameter payload prefix." }
         val bytes = inflate(Base64.getUrlDecoder().decode(encodedParameters.removePrefix(PREFIX)))
         DataInputStream(ByteArrayInputStream(bytes)).use { input ->
-            require(input.readString() == MAGIC)
-            val storedProfile = ExecutionProfileVersionId(input.readString())
-            val storedSide = Laterality.entries.first { it.storageValue == input.readString() }
-            val family = MetricFamily.entries.first { it.storageValue == input.readString() }
-            val horizon = Instant.parse(input.readString())
+            require(input.readUtf8String() == MAGIC)
+            val storedProfile = ExecutionProfileVersionId(input.readUtf8String())
+            val storedSide = Laterality.entries.first { it.storageValue == input.readUtf8String() }
+            val family = MetricFamily.entries.first { it.storageValue == input.readUtf8String() }
+            val horizon = Instant.parse(input.readUtf8String())
             val reference = input.readNullableDouble()
-            val canonicalUnit = UnitId.entries.first { it.storageValue == input.readString() }
-            val storedConfigId = ModelConfigId(input.readString())
+            val canonicalUnit = UnitId.entries.first { it.storageValue == input.readUtf8String() }
+            val storedConfigId = ModelConfigId(input.readUtf8String())
             require(storedProfile == executionProfileVersionId && storedSide == side && storedConfigId == modelConfigId) {
                 "N-BIO-7C codec envelope does not match persisted capability-state identity."
             }
-            val math = InferenceMathematicalModelIdentity(input.readString(), input.readString(), input.readString())
+            val math = InferenceMathematicalModelIdentity(input.readUtf8String(), input.readUtf8String(), input.readUtf8String())
             val solverIdentity = InferenceSolverIdentity(
-                solverFamily = InferenceSolverFamily.entries.first { it.storageValue == input.readString() },
-                semanticVersion = input.readString(),
-                computeBackend = InferenceComputeBackend.entries.first { it.storageValue == input.readString() },
+                solverFamily = InferenceSolverFamily.entries.first { it.storageValue == input.readUtf8String() },
+                semanticVersion = input.readUtf8String(),
+                computeBackend = InferenceComputeBackend.entries.first { it.storageValue == input.readUtf8String() },
                 deterministicReplay = input.readBoolean(),
-                approximationDefinition = input.readString(),
+                approximationDefinition = input.readUtf8String(),
             )
             val diagnostics = InferenceSolverDiagnostics(
                 solverIdentity = solverIdentity,
-                posteriorRepresentation = InferencePosteriorRepresentation.entries.first { it.storageValue == input.readString() },
+                posteriorRepresentation = InferencePosteriorRepresentation.entries.first { it.storageValue == input.readUtf8String() },
                 evaluatedNodeCount = input.readNullableLong(),
                 effectiveNodeCount = input.readNullableDouble(),
                 updateRuntimeNanos = input.readNullableLong(),
                 peakWorkingBytes = input.readNullableLong(),
                 approximationFailure = input.readNullableString(),
-                notes = input.readStringList().toSet(),
+                notes = input.readUtf8StringList().toSet(),
             )
-            val evidencePolicy = input.readString()
+            val evidencePolicy = input.readUtf8String()
             val support = EvidenceSupport(
                 observationCount = input.readInt(),
                 effectiveIndependentSessionCount = input.readInt(),
                 firstEvidenceAt = input.readNullableString()?.let(Instant::parse),
                 lastEvidenceAt = input.readNullableString()?.let(Instant::parse),
-                evidenceFamily = EvidenceFamily(input.readString()),
+                evidenceFamily = EvidenceFamily(input.readUtf8String()),
             )
             val observedInputMin = input.readNullableDouble()
             val observedInputMax = input.readNullableDouble()
@@ -116,11 +116,11 @@ object NonDynamicCapabilityParameterCodec {
                     posteriorWeight = input.readDouble(),
                 )
             }
-            val selectedObservationIds = input.readStringList()
-            val selectedSessionIds = input.readStringList()
+            val selectedObservationIds = input.readUtf8StringList()
+            val selectedSessionIds = input.readUtf8StringList()
             val originalBaseNodeCount = input.readInt()
             val retainedBaseNodeCount = input.readInt()
-            val warnings = input.readStringList().toSet()
+            val warnings = input.readUtf8StringList().toSet()
             require(input.available() == 0) { "N-BIO-7C parameter payload has trailing unsupported fields." }
             require(frontierAtReference.support == support) { "Persisted scalar capability support differs from joint 7C state." }
             return NonDynamicCapabilityFit(
@@ -157,36 +157,36 @@ object NonDynamicCapabilityParameterCodec {
     private fun encodeBinary(fit: NonDynamicCapabilityFit, includeOperationalTelemetry: Boolean): ByteArray {
         val bytes = ByteArrayOutputStream()
         DataOutputStream(bytes).use { output ->
-            output.writeString(MAGIC)
-            output.writeString(fit.executionProfileVersionId.value)
-            output.writeString(fit.side.storageValue)
-            output.writeString(fit.family.storageValue)
-            output.writeString(fit.inferenceHorizon.toString())
+            output.writeUtf8String(MAGIC)
+            output.writeUtf8String(fit.executionProfileVersionId.value)
+            output.writeUtf8String(fit.side.storageValue)
+            output.writeUtf8String(fit.family.storageValue)
+            output.writeUtf8String(fit.inferenceHorizon.toString())
             output.writeNullableDouble(fit.referenceCoordinate)
-            output.writeString(fit.canonicalUnit.storageValue)
-            output.writeString(fit.modelConfigId.value)
-            output.writeString(fit.mathematicalModelIdentity.family)
-            output.writeString(fit.mathematicalModelIdentity.semanticVersion)
-            output.writeString(fit.mathematicalModelIdentity.definition)
+            output.writeUtf8String(fit.canonicalUnit.storageValue)
+            output.writeUtf8String(fit.modelConfigId.value)
+            output.writeUtf8String(fit.mathematicalModelIdentity.family)
+            output.writeUtf8String(fit.mathematicalModelIdentity.semanticVersion)
+            output.writeUtf8String(fit.mathematicalModelIdentity.definition)
             val solver = fit.solverDiagnostics.solverIdentity
-            output.writeString(solver.solverFamily.storageValue)
-            output.writeString(solver.semanticVersion)
-            output.writeString(solver.computeBackend.storageValue)
+            output.writeUtf8String(solver.solverFamily.storageValue)
+            output.writeUtf8String(solver.semanticVersion)
+            output.writeUtf8String(solver.computeBackend.storageValue)
             output.writeBoolean(solver.deterministicReplay)
-            output.writeString(solver.approximationDefinition)
-            output.writeString(fit.solverDiagnostics.posteriorRepresentation.storageValue)
+            output.writeUtf8String(solver.approximationDefinition)
+            output.writeUtf8String(fit.solverDiagnostics.posteriorRepresentation.storageValue)
             output.writeNullableLong(if (includeOperationalTelemetry) fit.solverDiagnostics.evaluatedNodeCount else null)
             output.writeNullableDouble(if (includeOperationalTelemetry) fit.solverDiagnostics.effectiveNodeCount else null)
             output.writeNullableLong(if (includeOperationalTelemetry) fit.solverDiagnostics.updateRuntimeNanos else null)
             output.writeNullableLong(if (includeOperationalTelemetry) fit.solverDiagnostics.peakWorkingBytes else null)
             output.writeNullableString(fit.solverDiagnostics.approximationFailure)
-            output.writeStringList(if (includeOperationalTelemetry) fit.solverDiagnostics.notes.sorted() else emptyList())
-            output.writeString(fit.evidencePolicyIdentity)
+            output.writeUtf8StringList(if (includeOperationalTelemetry) fit.solverDiagnostics.notes.sorted() else emptyList())
+            output.writeUtf8String(fit.evidencePolicyIdentity)
             output.writeInt(fit.support.observationCount)
             output.writeInt(fit.support.effectiveIndependentSessionCount)
             output.writeNullableString(fit.support.firstEvidenceAt?.toString())
             output.writeNullableString(fit.support.lastEvidenceAt?.toString())
-            output.writeString(fit.support.evidenceFamily.value)
+            output.writeUtf8String(fit.support.evidenceFamily.value)
             output.writeNullableDouble(fit.observedInputMin)
             output.writeNullableDouble(fit.observedInputMax)
             output.writeDouble(fit.observedOutputMin)
@@ -204,11 +204,11 @@ object NonDynamicCapabilityParameterCodec {
                 output.writeDouble(node.noiseScale)
                 output.writeDouble(node.posteriorWeight)
             }
-            output.writeStringList(fit.selectedObservationIds)
-            output.writeStringList(fit.selectedSessionIds)
+            output.writeUtf8StringList(fit.selectedObservationIds)
+            output.writeUtf8StringList(fit.selectedSessionIds)
             output.writeInt(fit.originalBaseNodeCount)
             output.writeInt(fit.retainedBaseNodeCount)
-            output.writeStringList(fit.warnings.sorted())
+            output.writeUtf8StringList(fit.warnings.sorted())
         }
         return bytes.toByteArray()
     }
@@ -218,8 +218,8 @@ object NonDynamicCapabilityParameterCodec {
         writeDouble(value.summary.p50)
         writeDouble(value.summary.p95)
         writeDouble(value.summary.posteriorVariance)
-        writeString(value.identification.storageValue)
-        writeString(value.semanticUnit)
+        writeUtf8String(value.identification.storageValue)
+        writeUtf8String(value.semanticUnit)
     }
 
     private fun DataOutputStream.writeNullableParameterPosterior(value: NonDynamicParameterPosterior?) {
@@ -229,21 +229,21 @@ object NonDynamicCapabilityParameterCodec {
 
     private fun DataInputStream.readParameterPosterior(): NonDynamicParameterPosterior = NonDynamicParameterPosterior(
         summary = PosteriorSummary(readDouble(), readDouble(), readDouble(), readDouble()),
-        identification = DynamicParameterIdentification.entries.first { it.storageValue == readString() },
-        semanticUnit = readString(),
+        identification = DynamicParameterIdentification.entries.first { it.storageValue == readUtf8String() },
+        semanticUnit = readUtf8String(),
     )
 
     private fun DataInputStream.readNullableParameterPosterior(): NonDynamicParameterPosterior? =
         if (readBoolean()) readParameterPosterior() else null
 
-    private fun DataOutputStream.writeString(value: String) {
+    private fun DataOutputStream.writeUtf8String(value: String) {
         val bytes = value.toByteArray(StandardCharsets.UTF_8)
         require(bytes.size <= MAX_STRING_BYTES) { "N-BIO-7C codec string exceeds $MAX_STRING_BYTES UTF-8 bytes." }
         writeInt(bytes.size)
         write(bytes)
     }
 
-    private fun DataInputStream.readString(): String {
+    private fun DataInputStream.readUtf8String(): String {
         val length = readInt()
         require(length in 0..MAX_STRING_BYTES) { "N-BIO-7C codec string length $length is invalid." }
         val bytes = ByteArray(length)
@@ -255,10 +255,10 @@ object NonDynamicCapabilityParameterCodec {
     private fun DataInputStream.readNullableDouble(): Double? = if (readBoolean()) readDouble() else null
     private fun DataOutputStream.writeNullableLong(value: Long?) { writeBoolean(value != null); if (value != null) writeLong(value) }
     private fun DataInputStream.readNullableLong(): Long? = if (readBoolean()) readLong() else null
-    private fun DataOutputStream.writeNullableString(value: String?) { writeBoolean(value != null); if (value != null) writeString(value) }
-    private fun DataInputStream.readNullableString(): String? = if (readBoolean()) readString() else null
-    private fun DataOutputStream.writeStringList(values: List<String>) { writeInt(values.size); values.forEach { writeString(it) } }
-    private fun DataInputStream.readStringList(): List<String> = List(readInt()) { readString() }
+    private fun DataOutputStream.writeNullableString(value: String?) { writeBoolean(value != null); if (value != null) writeUtf8String(value) }
+    private fun DataInputStream.readNullableString(): String? = if (readBoolean()) readUtf8String() else null
+    private fun DataOutputStream.writeUtf8StringList(values: List<String>) { writeInt(values.size); values.forEach { writeUtf8String(it) } }
+    private fun DataInputStream.readUtf8StringList(): List<String> = List(readInt()) { readUtf8String() }
 
     private fun deflate(bytes: ByteArray): ByteArray {
         val output = ByteArrayOutputStream()
