@@ -15,7 +15,12 @@ class NBio7CSyntheticValidationTest {
         assertTrue(
             report.passed,
             report.cases.filterNot { it.passed }.joinToString("\n") { failed ->
-                "${failed.family.storageValue}/${failed.scenario}: failure=${failed.numericalFailure} checks=${failed.recoveryChecks.filterValues { !it }}"
+                "${failed.family.storageValue}/${failed.scenario}: " +
+                    "failure=${failed.numericalFailure} " +
+                    "truthSlope=${failed.truthSlope} " +
+                    "sparseSlope=${failed.sparseSlope} " +
+                    "denseSlope=${failed.denseSlope} " +
+                    "checks=${failed.recoveryChecks.filterValues { !it }}"
             },
         )
     }
