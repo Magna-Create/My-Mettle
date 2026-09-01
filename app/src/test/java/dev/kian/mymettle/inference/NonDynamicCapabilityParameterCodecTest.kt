@@ -120,6 +120,7 @@ class NonDynamicCapabilityParameterCodecTest {
                         Quantity(30.0 + 5.0 * session, UnitId.SECOND),
                     ),
                 ),
+                bodyMassContextKg = null,
                 warmUp = false,
                 kind = "work",
                 observationSource = "corrected_lite_import",
