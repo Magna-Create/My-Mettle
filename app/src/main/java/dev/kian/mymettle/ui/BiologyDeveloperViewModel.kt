@@ -23,6 +23,8 @@ import dev.kian.mymettle.developer.NBio7BAcceptanceProgress
 import dev.kian.mymettle.developer.NBio7BAcceptanceReport
 import dev.kian.mymettle.developer.NBio7BClosureAcceptanceReport
 import dev.kian.mymettle.developer.NBio7BClosureAcceptanceRunner
+import dev.kian.mymettle.developer.NBio7CCapabilityAcceptanceReport
+import dev.kian.mymettle.developer.NBio7CCapabilityAcceptanceRunner
 import dev.kian.mymettle.developer.NBioAdaptiveInferenceAcceptanceReport
 import dev.kian.mymettle.developer.NBioAdaptiveInferenceAcceptanceRunner
 import dev.kian.mymettle.workout.TrainingMode
@@ -48,6 +50,9 @@ data class BiologyDeveloperUiState(
     val adaptiveInferenceRunning: Boolean = false,
     val adaptiveInferenceProgress: NBio7BAcceptanceProgress? = null,
     val adaptiveInferenceReport: NBioAdaptiveInferenceAcceptanceReport? = null,
+    val nBio7CCapabilityRunning: Boolean = false,
+    val nBio7CCapabilityProgress: NBio7BAcceptanceProgress? = null,
+    val nBio7CCapabilityReport: NBio7CCapabilityAcceptanceReport? = null,
     val resetComplete: Boolean = false,
     val message: String? = null,
     val error: String? = null,
@@ -61,6 +66,7 @@ class BiologyDeveloperViewModel(
     private val nBio6Verifier: NBio6DeviceVerificationRepository,
     private val nBio7BClosureRunner: NBio7BClosureAcceptanceRunner,
     private val adaptiveInferenceRunner: NBioAdaptiveInferenceAcceptanceRunner,
+    private val nBio7CCapabilityRunner: NBio7CCapabilityAcceptanceRunner,
 ) : ViewModel() {
     var uiState by mutableStateOf(BiologyDeveloperUiState())
         private set
@@ -122,7 +128,7 @@ class BiologyDeveloperViewModel(
     }
 
     private fun anyLongAcceptanceRunning(): Boolean =
-        uiState.nBio7BAcceptanceRunning || uiState.adaptiveInferenceRunning ||
+        uiState.nBio7BAcceptanceRunning || uiState.adaptiveInferenceRunning || uiState.nBio7CCapabilityRunning ||
             uiState.nBio6VerificationRunning || uiState.nBio6LiteVerificationRunning
 
     fun runNBio6DeviceVerification() {
@@ -247,6 +253,45 @@ class BiologyDeveloperViewModel(
         uiState = uiState.copy(message = "N-BIO Adaptive Inference acceptance report exported.")
     }
 
+    fun runNBio7CCapabilityAcceptance() {
+        if (anyLongAcceptanceRunning()) return
+        viewModelScope.launch {
+            uiState = uiState.copy(
+                nBio7CCapabilityRunning = true,
+                nBio7CCapabilityProgress = NBio7BAcceptanceProgress(0, 0, "Preparing N-BIO-7C structural capability acceptance"),
+                nBio7CCapabilityReport = null,
+                error = null,
+            )
+            runCatching {
+                withContext(Dispatchers.Default) {
+                    nBio7CCapabilityRunner.run { progress ->
+                        viewModelScope.launch {
+                            uiState = uiState.copy(nBio7CCapabilityProgress = progress)
+                        }
+                    }
+                }
+            }.onSuccess { report ->
+                uiState = uiState.copy(
+                    nBio7CCapabilityRunning = false,
+                    nBio7CCapabilityProgress = null,
+                    nBio7CCapabilityReport = report,
+                    message = "N-BIO-7C capability acceptance complete · structural ${report.structuralVerdict.storageValue} · empirical ${report.empiricalAccuracyStatus.storageValue}.",
+                )
+                refresh()
+            }.onFailure { error ->
+                uiState = uiState.copy(nBio7CCapabilityRunning = false, nBio7CCapabilityProgress = null)
+                showError(error)
+            }
+        }
+    }
+
+    fun nBio7CCapabilityJson(): String = uiState.nBio7CCapabilityReport?.toJson()
+        ?: error("Run N-BIO 7C Capability Acceptance before exporting.")
+
+    fun markNBio7CCapabilityExported() {
+        uiState = uiState.copy(message = "N-BIO-7C capability acceptance report exported.")
+    }
+
     fun resetDatabase() {
         if (uiState.task.phase == BiologyTaskPhase.RUNNING || anyLongAcceptanceRunning()) return
         viewModelScope.launch {
@@ -290,6 +335,7 @@ class BiologyDeveloperViewModelFactory(context: Context) : ViewModelProvider.Fac
             nBio6Verifier = NBio6DeviceVerificationRepository(appContext),
             nBio7BClosureRunner = NBio7BClosureAcceptanceRunner(appContext, database),
             adaptiveInferenceRunner = NBioAdaptiveInferenceAcceptanceRunner(appContext, database),
+            nBio7CCapabilityRunner = NBio7CCapabilityAcceptanceRunner(appContext, database),
         ) as T
     }
 }
