@@ -36,8 +36,7 @@ jobs:
         run: |
           git diff --check
           grep -Fq 'containsWithFloatingPointTolerance' app/src/main/java/dev/kian/mymettle/developer/NBio7CSyntheticValidation.kt
-          grep -Fq 'private class CodecWriter' app/src/main/java/dev/kian/mymettle/inference/NonDynamicCapabilityParameterCodec.kt
-          grep -Fq 'private class CodecReader' app/src/main/java/dev/kian/mymettle/inference/NonDynamicCapabilityParameterCodec.kt
+          grep -Fq 'readStoredEnum' app/src/main/java/dev/kian/mymettle/inference/NonDynamicCapabilityParameterCodec.kt
       - name: Focused 7C regressions
         shell: bash
         run: |
