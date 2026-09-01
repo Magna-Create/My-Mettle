@@ -257,7 +257,7 @@ object NonDynamicCapabilityParameterCodec {
     private fun DataInputStream.readNullableLong(): Long? = if (readBoolean()) readLong() else null
     private fun DataOutputStream.writeNullableString(value: String?) { writeBoolean(value != null); if (value != null) writeString(value) }
     private fun DataInputStream.readNullableString(): String? = if (readBoolean()) readString() else null
-    private fun DataOutputStream.writeStringList(values: List<String>) { writeInt(values.size); values.forEach(::writeUTF) }
+    private fun DataOutputStream.writeStringList(values: List<String>) { writeInt(values.size); values.forEach(::writeString) }
     private fun DataInputStream.readStringList(): List<String> = List(readInt()) { readString() }
 
     private fun deflate(bytes: ByteArray): ByteArray {
