@@ -326,7 +326,7 @@ private class NonDynamicLogFrontierCore(
             }
         }
         val x = if (input == null) 0.0 else ln(input / requireNotNull(fit.referenceCoordinate))
-        val safeExpLogMin = ln(Double.MIN_NORMAL)
+        val safeExpLogMin = ln(java.lang.Double.MIN_NORMAL)
         val safeExpLogMax = ln(Double.MAX_VALUE)
         val logValues = fit.posteriorNodes.map { node ->
             val value = node.logFrontierAtReference + node.trajectory * offset - (node.slope ?: 0.0) * x
