@@ -1,6 +1,6 @@
 # N-BIO-7B Dynamic Resistance Capability Contract
 
-Status: **Candidate v1 frozen/rejected; Candidate v2 implemented as a bounded development experiment; N-BIO-7B.X adaptive-inference consolidation active; physical adaptive-inference acceptance pending.**
+Status: **Candidate v1 frozen/rejected; N-BIO-7B.X adaptive-inference consolidation complete. Adaptive Sparse is the selected forward Candidate-v2 solver, Dense is retained as the bounded high-fidelity oracle, Conditional Laplace is rejected for production, and N-BIO-7C is active under PD-001.**
 
 > The complete pre-adaptive 7B contract is preserved verbatim as [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT_LEGACY_PRE_ADAPTIVE.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT_LEGACY_PRE_ADAPTIVE.md). This document is the current forward contract and must be read with [`ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md`](./ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md).
 
@@ -219,22 +219,17 @@ When independent longitudinal support is insufficient to learn trajectory, the C
 
 ### Candidate-v2 solvers
 
-The valid same-mathematics comparison currently includes:
+The completed same-mathematics comparison includes:
 
-1. **Dense reference** — complete frozen-v1 posterior support crossed with a deterministic trend grid; high-fidelity Kotlin/JVM reference.
-2. **Conditional Laplace** — fast approximation over the same Candidate-v2 mathematical model and same frozen-v1 proposal.
+1. **Dense reference** — complete frozen-v1 posterior support crossed with a deterministic trend grid; retained as the bounded high-fidelity Kotlin/JVM oracle.
+2. **Adaptive Sparse** — deterministic posterior-support pruning over the identical Candidate-v2 mathematics; selected as the forward live Candidate-v2 inference representation.
+3. **Conditional Laplace** — continuous approximation over the same Candidate-v2 mathematical model; rejected for production because installed-history acceptance exposed material posterior/failure instability.
 
-At each direct comparison cutoff, v1 is fitted once and the identical frozen posterior is supplied to both v2 solvers. Timing of the v2 extension is recorded separately from the shared v1 proposal cost.
+At each direct comparison cutoff, v1 is fitted once and the identical frozen posterior is supplied to the Candidate-v2 solvers. Timing of the v2 extension is recorded separately from the shared v1 proposal cost.
 
 ### Candidate-v2 status
 
-Candidate v2 remains a **development candidate** until the consolidated installed-device acceptance report is executed and reviewed.
-
-Its current verdict is therefore:
-
-`INCONCLUSIVE_PENDING_ADAPTIVE_INFERENCE_ACCEPTANCE`
-
-A future result may be PASS, FAIL or remain INCONCLUSIVE. The broader adaptive architecture must not be distorted merely to promote v2.
+Candidate v2 remains **SHADOW / development evidence rather than product authority**, but the N-BIO-7B.X solver decision is closed. Installed-history acceptance selected Adaptive Sparse for forward Candidate-v2 inference, retained Dense as the high-fidelity oracle, and rejected Conditional Laplace for production. Fresh future workouts remain the strongest confirmatory evidence and may justify a future mathematical candidate without reopening the closed solver result by default.
 
 ## 8. Solver architecture
 
@@ -292,7 +287,7 @@ A poor compression result is a valid reason to stop. No TT production solver is 
 
 A generic Gaussian sigma-point solver exists as a fast sequential challenger for models whose posterior shape makes Gaussian moment representation defensible.
 
-Candidate v2's actual same-math fast approximation is currently conditional Laplace. A generic sigma-point success on a Gaussian fixture is not evidence that sigma points preserve the real Candidate-v2 one-sided/heavy-tail posterior.
+Candidate v2's accepted forward same-math approximation is Adaptive Sparse. Conditional Laplace remains implemented as a rejected challenger for diagnostic/regression evidence; a generic sigma-point success on a Gaussian fixture is not evidence that sigma points preserve the real Candidate-v2 one-sided/heavy-tail posterior.
 
 ## 9. Posterior-fidelity contract
 
@@ -310,7 +305,7 @@ At minimum where representable:
 - predictive-distribution divergence;
 - approximation failure.
 
-Candidate-v2 dense-vs-Laplace current-state diagnostics explicitly record posterior fidelity and solver identities.
+Candidate-v2 current-state diagnostics explicitly record Dense-vs-Adaptive-Sparse fidelity and, where numerically available, Dense-vs-Conditional-Laplace fidelity with separate solver identities.
 
 ## 10. Predictive evaluation contract
 
@@ -400,7 +395,7 @@ It exports a privacy-bounded JSON containing:
 - Room/app/device identity;
 - Candidate-v1 frozen status;
 - Candidate-v2 mathematical identity;
-- dense/Laplace solver identities;
+- Dense/Adaptive-Sparse/Conditional-Laplace solver identities;
 - profile/side counts;
 - historical whole-session solver bake-off;
 - CRPS/PIT/WIS/coverage/bias/MAE/catastrophic-contradiction metrics;
@@ -474,4 +469,4 @@ N-BIO-7B.X closes only when the mission can make evidence-backed recommendations
 
 If installed-device evidence is still missing or insufficient, the correct candidate/backend verdict is `INCONCLUSIVE`, not an invented production choice.
 
-N-BIO-7C has not started.
+N-BIO-7B.X is complete. N-BIO-7C is the active consolidated capability-family mission under PD-001; N-BIO-7D has not started.

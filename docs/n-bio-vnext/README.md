@@ -54,17 +54,9 @@ Candidate v1 is frozen as `REJECTED_EMPIRICAL_CALIBRATION_V1`. The installed-his
 
 Candidate v2 has been implemented as a bounded **development experiment**, not product authority. It adds a neutral statistical frontier trajectory to the frozen v1 base and deliberately does not label that trajectory development, recovery, fatigue, skill or biological growth.
 
-The valid same-mathematics Candidate-v2 solver comparison currently consists of:
+The completed same-mathematics Candidate-v2 solver comparison uses **Dense** as the bounded high-fidelity oracle, **Adaptive Sparse** as the selected forward inference representation, and **Conditional Laplace** as a rejected approximation challenger. All direct Candidate-v2 comparisons receive the same frozen-v1 proposal and share the corrected mathematical identity. Generic dense-sequential-grid, low-rank-screen and Gaussian sigma-point implementations remain solver-architecture substrates unless a mathematical adapter makes them genuinely Candidate-v2-equivalent.
 
-```text
-DENSE full-support trend-grid reference
-vs
-CONDITIONAL-LAPLACE approximation
-```
-
-Both receive the same frozen-v1 proposal when directly compared. Generic dense-sequential-grid, adaptive-sparse-grid, low-rank-screen and Gaussian sigma-point implementations also exist as solver-architecture substrates, but they are not to be misreported as Candidate-v2-equivalent solvers unless a mathematical adapter makes their state/transition/likelihood problem genuinely identical.
-
-The consolidated **N-BIO Adaptive Inference Acceptance** developer action is the current installed-Room14 evidence gate. It combines Candidate-v2 retrospective/current-state solver evidence with a separately labelled synthetic same-problem solver-substrate benchmark and exports one privacy-bounded JSON. Historical results remain development evidence; fresh future workouts are stronger confirmatory evidence.
+The consolidated **N-BIO Adaptive Inference Acceptance** installed-Room14 evidence established that solver decision while preserving SHADOW/development-only authority. Historical results remain development evidence; fresh future workouts are stronger confirmatory evidence.
 
 ## Product and safety authority during 7B.X
 
