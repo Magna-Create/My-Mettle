@@ -23,7 +23,10 @@ import dev.kian.mymettle.domain.performance.Laterality
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class DynamicTrendCapabilityParameterCodecTest {
     @Test
@@ -40,6 +43,47 @@ class DynamicTrendCapabilityParameterCodecTest {
         )
         assertEquals(fit, decoded)
         assertEquals(encoded, DynamicTrendCapabilityParameterCodec.encode(decoded))
+    }
+
+    @Test
+    fun `scientific replay equality ignores runtime and operational telemetry`() {
+        val fit = fixture()
+        val replay = fit.copy(
+            solverDiagnostics = fit.solverDiagnostics.copy(
+                evaluatedNodeCount = 999_999,
+                effectiveNodeCount = 77.0,
+                updateRuntimeNanos = 9_999_999,
+                peakWorkingBytes = 999_999_999,
+                notes = setOf("different_worker_count", "different_hardware_sample"),
+            ),
+        )
+        assertNotEquals(DynamicTrendCapabilityParameterCodec.encode(fit), DynamicTrendCapabilityParameterCodec.encode(replay))
+        assertTrue(DynamicTrendCapabilityParameterCodec.scientificallyEquivalent(fit, replay))
+    }
+
+    @Test
+    fun `scientific replay equality rejects posterior config and solver mismatches`() {
+        val fit = fixture()
+        val posteriorMismatch = fit.copy(
+            posteriorNodes = fit.posteriorNodes.map { it.copy(slope = it.slope + 0.01) },
+        )
+        assertFalse(DynamicTrendCapabilityParameterCodec.scientificallyEquivalent(fit, posteriorMismatch))
+
+        val otherConfig = ModelConfigId("candidate-v2-codec-test-other")
+        val configMismatch = fit.copy(
+            modelConfigId = otherConfig,
+            frontierAtLatestSession = fit.frontierAtLatestSession.copy(
+                provenance = fit.frontierAtLatestSession.provenance.copy(modelConfigId = otherConfig),
+            ),
+        )
+        assertFalse(DynamicTrendCapabilityParameterCodec.scientificallyEquivalent(fit, configMismatch))
+
+        val solverMismatch = fit.copy(
+            solverDiagnostics = fit.solverDiagnostics.copy(
+                solverIdentity = fit.solverDiagnostics.solverIdentity.copy(semanticVersion = "codec-test-solver-v2"),
+            ),
+        )
+        assertFalse(DynamicTrendCapabilityParameterCodec.scientificallyEquivalent(fit, solverMismatch))
     }
 
     @Test

@@ -110,13 +110,15 @@ object DynamicTrendFrontierV2 {
 
     val mathematicalModelIdentity: InferenceMathematicalModelIdentity = mathematicalIdentity(config)
 
-    val conditionalLaplaceSolverIdentity = InferenceSolverIdentity(
+    fun conditionalLaplaceSolverIdentity(value: DynamicTrendFrontierConfig): InferenceSolverIdentity = InferenceSolverIdentity(
         solverFamily = InferenceSolverFamily.SEQUENTIAL_LAPLACE,
         semanticVersion = "candidate-v2-conditional-laplace-v1",
         computeBackend = InferenceComputeBackend.KOTLIN_JVM,
         deterministicReplay = true,
-        approximationDefinition = config.approximationVersion,
+        approximationDefinition = value.approximationVersion,
     )
+
+    val conditionalLaplaceSolverIdentity: InferenceSolverIdentity = conditionalLaplaceSolverIdentity(config)
 
     fun mathematicalIdentity(value: DynamicTrendFrontierConfig): InferenceMathematicalModelIdentity =
         InferenceMathematicalModelIdentity(
@@ -186,11 +188,10 @@ data class DynamicTrendFrontierFit(
     val posteriorEffectiveNodeCount: Double,
     val warnings: Set<String>,
     val posteriorNodes: List<DynamicTrendFrontierPosteriorNode>,
-    val mathematicalModelIdentity: InferenceMathematicalModelIdentity = DynamicTrendFrontierV2.mathematicalModelIdentity,
-    val solverDiagnostics: InferenceSolverDiagnostics = InferenceSolverDiagnostics(
-        solverIdentity = DynamicTrendFrontierV2.conditionalLaplaceSolverIdentity,
-        posteriorRepresentation = InferencePosteriorRepresentation.WEIGHTED_DENSE_NODES,
-    ),
+    /** Required explicitly: mathematical candidate identity is independent of numerical solver identity. */
+    val mathematicalModelIdentity: InferenceMathematicalModelIdentity,
+    /** Required explicitly: no default solver identity may masquerade as the implementation that produced this fit. */
+    val solverDiagnostics: InferenceSolverDiagnostics,
 ) : DynamicCapabilityFit {
     init {
         require(referenceRepetitions.isFinite() && referenceRepetitions > 0.0)

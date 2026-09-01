@@ -31,10 +31,8 @@ interface DynamicTrendCandidateV2Solver {
 class DynamicTrendConditionalLaplaceSolverAdapter(
     private val model: DynamicTrendFrontierModel = DynamicTrendFrontierModel(),
 ) : DynamicTrendCandidateV2Solver {
-    override val mathematicalModelIdentity: InferenceMathematicalModelIdentity
-        get() = dev.kian.mymettle.domain.inference.DynamicTrendFrontierV2.mathematicalIdentity(model.config)
-    override val solverIdentity: InferenceSolverIdentity
-        get() = dev.kian.mymettle.domain.inference.DynamicTrendFrontierV2.conditionalLaplaceSolverIdentity
+    override val mathematicalModelIdentity: InferenceMathematicalModelIdentity get() = model.mathematicalModelIdentity
+    override val solverIdentity: InferenceSolverIdentity get() = model.solverIdentity
     override val baseConfig: DynamicStochasticFrontierConfig get() = model.config.baseConfig
     override val nextSessionOffset: Double get() = model.config.nextIndependentSessionOffset
 

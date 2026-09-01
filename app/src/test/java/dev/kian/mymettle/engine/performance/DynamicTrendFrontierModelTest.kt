@@ -13,7 +13,9 @@ import dev.kian.mymettle.domain.inference.DynamicResistanceEvidenceProjection
 import dev.kian.mymettle.domain.inference.DynamicResistanceProfileSemantics
 import dev.kian.mymettle.domain.inference.DynamicResistanceV2Contract
 import dev.kian.mymettle.domain.inference.DynamicTrendFrontierV2
+import dev.kian.mymettle.domain.inference.InferencePosteriorRepresentation
 import dev.kian.mymettle.domain.inference.InferenceSolverFamily
+import dev.kian.mymettle.engine.inference.DynamicTrendConditionalLaplaceSolverAdapter
 import dev.kian.mymettle.domain.inference.ProfileLocalResistanceCoordinate
 import dev.kian.mymettle.domain.performance.Laterality
 import dev.kian.mymettle.domain.performance.LateralityMode
@@ -138,6 +140,30 @@ class DynamicTrendFrontierModelTest {
             model.projectToSessionOffset(pathological, 1.0)
         }
         assertEquals(DynamicCapabilityFitFailureReason.NON_FINITE_POSTERIOR, failure.reason)
+    }
+
+    @Test
+    fun `conditional Laplace fit carries exact configured mathematical and solver identities`() {
+        val evidence = generated(sessions = 5, trend = 0.025, repsBySession = { listOf(8) })
+        val projection = projection(evidence)
+        val horizon = evidence.maxOf { it.completedAt }
+        val base = DynamicStochasticFrontierModel(TEST_MATH_CONFIG.baseConfig).fit(
+            DynamicCapabilityFitRequest(
+                projection,
+                horizon,
+                TEST_MATH_CONFIG.baseConfig.toModelConfig(CONFIG_CREATED_AT),
+            ),
+        )
+        val model = DynamicTrendFrontierModel(TEST_MATH_CONFIG)
+        val solver = DynamicTrendConditionalLaplaceSolverAdapter(model)
+        val fit = solver.fitFromFrozenV1(
+            DynamicCapabilityFitRequest(projection, horizon, solver.modelConfig(CONFIG_CREATED_AT)),
+            base,
+        )
+        assertEquals(solver.mathematicalModelIdentity, fit.mathematicalModelIdentity)
+        assertEquals(solver.solverIdentity, fit.solverDiagnostics.solverIdentity)
+        assertEquals(InferencePosteriorRepresentation.WEIGHTED_DENSE_NODES, fit.solverDiagnostics.posteriorRepresentation)
+        assertTrue(fit.solverDiagnostics.updateRuntimeNanos != null)
     }
 
     @Test

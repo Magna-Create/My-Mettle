@@ -16,6 +16,8 @@ import dev.kian.mymettle.domain.inference.DynamicTrendFrontierConfig
 import dev.kian.mymettle.domain.inference.DynamicTrendFrontierFit
 import dev.kian.mymettle.domain.inference.DynamicTrendFrontierPosteriorNode
 import dev.kian.mymettle.domain.inference.DynamicTrendFrontierV2
+import dev.kian.mymettle.domain.inference.InferencePosteriorRepresentation
+import dev.kian.mymettle.domain.inference.InferenceSolverDiagnostics
 import dev.kian.mymettle.domain.inference.ModelOutputProvenance
 import dev.kian.mymettle.domain.inference.PosteriorEstimate
 import dev.kian.mymettle.domain.inference.PosteriorSummary
@@ -53,6 +55,8 @@ class DynamicTrendFrontierModel(
     private val baseModel: DynamicStochasticFrontierModel = DynamicStochasticFrontierModel(config.baseConfig),
 ) : DynamicCapabilityModel<DynamicTrendFrontierFit> {
     override val modelVersion: String get() = config.semanticVersion
+    val mathematicalModelIdentity get() = DynamicTrendFrontierV2.mathematicalIdentity(config)
+    val solverIdentity get() = DynamicTrendFrontierV2.conditionalLaplaceSolverIdentity(config)
 
     private val slackQuadrature = buildSlackQuadrature(config.baseConfig)
     private val slackScratch = object : ThreadLocal<DoubleArray>() {
@@ -77,6 +81,7 @@ class DynamicTrendFrontierModel(
         request: DynamicCapabilityFitRequest,
         baseFit: DynamicStochasticFrontierFit,
     ): DynamicTrendFrontierFit {
+        val solverStart = System.nanoTime()
         validateRequest(request)
         require(baseFit.executionProfileVersionId == request.projection.profile.executionProfileVersionId)
         require(baseFit.side == request.projection.side)
@@ -246,6 +251,18 @@ class DynamicTrendFrontierModel(
             posteriorEffectiveNodeCount = effectiveNodeCount,
             warnings = warnings,
             posteriorNodes = posteriorNodes,
+            mathematicalModelIdentity = mathematicalModelIdentity,
+            solverDiagnostics = InferenceSolverDiagnostics(
+                solverIdentity = solverIdentity,
+                posteriorRepresentation = InferencePosteriorRepresentation.WEIGHTED_DENSE_NODES,
+                evaluatedNodeCount = rawNodes.size.toLong(),
+                effectiveNodeCount = effectiveNodeCount,
+                updateRuntimeNanos = System.nanoTime() - solverStart,
+                notes = setOf(
+                    "same_candidate_v2_mathematics_as_dense_reference",
+                    "conditional_laplace_solver",
+                ),
+            ),
         )
     }
 

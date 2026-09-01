@@ -37,6 +37,71 @@ object DynamicTrendCapabilityParameterCodec {
         deflate(encodePlain(fit).toByteArray(Charsets.UTF_8)),
     )
 
+    /**
+     * Canonical deterministic scientific equality for replay/persistence checks.
+     *
+     * Runtime duration, evaluated-node counters, peak working memory, worker/thread notes and future
+     * hardware diagnostics are operational telemetry. They must never participate in scientific
+     * equality or hashing. Mathematical model identity and numerical solver identity remain explicit
+     * and independently compared because multiple solvers may evaluate the same candidate model.
+     */
+    fun scientificallyEquivalent(left: DynamicTrendFrontierFit, right: DynamicTrendFrontierFit): Boolean =
+        scientificCanonicalForm(left) == scientificCanonicalForm(right)
+
+    fun scientificCanonicalForm(fit: DynamicTrendFrontierFit): String = buildString {
+        line("executionProfileVersionId", text(fit.executionProfileVersionId.value))
+        line("side", fit.side.storageValue)
+        line("inferenceHorizon", fit.inferenceHorizon.toString())
+        line("referenceRepetitions", fit.referenceRepetitions.toString())
+        line("modelConfigId", text(fit.modelConfigId.value))
+        line("modelVersion", text(fit.modelVersion))
+        line("evidencePolicyIdentity", text(fit.evidencePolicyIdentity))
+        line("supportObservationCount", fit.support.observationCount.toString())
+        line("supportIndependentSessionCount", fit.support.effectiveIndependentSessionCount.toString())
+        line("supportFirstEvidenceAt", fit.support.firstEvidenceAt?.toString() ?: "-")
+        line("supportLastEvidenceAt", fit.support.lastEvidenceAt?.toString() ?: "-")
+        line("supportEvidenceFamily", text(fit.support.evidenceFamily.value))
+        line("observedRepMin", fit.observedRepMin.toString())
+        line("observedRepMax", fit.observedRepMax.toString())
+        line("observedResistanceMinKg", fit.observedResistanceMinKg.toString())
+        line("observedResistanceMaxKg", fit.observedResistanceMaxKg.toString())
+        val frontier = requireNotNull(fit.frontierAtLatestSession.summary)
+        line("frontierSummary", listOf(frontier.p05, frontier.p50, frontier.p95, frontier.posteriorVariance).joinToString(","))
+        line("slope", parameter(fit.slope))
+        line("frontierTrend", parameter(fit.frontierTrend))
+        line("slackScale", parameter(fit.slackScale))
+        line("noiseScale", parameter(fit.noiseScale))
+        line("approximationVersion", text(fit.approximationVersion))
+        line("laplaceValidBasePosteriorMass", optionalDouble(fit.laplaceValidBasePosteriorMass))
+        line("laplaceFiniteDifferenceStep", optionalDouble(fit.laplaceFiniteDifferenceStep))
+        line("posteriorEffectiveNodeCount", fit.posteriorEffectiveNodeCount.toString())
+        line("warnings", fit.warnings.sorted().joinToString(",") { text(it) })
+        line("selectedObservationIds", fit.selectedObservationIds.joinToString(",") { text(it) })
+        line("selectedSessionIds", fit.selectedSessionIds.joinToString(",") { text(it) })
+        line("mathFamily", text(fit.mathematicalModelIdentity.family))
+        line("mathVersion", text(fit.mathematicalModelIdentity.semanticVersion))
+        line("mathDefinition", text(fit.mathematicalModelIdentity.definition))
+        val diagnostics = fit.solverDiagnostics
+        line("solverFamily", diagnostics.solverIdentity.solverFamily.storageValue)
+        line("solverVersion", text(diagnostics.solverIdentity.semanticVersion))
+        line("computeBackend", diagnostics.solverIdentity.computeBackend.storageValue)
+        line("deterministicReplay", diagnostics.solverIdentity.deterministicReplay.toString())
+        line("solverApproximation", text(diagnostics.solverIdentity.approximationDefinition))
+        line("posteriorRepresentation", diagnostics.posteriorRepresentation.storageValue)
+        line("approximationFailure", diagnostics.approximationFailure?.let(::text) ?: "-")
+        line("posteriorNodes", fit.posteriorNodes.joinToString(";") { node ->
+            listOf(
+                node.logFrontierAtLatestSession,
+                node.slope,
+                node.frontierTrend,
+                node.slackScale,
+                node.noiseScale,
+                node.posteriorWeight,
+            ).joinToString(",")
+        })
+        line("observationSlack", fit.observationSlack.joinToString(";") { encodeSlack(it) })
+    }.trimEnd('\n')
+
     fun decode(
         parameterSchemaVersion: Int,
         encodedParameters: String,
