@@ -43,7 +43,7 @@ Use this directory in the following order.
 7B.2    Candidate v1 frozen/rejected — implementation retained as historical/reference evidence
 7B.3/4  complete as historical validation infrastructure — correction-aware chronology, SHADOW persistence, diagnostics, installed-history acceptance
 7B.X    complete — Adaptive Sparse selected for forward Candidate-v2 inference; Dense retained oracle; Conditional Laplace rejected production
-7C      ACTIVE — loaded-hold, duration-only and repeated-contraction structural/pre-validation; PD-001 empirical accuracy pending where evidence is insufficient
+7C      ACTIVE — host structural/pre-validation gate green; installed Room14 capability acceptance pending; PD-001 empirical accuracy pending where evidence is insufficient
 ```
 
 ### Candidate-v1 record
@@ -107,4 +107,4 @@ Do not load both full raw research bodies into ordinary implementation context.
 
 Existing `docs/N_BIO_*.md` files remain historical implementation-stage documentation. The vNext authority stack above governs forward work where they conflict.
 
-N-BIO-7C is the active consolidated capability-family mission; N-BIO-7D has not started.
+N-BIO-7C remains active until the installed Room14 capability acceptance is recorded; N-BIO-7D has not started.
