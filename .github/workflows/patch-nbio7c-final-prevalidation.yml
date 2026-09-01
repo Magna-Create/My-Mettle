@@ -15,191 +15,52 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - name: Checkout live N-BIO-7C branch
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: agent/n-bio-vnext-inference
           fetch-depth: 0
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-
       - name: Install Android SDK 37
         run: |
           SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platforms;android-37.0" "build-tools;36.0.0"
-
-      - name: Apply bounded codec and numerical-comparison fixes
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          codec = Path('app/src/main/java/dev/kian/mymettle/inference/NonDynamicCapabilityParameterCodec.kt')
-          text = codec.read_text()
-
-          text = text.replace(
-              'DataInputStream(ByteArrayInputStream(bytes)).use { input ->\n            require(input.readUtf8String() == MAGIC)',
-              'DataInputStream(ByteArrayInputStream(bytes)).use { input ->\n            val reader = CodecReader(input)\n            require(reader.string() == MAGIC)',
-          )
-          for old, new in [
-              ('input.readUtf8String()', 'reader.string()'),
-              ('input.readNullableDouble()', 'reader.nullableDouble()'),
-              ('input.readNullableLong()', 'reader.nullableLong()'),
-              ('input.readNullableString()', 'reader.nullableString()'),
-              ('input.readUtf8StringList()', 'reader.stringList()'),
-              ('input.readNullableParameterPosterior()', 'reader.nullableParameterPosterior()'),
-              ('input.readParameterPosterior()', 'reader.parameterPosterior()'),
-              ('input.readBoolean()', 'reader.boolean()'),
-              ('input.readInt()', 'reader.int()'),
-              ('input.readDouble()', 'reader.double()'),
-              ('input.available()', 'reader.available()'),
-          ]:
-              text = text.replace(old, new)
-
-          text = text.replace(
-              'DataOutputStream(bytes).use { output ->\n            output.writeUtf8String(MAGIC)',
-              'DataOutputStream(bytes).use { output ->\n            val writer = CodecWriter(output)\n            writer.string(MAGIC)',
-          )
-          for old, new in [
-              ('output.writeUtf8String(', 'writer.string('),
-              ('output.writeNullableDouble(', 'writer.nullableDouble('),
-              ('output.writeNullableLong(', 'writer.nullableLong('),
-              ('output.writeNullableString(', 'writer.nullableString('),
-              ('output.writeUtf8StringList(', 'writer.stringList('),
-              ('output.writeNullableParameterPosterior(', 'writer.nullableParameterPosterior('),
-              ('output.writeParameterPosterior(', 'writer.parameterPosterior('),
-              ('output.writeBoolean(', 'writer.boolean('),
-              ('output.writeInt(', 'writer.int('),
-              ('output.writeDouble(', 'writer.double('),
-          ]:
-              text = text.replace(old, new)
-
-          start = text.index('    private fun DataOutputStream.writeParameterPosterior')
-          end = text.index('    private fun deflate', start)
-          helpers = '''    private class CodecWriter(private val output: DataOutputStream) {
-              fun parameterPosterior(value: NonDynamicParameterPosterior) {
-                  double(value.summary.p05)
-                  double(value.summary.p50)
-                  double(value.summary.p95)
-                  double(value.summary.posteriorVariance)
-                  string(value.identification.storageValue)
-                  string(value.semanticUnit)
-              }
-
-              fun nullableParameterPosterior(value: NonDynamicParameterPosterior?) {
-                  boolean(value != null)
-                  if (value != null) parameterPosterior(value)
-              }
-
-              fun string(value: String) {
-                  val bytes = value.toByteArray(StandardCharsets.UTF_8)
-                  require(bytes.size <= MAX_STRING_BYTES) { "N-BIO-7C codec string exceeds $MAX_STRING_BYTES UTF-8 bytes." }
-                  output.writeInt(bytes.size)
-                  output.write(bytes)
-              }
-
-              fun nullableDouble(value: Double?) { boolean(value != null); if (value != null) double(value) }
-              fun nullableLong(value: Long?) { boolean(value != null); if (value != null) output.writeLong(value) }
-              fun nullableString(value: String?) { boolean(value != null); if (value != null) string(value) }
-              fun stringList(values: List<String>) { int(values.size); values.forEach(::string) }
-              fun boolean(value: Boolean) = output.writeBoolean(value)
-              fun int(value: Int) = output.writeInt(value)
-              fun double(value: Double) = output.writeDouble(value)
-          }
-
-          private class CodecReader(private val input: DataInputStream) {
-              fun parameterPosterior(): NonDynamicParameterPosterior = NonDynamicParameterPosterior(
-                  summary = PosteriorSummary(double(), double(), double(), double()),
-                  identification = DynamicParameterIdentification.entries.first { it.storageValue == string() },
-                  semanticUnit = string(),
-              )
-
-              fun nullableParameterPosterior(): NonDynamicParameterPosterior? =
-                  if (boolean()) parameterPosterior() else null
-
-              fun string(): String {
-                  val length = input.readInt()
-                  require(length in 0..MAX_STRING_BYTES) { "N-BIO-7C codec string length $length is invalid." }
-                  val bytes = ByteArray(length)
-                  input.readFully(bytes)
-                  return String(bytes, StandardCharsets.UTF_8)
-              }
-
-              fun nullableDouble(): Double? = if (boolean()) double() else null
-              fun nullableLong(): Long? = if (boolean()) input.readLong() else null
-              fun nullableString(): String? = if (boolean()) string() else null
-              fun stringList(): List<String> {
-                  val size = int()
-                  require(size >= 0) { "N-BIO-7C codec list length $size is invalid." }
-                  return List(size) { string() }
-              }
-              fun boolean(): Boolean = input.readBoolean()
-              fun int(): Int = input.readInt()
-              fun double(): Double = input.readDouble()
-              fun available(): Int = input.available()
-          }
-
-'''
-          text = text[:start] + helpers + text[end:]
-          codec.write_text(text)
-
-          synthetic = Path('app/src/main/java/dev/kian/mymettle/developer/NBio7CSyntheticValidation.kt')
-          s = synthetic.read_text()
-          if 'import kotlin.math.abs\n' not in s:
-              s = s.replace('import kotlin.math.exp\n', 'import kotlin.math.abs\nimport kotlin.math.exp\n')
-          s = s.replace(
-              'checks["slope_truth_in_sparse_90pct_interval"] = truthSlope in requireNotNull(sparse.slope).summary.p05..sparse.slope.summary.p95\n            checks["slope_truth_in_dense_90pct_interval"] = truthSlope in requireNotNull(dense.slope).summary.p05..dense.slope.summary.p95',
-              'checks["slope_truth_in_sparse_90pct_interval"] = containsWithFloatingPointTolerance(requireNotNull(sparse.slope).summary, truthSlope)\n            checks["slope_truth_in_dense_90pct_interval"] = containsWithFloatingPointTolerance(requireNotNull(dense.slope).summary, truthSlope)',
-          )
-          anchor = '    private fun relativeWidth(summary: PosteriorSummary): Double =\n'
-          if anchor not in s:
-              raise SystemExit('relativeWidth anchor not found')
-          helper = '''    private fun containsWithFloatingPointTolerance(summary: PosteriorSummary, truth: Double): Boolean {
-              val scale = maxOf(1.0, abs(truth), abs(summary.p05), abs(summary.p95))
-              val tolerance = 1e-12 * scale
-              return truth >= summary.p05 - tolerance && truth <= summary.p95 + tolerance
-          }
-
-'''
-          if 'private fun containsWithFloatingPointTolerance' not in s:
-              s = s.replace(anchor, helper + anchor)
-          synthetic.write_text(s)
-          PY
-
+      - name: Apply bounded patch
+        run: python3 scripts/patch_nbio7c_prevalidation.py
       - name: Check patch
         run: |
           git diff --check
           grep -Fq 'containsWithFloatingPointTolerance' app/src/main/java/dev/kian/mymettle/developer/NBio7CSyntheticValidation.kt
-          grep -Fq 'private class CodecWriter' app/src/main/java/dev/kian/mymettle/inference/NonDynamicCapabilityParameterCodec.kt
-          grep -Fq 'private class CodecReader' app/src/main/java/dev/kian/mymettle/inference/NonDynamicCapabilityParameterCodec.kt
-
+          grep -Fq 'readStoredEnum' app/src/main/java/dev/kian/mymettle/inference/NonDynamicCapabilityParameterCodec.kt
       - name: Focused 7C regressions
+        shell: bash
         run: |
+          set +e
           ./gradlew :app:testDebugUnitTest \
             --tests 'dev.kian.mymettle.developer.NBio7CSyntheticValidationTest' \
             --tests 'dev.kian.mymettle.inference.NonDynamicCapabilityParameterCodecTest' \
             --stacktrace --no-daemon
-
+          status=$?
+          echo '===== focused JUnit XML ====='
+          find app/build/test-results/testDebugUnitTest -maxdepth 1 -type f -name '*.xml' -print -exec cat {} \; 2>/dev/null || true
+          exit $status
       - name: Full relevant Gradle gate
         run: |
           ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug \
             --stacktrace --no-daemon
-
-      - name: Verify Room14 remains exported
+      - name: Verify Room14
         run: |
           test -f app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/14.json
           grep -q '"version": 14' app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/14.json
-
-      - name: Commit bounded fixes
+      - name: Commit fixes
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add \
-            app/src/main/java/dev/kian/mymettle/inference/NonDynamicCapabilityParameterCodec.kt \
-            app/src/main/java/dev/kian/mymettle/developer/NBio7CSyntheticValidation.kt
+          git add app/src/main/java/dev/kian/mymettle/inference/NonDynamicCapabilityParameterCodec.kt app/src/main/java/dev/kian/mymettle/developer/NBio7CSyntheticValidation.kt
           git commit -m "Fix N-BIO-7C prevalidation framing"
           git push origin HEAD:agent/n-bio-vnext-inference
