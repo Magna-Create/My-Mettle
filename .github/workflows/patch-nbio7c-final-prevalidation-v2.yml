@@ -39,11 +39,17 @@ jobs:
           grep -Fq 'private class CodecWriter' app/src/main/java/dev/kian/mymettle/inference/NonDynamicCapabilityParameterCodec.kt
           grep -Fq 'private class CodecReader' app/src/main/java/dev/kian/mymettle/inference/NonDynamicCapabilityParameterCodec.kt
       - name: Focused 7C regressions
+        shell: bash
         run: |
+          set +e
           ./gradlew :app:testDebugUnitTest \
             --tests 'dev.kian.mymettle.developer.NBio7CSyntheticValidationTest' \
             --tests 'dev.kian.mymettle.inference.NonDynamicCapabilityParameterCodecTest' \
             --stacktrace --no-daemon
+          status=$?
+          echo '===== focused JUnit XML ====='
+          find app/build/test-results/testDebugUnitTest -maxdepth 1 -type f -name '*.xml' -print -exec cat {} \; 2>/dev/null || true
+          exit $status
       - name: Full relevant Gradle gate
         run: |
           ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug \
