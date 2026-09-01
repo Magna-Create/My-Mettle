@@ -8,10 +8,7 @@ import dev.kian.mymettle.data.local.entity.InferenceModelManifestEntity
 import dev.kian.mymettle.data.local.entity.InferenceModelManifestEntryEntity
 import dev.kian.mymettle.data.local.entity.InferenceRunEntity
 import dev.kian.mymettle.data.local.entity.ModelConfigDefinitionEntity
-import dev.kian.mymettle.data.local.entity.PosteriorColumns
 import dev.kian.mymettle.domain.exercise.ExecutionProfileVersionId
-import dev.kian.mymettle.domain.inference.EvidenceFamily
-import dev.kian.mymettle.domain.inference.EvidenceSupport
 import dev.kian.mymettle.domain.inference.InferenceExecutionMode
 import dev.kian.mymettle.domain.inference.InferenceRunId
 import dev.kian.mymettle.domain.inference.InferenceSemanticsMode
@@ -23,7 +20,6 @@ import dev.kian.mymettle.domain.inference.ModelOutputProvenance
 import dev.kian.mymettle.domain.inference.NonDynamicCapabilityFit
 import dev.kian.mymettle.domain.inference.NonDynamicCapabilityQuery
 import dev.kian.mymettle.domain.inference.PosteriorEstimate
-import dev.kian.mymettle.domain.inference.PosteriorSummary
 import dev.kian.mymettle.domain.performance.Laterality
 import dev.kian.mymettle.engine.inference.BenchmarkV0ModelManifestFactory
 import dev.kian.mymettle.engine.inference.NeutralPriorMuscleStateUpdater
@@ -211,33 +207,4 @@ class NonDynamicCapabilityShadowRepository(
         const val SHADOW_RUN_MODEL_VERSION = "n-bio-7c-non-dynamic-capability-shadow-v1"
         val CANDIDATE_CONFIG_CREATED_AT: Instant = Instant.parse("2026-09-01T00:00:00Z")
     }
-}
-
-private fun PosteriorEstimate.toPosteriorColumns(): PosteriorColumns = PosteriorColumns(
-    p05 = summary?.p05,
-    p50 = summary?.p50,
-    p95 = summary?.p95,
-    variance = summary?.posteriorVariance,
-    observationCount = support.observationCount,
-    independentSessionCount = support.effectiveIndependentSessionCount,
-    firstEvidenceAt = support.firstEvidenceAt?.toString(),
-    lastEvidenceAt = support.lastEvidenceAt?.toString(),
-    evidenceFamily = support.evidenceFamily.value,
-)
-
-private fun PosteriorColumns.toPosteriorEstimate(provenance: ModelOutputProvenance): PosteriorEstimate {
-    val support = EvidenceSupport(
-        observationCount = observationCount,
-        effectiveIndependentSessionCount = independentSessionCount,
-        firstEvidenceAt = firstEvidenceAt?.let(Instant::parse),
-        lastEvidenceAt = lastEvidenceAt?.let(Instant::parse),
-        evidenceFamily = EvidenceFamily(evidenceFamily),
-    )
-    val summary = if (p05 == null) null else PosteriorSummary(
-        credibleLower05 = requireNotNull(p05),
-        estimateMedian = requireNotNull(p50),
-        credibleUpper95 = requireNotNull(p95),
-        posteriorVariance = requireNotNull(variance),
-    )
-    return PosteriorEstimate(summary, support, provenance)
 }
