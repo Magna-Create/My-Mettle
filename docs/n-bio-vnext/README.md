@@ -9,7 +9,7 @@ Use this directory in the following order.
 3. [`CORE_MODEL_DETAIL.md`](./CORE_MODEL_DETAIL.md) — normative detailed N-BIO-7/N-BIO-8 mathematical and behavioural supplement except where superseded by the adaptive-inference supplement or later explicit PLAN corrections.
 4. [`PRODUCT_ROADMAP_GATES.md`](./PRODUCT_ROADMAP_GATES.md) — authoritative additive product/research/collaboration gates for late N-BIO-7 equipment intelligence, uncertainty communication, N-BIO-8 research/UX design, N-BIO-9 recomputation lifecycle and Native database-safety behaviour. When it marks `COLLABORATION REQUIRED`, stop before behaviour-driving implementation and involve Kian rather than silently choosing product policy.
 
-`ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md` does not authorise N-BIO-7C, later biological-state implementations, V8 prescription behaviour or normal-user UX changes. It corrects the inference architecture used to reach those later gates.
+`ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md` does not authorise later biological-state implementations, V8 prescription behaviour or normal-user UX changes. It corrects the inference architecture used to reach those later gates.
 
 ## Core biological/performance research
 
@@ -29,8 +29,10 @@ Use this directory in the following order.
 - [`EXERCISE_AUTHORING_CONTRACT.md`](./EXERCISE_AUTHORING_CONTRACT.md) — authoritative protocol for externally proposed exercise/execution/recruitment semantics before they enter the existing Native authoring pathway.
 - [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md) — N-BIO-7B evidence/coordinate contract, frozen Candidate-v1 record, chronological validation, SHADOW persistence and Candidate-v2 development evidence. Read it together with the adaptive-inference supplement for current capability/policy and solver semantics.
 - [`NON_DYNAMIC_CAPABILITY_CONTRACT.md`](./NON_DYNAMIC_CAPABILITY_CONTRACT.md) — normative N-BIO-7C loaded-hold, duration-only and repeated-contraction capability contract.
-- [`POSTPONED_DEVELOPMENT.md`](./POSTPONED_DEVELOPMENT.md) — deferred-validation register; PD-001 permits 7C structural closure while explicitly quarantining unearned empirical claims.
+- [`SET_DEMAND_AND_DOSE_CONTRACT.md`](./SET_DEMAND_AND_DOSE_CONTRACT.md) — normative N-BIO-7D SetDemand, exact historical Exposure, candidate EffectiveDose, same-session dependence and SessionDose contract.
+- [`POSTPONED_DEVELOPMENT.md`](./POSTPONED_DEVELOPMENT.md) — deferred-validation register; PD-001 quarantines 7C empirical accuracy and PD-002 quarantines 7D SetDemand/EffectiveDose empirical calibration.
 - [`NBIO_7C_CAPABILITY_ACCEPTANCE_CHECKPOINT_2026-09-02.md`](./NBIO_7C_CAPABILITY_ACCEPTANCE_CHECKPOINT_2026-09-02.md) — physical Room14 structural/pre-validation closure record; the full personal acceptance export remains outside the public repository.
+- [`NBIO_7D_DEMAND_DOSE_IMPLEMENTATION_CHECKPOINT_2026-09-03.md`](./NBIO_7D_DEMAND_DOSE_IMPLEMENTATION_CHECKPOINT_2026-09-03.md) — implementation-complete checkpoint and physical installed-device acceptance procedure. It is not itself a physical acceptance PASS.
 - [`INFERENCE_BACKEND_AUDIT.md`](./INFERENCE_BACKEND_AUDIT.md) — current Android numerical-backend audit and profiling-first JVM/native/SIMD/Vulkan/LiteRT decision ladder.
 - [`exercise-import.schema.json`](./exercise-import.schema.json) — Draft 2020-12 machine-readable structural exchange schema, format v1.
 - [`exercise-import-example.json`](./exercise-import-example.json) — canonical validated authoring example.
@@ -45,7 +47,8 @@ Use this directory in the following order.
 7B.3/4  complete as historical validation infrastructure — correction-aware chronology, SHADOW persistence, diagnostics, installed-history acceptance
 7B.X    complete — Adaptive Sparse selected for forward Candidate-v2 inference; Dense retained oracle; Conditional Laplace rejected production
 7C      complete structural/pre-validation — physical Room14 capability acceptance PASS; PD-001 empirical accuracy remains pending where evidence is insufficient
-7D      NOT STARTED — requires explicit next-phase instruction
+7D      implementation complete — SetDemand/Exposure/EffectiveDose/SessionDose SHADOW pipeline and consolidated device acceptance action implemented; physical installed-history acceptance still pending; PD-002 OPEN
+7E      NOT STARTED
 ```
 
 ### Candidate-v1 record
@@ -60,17 +63,42 @@ The completed same-mathematics Candidate-v2 solver comparison uses **Dense** as 
 
 The consolidated **N-BIO Adaptive Inference Acceptance** installed-Room14 evidence established that solver decision while preserving SHADOW/development-only authority. Historical results remain development evidence; fresh future workouts are stronger confirmatory evidence.
 
+### N-BIO-7D implementation status
+
+N-BIO-7D now consumes the already-frozen 7B.X/7C capability contracts without treating capability as an action policy or treating PD-001 as closed.
+
+The implementation provides:
+
+- causal pre-session capability replay;
+- posterior frontier-gap SetDemand;
+- exact historical recruitment-weight Exposure;
+- candidate posterior EffectiveDose;
+- shared-posterior within-stream aggregation;
+- explicit cross-stream independence approximation only where no joint posterior exists;
+- raw and concave candidate SessionDose;
+- Room14 SHADOW persistence/reload/delete/replay;
+- correction-aware invalidation/replay utilities;
+- Native backup verification;
+- 14-case structural validation;
+- delta/tau sensitivity;
+- Dense-vs-Adaptive-Sparse downstream fidelity checks;
+- one consolidated installed-device developer action and privacy-bounded JSON export.
+
+The implementation checkpoint is not a physical acceptance result. The consolidated action must still be run against the installed Room14 history before physical 7D structural closure is recorded. PD-002 remains OPEN regardless of structural success.
+
 ## Current product and safety authority
 
 All current candidates remain **SHADOW / CANDIDATE** only.
 
 - Normal workout/prescription authority remains `BENCHMARK_V0`.
-- Context consumption remains `NONE` for the current dynamic candidate.
-- No RIR/RPE value may be fabricated.
+- Context consumption remains `NONE` for the current dynamic candidate and 7D does not add note/sleep/HR/HRV context.
+- No RIR/RPE/failure-probability or `% max` value may be fabricated.
 - Raw performance evidence remains immutable and separate from derived inference.
 - Semantic metadata beats statistical changepoint suspicion when a real execution boundary is known.
 - Room remains 14 unless a genuine semantic impossibility requires another migration.
 - N-BIO-7C numerical outputs remain SHADOW/developer-only under PD-001 and are not normal-user prescription or prefill authority.
+- N-BIO-7D demand/dose outputs remain SHADOW/developer-only under PD-002; structural success does not establish calibrated physiology.
+- N-BIO-7E fatigue/recovery/readiness/development/skill/decay state has not started.
 
 Before behaviour-driving N-BIO-8 implementation, `PRODUCT_ROADMAP_GATES.md` still requires the dedicated research + product/UX design gate. Programme intent/priorities, in-workout adaptation, editing/regeneration semantics, equipment setup/feasible-load UX and uncertainty presentation require explicit collaboration.
 
@@ -80,7 +108,7 @@ Native Cutover must consult the database compatibility, downgrade protection, mi
 
 ## Reading rule
 
-For inference-history and capability work:
+For inference-history, capability and 7D demand/dose work:
 
 ```text
 PLAN.md
@@ -88,7 +116,8 @@ PLAN.md
 → relevant CORE_MODEL_DETAIL.md section where not superseded
 → DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md for 7B evidence/model history
 → NON_DYNAMIC_CAPABILITY_CONTRACT.md for the completed 7C structural capability contract
-→ POSTPONED_DEVELOPMENT.md for PD-001 quarantine
+→ SET_DEMAND_AND_DOSE_CONTRACT.md for 7D semantics
+→ POSTPONED_DEVELOPMENT.md for PD-001 / PD-002 quarantine
 → PRODUCT_ROADMAP_GATES.md whenever crossing a product/research collaboration gate
 → relevant research guide
 → targeted raw research only when exact evidence/equations/platform wording are needed
@@ -103,4 +132,4 @@ Do not load both full raw research bodies into ordinary implementation context.
 
 Existing `docs/N_BIO_*.md` files remain historical implementation-stage documentation. The vNext authority stack above governs forward work where they conflict.
 
-N-BIO-7C structural/pre-validation is complete after physical Room14 acceptance. PD-001 remains open; N-BIO-7D has not started.
+N-BIO-7C structural/pre-validation is physically closed under PD-001 quarantine. N-BIO-7D implementation is complete and awaiting the consolidated installed-device acceptance run; PD-002 remains open and N-BIO-7E has not started.
