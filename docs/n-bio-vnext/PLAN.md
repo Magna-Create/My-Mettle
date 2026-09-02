@@ -66,7 +66,7 @@ Changes to equations, latent dimensions, priors, likelihoods, pooling, regime ha
 7. **Context is typed and gated.** Current N-BIO-7B dynamic candidates consume `NONE`; sleep/HRV/illness/stress/notes cannot be used to rescue them.
 8. **Derived inference is rebuildable.** Deleting candidate state cannot cascade into raw evidence.
 9. **Product authority is explicit.** SHADOW/CANDIDATE runs do not alter normal prescriptions, workout UX or `BENCHMARK_V0` authority.
-10. **Room migrations require semantics, not convenience.** Room14 remains sufficient for the completed 7B.X model/solver state and the current 7C capability mission.
+10. **Room migrations require semantics, not convenience.** Room14 remains sufficient for the completed 7B.X model/solver state and the completed N-BIO-7C structural/pre-validation mission; PD-001 remains open for deferred empirical calibration.
 11. **Backup/replay are acceptance gates.** Full Native backup remains generic; model/solver state must reload and raw evidence must replay within documented tolerance.
 12. **Collaboration gates remain mandatory.** `PRODUCT_ROADMAP_GATES.md` is not superseded by backend capability.
 
@@ -282,9 +282,9 @@ The completed mission covers Candidate-v2 closure, capability/policy separation,
 
 N-BIO-7C is a separate subsequent mission and must not be retroactively folded into 7B.X.
 
-## 13. Current device acceptance gate
+## 13. Completed N-BIO-7C device acceptance gate
 
-The active consolidated Biological Developer action is:
+The consolidated Biological Developer action used for physical 7C structural closure was:
 
 **Run N-BIO 7C Capability Acceptance**
 
@@ -300,9 +300,9 @@ It operates on installed Room14 data for `LOADED_HOLD`, `DURATION_ONLY` and `REP
 - Native Room14 backup/restore candidate-row verification and foreign-key integrity;
 - explicit limitations, structural verdict and PD-001 empirical-accuracy status.
 
-The gate may establish structural closure only. Under PD-001, insufficient real longitudinal evidence remains `EMPIRICAL_ACCURACY_PENDING` / `NOT_EVALUATED_REAL_HISTORY`; synthetic recovery or structural success must not be relabelled as empirical human calibration.
+The physical gate established structural closure only. Under PD-001, insufficient real longitudinal evidence remains `EMPIRICAL_ACCURACY_PENDING` / `NOT_EVALUATED_REAL_HISTORY`; synthetic recovery or structural success must not be relabelled as empirical human calibration. The accepted physical checkpoint is preserved in [`NBIO_7C_CAPABILITY_ACCEPTANCE_CHECKPOINT_2026-09-02.md`](./NBIO_7C_CAPABILITY_ACCEPTANCE_CHECKPOINT_2026-09-02.md).
 
-The earlier **N-BIO Adaptive Inference Acceptance** action is retained as historical/developer evidence for the completed 7B.X mission, not the active 7C closure gate.
+The earlier **N-BIO Adaptive Inference Acceptance** action is retained as historical/developer evidence for the completed 7B.X mission, not an active product gate.
 
 ## 14. Numerical backend policy
 
@@ -326,7 +326,7 @@ Do not port backup/acceptance overhead and claim inference improved. Model compu
 
 ## 15. Persistence and replay
 
-Room remains **14** through the current N-BIO-7C mission unless a genuine semantic impossibility is demonstrated.
+Room remains **14** through the completed N-BIO-7C structural/pre-validation mission unless a genuine semantic impossibility is demonstrated.
 
 Reuse existing inference run/model config/manifest/capability/parameter-state storage where semantically sufficient.
 
@@ -371,9 +371,10 @@ N-BIO-7B.1 complete — dynamic-resistance evidence/coordinate contract
 N-BIO-7B.2 Candidate v1 frozen/rejected
 N-BIO-7B.3/4 historical validation + installed-history acceptance infrastructure complete
 N-BIO-7B.X complete — corrected adaptive-inference consolidation; Sparse selected, Dense oracle retained, Laplace rejected production
-N-BIO-7C   ACTIVE — loaded-hold, duration-only and repeated-contraction structural/pre-validation under NON_DYNAMIC_CAPABILITY_CONTRACT.md
+N-BIO-7C   complete structural/pre-validation — loaded-hold, duration-only and repeated-contraction contracts accepted physically; numerical outputs remain SHADOW under PD-001
 PD-001     OPEN — empirical human calibration postponed where longitudinal evidence is insufficient; downstream quarantine remains binding
-later 7D–7G retain their intended product/domain destinations and must consume the corrected inference/7C contracts without treating PD-001 as a pass
+N-BIO-7D   NOT STARTED — next-phase work requires explicit instruction and must consume 7C contracts without treating PD-001 as a pass
+later 7E–7G retain their intended product/domain destinations under the same quarantine
 N-BIO-8   later constrained programme-resolution/decision layer; collaboration gates mandatory
 N-BIO-9   later context/Health/intelligence/data integration
 Native Cutover last
