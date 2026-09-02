@@ -7,6 +7,7 @@ import dev.kian.mymettle.domain.inference.NBio7DSessionEvaluator
 import dev.kian.mymettle.domain.inference.NBio7DSetInput
 import dev.kian.mymettle.domain.inference.SetDemandStructuralSupport
 import dev.kian.mymettle.domain.inference.WeightedScalarNode
+import dev.kian.mymettle.domain.inference.empiricalStatuses
 import dev.kian.mymettle.domain.performance.MetricFamily
 import kotlin.math.abs
 
@@ -98,7 +99,8 @@ object NBio7DSyntheticValidation {
             },
             case("duration_only") {
                 val demand = demand(MetricFamily.DURATION_ONLY, listOf(0.01, 0.07, 0.13), config = config)
-                demand.family == MetricFamily.DURATION_ONLY && demand.probabilityAtOrWithinDelta in 0.0..1.0 && demand.empiricalStatuses.size == 2
+                val q = demand.probabilityAtOrWithinDelta!!
+                demand.family == MetricFamily.DURATION_ONLY && q in 0.0..1.0 && demand.empiricalStatuses.size == 2
             },
             case("semantic_boundary_fail_closed") {
                 val demand = NBio7DPosteriorMath.unsupportedDemand(MetricFamily.DYNAMIC_RESISTANCE, config)
@@ -153,7 +155,7 @@ object NBio7DSyntheticValidation {
         return NBio7DSyntheticValidationReport(cases)
     }
 
-    private inline fun case(id: String, check: () -> Boolean): NBio7DSyntheticCaseResult = runCatching(check)
+    private fun case(id: String, check: () -> Boolean): NBio7DSyntheticCaseResult = runCatching { check() }
         .fold(
             onSuccess = { passed -> NBio7DSyntheticCaseResult(id, passed, if (passed) "pass" else "invariant_not_met") },
             onFailure = { failure -> NBio7DSyntheticCaseResult(id, false, failure::class.simpleName ?: "failure") },
