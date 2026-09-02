@@ -171,6 +171,137 @@ There is no requirement that every family produce a confident model. A scientifi
 
 ---
 
+# PD-002 — N-BIO-7D empirical SetDemand / EffectiveDose calibration
+
+## Status
+
+**OPEN — STRUCTURAL CANDIDATE MAY PROCEED; EMPIRICAL NUMERIC CALIBRATION IS NOT ESTABLISHED**
+
+This entry applies to the N-BIO-7D chain:
+
+`contemporaneous capability posterior -> frontier-gap SetDemand -> high-demand-band projection -> muscle EffectiveDose -> SessionDose`.
+
+It is separate from PD-001. PD-001 concerns empirical capability accuracy for the 7C non-dynamic families. PD-002 concerns whether 7D's latent demand/dose mapping itself corresponds quantitatively to human task demand and biologically meaningful training dose.
+
+## Why this is postponed
+
+Ordinary workout history directly observes performed task outcomes such as resistance, repetitions, duration and cycles. It does not directly observe:
+
+- the true latent distance from the user's task-specific capability frontier on that set;
+- local muscle-specific failure proximity;
+- motor-unit recruitment percentage;
+- fibre-level stimulus;
+- the hypertrophic contribution caused by one set;
+- the correct numerical threshold separating a candidate high-demand frontier band;
+- the exact within-session diminishing-return curve or its `tau`.
+
+Synthetic latent-truth fixtures can prove that the implementation recovers and propagates quantities according to its declared mathematics. They cannot establish that `delta`, the high-demand-band EffectiveDose mapping, or `tau` is biologically calibrated.
+
+Retrospectively making values “look right” against the developer's expectations would not solve this identifiability problem and would create circular evidence. N-BIO therefore pre-registers the first 7D candidate before inspecting 7D history outputs and keeps its empirical calibration explicitly pending.
+
+## What is structurally validated in 7D
+
+PD-002 does **not** waive any structural requirement. N-BIO-7D must still prove, before structural closure:
+
+- SetDemand is conditional frontier distance, not a user action-policy probability;
+- historical sets use contemporaneous/pre-session capability only;
+- same-session sets share one persistent pre-session capability reference;
+- no future evidence enters causal replay;
+- no RIR/RPE/failure label is fabricated from normal set completion;
+- frontier-gap uncertainty and contradiction diagnostics are preserved;
+- `delta` is immutable/versioned and family-scoped;
+- Exposure uses exact immutable historical recruitment semantics and is independently recomputable;
+- recruitment weights are independent/non-conserved and never normalised;
+- EffectiveDose remains separate from Exposure and propagates the demand posterior;
+- unresolved demand remains unresolved rather than becoming zero, 0.5, or Exposure;
+- task demand is not presented as local muscle failure/stimulus truth;
+- same-session shared capability uncertainty is propagated jointly rather than as independent marginal variances;
+- raw SessionDose and the separately named concave transform are reproducible;
+- `tau` is immutable/versioned and not labelled MRV/failure capacity;
+- unresolved session inputs remain typed;
+- Adaptive Sparse downstream behaviour is checked against Dense;
+- persistence/reload, invalidation and delete-derived/replay are deterministic where claimed;
+- raw evidence, prescriptions and BENCHMARK_V0 product authority are unchanged;
+- Room/backup integrity remains valid;
+- no across-session fatigue/recovery/development biology is introduced.
+
+A failure in those properties is a 7D blocker and cannot be deferred under PD-002.
+
+## What remains empirically unvalidated
+
+Until PD-002 closes, N-BIO must not claim empirical human truth for:
+
+- the absolute numerical calibration of frontier gap as perceived or physiological set demand;
+- the v1 `delta` values;
+- equivalence of equal `delta` values across capability families;
+- the binary high-demand-band candidate used inside v1 EffectiveDose;
+- the magnitude of EffectiveDose as actual local muscle stimulus;
+- the quantitative relationship between recruitment weights and biological dose;
+- the v1 `tau` value;
+- the exact logarithmic concave transform as the true human within-session dose-response curve;
+- any marginal “set N is X% less effective” interpretation;
+- product-authority use of 7D dose outputs.
+
+The accepted status is therefore:
+
+`EMPIRICAL_CALIBRATION_PENDING`
+
+not `PASS`, even when structural tests and numerical fixtures pass.
+
+## Downstream quarantine
+
+Until PD-002 closes:
+
+1. all 7D SetDemand, EffectiveDose and SessionDose outputs remain derived SHADOW/CANDIDATE state;
+2. `BENCHMARK_V0` remains normal-product authority;
+3. normal workout prescription, prefill, set count, exercise selection, routine generation and progression logic must not consume 7D values as validated truth;
+4. N-BIO-7E may later consume the 7D **interface and candidate outputs** for structural/model-development work only;
+5. 7E must not claim its fatigue/recovery/development model is validated because 7D EffectiveDose is assumed correct;
+6. later predictive validation may evaluate the 7D dose model and an acute-state model jointly, but it must state that joint identifiability limitation;
+7. if a replacement 7D model materially changes dose, all dependent derived state must be replayable from raw evidence and historical semantics;
+8. 7C-family downstream values additionally remain subject to PD-001.
+
+## Evidence that can revisit PD-002
+
+No single future evidence source is guaranteed to identify every latent 7D quantity. Useful evidence may include a combination of:
+
+- semantically strong longitudinal training histories with pre-registered later predictive outcomes;
+- controlled or externally published datasets with known set-to-failure/proximity protocols where those labels are actually observed rather than reconstructed;
+- repeated-session designs that vary set number and proximity while retaining interpretable exercise/recruitment semantics;
+- suitably designed studies linking resistance-training dose manipulations to later performance, fatigue/recovery or hypertrophy outcomes;
+- later My Mettle data where acute-state and longer-term predictive models can be evaluated prospectively without tuning against the same outcomes;
+- external evidence capable of discriminating plausible `delta`, demand-to-dose and within-session saturation candidates.
+
+Subjective free-text notes, generic vibe/form/comfort scores, anonymous anecdotes and visual plausibility are not sufficient calibration targets.
+
+## Revisit protocol
+
+When sufficient evidence exists:
+
+1. freeze the then-current 7D candidate/config before examining confirmatory outcomes;
+2. preserve the v1 results as historical candidate evidence;
+3. define the observable validation target separately from latent demand/dose semantics;
+4. evaluate calibration/sensitivity prospectively or on held-out evidence where possible;
+5. test alternative immutable `delta`, demand-to-dose and session-transform candidates rather than mutating the historical model;
+6. retain Dense as the high-fidelity numerical reference for capability-driven comparisons where applicable;
+7. evaluate whether apparent downstream predictive gains identify the dose model or only compensate through another model layer;
+8. rerun all materially dependent derived state after any accepted model replacement;
+9. close PD-002 only for claims actually supported by the evidence.
+
+## Closure condition
+
+PD-002 closes only when there is sufficient semantically valid evidence to make an evidence-backed decision about the numerical 7D mapping. Valid outcomes include:
+
+- retain the candidate with defensible calibration bounds;
+- replace one or more family-specific `delta` values;
+- replace the demand-to-dose transform;
+- replace/refine the session concavity model or `tau`;
+- keep part of the chain deliberately broad/non-authoritative because it remains unidentifiable.
+
+Closure does not require pretending every latent quantity is directly measurable. It requires that any promoted numeric interpretation has a defensible empirical chain and that unresolved parts remain explicitly uncertain.
+
+---
+
 # Future entries
 
 Use this file for later deliberately postponed work where forward development is safe only under explicit quarantine. Every entry should state:
