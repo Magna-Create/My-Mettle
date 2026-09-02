@@ -10,10 +10,13 @@ data class NBio7DCompleteAcceptanceReport(
     val sensitivity: NBio7DSensitivityValidationReport,
     val correctionBoundary: NBio7DCorrectionBoundaryValidationReport,
     val downstreamFidelity: NBio7DDownstreamFidelityValidationReport,
+    val benchmarkV0RunIdBefore: String?,
+    val benchmarkV0RunIdAfter: String?,
 ) {
     val validationBundlePassed: Boolean get() = sensitivity.passed && correctionBoundary.passed && downstreamFidelity.passed
+    val benchmarkV0AuthorityUnchanged: Boolean get() = benchmarkV0RunIdBefore != null && benchmarkV0RunIdBefore == benchmarkV0RunIdAfter
     val structuralVerdict: NBio7DStructuralVerdict get() = if (
-        core.structuralVerdict == NBio7DStructuralVerdict.PASS && validationBundlePassed
+        core.structuralVerdict == NBio7DStructuralVerdict.PASS && validationBundlePassed && benchmarkV0AuthorityUnchanged
     ) NBio7DStructuralVerdict.PASS else NBio7DStructuralVerdict.FAIL
     val empiricalCalibrationStatus: NBio7DEmpiricalCalibrationStatus get() = core.empiricalCalibrationStatus
     val overallVerdict: NBio7DOverallVerdict get() = if (structuralVerdict == NBio7DStructuralVerdict.PASS) {
@@ -27,6 +30,10 @@ data class NBio7DCompleteAcceptanceReport(
         root.put("correctionBoundary", correctionBoundary.toJson7dComplete())
         root.put("downstreamSolverFidelity", downstreamFidelity.toJson7dComplete())
         root.put("validationBundlePassed", validationBundlePassed)
+        root.put("benchmarkV0Authority", JSONObject()
+            .put("runIdBefore", benchmarkV0RunIdBefore ?: JSONObject.NULL)
+            .put("runIdAfter", benchmarkV0RunIdAfter ?: JSONObject.NULL)
+            .put("unchanged", benchmarkV0AuthorityUnchanged))
         root.put("verdicts", JSONObject()
             .put("structural", structuralVerdict.storageValue)
             .put("empiricalCalibration", empiricalCalibrationStatus.storageValue)
@@ -39,12 +46,13 @@ data class NBio7DCompleteAcceptanceReport(
 /** Single installed-device action spanning every N-BIO-7D structural acceptance layer. */
 class NBio7DCompleteAcceptanceRunner(
     context: Context,
-    database: MyMettleDatabase,
+    private val database: MyMettleDatabase,
     private val coreRunner: NBio7DDemandDoseAcceptanceRunner = NBio7DDemandDoseAcceptanceRunner(context, database),
 ) {
     suspend fun run(
         onProgress: (NBio7BAcceptanceProgress) -> Unit = {},
     ): NBio7DCompleteAcceptanceReport {
+        val benchmarkBefore = latestBenchmarkV0RunId()
         onProgress(NBio7BAcceptanceProgress(0, 7, "N-BIO-7D · delta/tau sensitivity"))
         val sensitivity = NBio7DSensitivityValidation.run()
         onProgress(NBio7BAcceptanceProgress(1, 7, "N-BIO-7D · causal correction boundaries"))
@@ -60,8 +68,20 @@ class NBio7DCompleteAcceptanceRunner(
                 ),
             )
         }
-        return NBio7DCompleteAcceptanceReport(core, sensitivity, correction, fidelity)
+        val benchmarkAfter = latestBenchmarkV0RunId()
+        return NBio7DCompleteAcceptanceReport(
+            core = core,
+            sensitivity = sensitivity,
+            correctionBoundary = correction,
+            downstreamFidelity = fidelity,
+            benchmarkV0RunIdBefore = benchmarkBefore,
+            benchmarkV0RunIdAfter = benchmarkAfter,
+        )
     }
+
+    private fun latestBenchmarkV0RunId(): String? = database.openHelper.readableDatabase.query(
+        "SELECT id FROM inference_run WHERE executionMode = 'benchmark_v0' ORDER BY calculatedAt DESC, id DESC LIMIT 1",
+    ).use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
 }
 
 private fun NBio7DSensitivityValidationReport.toJson7dComplete(): JSONObject = JSONObject()
