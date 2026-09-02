@@ -52,7 +52,7 @@ N-BIO-7 replaces the conservative v0 placeholders with a versioned probabilistic
 
 Do **not** implement every equation simultaneously.
 
-Forward model implementation order (with same-profile capability now active in N-BIO-7C):
+Forward model implementation order (with same-profile capability structurally closed in N-BIO-7C under open PD-001):
 
 ```text
 1. common posterior + model-version infrastructure

@@ -1,6 +1,6 @@
 # N-BIO-7B Dynamic Resistance Capability Contract
 
-Status: **Candidate v1 frozen/rejected; N-BIO-7B.X adaptive-inference consolidation complete. Adaptive Sparse is the selected forward Candidate-v2 solver, Dense is retained as the bounded high-fidelity oracle, Conditional Laplace is rejected for production, and N-BIO-7C is active under PD-001.**
+Status: **Candidate v1 frozen/rejected; N-BIO-7B.X adaptive-inference consolidation complete. Adaptive Sparse is the selected forward Candidate-v2 solver, Dense is retained as the bounded high-fidelity oracle, Conditional Laplace is rejected for production, and N-BIO-7C structural/pre-validation is complete with PD-001 still open.**
 
 > The complete pre-adaptive 7B contract is preserved verbatim as [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT_LEGACY_PRE_ADAPTIVE.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT_LEGACY_PRE_ADAPTIVE.md). This document is the current forward contract and must be read with [`ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md`](./ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md).
 
@@ -469,4 +469,4 @@ N-BIO-7B.X closes only when the mission can make evidence-backed recommendations
 
 If installed-device evidence is still missing or insufficient, the correct candidate/backend verdict is `INCONCLUSIVE`, not an invented production choice.
 
-N-BIO-7B.X is complete. N-BIO-7C is the active consolidated capability-family mission under PD-001; N-BIO-7D has not started.
+N-BIO-7B.X is complete. N-BIO-7C structural/pre-validation is also complete; PD-001 remains open and N-BIO-7D has not started.
