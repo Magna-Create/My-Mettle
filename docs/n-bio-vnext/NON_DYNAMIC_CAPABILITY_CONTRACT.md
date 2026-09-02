@@ -1,6 +1,6 @@
 # N-BIO-7C — Non-dynamic Same-profile Capability Contract
 
-Status: **N-BIO-7C ACTIVE — structural/pre-validation implementation; empirical calibration quarantined by PD-001.**
+Status: **N-BIO-7C STRUCTURAL/PRE-VALIDATION COMPLETE — physical acceptance PASS; empirical calibration remains quarantined by open PD-001. N-BIO-7D has not started.**
 
 This is the normative contract for the single consolidated N-BIO-7C mission covering `LOADED_HOLD`, `DURATION_ONLY` and `REPEATED_CONTRACTION`. It consumes the completed N-BIO-7B.X adaptive-inference architecture. It does not reopen the 7B.X solver decision and does not authorise N-BIO-7D or later biological/product work.
 
@@ -141,7 +141,7 @@ Grip/support/equipment/angle/technique that defines task capability belongs in v
 
 ### Capability question
 
-> What profile-local physical resistance is currently plausible at a specified positive cycle count for this exact repeated-contraction execution-profile version/semantic regime/side?
+> What profile-local physical resistance is currently plausible at a specified positive cycle count for this exact repeated-contraction execution-profile version/semantic regime and side?
 
 ### Exact candidate
 
@@ -256,7 +256,7 @@ Real history uses whole-session chronological evaluation only where sufficient. 
 
 N-BIO-7C remains SHADOW/developer inference foundation. `BENCHMARK_V0` remains normal product authority. No normal workout/prescription/order/prefill or normal-user capability display changes are authorised.
 
-N-BIO-7D SetDemand/dose work and every later biological/translation/conditioning/V8 feature remain strictly out of scope while this 7C mission is active.
+N-BIO-7D SetDemand/dose work and every later biological/translation/conditioning/V8 feature remained strictly out of scope for the 7C mission. Structural closure does not itself authorise or start N-BIO-7D.
 
 ## 16. PD-001 amended closure rule
 
@@ -268,4 +268,4 @@ Where semantically valid longitudinal history is insufficient, family/profile em
 
 Until PD-001 is later closed, 7C numerical outputs remain quarantined from normal-user authority and downstream phases may consume only the contracts/interfaces without inferring empirical validation from a finite posterior. Raw evidence and immutable model versions remain replayable for later candidate refinement.
 
-N-BIO-7D is not authorised until this amended 7C structural closure is complete.
+N-BIO-7C structural closure is complete. PD-001 remains open and binding; N-BIO-7D has not started and requires explicit next-phase instruction.
