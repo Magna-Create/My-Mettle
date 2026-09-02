@@ -321,7 +321,7 @@ fun MyMettleApp() {
                             BackupScreen(onBack = { navController.popBackStack() })
                         }
                         composable(BIOLOGY_DEVELOPER_ROUTE) {
-                            BiologyDeveloperScreen(onBack = { navController.popBackStack() })
+                            BiologyDeveloperHostScreen(onBack = { navController.popBackStack() })
                         }
                     }
                     NativeRestTimerOverlay()
