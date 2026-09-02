@@ -43,7 +43,7 @@ object NBio7DHistoricalReplayPlanner {
         replayKnowledgeAt: Instant,
     ): NBio7DHistoricalReplayPlan {
         val revisions = (dynamicHistory.revisions + nonDynamicHistory.revisions)
-            .distinctBy(HistoricalCompletedSetEvidenceRevision::recordKey)
+            .distinctBy { it.recordKey }
         val skipped = linkedMapOf<String, String>()
         val sessions = inputs.sessions.values
             .filter { !it.startedAt.isAfter(replayKnowledgeAt) }
