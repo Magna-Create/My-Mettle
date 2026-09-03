@@ -4,9 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -36,13 +37,15 @@ fun BiologyDeveloperHostScreen(onBack: () -> Unit) {
     if (!showing7D) {
         Box(modifier = Modifier.fillMaxSize()) {
             BiologyDeveloperScreen(onBack = onBack)
-            AssistChip(
+            Button(
                 onClick = { showing7D = true },
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 64.dp, end = 12.dp),
-                label = { Text("N-BIO-7D") },
-            )
+                    .align(Alignment.TopCenter)
+                    .padding(top = 72.dp, start = 16.dp, end = 16.dp)
+                    .fillMaxWidth(),
+            ) {
+                Text("Open N-BIO-7D Demand & Dose Acceptance")
+            }
         }
         return
     }
