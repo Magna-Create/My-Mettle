@@ -7,25 +7,29 @@ Use this directory in the following order.
 1. [`PLAN.md`](./PLAN.md) — overarching phase/architecture/acceptance contract.
 2. [`ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md`](./ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md) — authoritative additive supplement for N-BIO inference architecture, solver strategy, dynamic latent-state naming, capability-vs-action-policy separation, hierarchical personalisation, prequential evaluation and later decision architecture. Where older planning assumes stationary/batch capability, one universal inference backend, tensor inference as inherently non-sequential, predetermined biological latent-state labels, or capability and action selection as one distribution, this supplement governs.
 3. [`CORE_MODEL_DETAIL.md`](./CORE_MODEL_DETAIL.md) — normative detailed N-BIO-7/N-BIO-8 mathematical and behavioural supplement except where superseded by the adaptive-inference supplement or later explicit PLAN corrections.
-4. [`PRODUCT_ROADMAP_GATES.md`](./PRODUCT_ROADMAP_GATES.md) — authoritative additive product/research/collaboration gates for late N-BIO-7 equipment intelligence, uncertainty communication, N-BIO-8 research/UX design, N-BIO-9 recomputation lifecycle and Native database-safety behaviour. When it marks `COLLABORATION REQUIRED`, stop before behaviour-driving implementation and involve Kian rather than silently choosing product policy.
+4. [`CONTEXT_MODULE_ARCHITECTURE.md`](./CONTEXT_MODULE_ARCHITECTURE.md) — authoritative additive N-BIO-7E requirements for the extensible context-feature library, stateful per-feature modules, module-owned replayable memory, personalised associative learning, standard ContextSignals and N-BIO Core arbitration. It does not start 7E or authorise product behaviour.
+5. [`PRODUCT_ROADMAP_GATES.md`](./PRODUCT_ROADMAP_GATES.md) — authoritative additive product/research/collaboration gates for late N-BIO-7 equipment intelligence, uncertainty communication, N-BIO-8 research/UX design, N-BIO-9 recomputation lifecycle and Native database-safety behaviour. When it marks `COLLABORATION REQUIRED`, stop before behaviour-driving implementation and involve Kian rather than silently choosing product policy.
 
 `ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md` does not authorise later biological-state implementations, V8 prescription behaviour or normal-user UX changes. It corrects the inference architecture used to reach those later gates.
 
+`CONTEXT_MODULE_ARCHITECTURE.md` likewise does not make tags behaviour-driving. It prevents the future 7E implementation from degenerating into passive context metadata or hard-coded per-tag logic inside N-BIO Core.
+
 ## Core biological/performance research
 
-5. [`RESEARCH_GUIDE.md`](./RESEARCH_GUIDE.md) — implementation-facing evaluation/navigation.
-6. [`RESEARCH_RAW.md`](./RESEARCH_RAW.md) — preserved core DeepResearch source.
+6. [`RESEARCH_GUIDE.md`](./RESEARCH_GUIDE.md) — implementation-facing evaluation/navigation.
+7. [`RESEARCH_RAW.md`](./RESEARCH_RAW.md) — preserved core DeepResearch source.
 
 ## Temporal / Health Connect / conditioning / HR research
 
-7. [`RESEARCH_HEALTH_TEMPORAL_GUIDE.md`](./RESEARCH_HEALTH_TEMPORAL_GUIDE.md) — implementation-facing evaluation/navigation.
-8. [`RESEARCH_HEALTH_TEMPORAL_RAW.md`](./RESEARCH_HEALTH_TEMPORAL_RAW.md) — raw-report index and integrity metadata; links seven verbatim storage parts.
+8. [`RESEARCH_HEALTH_TEMPORAL_GUIDE.md`](./RESEARCH_HEALTH_TEMPORAL_GUIDE.md) — implementation-facing evaluation/navigation.
+9. [`RESEARCH_HEALTH_TEMPORAL_RAW.md`](./RESEARCH_HEALTH_TEMPORAL_RAW.md) — raw-report index and integrity metadata; links seven verbatim storage parts.
 
 ## Implementation contracts and notes
 
 - [`TEMPORAL_FOUNDATION.md`](./TEMPORAL_FOUNDATION.md) — concrete N-BIO-6 temporal storage, scope, codec, revision and compatibility decisions. The live development database has since advanced to Room14; historical schema numbers in this document describe the stage at which the contract was introduced.
 - [`DEVICE_VERIFICATION.md`](./DEVICE_VERIFICATION.md) — reproducible Termux build and isolated on-device scalar/temporal acceptance procedure.
 - [`CONTEXT_INTERPRETATION_CONTRACT.md`](./CONTEXT_INTERPRETATION_CONTRACT.md) — N-BIO-7A.5 canonical-note ownership, bounded tag ontology, interpreter/fallback/privacy boundary, provenance and zero-effect N-BIO context interface.
+- [`CONTEXT_MODULE_ARCHITECTURE.md`](./CONTEXT_MODULE_ARCHITECTURE.md) — future N-BIO-7E context-learning architecture: versioned feature definitions, independent module memory/learners, authorised read/write boundaries, temporal episodes, personalised association learning, generic signal protocol and central correlation/arbitration.
 - [`EXERCISE_AUTHORING_CONTRACT.md`](./EXERCISE_AUTHORING_CONTRACT.md) — authoritative protocol for externally proposed exercise/execution/recruitment semantics before they enter the existing Native authoring pathway.
 - [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md) — N-BIO-7B evidence/coordinate contract, frozen Candidate-v1 record, chronological validation, SHADOW persistence and Candidate-v2 development evidence. Read it together with the adaptive-inference supplement for current capability/policy and solver semantics.
 - [`NON_DYNAMIC_CAPABILITY_CONTRACT.md`](./NON_DYNAMIC_CAPABILITY_CONTRACT.md) — normative N-BIO-7C loaded-hold, duration-only and repeated-contraction capability contract.
@@ -48,7 +52,7 @@ Use this directory in the following order.
 7B.X    complete — Adaptive Sparse selected for forward Candidate-v2 inference; Dense retained oracle; Conditional Laplace rejected production
 7C      complete structural/pre-validation — physical Room14 capability acceptance PASS; PD-001 empirical accuracy remains pending where evidence is insufficient
 7D      implementation complete — SetDemand/Exposure/EffectiveDose/SessionDose SHADOW pipeline and consolidated device acceptance action implemented; physical installed-history acceptance still pending; PD-002 OPEN
-7E      NOT STARTED
+7E      NOT STARTED — architecture requirements are now frozen in CONTEXT_MODULE_ARCHITECTURE.md before implementation
 ```
 
 ### Candidate-v1 record
@@ -92,17 +96,18 @@ All current candidates remain **SHADOW / CANDIDATE** only.
 
 - Normal workout/prescription authority remains `BENCHMARK_V0`.
 - Context consumption remains `NONE` for the current dynamic candidate and 7D does not add note/sleep/HR/HRV context.
+- The future 7E context architecture must learn through versioned ContextModules and standard ContextSignals; no tag currently has permission to mutate N-BIO state directly.
 - No RIR/RPE/failure-probability or `% max` value may be fabricated.
 - Raw performance evidence remains immutable and separate from derived inference.
 - Semantic metadata beats statistical changepoint suspicion when a real execution boundary is known.
 - Room remains 14 unless a genuine semantic impossibility requires another migration.
 - N-BIO-7C numerical outputs remain SHADOW/developer-only under PD-001 and are not normal-user prescription or prefill authority.
 - N-BIO-7D demand/dose outputs remain SHADOW/developer-only under PD-002; structural success does not establish calibrated physiology.
-- N-BIO-7E fatigue/recovery/readiness/development/skill/decay state has not started.
+- N-BIO-7E fatigue/recovery/readiness/development/skill/decay state and context-module learning have not started.
 
 Before behaviour-driving N-BIO-8 implementation, `PRODUCT_ROADMAP_GATES.md` still requires the dedicated research + product/UX design gate. Programme intent/priorities, in-workout adaptation, editing/regeneration semantics, equipment setup/feasible-load UX and uncertainty presentation require explicit collaboration.
 
-N-BIO-9 remains the later product/integration phase for broader context UX, explicit reannotation/data controls, Nano rollout/download management, notification/dashboard consumers, Health Connect/HR experiments and Analysis Export. N-BIO-9 must additionally consult the recomputation/model-upgrade UX gates in `PRODUCT_ROADMAP_GATES.md`.
+N-BIO-9 remains the later product/integration phase for broader context UX, additional producers such as Health Connect/wearables, explicit reannotation/data controls, Nano rollout/download management, notification/dashboard consumers and Analysis Export. It must plug those sources into the 7E context-module protocol rather than inventing a second context-learning stack. N-BIO-9 must additionally consult the recomputation/model-upgrade UX gates in `PRODUCT_ROADMAP_GATES.md`.
 
 Native Cutover must consult the database compatibility, downgrade protection, migration-safety and recovery-UX gates in `PRODUCT_ROADMAP_GATES.md` before destructive migration is removed and the first permanent Native schema is declared.
 
@@ -124,6 +129,19 @@ PLAN.md
 → current source code and immutable model/config identities
 ```
 
+For N-BIO-7E context/state work, read:
+
+```text
+PLAN.md
+→ CONTEXT_INTERPRETATION_CONTRACT.md
+→ CONTEXT_MODULE_ARCHITECTURE.md
+→ ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md
+→ relevant CORE_MODEL_DETAIL.md acute/recovery/state sections
+→ PRODUCT_ROADMAP_GATES.md
+→ relevant research guides
+→ current source code
+```
+
 For later non-inference work, start with `PLAN.md` and follow the relevant authority links above.
 
 When `PRODUCT_ROADMAP_GATES.md` says `COLLABORATION REQUIRED`, do not silently infer a final UX/product policy from backend capability. Explicitly involve Kian before behaviour-driving implementation.
@@ -132,4 +150,4 @@ Do not load both full raw research bodies into ordinary implementation context.
 
 Existing `docs/N_BIO_*.md` files remain historical implementation-stage documentation. The vNext authority stack above governs forward work where they conflict.
 
-N-BIO-7C structural/pre-validation is physically closed under PD-001 quarantine. N-BIO-7D implementation is complete and awaiting the consolidated installed-device acceptance run; PD-002 remains open and N-BIO-7E has not started.
+N-BIO-7C structural/pre-validation is physically closed under PD-001 quarantine. N-BIO-7D implementation is complete and awaiting the consolidated installed-device acceptance run; PD-002 remains open. N-BIO-7E has not started, but its context-module/associative-learning architecture is now an explicit forward requirement rather than an optional later enhancement.
