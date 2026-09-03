@@ -124,7 +124,7 @@ Let:
 innovation ν_t = y_t - H x_t^- - c_t
 innovation variance S_t = H P_t^- Hᵀ + r_t
 standardised residual a_t = ν_t / sqrt(S_t)
-H = [1, 1]
+H_t = [1, 1, 0] for TEMPORAL_BASE; [1, 1, d_t] for dose-aware layers
 ```
 
 The candidate uses Huber-style variance inflation:
@@ -284,8 +284,11 @@ Signals are immutable derived outputs, rebuilt/superseded through replay. Unknow
 Implemented in 7E v1:
 
 - `SYSTEMIC_TRANSIENT_STATE`;
-- `LOCAL_TRANSIENT_STATE`;
 - `OBSERVATION_VARIANCE`.
+
+Accepted as a protocol-only route in 7E v1:
+
+- `LOCAL_TRANSIENT_STATE` (scope validation and central arbitration are implemented, but no production module or evolving local latent/filter consumer exists yet).
 
 Reserved in the protocol but rejected by the v1 target policy:
 
@@ -317,11 +320,15 @@ Production representative: legacy `ILLNESS_REPORTED` v1 adapter.
 
 The module clusters temporally compatible positive evidence into derived episodes, tracks explicit resolution, maintains a Beta-Bernoulli persistence posterior and a conjugate normal association posterior over future frozen residuals. Rows inside one episode increase row/session support but only one independent-episode count. Missing evidence does not resolve an episode. It may publish `SYSTEMIC_TRANSIENT_STATE` only.
 
+Immutable config `context-module:illness-episode:v1` is exported canonically with: maximum episode gap 168 hours; maximum episode age 14 days; association half-life 3 days; association prior variance 0.0100; residual observation variance 0.0400; persistence Beta prior `(1,1)`; partial/data-informed thresholds 1/3 independent episodes; maximum absolute log-location shift 0.20; and signal variance bounds `[0.0001, 1.0]`.
+
 ### Observation variance association module
 
 Production representative: legacy `TIME_PRESSURE_REPORTED` v1 adapter.
 
 This module does not create episodes or learn a median penalty. It maintains separate robust residual second-moment sufficient statistics for explicit-present versus explicitly-known-false evidence and publishes a bounded log observation-variance ratio only when both groups have support. Unmentioned evidence is not placed in the false/control group. It may publish `OBSERVATION_VARIANCE` only.
+
+Immutable config `context-module:time-pressure-variance:v1` is exported canonically with: prior count 2.0; prior variance sum 0.02; squared-residual cap 0.25; maximum absolute log-variance shift 1.38629436112; partial/data-informed thresholds 1/8 distinct sessions per explicit group; signal variance bounds `[0.0001, 1.0]`; and persisted signal-envelope validity 86,400 seconds. The source feature itself remains session-scoped, so later pre-session publication does not carry it forward.
 
 A synthetic anatomy-scoped module fixture proves `LOCAL_TRANSIENT_STATE` scope enforcement without inventing a new production ontology tag.
 

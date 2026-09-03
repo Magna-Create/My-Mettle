@@ -192,7 +192,7 @@ object NBio7ESyntheticValidation {
     private class VersionFixtureModule(protocol: Int) : ContextModuleV7E {
         override val descriptor = EpisodeAssociationModuleV1().descriptor.copy(moduleId = "fixture.version", protocolVersion = protocol)
         override val stateCodec = object : ContextModuleStateCodecV7E {
-            override val moduleId = "fixture.version"; override val schemaVersion = 1
+            override val moduleId = "fixture.version"; override val schemaVersion = 2
             override fun encode(state: ContextModuleStateV7E) = "1"
             override fun decode(encoded: String) = initialState()
         }

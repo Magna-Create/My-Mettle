@@ -54,6 +54,7 @@ data class NBio7EPersistenceAcceptance(
     val signalDeletionConfirmed: Boolean,
     val derivedRunDeletionConfirmed: Boolean,
     val fullReplayEquivalent: Boolean,
+    val targetedReannotationInvalidationConfirmed: Boolean,
 )
 
 enum class NBio7EStructuralVerdict { PASS, FAIL }
@@ -83,7 +84,8 @@ data class NBio7EStateContextAcceptanceReport(
     val structuralVerdict: NBio7EStructuralVerdict get() = if (
         roomSchemaVersion == 15 && synthetic.allPassed && persistence.persistReloadEquivalent &&
         persistence.moduleStateDeletionConfirmed && persistence.signalDeletionConfirmed &&
-        persistence.derivedRunDeletionConfirmed && persistence.fullReplayEquivalent && nativeBackupRoundTrip &&
+        persistence.derivedRunDeletionConfirmed && persistence.fullReplayEquivalent &&
+        persistence.targetedReannotationInvalidationConfirmed && nativeBackupRoundTrip &&
         rawFingerprintBefore == rawFingerprintAfter && contextFingerprintBefore == contextFingerprintAfter &&
         prescriptionBefore == prescriptionAfter && benchmarkRunIdBefore == benchmarkRunIdAfter && foreignKeysClean
     ) NBio7EStructuralVerdict.PASS else NBio7EStructuralVerdict.FAIL
@@ -110,6 +112,8 @@ data class NBio7EStateContextAcceptanceReport(
         .put("registeredModules", JSONArray(registeredModules.map { it.toJson() }))
         .put("contextTargets", JSONObject()
             .put("implemented", JSONArray(ContextSignalTargetPolicyV1.implementedTargets.map { it.name }.sorted()))
+            .put("effectfulInTemporalCandidate", JSONArray(ContextSignalTargetPolicyV1.effectfulTemporalTargets.map { it.name }.sorted()))
+            .put("protocolOnly", JSONArray(ContextSignalTargetPolicyV1.protocolOnlyTargets.map { it.name }.sorted()))
             .put("reserved", JSONArray(listOf("OBSERVATION_RELIABILITY", "PROCESS_VOLATILITY", "RECOVERY_DYNAMICS", "EXECUTION_CONTEXT")))
             .put("laterPhase", JSONArray(listOf("CAPABILITY_CONDITIONING", "EQUIPMENT_TRANSLATION", "RECRUITMENT_CONTEXT"))))
         .put("realHistory", history.toJson())
@@ -118,7 +122,8 @@ data class NBio7EStateContextAcceptanceReport(
             .put("moduleStateDeletionConfirmed", persistence.moduleStateDeletionConfirmed)
             .put("signalDeletionConfirmed", persistence.signalDeletionConfirmed)
             .put("derivedRunDeletionConfirmed", persistence.derivedRunDeletionConfirmed)
-            .put("fullReplayEquivalent", persistence.fullReplayEquivalent))
+            .put("fullReplayEquivalent", persistence.fullReplayEquivalent)
+            .put("correctionReannotationInvalidation", persistence.targetedReannotationInvalidationConfirmed))
         .put("nativeBackupRestore", nativeBackupRoundTrip)
         .put("integrity", JSONObject()
             .put("rawEvidenceBeforeSha256", rawFingerprintBefore.sha256)
@@ -184,6 +189,26 @@ class NBio7EStateContextAcceptanceRunner(
         val runDeleted = repository.load(runId) == null
         val replay = compute(NBio7EHistoricalEvidenceReader(database).read())
         val replayEquivalent = first == replay
+
+        val invalidationRunId = "n-bio-7e-invalidation-${UUID.randomUUID()}"
+        repository.save(replay.toPersistedRun(invalidationRunId, userProfileId, sourceRun.id, temporalConfig))
+        val invalidationBefore = requireNotNull(repository.load(invalidationRunId))
+        database.nBio7EDao().invalidateContextModules(
+            listOf(dev.kian.mymettle.context.modules.EpisodeAssociationModuleV1.MODULE_ID),
+        )
+        val invalidationAfter = requireNotNull(repository.load(invalidationRunId))
+        val targetedInvalidation =
+            dev.kian.mymettle.context.modules.EpisodeAssociationModuleV1.MODULE_ID !in invalidationAfter.moduleStates &&
+                invalidationAfter.moduleStates[dev.kian.mymettle.context.modules.ObservationVarianceAssociationModuleV1.MODULE_ID] ==
+                invalidationBefore.moduleStates[dev.kian.mymettle.context.modules.ObservationVarianceAssociationModuleV1.MODULE_ID] &&
+                invalidationAfter.temporalStates.none { it.layer == TemporalCandidateLayer.CONTEXT_TEMPORAL } &&
+                invalidationAfter.temporalStates == invalidationBefore.temporalStates.filterNot {
+                    it.layer == TemporalCandidateLayer.CONTEXT_TEMPORAL
+                } &&
+                invalidationAfter.signals == invalidationBefore.signals.filterNot {
+                    it.sourceModuleId == dev.kian.mymettle.context.modules.EpisodeAssociationModuleV1.MODULE_ID
+                }
+        repository.deleteDerivedRun(invalidationRunId)
         val retainedId = "n-bio-7e-${UUID.randomUUID()}"
         repository.save(replay.toPersistedRun(retainedId, userProfileId, sourceRun.id, temporalConfig))
 
@@ -206,7 +231,14 @@ class NBio7EStateContextAcceptanceRunner(
             synthetic = synthetic,
             registeredModules = registry.modules.map { it.descriptor },
             history = first.audit,
-            persistence = NBio7EPersistenceAcceptance(persistReload, moduleDeleted, signalsDeleted, runDeleted, replayEquivalent),
+            persistence = NBio7EPersistenceAcceptance(
+                persistReload,
+                moduleDeleted,
+                signalsDeleted,
+                runDeleted,
+                replayEquivalent,
+                targetedInvalidation,
+            ),
             nativeBackupRoundTrip = backupPass,
             rawFingerprintBefore = rawBefore,
             rawFingerprintAfter = rawAfter,
@@ -434,7 +466,8 @@ private fun NBio7ESyntheticCase.toJson() = JSONObject().put("id", id).put("passe
 
 private fun ContextModuleDescriptor.toJson() = JSONObject()
     .put("moduleId", moduleId).put("protocolVersion", protocolVersion).put("learnerFamily", learnerFamily)
-    .put("modelVersion", modelVersion).put("configId", configId).put("stateSchemaVersion", stateSchemaVersion)
+    .put("modelVersion", modelVersion).put("configId", configId).put("configPayload", configPayload)
+    .put("stateSchemaVersion", stateSchemaVersion)
     .put("consumedFeatures", JSONArray(consumedFeatures.map { it.canonical }.sorted()))
     .put("requiredReadCapabilities", JSONArray(requiredReadCapabilities.map { it.name }.sorted()))
     .put("allowedTargets", JSONArray(allowedTargets.map { it.name }.sorted()))
@@ -469,6 +502,7 @@ private class NBio7EBackupRoundTripVerifier(
                 source.nBio7EDao().temporalStates(retainedRunId) == restored.nBio7EDao().temporalStates(retainedRunId) &&
                 source.nBio7EDao().moduleStates(retainedRunId) == restored.nBio7EDao().moduleStates(retainedRunId) &&
                 source.nBio7EDao().signals(retainedRunId) == restored.nBio7EDao().signals(retainedRunId) &&
+                source.nBio7EDao().moduleStatuses(retainedRunId) == restored.nBio7EDao().moduleStatuses(retainedRunId) &&
                 restored.openHelper.readableDatabase.query("PRAGMA foreign_key_check").use { !it.moveToFirst() }
         } finally {
             restored.close()

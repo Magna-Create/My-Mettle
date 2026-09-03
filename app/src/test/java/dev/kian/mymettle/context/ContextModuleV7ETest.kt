@@ -50,7 +50,7 @@ class ContextModuleV7ETest {
                 override val descriptor = EpisodeAssociationModuleV1().descriptor.copy(moduleId = "bad.protocol", protocolVersion = 99)
                 override val stateCodec = object : ContextModuleStateCodecV7E {
                     override val moduleId = "bad.protocol"
-                    override val schemaVersion = 1
+                    override val schemaVersion = 2
                     override fun encode(state: ContextModuleStateV7E) = ""
                     override fun decode(encoded: String) = object : ContextModuleStateV7E { override val ownerModuleId = moduleId }
                 }
@@ -317,7 +317,7 @@ class ContextModuleV7ETest {
                 override val descriptor = delegate.descriptor.copy(moduleId = "fixture.throwing")
                 override val stateCodec = object : ContextModuleStateCodecV7E {
                     override val moduleId = "fixture.throwing"
-                    override val schemaVersion = 1
+                    override val schemaVersion = delegate.descriptor.stateSchemaVersion
                     override fun encode(state: ContextModuleStateV7E) = "1"
                     override fun decode(encoded: String) = initialState()
                 }

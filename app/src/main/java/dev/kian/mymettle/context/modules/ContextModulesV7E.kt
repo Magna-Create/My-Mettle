@@ -137,6 +137,49 @@ object LegacyContextEvidenceAdapterV1 {
     }
 }
 
+object EpisodeAssociationConfigV1 {
+    const val configId: String = "context-module:illness-episode:v1"
+    const val maximumEpisodeGapHours: Long = 7L * 24L
+    const val maximumEpisodeAgeDays: Double = 14.0
+    const val associationHalfLifeDays: Double = 3.0
+    const val associationPriorVariance: Double = 0.0100
+    const val associationObservationVariance: Double = 0.0400
+    const val persistencePriorAlpha: Double = 1.0
+    const val persistencePriorBeta: Double = 1.0
+    const val partialLearningEpisodeCount: Int = 1
+    const val dataInformedEpisodeCount: Int = 3
+    const val maximumAbsoluteLocationShift: Double = 0.20
+    const val minimumSignalVariance: Double = 0.0001
+    const val maximumSignalVariance: Double = 1.0
+
+    init {
+        require(configId.isNotBlank() && maximumEpisodeGapHours > 0L)
+        require(maximumEpisodeAgeDays > 0.0 && associationHalfLifeDays > 0.0)
+        require(associationPriorVariance > 0.0 && associationObservationVariance > 0.0)
+        require(persistencePriorAlpha > 0.0 && persistencePriorBeta > 0.0)
+        require(partialLearningEpisodeCount > 0 && dataInformedEpisodeCount >= partialLearningEpisodeCount)
+        require(maximumAbsoluteLocationShift > 0.0)
+        require(minimumSignalVariance > 0.0 && maximumSignalVariance >= minimumSignalVariance)
+    }
+
+    val canonicalPayload: String = listOf(
+        "schema=1",
+        "configId=$configId",
+        "maximumEpisodeGapHours=$maximumEpisodeGapHours",
+        "maximumEpisodeAgeDays=$maximumEpisodeAgeDays",
+        "associationHalfLifeDays=$associationHalfLifeDays",
+        "associationPriorVariance=$associationPriorVariance",
+        "associationObservationVariance=$associationObservationVariance",
+        "persistencePriorAlpha=$persistencePriorAlpha",
+        "persistencePriorBeta=$persistencePriorBeta",
+        "partialLearningEpisodeCount=$partialLearningEpisodeCount",
+        "dataInformedEpisodeCount=$dataInformedEpisodeCount",
+        "maximumAbsoluteLocationShift=$maximumAbsoluteLocationShift",
+        "minimumSignalVariance=$minimumSignalVariance",
+        "maximumSignalVariance=$maximumSignalVariance",
+    ).joinToString(";")
+}
+
 data class EpisodeAssociationStateV2(
     override val ownerModuleId: String = EpisodeAssociationModuleV1.MODULE_ID,
     val processedEvidenceIds: Set<String> = emptySet(),
@@ -216,12 +259,14 @@ object EpisodeAssociationStateCodecV2 : ContextModuleStateCodecV7E {
 }
 
 class EpisodeAssociationModuleV1 : ContextModuleV7E {
+    private val config = EpisodeAssociationConfigV1
     override val descriptor = ContextModuleDescriptor(
         moduleId = MODULE_ID,
         protocolVersion = 1,
         learnerFamily = "episode_persistence_conjugate_association",
         modelVersion = "illness-episode-association-v1",
-        configId = "context-module:illness-episode:v1",
+        configId = config.configId,
+        configPayload = config.canonicalPayload,
         stateSchemaVersion = 2,
         consumedFeatures = setOf(ProductionContextFeaturesV7E.illness.key),
         requiredReadCapabilities = ProductionContextFeaturesV7E.illness.requiredReadCapabilities,
@@ -230,7 +275,11 @@ class EpisodeAssociationModuleV1 : ContextModuleV7E {
     )
     override val stateCodec: ContextModuleStateCodecV7E = EpisodeAssociationStateCodecV2
 
-    override fun initialState(): ContextModuleStateV7E = EpisodeAssociationStateV2()
+    override fun initialState(): ContextModuleStateV7E = EpisodeAssociationStateV2(
+        associationVariance = config.associationPriorVariance,
+        persistenceAlpha = config.persistencePriorAlpha,
+        persistenceBeta = config.persistencePriorBeta,
+    )
 
     override fun evaluate(state: ContextModuleStateV7E, view: ContextReadViewV1): ContextModuleResultV7E {
         require(state is EpisodeAssociationStateV2 && state.ownerModuleId == MODULE_ID)
@@ -244,7 +293,7 @@ class EpisodeAssociationModuleV1 : ContextModuleV7E {
         val episodeId = next.activeEpisodeId
         if (residual != null && episodeId != null && episodeId !in next.learnedEpisodeIds) {
             val priorPrecision = 1.0 / next.associationVariance
-            val observationPrecision = 1.0 / ASSOCIATION_OBSERVATION_VARIANCE
+            val observationPrecision = 1.0 / config.associationObservationVariance
             next = next.copy(
                 associationMean = (next.associationMean * priorPrecision + residual * observationPrecision) / (priorPrecision + observationPrecision),
                 associationVariance = 1.0 / (priorPrecision + observationPrecision),
@@ -280,7 +329,7 @@ class EpisodeAssociationModuleV1 : ContextModuleV7E {
 
         if (evidence.missingness != ContextEvidenceMissingness.PRESENT) return state.copy(processedEvidenceIds = processed)
         val continueEpisode = state.activeEpisodeId != null && state.lastPositiveAt != null &&
-            Duration.between(state.lastPositiveAt, evidence.observedAt).toHours() <= MAX_EPISODE_GAP_HOURS
+            Duration.between(state.lastPositiveAt, evidence.observedAt).toHours() <= config.maximumEpisodeGapHours
         val newEpisodeId = if (continueEpisode) state.activeEpisodeId else "episode:${evidence.evidenceId}"
         return state.copy(
             processedEvidenceIds = processed,
@@ -300,12 +349,12 @@ class EpisodeAssociationModuleV1 : ContextModuleV7E {
         val last = state.lastPositiveAt ?: return null
         val episodeId = state.activeEpisodeId ?: return null
         val ageDays = max(0.0, Duration.between(last, horizon).toMillis() / 86_400_000.0)
-        if (ageDays > MAX_EPISODE_AGE_DAYS) return null
+        if (ageDays > config.maximumEpisodeAgeDays) return null
         val persistenceMean = state.persistenceAlpha / (state.persistenceAlpha + state.persistenceBeta)
-        val decay = exp(-ln(2.0) * ageDays / ASSOCIATION_HALF_LIFE_DAYS) * persistenceMean
+        val decay = exp(-ln(2.0) * ageDays / config.associationHalfLifeDays) * persistenceMean
         val maturity = when {
-            state.independentEpisodeCount >= 3 -> ContextEvidenceMaturity.DATA_INFORMED
-            state.independentEpisodeCount >= 1 -> ContextEvidenceMaturity.PARTIALLY_LEARNED
+            state.independentEpisodeCount >= config.dataInformedEpisodeCount -> ContextEvidenceMaturity.DATA_INFORMED
+            state.independentEpisodeCount >= config.partialLearningEpisodeCount -> ContextEvidenceMaturity.PARTIALLY_LEARNED
             else -> ContextEvidenceMaturity.PRIOR_DOMINATED
         }
         return ContextSignalV1(
@@ -317,10 +366,10 @@ class EpisodeAssociationModuleV1 : ContextModuleV7E {
             target = ContextSignalTarget.SYSTEMIC_TRANSIENT_STATE,
             scope = ContextScope.SYSTEMIC,
             effectiveFrom = horizon,
-            effectiveUntil = last.plusSeconds((MAX_EPISODE_AGE_DAYS * 86_400).toLong()),
+            effectiveUntil = last.plusSeconds((config.maximumEpisodeAgeDays * 86_400).toLong()),
             effectRepresentation = ContextSignalEffectRepresentation.LOG_PERFORMANCE_LOCATION_SHIFT,
-            locationMean = min(0.20, max(-0.20, state.associationMean * decay)),
-            variance = min(1.0, max(0.0001, state.associationVariance + (1.0 - decay) * 0.0100)),
+            locationMean = min(config.maximumAbsoluteLocationShift, max(-config.maximumAbsoluteLocationShift, state.associationMean * decay)),
+            variance = min(config.maximumSignalVariance, max(config.minimumSignalVariance, state.associationVariance + (1.0 - decay) * config.associationPriorVariance)),
             evidenceRowCount = state.evidenceRowCount,
             independentSessionCount = state.independentSessionCount,
             independentEpisodeCount = state.independentEpisodeCount,
@@ -336,15 +385,47 @@ class EpisodeAssociationModuleV1 : ContextModuleV7E {
 
     companion object {
         const val MODULE_ID = "context.illness.episode.v1"
-        private const val MAX_EPISODE_GAP_HOURS = 7L * 24L
-        private const val MAX_EPISODE_AGE_DAYS = 14.0
-        private const val ASSOCIATION_HALF_LIFE_DAYS = 3.0
-        private const val ASSOCIATION_OBSERVATION_VARIANCE = 0.0400
     }
 }
 
 object EpisodeAssociationModuleProviderV1 : ContextModuleProviderV7E {
     override fun create(): ContextModuleV7E = EpisodeAssociationModuleV1()
+}
+
+object ObservationVarianceAssociationConfigV1 {
+    const val configId: String = "context-module:time-pressure-variance:v1"
+    const val priorCount: Double = 2.0
+    const val priorVarianceSum: Double = 0.02
+    const val maximumSquaredResidual: Double = 0.25
+    const val maximumAbsoluteLogVarianceShift: Double = 1.38629436112
+    const val partialLearningCountPerGroup: Int = 1
+    const val dataInformedCountPerGroup: Int = 8
+    const val minimumSignalVariance: Double = 0.0001
+    const val maximumSignalVariance: Double = 1.0
+    const val publishedSignalValiditySeconds: Long = 86_400L
+
+    init {
+        require(configId.isNotBlank())
+        require(priorCount > 0.0 && priorVarianceSum > 0.0 && maximumSquaredResidual > 0.0)
+        require(maximumAbsoluteLogVarianceShift > 0.0)
+        require(partialLearningCountPerGroup > 0 && dataInformedCountPerGroup >= partialLearningCountPerGroup)
+        require(minimumSignalVariance > 0.0 && maximumSignalVariance >= minimumSignalVariance)
+        require(publishedSignalValiditySeconds > 0L)
+    }
+
+    val canonicalPayload: String = listOf(
+        "schema=1",
+        "configId=$configId",
+        "priorCount=$priorCount",
+        "priorVarianceSum=$priorVarianceSum",
+        "maximumSquaredResidual=$maximumSquaredResidual",
+        "maximumAbsoluteLogVarianceShift=$maximumAbsoluteLogVarianceShift",
+        "partialLearningCountPerGroup=$partialLearningCountPerGroup",
+        "dataInformedCountPerGroup=$dataInformedCountPerGroup",
+        "minimumSignalVariance=$minimumSignalVariance",
+        "maximumSignalVariance=$maximumSignalVariance",
+        "publishedSignalValiditySeconds=$publishedSignalValiditySeconds",
+    ).joinToString(";")
 }
 
 data class ObservationVarianceStateV2(
@@ -407,12 +488,14 @@ object ObservationVarianceStateCodecV2 : ContextModuleStateCodecV7E {
 }
 
 class ObservationVarianceAssociationModuleV1 : ContextModuleV7E {
+    private val config = ObservationVarianceAssociationConfigV1
     override val descriptor = ContextModuleDescriptor(
         moduleId = MODULE_ID,
         protocolVersion = 1,
         learnerFamily = "two_group_robust_variance_ratio",
         modelVersion = "time-pressure-observation-variance-v1",
-        configId = "context-module:time-pressure-variance:v1",
+        configId = config.configId,
+        configPayload = config.canonicalPayload,
         stateSchemaVersion = 2,
         consumedFeatures = setOf(ProductionContextFeaturesV7E.timePressure.key),
         requiredReadCapabilities = ProductionContextFeaturesV7E.timePressure.requiredReadCapabilities,
@@ -442,7 +525,7 @@ class ObservationVarianceAssociationModuleV1 : ContextModuleV7E {
         val learnedEvidence = newEvidence.lastOrNull()
         val learnedPresence = learnedEvidence?.missingness
         if (residual != null && learnedPresence in setOf(ContextEvidenceMissingness.PRESENT, ContextEvidenceMissingness.KNOWN_FALSE)) {
-            val boundedSquare = min(MAX_SQUARED_RESIDUAL, residual * residual)
+            val boundedSquare = min(config.maximumSquaredResidual, residual * residual)
             val sessionKey = requireNotNull(learnedEvidence).independentSessionKey()
             next = when (learnedPresence) {
                 ContextEvidenceMissingness.PRESENT -> if (sessionKey in next.countedPresentSessionKeys) next else next.copy(
@@ -467,13 +550,15 @@ class ObservationVarianceAssociationModuleV1 : ContextModuleV7E {
             state.currentEffectiveUntil?.let(horizon::isAfter) != false
         ) return null
         val bothGroups = state.presentSessionCount > 0 && state.falseSessionCount > 0
-        val presentVariance = (state.presentSquaredResidualSum + PRIOR_VARIANCE_SUM) / (state.presentSessionCount + PRIOR_COUNT)
-        val falseVariance = (state.falseSquaredResidualSum + PRIOR_VARIANCE_SUM) / (state.falseSessionCount + PRIOR_COUNT)
+        val presentVariance = (state.presentSquaredResidualSum + config.priorVarianceSum) / (state.presentSessionCount + config.priorCount)
+        val falseVariance = (state.falseSquaredResidualSum + config.priorVarianceSum) / (state.falseSessionCount + config.priorCount)
         val logRatio = if (bothGroups) ln(presentVariance / falseVariance) else 0.0
-        val uncertainty = if (bothGroups) 2.0 / (state.presentSessionCount + PRIOR_COUNT) + 2.0 / (state.falseSessionCount + PRIOR_COUNT) else 1.0
+        val uncertainty = if (bothGroups) {
+            2.0 / (state.presentSessionCount + config.priorCount) + 2.0 / (state.falseSessionCount + config.priorCount)
+        } else config.maximumSignalVariance
         val maturity = when {
-            state.presentSessionCount >= 8 && state.falseSessionCount >= 8 -> ContextEvidenceMaturity.DATA_INFORMED
-            bothGroups -> ContextEvidenceMaturity.PARTIALLY_LEARNED
+            state.presentSessionCount >= config.dataInformedCountPerGroup && state.falseSessionCount >= config.dataInformedCountPerGroup -> ContextEvidenceMaturity.DATA_INFORMED
+            state.presentSessionCount >= config.partialLearningCountPerGroup && state.falseSessionCount >= config.partialLearningCountPerGroup -> ContextEvidenceMaturity.PARTIALLY_LEARNED
             else -> ContextEvidenceMaturity.PRIOR_DOMINATED
         }
         return ContextSignalV1(
@@ -485,10 +570,10 @@ class ObservationVarianceAssociationModuleV1 : ContextModuleV7E {
             target = ContextSignalTarget.OBSERVATION_VARIANCE,
             scope = ContextScope.SYSTEMIC,
             effectiveFrom = horizon,
-            effectiveUntil = horizon.plusSeconds(86_400),
+            effectiveUntil = horizon.plusSeconds(config.publishedSignalValiditySeconds),
             effectRepresentation = ContextSignalEffectRepresentation.LOG_OBSERVATION_VARIANCE_SHIFT,
-            locationMean = min(MAX_ABS_LOG_VARIANCE_SHIFT, max(-MAX_ABS_LOG_VARIANCE_SHIFT, logRatio)),
-            variance = min(1.0, max(0.0001, uncertainty)),
+            locationMean = min(config.maximumAbsoluteLogVarianceShift, max(-config.maximumAbsoluteLogVarianceShift, logRatio)),
+            variance = min(config.maximumSignalVariance, max(config.minimumSignalVariance, uncertainty)),
             evidenceRowCount = state.evidenceRowCount,
             independentSessionCount = state.presentSessionCount + state.falseSessionCount,
             independentEpisodeCount = 0,
@@ -503,10 +588,6 @@ class ObservationVarianceAssociationModuleV1 : ContextModuleV7E {
 
     companion object {
         const val MODULE_ID = "context.time_pressure.observation_variance.v1"
-        private const val PRIOR_COUNT = 2.0
-        private const val PRIOR_VARIANCE_SUM = 0.02
-        private const val MAX_SQUARED_RESIDUAL = 0.25
-        private const val MAX_ABS_LOG_VARIANCE_SHIFT = 1.38629436112
     }
 }
 

@@ -297,6 +297,7 @@ data class ContextModuleDescriptor(
     val learnerFamily: String,
     val modelVersion: String,
     val configId: String,
+    val configPayload: String,
     val stateSchemaVersion: Int,
     val consumedFeatures: Set<ContextFeatureKey>,
     val requiredReadCapabilities: Set<ContextReadCapability>,
@@ -304,7 +305,8 @@ data class ContextModuleDescriptor(
     val deterministicReplay: Boolean,
 ) {
     init {
-        require(moduleId.isNotBlank() && learnerFamily.isNotBlank() && modelVersion.isNotBlank() && configId.isNotBlank())
+        require(moduleId.isNotBlank() && learnerFamily.isNotBlank() && modelVersion.isNotBlank())
+        require(configId.isNotBlank() && configPayload.isNotBlank())
         require(protocolVersion > 0 && stateSchemaVersion > 0)
         require(consumedFeatures.isNotEmpty() && allowedTargets.isNotEmpty())
     }
@@ -483,11 +485,12 @@ class ContextModuleRuntimeV7E(
 }
 
 object ContextSignalTargetPolicyV1 {
-    val implementedTargets: Set<ContextSignalTarget> = setOf(
+    val effectfulTemporalTargets: Set<ContextSignalTarget> = setOf(
         ContextSignalTarget.SYSTEMIC_TRANSIENT_STATE,
-        ContextSignalTarget.LOCAL_TRANSIENT_STATE,
         ContextSignalTarget.OBSERVATION_VARIANCE,
     )
+    val protocolOnlyTargets: Set<ContextSignalTarget> = setOf(ContextSignalTarget.LOCAL_TRANSIENT_STATE)
+    val implementedTargets: Set<ContextSignalTarget> = effectfulTemporalTargets + protocolOnlyTargets
 }
 
 object ContextSignalValidatorV1 {

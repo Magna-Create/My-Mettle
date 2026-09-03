@@ -184,6 +184,28 @@ Chronology/replay impact: only prior SessionDose enters `d`; missing dose uses d
 Failure behaviour: typed dose availability remains false; base-equivalent prediction/update remains available.
 Human/3P extension impact: modules publish observation adjustments only and never inject impulses into the transition.
 
+DECISION 7E-API-008
+Date / HEAD: 2026-09-03 / after 7ad9751
+Component: immutable module configuration and state-codec evolution
+Decision: each module descriptor publishes a non-empty canonical config payload alongside its immutable config ID. The two production configurations are singleton versioned values, not freely mutable constructor bags. Their persisted state layouts advance to schema v2 to add delimiter-safe identifiers and distinct session keys; pre-acceptance schema-v1 rows fail closed and replay.
+Why: a name-only config identity hid behaviour-driving constants, while changing the v1 codec field layout without advancing its version could misread previously generated derived state.
+Alternatives considered: rely on private constants plus prose (not machine-auditable); accept both layouts heuristically (ambiguous); serialize arbitrary mutable config under one ID (identity violation).
+Compatibility impact: exact model/config/state identities are mandatory; derived v1 module state must be deleted/replayed, with canonical evidence untouched.
+Chronology/replay impact: canonical payload and distinct row/session/episode IDs make replay inputs and confidence units explicit.
+Failure behaviour: blank config payload, stale schema or malformed/non-finite decoded state is rejected before learning/publication.
+Human/3P extension impact: authors expose every behaviour-driving parameter canonically and advance identity/schema when semantics or storage change.
+
+DECISION 7E-API-009
+Date / HEAD: 2026-09-03 / after 7ad9751
+Component: ContextSignal target authority declaration
+Decision: distinguish effectful temporal targets from protocol-only accepted targets. `SYSTEMIC_TRANSIENT_STATE` and `OBSERVATION_VARIANCE` affect the v1 context candidate; `LOCAL_TRANSIENT_STATE` has envelope/scope validation and arbitration only, with no production module or evolving local latent/filter consumer.
+Why: describing every accepted target as filter-consumed overstated what a future module could influence.
+Alternatives considered: remove the local protocol probe entirely (would lose scope-contract evidence); add a local latent merely to make the label true (unearned identifiability/complexity).
+Compatibility impact: the accepted enum/wire target is unchanged; diagnostics now expose `effectfulInTemporalCandidate` and `protocolOnly` sets.
+Chronology/replay impact: protocol-only local signals remain derived and replayable but cannot affect predictions.
+Failure behaviour: wrong local scope still fails closed; absence of a consumer never falls back to systemic state.
+Human/3P extension impact: an author can test local envelopes now but must not claim an effectful plug-in point until a later model/version adds a consumer.
+
 ---
 
 # 4. What a feature/tag is allowed to plug into
@@ -210,7 +232,7 @@ For each target, record whether 7E actually implements the route now, only reser
 | Target/capability | 7E implemented? | Who may publish | Who consumes | Required scope | Notes / later phase boundary |
 |---|---|---|---|---|---|
 | SYSTEMIC_TRANSIENT_STATE | IMPLEMENTED target | compatible state-association modules | 7E generic arbitrator/filter | systemic/user + interval | bounded log-performance location shift; SHADOW |
-| LOCAL_TRANSIENT_STATE | IMPLEMENTED target | compatible anatomy-scoped modules | 7E generic arbitrator/filter | anatomy ID required | synthetic probe initially; no invented production tag |
+| LOCAL_TRANSIENT_STATE | IMPLEMENTED protocol-only target | compatible anatomy-scoped modules | 7E validator/arbitrator only | anatomy ID required | synthetic probe; no production module or evolving local latent/filter consumer in v1 |
 | OBSERVATION_RELIABILITY | RESERVED | none in v1 | none | — | target policy rejects |
 | OBSERVATION_VARIANCE | IMPLEMENTED target | compatible variance modules | 7E generic arbitrator/filter | exact signal scope | bounded log-variance shift |
 | PROCESS_VOLATILITY | RESERVED | none in v1 | none | — | target policy rejects; identifiability risk |
@@ -281,7 +303,7 @@ Questions to answer:
 
 ### Current lifecycle
 
-`ProductionContextModuleRegistryV7E.providers` is the explicit composition root. `ContextModuleProviderV7E.create()` constructs an I/O-free module; the registry sorts by stable module ID and rejects duplicate IDs, protocol mismatch or descriptor/codec mismatch before execution. The host supplies a capability-checked view, calls each module serially in deterministic ID order, validates state ownership and every signal, then atomically persists a complete run. Bootstrap is full chronological replay from canonical evidence; incremental use passes prior decoded state. A missing/stale provider, codec, model/config or protocol fails closed on reload. There is no reflection, `ServiceLoader`, downloaded dex or runtime marketplace.
+`ProductionContextModuleRegistryV7E.providers` is the explicit composition root. `ContextModuleProviderV7E.create()` constructs an I/O-free module; the registry sorts by stable module ID and rejects duplicate IDs, protocol mismatch or descriptor/codec mismatch before execution. Every descriptor carries both an immutable `configId` and canonical config payload, so the developer export exposes all behaviour-driving module constants. The host supplies a capability-checked view, calls each module serially in deterministic ID order, validates state ownership and every signal, then atomically persists a complete run. Bootstrap is full chronological replay from canonical evidence; incremental use passes prior decoded state. A missing/stale provider, codec, model/config or protocol fails closed on reload. There is no reflection, `ServiceLoader`, downloaded dex or runtime marketplace.
 
 ---
 
