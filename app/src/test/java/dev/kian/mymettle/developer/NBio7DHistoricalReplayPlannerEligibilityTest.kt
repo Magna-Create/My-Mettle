@@ -56,7 +56,7 @@ class NBio7DHistoricalReplayPlannerEligibilityTest {
                 val evidence = revision.evidence
                 evidence.observationId to NBio7DObservationContext(
                     observationId = evidence.observationId,
-                    sessionId = evidence.sessionId,
+                    sessionId = requireNotNull(evidence.sessionId),
                     executionProfileVersionId = evidence.executionProfileVersionId.value,
                     recruitmentProfileVersionId = "recruitment:v1",
                     side = evidence.laterality.storageValue,
