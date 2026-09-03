@@ -33,6 +33,10 @@ data class NBio7DHistoricalReplayPlan(
 ) {
     val targetWorkingSetCount: Int get() = sessions.sumOf { it.targetWorkingSetCount }
     val muscleExposureCount: Int get() = sessions.sumOf { it.muscleExposureCount }
+    val skippedTargetReasonCounts: Map<String, Int> get() = skippedTargetObservations.values
+        .groupingBy { it.substringBefore(':') }
+        .eachCount()
+        .toSortedMap()
 }
 
 object NBio7DHistoricalReplayPlanner {
@@ -60,8 +64,12 @@ object NBio7DHistoricalReplayPlanner {
                 val sets = slice.target
                     .sortedWith(compareBy<CompletedSetEvidence> { it.completedAt }.thenBy { it.observationId })
                     .mapNotNull { target ->
-                        if (target.warmUp || target.kind != WORKING_SET_KIND) {
-                            skipped[target.observationId] = if (target.warmUp) "warm_up" else "non_working_kind:${target.kind}"
+                        // 7D working-set eligibility is semantic, not a storage-label allow-list:
+                        // once a canonical performed observation exists, every non-warmup set is
+                        // eligible. This deliberately includes prescribed and additional sets and
+                        // remains compatible with imported historical kind labels.
+                        if (target.warmUp) {
+                            skipped[target.observationId] = "warm_up"
                             return@mapNotNull null
                         }
                         val context = inputs.observations[target.observationId]
@@ -74,7 +82,6 @@ object NBio7DHistoricalReplayPlanner {
                         require(context.side == target.laterality.storageValue)
                         val training = slice.training.filter { candidate ->
                             !candidate.warmUp &&
-                                candidate.kind == WORKING_SET_KIND &&
                                 candidate.metricFamily == target.metricFamily &&
                                 candidate.executionProfileVersionId == target.executionProfileVersionId &&
                                 candidate.laterality == target.laterality
@@ -103,6 +110,4 @@ object NBio7DHistoricalReplayPlanner {
             recordedAt.toString(),
             supersedesObservationId ?: "root",
         ).joinToString("|")
-
-    private const val WORKING_SET_KIND = "working"
 }
