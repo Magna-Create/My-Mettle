@@ -61,6 +61,49 @@ interface NBio7EDao {
     @Query("DELETE FROM n_bio_7e_run")
     suspend fun deleteAllDerived()
 
+    @Query("DELETE FROM n_bio_7e_temporal_state WHERE candidateLayer = 'context_temporal'")
+    suspend fun deleteAllContextTemporalStates()
+
+    @Query("DELETE FROM n_bio_7e_context_signal WHERE sourceModuleId IN (:moduleIds)")
+    suspend fun deleteSignalsForModules(moduleIds: List<String>)
+
+    @Query("DELETE FROM n_bio_7e_context_module_status WHERE moduleId IN (:moduleIds)")
+    suspend fun deleteStatusesForModules(moduleIds: List<String>)
+
+    @Query("DELETE FROM n_bio_7e_context_module_state WHERE moduleId IN (:moduleIds)")
+    suspend fun deleteStatesForModules(moduleIds: List<String>)
+
+    @Query("DELETE FROM n_bio_7e_context_signal")
+    suspend fun deleteAllSignals()
+
+    @Query("DELETE FROM n_bio_7e_context_module_status")
+    suspend fun deleteAllModuleStatuses()
+
+    @Query("DELETE FROM n_bio_7e_context_module_state")
+    suspend fun deleteAllModuleStates()
+
+    /**
+     * A changed feature invalidates its owning module(s) and the combined context candidate only.
+     * Context-free/dose temporal states and unrelated module memories/signals remain reusable.
+     */
+    @Transaction
+    suspend fun invalidateContextModules(moduleIds: List<String>) {
+        if (moduleIds.isEmpty()) return
+        deleteAllContextTemporalStates()
+        deleteSignalsForModules(moduleIds)
+        deleteStatusesForModules(moduleIds)
+        deleteStatesForModules(moduleIds)
+    }
+
+    /** Deleting the complete annotation substrate preserves non-context 7E temporal candidates. */
+    @Transaction
+    suspend fun invalidateAllContextConditionedDerived() {
+        deleteAllContextTemporalStates()
+        deleteAllSignals()
+        deleteAllModuleStatuses()
+        deleteAllModuleStates()
+    }
+
     @Transaction
     suspend fun insertCompleteRun(
         run: NBio7ERunEntity,

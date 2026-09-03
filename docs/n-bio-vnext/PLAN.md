@@ -4,7 +4,7 @@
 >
 > The complete pre-adaptive plan is preserved verbatim as [`PLAN_LEGACY_PRE_ADAPTIVE.md`](./PLAN_LEGACY_PRE_ADAPTIVE.md). It remains useful historical planning, but assumptions superseded below are not forward requirements.
 >
-> Read this document with [`ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md`](./ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md). The adaptive-inference document is an authoritative additive supplement for mathematical-model, inference-solver and backend architecture. [`CONTEXT_MODULE_ARCHITECTURE.md`](./CONTEXT_MODULE_ARCHITECTURE.md) is an authoritative additive supplement for the future N-BIO-7E context-feature/module/associative-learning architecture. [`PRODUCT_ROADMAP_GATES.md`](./PRODUCT_ROADMAP_GATES.md) remains authoritative for collaboration/research/Figma and product-safety gates.
+> Read this document with [`ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md`](./ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md). The adaptive-inference document is an authoritative additive supplement for mathematical-model, inference-solver and backend architecture. [`CONTEXT_MODULE_ARCHITECTURE.md`](./CONTEXT_MODULE_ARCHITECTURE.md) defines the N-BIO-7E extension requirements; [`NBIO_7E_STATE_CONTEXT_CONTRACT.md`](./NBIO_7E_STATE_CONTEXT_CONTRACT.md) governs the implemented v1 candidate. [`PRODUCT_ROADMAP_GATES.md`](./PRODUCT_ROADMAP_GATES.md) remains authoritative for collaboration/research/Figma and product-safety gates.
 
 ## 1. Purpose
 
@@ -66,7 +66,7 @@ Changes to equations, latent dimensions, priors, likelihoods, pooling, regime ha
 7. **Context is typed, modular and gated.** Current N-BIO-7B Candidate-v2 and N-BIO-7D consume `NONE`; sleep/HRV/illness/stress/notes cannot be used to rescue them. Future N-BIO-7E context consumption must flow through versioned `ContextFeature`/`ContextModule` contracts with module-owned replayable memory, explicit allowed inputs/targets and standard uncertainty-aware signals. No tag may directly mutate N-BIO core state merely because it exists.
 8. **Derived inference is rebuildable.** Deleting candidate state cannot cascade into raw evidence.
 9. **Product authority is explicit.** SHADOW/CANDIDATE runs do not alter normal prescriptions, workout UX or `BENCHMARK_V0` authority.
-10. **Room migrations require semantics, not convenience.** Room14 remains sufficient for the completed 7B.X model/solver state, the completed N-BIO-7C structural/pre-validation mission and the implemented N-BIO-7D SHADOW pipeline; PD-001/PD-002 remain explicit deferred empirical-calibration boundaries where applicable.
+10. **Room migrations require semantics, not convenience.** Room14 remains sufficient for completed 7B.X/7C/7D. N-BIO-7E advances the development schema to Room15 because module-owned state, generic signals/failures and neutral temporal candidates have no honest Room14 owner. The explicit additive migration does not reinterpret prior rows; PD-001/PD-002/PD-003 remain binding.
 11. **Backup/replay are acceptance gates.** Full Native backup remains generic; model/solver/module state must reload and raw evidence must replay within documented tolerance.
 12. **Collaboration gates remain mandatory.** `PRODUCT_ROADMAP_GATES.md` is not superseded by backend capability.
 
@@ -430,9 +430,10 @@ N-BIO-7B.3/4 historical validation + installed-history acceptance infrastructure
 N-BIO-7B.X complete — corrected adaptive-inference consolidation; Sparse selected, Dense oracle retained, Laplace rejected production
 N-BIO-7C   complete structural/pre-validation — loaded-hold, duration-only and repeated-contraction contracts accepted physically; numerical outputs remain SHADOW under PD-001
 PD-001     OPEN — empirical human calibration postponed where longitudinal evidence is insufficient; downstream quarantine remains binding
-N-BIO-7D   implementation complete — SetDemand/Exposure/EffectiveDose/SessionDose SHADOW pipeline implemented; consolidated installed-device physical acceptance still pending; PD-002 OPEN
+N-BIO-7D   structurally closed — physical installed-history SetDemand/Exposure/EffectiveDose/SessionDose acceptance passed; SHADOW only
 PD-002     OPEN — 7D empirical SetDemand/EffectiveDose calibration remains quarantined from structural success
-N-BIO-7E   NOT STARTED — next state phase; context-module/associative-learning platform is a mandatory infrastructure requirement, not optional metadata enrichment
+N-BIO-7E   implementation complete; exact-head/physical acceptance pending — neutral persistent/transient candidates, modular context SPI, two learner families and Room15 persistence; SHADOW under PD-003
+PD-003     OPEN — 7E temporal/context calibration, biological interpretation and prospective usefulness remain quarantined
 N-BIO-7F   later cross-profile/equipment translation under dedicated equipment contracts
 N-BIO-7G   later conditioning capability
 N-BIO-7H   later replay/validation closure where retained by the active roadmap
@@ -441,7 +442,7 @@ N-BIO-9    later context/Health/product integration and recomputation lifecycle;
 Native Cutover last
 ```
 
-N-BIO-7E must establish acute/transient/recovery state and the generic context-association substrate without silently starting N-BIO-8 coaching policy. Later Skill/Development naming remains evidence-dependent rather than mandatory merely because persistence scaffolding exists.
+N-BIO-7E establishes neutral persistent/transient statistical state and the generic context-association substrate without silently starting N-BIO-8 coaching policy. Recovery/Fatigue/Skill/Development naming remains evidence-dependent rather than mandatory merely because persistence scaffolding exists.
 
 Cross-profile translation, equipment intelligence, conditioning, broader Health Connect/HR integration and product-facing adaptive programme behaviour remain later phases under their own gates.
 

@@ -1,6 +1,7 @@
 package dev.kian.mymettle.context
 
 import androidx.room.withTransaction
+import dev.kian.mymettle.context.modules.ProductionContextModuleRegistryV7E
 import dev.kian.mymettle.data.local.MyMettleDatabase
 import dev.kian.mymettle.data.local.entity.ContextAnnotationEntity
 import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
@@ -84,6 +85,7 @@ class ContextInterpretationRepository(
     private val registry: ContextTagRegistry = ContextTagRegistry.V1,
 ) {
     private val dao get() = database.contextDao()
+    private val contextModuleRegistry by lazy(ProductionContextModuleRegistryV7E::create)
 
     suspend fun persist(
         source: CanonicalNoteSource,
@@ -119,10 +121,14 @@ class ContextInterpretationRepository(
         )
         val entities = result.annotations.mapIndexed { index, annotation -> annotation.toEntity(runId, index) }
         database.withTransaction {
+            val previousTagIds = sourceRuns(source)
+                .firstOrNull { it.tagSchemaVersion == registry.schemaVersion }
+                ?.let { dao.annotations(it.id) }
+                .orEmpty()
+                .mapTo(linkedSetOf()) { it.tagId }
+            val affectedTagIds = previousTagIds + result.annotations.map { it.tagId.value }
             dao.insertInterpretation(run, entities)
-            // A changed interpretation revision invalidates only disposable 7E context-conditioned
-            // products. Raw notes/annotations and unrelated 7C/7D state retain their existing owners.
-            database.nBio7EDao().deleteAllDerived()
+            invalidate7EFeatures(affectedTagIds)
         }
         return run
     }
@@ -155,9 +161,10 @@ class ContextInterpretationRepository(
     }
 
     suspend fun deleteRun(runId: String): Boolean {
+        val affectedTagIds = dao.annotations(runId).mapTo(linkedSetOf()) { it.tagId }
         return database.withTransaction {
             val deleted = dao.deleteRun(runId) > 0
-            if (deleted) database.nBio7EDao().deleteAllDerived()
+            if (deleted) invalidate7EFeatures(affectedTagIds)
             deleted
         }
     }
@@ -165,7 +172,7 @@ class ContextInterpretationRepository(
     suspend fun deleteAllDerivedInterpretations(): Int {
         return database.withTransaction {
             val deleted = dao.deleteAllInterpretations()
-            if (deleted > 0) database.nBio7EDao().deleteAllDerived()
+            if (deleted > 0) database.nBio7EDao().invalidateAllContextConditionedDerived()
             deleted
         }
     }
@@ -177,6 +184,18 @@ class ContextInterpretationRepository(
         val scope = NoteScope.entries.firstOrNull { it.storageValue == run.sourceScope }
             ?: throw IllegalArgumentException("Unknown persisted note scope: ${run.sourceScope}")
         return dao.annotations(runId).map { it.toDomain(scope) }
+    }
+
+    private suspend fun invalidate7EFeatures(tagIds: Set<String>) {
+        val moduleIds = contextModuleRegistry.modules
+            .filter { module -> module.descriptor.consumedFeatures.any { it.featureId in tagIds } }
+            .map { it.descriptor.moduleId }
+        database.nBio7EDao().invalidateContextModules(moduleIds)
+    }
+
+    private suspend fun sourceRuns(source: CanonicalNoteSource): List<NoteInterpretationRunEntity> = when (source) {
+        is CanonicalNoteSource.SessionReview -> dao.sessionReviewRuns(source.sessionId)
+        is CanonicalNoteSource.ExerciseReview -> dao.exerciseReviewRuns(source.sessionExerciseId)
     }
 
     private fun ContextAnnotation.toEntity(runId: String, ordinal: Int): ContextAnnotationEntity {

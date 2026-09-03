@@ -18,13 +18,13 @@ import dev.kian.mymettle.domain.inference.NeutralTemporalStateFilterV1
 import dev.kian.mymettle.domain.inference.TemporalCandidateLayer
 import java.time.Instant
 import kotlinx.coroutines.runBlocking
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
@@ -33,7 +33,7 @@ class NBio7EShadowRepositoryTest {
     private lateinit var registry: ContextModuleRegistryV7E
     private lateinit var repository: NBio7EShadowRepository
 
-    @BeforeTest
+    @Before
     fun setUp() {
         database = Room.inMemoryDatabaseBuilder(
             ApplicationProvider.getApplicationContext(),
@@ -44,7 +44,7 @@ class NBio7EShadowRepositoryTest {
         seedParents()
     }
 
-    @AfterTest
+    @After
     fun close() = database.close()
 
     @Test

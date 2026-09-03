@@ -34,7 +34,9 @@ Use this directory in the following order.
 - [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md) — N-BIO-7B evidence/coordinate contract, frozen Candidate-v1 record, chronological validation, SHADOW persistence and Candidate-v2 development evidence. Read it together with the adaptive-inference supplement for current capability/policy and solver semantics.
 - [`NON_DYNAMIC_CAPABILITY_CONTRACT.md`](./NON_DYNAMIC_CAPABILITY_CONTRACT.md) — normative N-BIO-7C loaded-hold, duration-only and repeated-contraction capability contract.
 - [`SET_DEMAND_AND_DOSE_CONTRACT.md`](./SET_DEMAND_AND_DOSE_CONTRACT.md) — normative N-BIO-7D SetDemand, exact historical Exposure, candidate EffectiveDose, same-session dependence and SessionDose contract.
-- [`POSTPONED_DEVELOPMENT.md`](./POSTPONED_DEVELOPMENT.md) — deferred-validation register; PD-001 quarantines 7C empirical accuracy and PD-002 quarantines 7D SetDemand/EffectiveDose empirical calibration.
+- [`NBIO_7E_STATE_CONTEXT_CONTRACT.md`](./NBIO_7E_STATE_CONTEXT_CONTRACT.md) — preregistered and source-reconciled neutral temporal-state, modular context, chronology, arbitration and Room15 contract.
+- [`NBIO_7E_CONTEXT_EXTENSION_JOURNAL.md`](./NBIO_7E_CONTEXT_EXTENSION_JOURNAL.md) — intentionally rough implementation/API/SPI/research/review record for the dedicated post-7E authoring-guide cleanup.
+- [`POSTPONED_DEVELOPMENT.md`](./POSTPONED_DEVELOPMENT.md) — deferred-validation register; PD-001 quarantines 7C empirical accuracy, PD-002 quarantines 7D dose calibration and PD-003 quarantines 7E temporal/context calibration and biological interpretation.
 - [`NBIO_7C_CAPABILITY_ACCEPTANCE_CHECKPOINT_2026-09-02.md`](./NBIO_7C_CAPABILITY_ACCEPTANCE_CHECKPOINT_2026-09-02.md) — physical Room14 structural/pre-validation closure record; the full personal acceptance export remains outside the public repository.
 - [`NBIO_7D_DEMAND_DOSE_IMPLEMENTATION_CHECKPOINT_2026-09-03.md`](./NBIO_7D_DEMAND_DOSE_IMPLEMENTATION_CHECKPOINT_2026-09-03.md) — historical implementation-complete checkpoint and physical installed-device acceptance procedure written before the acceptance run.
 - [`NBIO_7D_DEMAND_DOSE_PHYSICAL_CLOSURE_2026-09-03.md`](./NBIO_7D_DEMAND_DOSE_PHYSICAL_CLOSURE_2026-09-03.md) — physical Room14 N-BIO-7D structural/pre-validation PASS record; PD-001/PD-002 remain open and the full personal export remains outside the repository.
@@ -53,7 +55,7 @@ Use this directory in the following order.
 7B.X    complete — Adaptive Sparse selected for forward Candidate-v2 inference; Dense retained oracle; Conditional Laplace rejected production
 7C      complete structural/pre-validation — physical Room14 capability acceptance PASS; PD-001 empirical accuracy remains pending where evidence is insufficient
 7D      complete structural/pre-validation — physical Room14 demand/dose acceptance PASS; PD-001/PD-002 remain OPEN and all 7D output remains SHADOW
-7E      NOT STARTED — architecture requirements are now frozen in CONTEXT_MODULE_ARCHITECTURE.md before implementation
+7E      implementation complete pending exact-head/physical acceptance — neutral temporal candidates, modular context SPI, two learner families and Room15 derived persistence remain SHADOW under PD-003
 ```
 
 ### Candidate-v1 record
@@ -101,10 +103,10 @@ All current candidates remain **SHADOW / CANDIDATE** only.
 - No RIR/RPE/failure-probability or `% max` value may be fabricated.
 - Raw performance evidence remains immutable and separate from derived inference.
 - Semantic metadata beats statistical changepoint suspicion when a real execution boundary is known.
-- Room remains 14 unless a genuine semantic impossibility requires another migration.
+- Room15 is the current development schema; its five additive 7E tables were justified by module ownership/signal/state semantics rather than convenience, while all prior rows remain unchanged through the explicit 14→15 migration.
 - N-BIO-7C numerical outputs remain SHADOW/developer-only under PD-001 and are not normal-user prescription or prefill authority.
 - N-BIO-7D demand/dose outputs remain SHADOW/developer-only under PD-002; structural success does not establish calibrated physiology.
-- N-BIO-7E fatigue/recovery/readiness/development/skill/decay state and context-module learning have not started.
+- N-BIO-7E implements neutral persistent/transient statistical state and context-module learning in SHADOW only. It does not claim measured fatigue, recovery, readiness, development, skill or decay; PD-003 remains OPEN.
 
 Before behaviour-driving N-BIO-8 implementation, `PRODUCT_ROADMAP_GATES.md` still requires the dedicated research + product/UX design gate. Programme intent/priorities, in-workout adaptation, editing/regeneration semantics, equipment setup/feasible-load UX and uncertainty presentation require explicit collaboration.
 

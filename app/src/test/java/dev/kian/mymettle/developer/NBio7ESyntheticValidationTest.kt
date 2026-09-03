@@ -10,6 +10,7 @@ class NBio7ESyntheticValidationTest {
         val report = NBio7ESyntheticValidation.run()
         assertEquals(17, report.temporalCases.size)
         assertEquals(25, report.contextModuleCases.size)
+        assertTrue(report.futureDataLeakageGuardPassed)
         assertTrue(report.allPassed, (report.temporalCases + report.contextModuleCases).filterNot { it.passed }.toString())
     }
 }

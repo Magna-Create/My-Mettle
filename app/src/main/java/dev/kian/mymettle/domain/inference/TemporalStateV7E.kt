@@ -331,7 +331,9 @@ object RecentDoseCovariateV1 {
     ): Double? {
         if (priorDoses.isEmpty()) return null
         require(priorDoses.none { it.at.isAfter(horizon) }) { "Future SessionDose cannot enter a pre-session covariate." }
-        return priorDoses.sumOf { dose ->
+        val strictlyPrior = priorDoses.filter { it.at.isBefore(horizon) }
+        if (strictlyPrior.isEmpty()) return null
+        return strictlyPrior.sumOf { dose ->
             val ageDays = Duration.between(dose.at, horizon).toMillis() / 86_400_000.0
             (dose.value / config.doseStandardisationScale) * exp(-ln(2.0) * ageDays / config.doseHalfLifeDays)
         }

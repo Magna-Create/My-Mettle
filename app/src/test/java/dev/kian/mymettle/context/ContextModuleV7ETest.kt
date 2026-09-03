@@ -2,12 +2,12 @@ package dev.kian.mymettle.context
 
 import dev.kian.mymettle.context.modules.EpisodeAssociationModuleProviderV1
 import dev.kian.mymettle.context.modules.EpisodeAssociationModuleV1
-import dev.kian.mymettle.context.modules.EpisodeAssociationStateCodecV1
-import dev.kian.mymettle.context.modules.EpisodeAssociationStateV1
+import dev.kian.mymettle.context.modules.EpisodeAssociationStateCodecV2
+import dev.kian.mymettle.context.modules.EpisodeAssociationStateV2
 import dev.kian.mymettle.context.modules.ObservationVarianceAssociationModuleProviderV1
 import dev.kian.mymettle.context.modules.ObservationVarianceAssociationModuleV1
-import dev.kian.mymettle.context.modules.ObservationVarianceStateCodecV1
-import dev.kian.mymettle.context.modules.ObservationVarianceStateV1
+import dev.kian.mymettle.context.modules.ObservationVarianceStateCodecV2
+import dev.kian.mymettle.context.modules.ObservationVarianceStateV2
 import dev.kian.mymettle.context.modules.ProductionContextFeaturesV7E
 import dev.kian.mymettle.context.modules.ProductionContextModuleRegistryV7E
 import dev.kian.mymettle.domain.context.*
@@ -63,17 +63,47 @@ class ContextModuleV7ETest {
 
     @Test
     fun `module state codecs round trip independently`() {
-        val episode = EpisodeAssociationStateV1(
-            processedEvidenceIds = setOf("b", "a"), activeEpisodeId = "episode:a", episodeStartedAt = start,
-            lastPositiveAt = start, lastEvidenceId = "a", evidenceRowCount = 2, independentSessionCount = 2,
+        val episode = EpisodeAssociationStateV2(
+            processedEvidenceIds = setOf("b,one", "a|two"), learnedEpisodeIds = setOf("episode:a,b|c"),
+            countedSessionKeys = setOf("SESSION:session,a|b", "SESSION:session,c|d"), activeEpisodeId = "episode:a,b|c", episodeStartedAt = start,
+            lastPositiveAt = start, lastEvidenceId = "a,b|c", evidenceRowCount = 2, independentSessionCount = 2,
             independentEpisodeCount = 1, associationMean = -0.04, associationVariance = 0.005,
         )
-        assertEquals(episode, EpisodeAssociationStateCodecV1.decode(EpisodeAssociationStateCodecV1.encode(episode)))
-        val variance = ObservationVarianceStateV1(
-            processedEvidenceIds = setOf("x"), evidenceRowCount = 1, presentSessionCount = 1,
-            presentSquaredResidualSum = 0.03, currentPresence = ContextEvidenceMissingness.PRESENT, lastEvidenceId = "x",
+        assertEquals(episode, EpisodeAssociationStateCodecV2.decode(EpisodeAssociationStateCodecV2.encode(episode)))
+        val variance = ObservationVarianceStateV2(
+            processedEvidenceIds = setOf("x,one|two"), evidenceRowCount = 1, presentSessionCount = 1,
+            presentSquaredResidualSum = 0.03, countedPresentSessionKeys = setOf("SESSION:s,1|2"),
+            currentPresence = ContextEvidenceMissingness.PRESENT, lastEvidenceId = "x,one|two",
         )
-        assertEquals(variance, ObservationVarianceStateCodecV1.decode(ObservationVarianceStateCodecV1.encode(variance)))
+        assertEquals(variance, ObservationVarianceStateCodecV2.decode(ObservationVarianceStateCodecV2.encode(variance)))
+    }
+
+    @Test
+    fun `multiple evidence rows in one session count as one independent session`() {
+        val module = EpisodeAssociationModuleV1()
+        val sessionScope = ContextScope(ContextScopeKind.SESSION, "session-one")
+        val rows = listOf(
+            evidence("ill-row-a", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.PRESENT, start, sessionScope),
+            evidence("ill-row-b", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.PRESENT, start.plusSeconds(1), sessionScope),
+        )
+        val state = module.evaluate(module.initialState(), view(ContextModulePhase.POST_SESSION_UPDATE, start.plusSeconds(1), rows, -0.1)).state as EpisodeAssociationStateV2
+        assertEquals(2, state.evidenceRowCount)
+        assertEquals(1, state.independentSessionCount)
+        assertEquals(1, state.independentEpisodeCount)
+    }
+
+    @Test
+    fun `variance learner does not count a session twice across incremental updates`() {
+        val module = ObservationVarianceAssociationModuleV1()
+        val sessionScope = ContextScope(ContextScopeKind.SESSION, "session-one")
+        val first = evidence("pressure-a", ProductionContextFeaturesV7E.timePressure.key, ContextEvidenceMissingness.PRESENT, start, sessionScope)
+        var state = module.evaluate(module.initialState(), view(ContextModulePhase.POST_SESSION_UPDATE, start, listOf(first), 0.1)).state
+        val second = evidence("pressure-b", ProductionContextFeaturesV7E.timePressure.key, ContextEvidenceMissingness.PRESENT, start.plusSeconds(1), sessionScope)
+        state = module.evaluate(state, view(ContextModulePhase.POST_SESSION_UPDATE, start.plusSeconds(1), listOf(second), 0.2)).state
+        state as ObservationVarianceStateV2
+        assertEquals(2, state.evidenceRowCount)
+        assertEquals(1, state.presentSessionCount)
+        assertEquals(0.01, state.presentSquaredResidualSum, 1e-12)
     }
 
     @Test
@@ -81,7 +111,7 @@ class ContextModuleV7ETest {
         val module = ObservationVarianceAssociationModuleV1()
         val evidence = evidence("missing", ProductionContextFeaturesV7E.timePressure.key, ContextEvidenceMissingness.NOT_REPORTED, start)
         val result = module.evaluate(module.initialState(), view(ContextModulePhase.POST_SESSION_UPDATE, start, listOf(evidence), residual = 0.2))
-        val state = result.state as ObservationVarianceStateV1
+        val state = result.state as ObservationVarianceStateV2
         assertEquals(0, state.falseSessionCount)
         assertEquals(0, state.presentSessionCount)
         assertTrue(result.signals.isEmpty())
@@ -91,7 +121,7 @@ class ContextModuleV7ETest {
     fun `explicit false is a control observation`() {
         val module = ObservationVarianceAssociationModuleV1()
         val evidence = evidence("false", ProductionContextFeaturesV7E.timePressure.key, ContextEvidenceMissingness.KNOWN_FALSE, start)
-        val state = module.evaluate(module.initialState(), view(ContextModulePhase.POST_SESSION_UPDATE, start, listOf(evidence), residual = 0.1)).state as ObservationVarianceStateV1
+        val state = module.evaluate(module.initialState(), view(ContextModulePhase.POST_SESSION_UPDATE, start, listOf(evidence), residual = 0.1)).state as ObservationVarianceStateV2
         assertEquals(1, state.falseSessionCount)
         assertEquals(0, state.presentSessionCount)
     }
@@ -109,7 +139,7 @@ class ContextModuleV7ETest {
         val falseEvidence = evidence("well-3", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.KNOWN_FALSE, resolvedAt)
         result = module.evaluate(result.state, view(ContextModulePhase.PRE_SESSION_PUBLICATION, resolvedAt, listOf(falseEvidence)))
         assertTrue(result.signals.isEmpty())
-        assertEquals(null, (result.state as EpisodeAssociationStateV1).activeEpisodeId)
+        assertEquals(null, (result.state as EpisodeAssociationStateV2).activeEpisodeId)
     }
 
     @Test
@@ -120,7 +150,7 @@ class ContextModuleV7ETest {
             val at = start.plusSeconds(index * 86_400L)
             state = module.evaluate(state, view(ContextModulePhase.POST_SESSION_UPDATE, at, listOf(evidence("ill-$index", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.PRESENT, at)), residual = -0.05)).state
         }
-        val learned = state as EpisodeAssociationStateV1
+        val learned = state as EpisodeAssociationStateV2
         assertEquals(5, learned.evidenceRowCount)
         assertEquals(1, learned.independentEpisodeCount)
         assertEquals(1, learned.learnedEpisodeIds.size)
@@ -135,7 +165,7 @@ class ContextModuleV7ETest {
         state = module.evaluate(state, view(ContextModulePhase.PRE_SESSION_PUBLICATION, resolutionAt, listOf(evidence("well-a", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.KNOWN_FALSE, resolutionAt)))).state
         val secondAt = start.plusSeconds(20 * 86_400)
         state = module.evaluate(state, view(ContextModulePhase.POST_SESSION_UPDATE, secondAt, listOf(evidence("ill-b", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.PRESENT, secondAt)), residual = -0.04)).state
-        assertEquals(2, (state as EpisodeAssociationStateV1).independentEpisodeCount)
+        assertEquals(2, (state as EpisodeAssociationStateV2).independentEpisodeCount)
     }
 
     @Test
@@ -198,8 +228,11 @@ class ContextModuleV7ETest {
 
     @Test
     fun `unknown and malformed module state versions fail closed`() {
-        assertFailsWith<IllegalArgumentException> { EpisodeAssociationStateCodecV1.decode("99|old") }
-        assertFailsWith<IllegalArgumentException> { ObservationVarianceStateCodecV1.decode("1|truncated") }
+        assertFailsWith<IllegalArgumentException> { EpisodeAssociationStateCodecV2.decode("1|old") }
+        assertFailsWith<IllegalArgumentException> { ObservationVarianceStateCodecV2.decode("1|old") }
+        assertFailsWith<IllegalArgumentException> {
+            ObservationVarianceStateV2().copy(presentSquaredResidualSum = Double.NaN)
+        }
     }
 
     @Test
@@ -231,7 +264,7 @@ class ContextModuleV7ETest {
                 view(ContextModulePhase.PRE_SESSION_PUBLICATION, at.plusSeconds(86_400), listOf(evidence("well-p$episode", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.KNOWN_FALSE, at.plusSeconds(86_400)))),
             ).state
         }
-        assertTrue((state as EpisodeAssociationStateV1).associationMean < -0.04)
+        assertTrue((state as EpisodeAssociationStateV2).associationMean < -0.04)
     }
 
     @Test
@@ -250,7 +283,7 @@ class ContextModuleV7ETest {
                 view(ContextModulePhase.PRE_SESSION_PUBLICATION, at.plusSeconds(86_400), listOf(evidence("well-i$episode", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.KNOWN_FALSE, at.plusSeconds(86_400)))),
             ).state
         }
-        assertTrue(kotlin.math.abs((state as EpisodeAssociationStateV1).associationMean) < 0.02)
+        assertTrue(kotlin.math.abs((state as EpisodeAssociationStateV2).associationMean) < 0.02)
     }
 
     @Test
@@ -258,8 +291,8 @@ class ContextModuleV7ETest {
         val module = EpisodeAssociationModuleV1()
         val high = evidence("high", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.PRESENT, start)
         val low = high.copy(evidenceId = "low", sourceRevisionId = "revision:low", extractorConfidence = 0.1)
-        val highState = module.evaluate(module.initialState(), view(ContextModulePhase.POST_SESSION_UPDATE, start, listOf(high), -0.05)).state as EpisodeAssociationStateV1
-        val lowState = module.evaluate(module.initialState(), view(ContextModulePhase.POST_SESSION_UPDATE, start, listOf(low), -0.05)).state as EpisodeAssociationStateV1
+        val highState = module.evaluate(module.initialState(), view(ContextModulePhase.POST_SESSION_UPDATE, start, listOf(high), -0.05)).state as EpisodeAssociationStateV2
+        val lowState = module.evaluate(module.initialState(), view(ContextModulePhase.POST_SESSION_UPDATE, start, listOf(low), -0.05)).state as EpisodeAssociationStateV2
         assertEquals(highState.associationMean, lowState.associationMean)
         assertEquals(highState.associationVariance, lowState.associationVariance)
     }
@@ -333,12 +366,13 @@ class ContextModuleV7ETest {
         key: ContextFeatureKey,
         missingness: ContextEvidenceMissingness,
         at: Instant,
+        scope: ContextScope = ContextScope.SYSTEMIC,
     ) = ContextFeatureEvidenceV7E(
         evidenceId = id,
         featureKey = key,
         value = if (missingness == ContextEvidenceMissingness.PRESENT) ContextFeatureValueV7E.BooleanValue(true) else null,
         missingness = missingness,
-        scope = ContextScope.SYSTEMIC,
+        scope = scope,
         observedAt = at,
         sourceKind = ContextEvidenceSourceKind.TEST_FIXTURE,
         sourceRevisionId = "revision:$id",

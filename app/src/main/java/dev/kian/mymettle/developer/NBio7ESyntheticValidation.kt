@@ -2,11 +2,11 @@ package dev.kian.mymettle.developer
 
 import dev.kian.mymettle.context.modules.EpisodeAssociationModuleProviderV1
 import dev.kian.mymettle.context.modules.EpisodeAssociationModuleV1
-import dev.kian.mymettle.context.modules.EpisodeAssociationStateCodecV1
-import dev.kian.mymettle.context.modules.EpisodeAssociationStateV1
+import dev.kian.mymettle.context.modules.EpisodeAssociationStateCodecV2
+import dev.kian.mymettle.context.modules.EpisodeAssociationStateV2
 import dev.kian.mymettle.context.modules.ObservationVarianceAssociationModuleV1
-import dev.kian.mymettle.context.modules.ObservationVarianceStateCodecV1
-import dev.kian.mymettle.context.modules.ObservationVarianceStateV1
+import dev.kian.mymettle.context.modules.ObservationVarianceStateCodecV2
+import dev.kian.mymettle.context.modules.ObservationVarianceStateV2
 import dev.kian.mymettle.context.modules.ProductionContextFeaturesV7E
 import dev.kian.mymettle.context.modules.ProductionContextModuleRegistryV7E
 import dev.kian.mymettle.domain.context.*
@@ -19,9 +19,11 @@ data class NBio7ESyntheticCase(val id: String, val passed: Boolean, val detail: 
 data class NBio7ESyntheticValidationReport(
     val temporalCases: List<NBio7ESyntheticCase>,
     val contextModuleCases: List<NBio7ESyntheticCase>,
+    val futureDataLeakageGuardPassed: Boolean,
 ) {
     val allPassed: Boolean get() = temporalCases.size == 17 && contextModuleCases.size == 25 &&
-        temporalCases.all { it.passed } && contextModuleCases.all { it.passed }
+        temporalCases.all { it.passed } && contextModuleCases.all { it.passed } &&
+        futureDataLeakageGuardPassed
 }
 
 /** Device-runnable mirror of the richer unit truth suite; every case computes a contract property. */
@@ -31,7 +33,32 @@ object NBio7ESyntheticValidation {
     fun run(): NBio7ESyntheticValidationReport = NBio7ESyntheticValidationReport(
         temporalCases = temporalCases(),
         contextModuleCases = contextCases(),
+        futureDataLeakageGuardPassed = futureDataLeakageGuard(),
     )
+
+    private fun futureDataLeakageGuard(): Boolean {
+        val filter = NeutralTemporalStateFilterV1()
+        val state = filter.initial(start)
+        val (_, prediction) = filter.predict(state, start.plusSeconds(DAY), TemporalCandidateLayer.TEMPORAL_BASE)
+        val futureDoseRejected = fails {
+            RecentDoseCovariateV1.calculate(
+                listOf(DatedSessionDose(start.plusSeconds(2 * DAY), 1.0)),
+                start.plusSeconds(DAY),
+            )
+        }
+        val equalDoseIgnored = RecentDoseCovariateV1.calculate(listOf(DatedSessionDose(start, 1.0)), start) == null
+        val preSessionOutcomeRejected = fails {
+            ContextReadViewV1(
+                phase = ContextModulePhase.PRE_SESSION_PUBLICATION,
+                horizon = start,
+                scope = ContextScope.SYSTEMIC,
+                grantedCapabilities = ContextReadCapability.entries.toSet(),
+                realisedPostSessionResidual = -0.1,
+            )
+        }
+        return futureDoseRejected && equalDoseIgnored && preSessionOutcomeRejected &&
+            requireNotNull(prediction.evidenceThrough).isBefore(prediction.predictedAt)
+    }
 
     private fun temporalCases(): List<NBio7ESyntheticCase> {
         val filter = NeutralTemporalStateFilterV1()
@@ -54,6 +81,17 @@ object NBio7ESyntheticValidation {
             val dose = if (index % 2 == 0) 1.0 else 0.1
             doseState = filter.update(doseState, start.plusSeconds((index + 1L) * DAY), -0.05 * dose, TemporalCandidateLayer.DOSE_TEMPORAL, dose).posterior
         }
+        var noDoseEffectState = filter.initial(start)
+        repeat(12) { index ->
+            val dose = if (index % 2 == 0) 1.0 else 0.1
+            noDoseEffectState = filter.update(
+                noDoseEffectState,
+                start.plusSeconds((index + 1L) * DAY),
+                0.0,
+                TemporalCandidateLayer.DOSE_TEMPORAL,
+                dose,
+            ).posterior
+        }
         val noisy = fit(List(24) { if (it % 2 == 0) -0.10 else 0.10 })
         val sparse = fit(listOf(0.03))
         val simultaneousBase = improving
@@ -75,7 +113,10 @@ object NBio7ESyntheticValidation {
             case("multi_session_transient_suppression") { suppression.transientMean < 0.0 },
             case("recovery_after_transient_suppression") { abs(recovered.transientMean) < abs(suppression.transientMean) / 8.0 + 1e-9 },
             case("dose_associated_transient_effect") { doseState.doseCoefficientMean < 0.0 },
-            case("no_dose_effect") { filter.initial(start).doseCoefficientMean == 0.0 },
+            case("no_dose_effect") {
+                abs(noDoseEffectState.doseCoefficientMean) < 1e-12 &&
+                    noDoseEffectState.covariance.dd < filter.config.doseCoefficientPriorVariance
+            },
             case("high_observation_noise") { abs(noisy.persistentMean) < 0.025 },
             case("sparse_history") { sparse.covariance.pp > 0.005 },
             case("robust_outlier") { abs(outlier.posterior.persistentMean) < 0.05 },
@@ -100,23 +141,23 @@ object NBio7ESyntheticValidation {
         val resolution = episode.evaluate(persisted.state, view(start.plusSeconds(2 * DAY), listOf(resolved), null, ContextModulePhase.PRE_SESSION_PUBLICATION))
         var repeated: ContextModuleStateV7E = episode.initialState()
         repeat(5) { index -> repeated = episode.evaluate(repeated, view(start.plusSeconds(index * DAY), listOf(evidence("row$index", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.PRESENT, start.plusSeconds(index * DAY))), -0.05)).state }
-        val repeatedState = repeated as EpisodeAssociationStateV1
+        val repeatedState = repeated as EpisodeAssociationStateV2
         val falseVariance = variance.evaluate(
             variance.initialState(),
             view(start, listOf(evidence("false", ProductionContextFeaturesV7E.timePressure.key, ContextEvidenceMissingness.KNOWN_FALSE, start)), 0.1),
-        ).state as ObservationVarianceStateV1
+        ).state as ObservationVarianceStateV2
         val missingVariance = variance.evaluate(
             variance.initialState(),
             view(start, listOf(evidence("absent", ProductionContextFeaturesV7E.timePressure.key, ContextEvidenceMissingness.NOT_REPORTED, start)), 0.1),
-        ).state as ObservationVarianceStateV1
+        ).state as ObservationVarianceStateV2
         val correlated = ContextSignalArbitratorV1.arbitrate(listOf(signal("a", -0.08, "same"), signal("b", -0.07, "same")), start).single()
         val contradictory = ContextSignalArbitratorV1.arbitrate(listOf(signal("n", -0.08, "n"), signal("p", 0.08, "p")), start).single()
         val runtimeDenied = ContextModuleRuntimeV7E(registry).evaluate(emptyMap()) { descriptor ->
             ContextReadViewV1(ContextModulePhase.PRE_SESSION_PUBLICATION, start, ContextScope.SYSTEMIC, if (descriptor.moduleId == episode.descriptor.moduleId) emptySet() else descriptor.requiredReadCapabilities)
         }
-        val replay = EpisodeAssociationStateCodecV1.decode(EpisodeAssociationStateCodecV1.encode(episodeResult.state))
-        val lowConfidence = episode.evaluate(episode.initialState(), view(start, listOf(positive.copy(evidenceId = "low", sourceRevisionId = "low", extractorConfidence = 0.1)), -0.1)).state as EpisodeAssociationStateV1
-        val highConfidence = episodeResult.state as EpisodeAssociationStateV1
+        val replay = EpisodeAssociationStateCodecV2.decode(EpisodeAssociationStateCodecV2.encode(episodeResult.state))
+        val lowConfidence = episode.evaluate(episode.initialState(), view(start, listOf(positive.copy(evidenceId = "low", sourceRevisionId = "low", extractorConfidence = 0.1)), -0.1)).state as EpisodeAssociationStateV2
+        val highConfidence = episodeResult.state as EpisodeAssociationStateV2
         val basePrediction = NeutralTemporalStateFilterV1().predict(NeutralTemporalStateFilterV1().initial(start), start, TemporalCandidateLayer.TEMPORAL_BASE).second
         val contextPrediction = NeutralTemporalStateFilterV1().predict(NeutralTemporalStateFilterV1().initial(start), start, TemporalCandidateLayer.CONTEXT_TEMPORAL, 0.0, TemporalContextAdjustment(-0.05, 0.01)).second
         return listOf(
@@ -164,7 +205,7 @@ object NBio7ESyntheticValidation {
         var state = module.evaluate(module.initialState(), view(start, listOf(evidence("a", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.PRESENT, start)), -0.05)).state
         state = module.evaluate(state, view(start.plusSeconds(DAY), listOf(evidence("ar", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.KNOWN_FALSE, start.plusSeconds(DAY))), null, ContextModulePhase.PRE_SESSION_PUBLICATION)).state
         state = module.evaluate(state, view(start.plusSeconds(20 * DAY), listOf(evidence("b", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.PRESENT, start.plusSeconds(20 * DAY))), -0.05)).state
-        return (state as EpisodeAssociationStateV1).independentEpisodeCount == 2
+        return (state as EpisodeAssociationStateV2).independentEpisodeCount == 2
     }
 
     private fun irrelevantEpisodeFixture(): Boolean {
@@ -175,7 +216,7 @@ object NBio7ESyntheticValidation {
             state = module.evaluate(state, view(at, listOf(evidence("i$index", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.PRESENT, at)), if (index % 2 == 0) -0.06 else 0.06)).state
             state = module.evaluate(state, view(at.plusSeconds(DAY), listOf(evidence("ir$index", ProductionContextFeaturesV7E.illness.key, ContextEvidenceMissingness.KNOWN_FALSE, at.plusSeconds(DAY))), null, ContextModulePhase.PRE_SESSION_PUBLICATION)).state
         }
-        return abs((state as EpisodeAssociationStateV1).associationMean) < 0.02
+        return abs((state as EpisodeAssociationStateV2).associationMean) < 0.02
     }
 
     private fun localScopeFixture(): Boolean {

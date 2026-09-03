@@ -302,6 +302,76 @@ Closure does not require pretending every latent quantity is directly measurable
 
 ---
 
+# PD-003 — N-BIO-7E temporal/context-state empirical calibration
+
+## Status
+
+**OPEN — STRUCTURAL TEMPORAL/MODULE PLATFORM MAY PROCEED; HUMAN CALIBRATION AND BIOLOGICAL INTERPRETATION ARE NOT ESTABLISHED**
+
+This entry covers N-BIO-7E's neutral persistent/transient decomposition, the optional association with N-BIO-7D SessionDose, and personalised ContextModule signals. It is additive to PD-001 and PD-002; it does not close either upstream quarantine.
+
+## What is structurally established
+
+The 7E implementation may close structurally after exact-head and physical acceptance prove its declared mathematics and boundaries:
+
+- a versioned causal/pre-session neutral state-space candidate and a surviving context-free baseline;
+- a slowly varying persistent performance component and a mean-reverting transient performance component, without labelling either as measured growth, fatigue or physical repair;
+- optional, shrunk SessionDose input carrying 7D/PD-002 provenance;
+- robust observation handling and explicit identifiability constraints;
+- versioned feature definitions, missingness and scope;
+- build-integrated module providers with independent state, codecs and learner mathematics;
+- least-privilege read views, validated ContextSignals and central correlation-aware arbitration;
+- replayable derived episodes, independent-episode accounting, failure isolation and fail-closed version behaviour;
+- chronological baseline/dose/context comparison, persistence, deletion, replay, reannotation invalidation and Native backup safety;
+- SHADOW-only outputs with unchanged raw evidence, prescriptions and `BENCHMARK_V0` authority.
+
+## What remains uncalibrated
+
+Structural or synthetic success does not establish:
+
+- that the v1 process/observation priors or transient half-life describe this user or a wider population;
+- unique biological separation of persistent change, transient availability, dose response, context effect, process volatility and observation noise;
+- that the persistent component measures development, hypertrophy, skill or neural adaptation;
+- that the transient component measures fatigue, recovery, illness burden or percentage physical repair;
+- that SessionDose is calibrated physiology or improves prospective prediction;
+- that any current context feature provides repeatable predictive benefit;
+- personalised persistence from one episode or confidence manufactured from repeated rows inside one episode;
+- causal effects of illness, time pressure or any other tag;
+- product-safe thresholds, readiness labels, coaching actions or prescription changes.
+
+Sparse installed history may legitimately leave modules `NO_EVIDENCE`, `PRIOR_DOMINATED`, `PARTIALLY_LEARNED`, `NO_PREDICTIVE_BENEFIT` or `REJECTED`. Those are valid findings, not failures to tune away.
+
+## Downstream quarantine
+
+Until PD-003 closes:
+
+1. all 7E state, module memory, signals and comparisons remain derived SHADOW/CANDIDATE evidence;
+2. normal workout behaviour and `BENCHMARK_V0` remain authoritative;
+3. no output may be described as a recovery percentage, measured fatigue, measured growth or a causal context penalty;
+4. N-BIO-8 may consume the versioned interfaces for structural research only and must not turn uncalibrated 7E output into coaching policy;
+5. N-BIO-9 producers must enter through the same least-privilege feature/module protocol and cannot inherit predictive authority merely by supplying more data;
+6. changes to 7C, 7D, the 7E model/config, feature interpretation or module state schema require dependent 7E deletion and replay;
+7. product promotion requires a separate prospective evidence and product/UX authority gate.
+
+## Evidence that can revisit PD-003
+
+The most useful evidence is fresh, prospectively ordered history gathered after freezing the candidate:
+
+- repeated performance observations across stable execution-profile semantics;
+- multiple genuinely independent episodes for a candidate episodic feature, including explicit resolution/negation where the capture surface supports it;
+- repeated scoped evidence capable of testing local versus systemic effects;
+- context-free, dose-aware and context-aware prequential predictions retained before outcomes occur;
+- deliberate context and module ablations with calibration, coverage, log score/CRPS/WIS, signed bias and catastrophic-contradiction review;
+- suitable external longitudinal sports datasets whose timing, execution and context semantics can be mapped without fabrication.
+
+## Revisit protocol and closure
+
+Freeze the then-current model/config/module identities before examining confirmatory outcomes. Evaluate simpler candidates first, preserve missingness semantics, count independent episodes rather than rows, inspect confounding between dose and context, and retain broad/null results where decomposition is not identified. Any replacement is a new immutable candidate followed by full dependent replay.
+
+PD-003 closes only for the empirical claims supported by fresh semantically valid evidence. Partial closure is allowed: for example, a temporal candidate may earn predictive use while individual context modules remain inert or rejected. Biological naming and product authority require separate evidence; they are not automatic consequences of predictive improvement.
+
+---
+
 # Future entries
 
 Use this file for later deliberately postponed work where forward development is safe only under explicit quarantine. Every entry should state:

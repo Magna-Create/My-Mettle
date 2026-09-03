@@ -105,7 +105,8 @@ data class NBio7EStateContextAcceptanceReport(
             .put("PD-003", JSONObject().put("status", "OPEN").put("scope", "7E_TEMPORAL_CONTEXT_EMPIRICAL_CALIBRATION")))
         .put("synthetic", JSONObject()
             .put("temporal", JSONArray(synthetic.temporalCases.map { it.toJson() }))
-            .put("contextModules", JSONArray(synthetic.contextModuleCases.map { it.toJson() })))
+            .put("contextModules", JSONArray(synthetic.contextModuleCases.map { it.toJson() }))
+            .put("futureDataLeakageGuard", synthetic.futureDataLeakageGuardPassed))
         .put("registeredModules", JSONArray(registeredModules.map { it.toJson() }))
         .put("contextTargets", JSONObject()
             .put("implemented", JSONArray(ContextSignalTargetPolicyV1.implementedTargets.map { it.name }.sorted()))
@@ -240,18 +241,23 @@ class NBio7EStateContextAcceptanceRunner(
         var moduleStates: Map<String, ContextModuleStateV7E> = emptyMap()
         val failures = mutableListOf<ContextModuleFailureV7E>()
         val processedContextSessions = mutableSetOf<String>()
-        val residualBySession = evidence.residuals.associateBy { it.sessionId }
+        val frozenPredictionBySession = mutableMapOf<String, FrozenContextPrediction>()
+        val learningResidualBySession = mutableMapOf<String, Double>()
         val priorDoses = mutableListOf<DatedSessionDose>()
         var latestSignals = emptyList<ContextSignalV1>()
 
-        fun applyContextEvents(through: Instant) {
+        fun applyContextEvents(through: Instant, inclusive: Boolean, onlySessionId: String? = null) {
+            fun isVisible(at: Instant): Boolean = at.isBefore(through) || inclusive && at == through
             evidence.contextBySession.entries
-                .filter { (sessionId, items) -> sessionId !in processedContextSessions && items.any { !it.observedAt.isAfter(through) } }
+                .filter { (sessionId, items) ->
+                    sessionId !in processedContextSessions &&
+                        (onlySessionId == null || sessionId == onlySessionId) &&
+                        items.any { isVisible(it.observedAt) }
+                }
                 .sortedBy { (_, items) -> items.minOf { it.observedAt } }
                 .forEach { (sessionId, items) ->
-                    val visible = items.filter { !it.observedAt.isAfter(through) }
+                    val visible = items.filter { isVisible(it.observedAt) }
                     val eventAt = visible.maxOf { it.observedAt }
-                    val residual = residualBySession[sessionId]
                     val result = runtime.evaluate(moduleStates) { descriptor ->
                         ContextReadViewV1(
                             phase = ContextModulePhase.POST_SESSION_UPDATE,
@@ -259,8 +265,8 @@ class NBio7EStateContextAcceptanceRunner(
                             scope = ContextScope(ContextScopeKind.SESSION, sessionId),
                             grantedCapabilities = descriptor.requiredReadCapabilities,
                             ownFeatureEvidence = visible.filter { it.featureKey in descriptor.consumedFeatures },
-                            frozenPrediction = residual?.let { FrozenContextPrediction("frozen:$sessionId", it.at, it.at.minusNanos(1), 0.0, it.capabilityPredictiveVariance, "7c-frozen-pre-session") },
-                            realisedPostSessionResidual = residual?.observedLogResidual,
+                            frozenPrediction = frozenPredictionBySession[sessionId],
+                            realisedPostSessionResidual = learningResidualBySession[sessionId],
                         )
                     }
                     moduleStates = result.states
@@ -271,9 +277,19 @@ class NBio7EStateContextAcceptanceRunner(
         }
 
         evidence.residuals.forEach { session ->
-            applyContextEvents(session.at)
+            // Evidence tied to this session is deliberately excluded until after every candidate
+            // prediction has been frozen and scored. Equal timestamps do not imply causal order.
+            applyContextEvents(session.at, inclusive = false)
             val baseState = states.getValue(TemporalCandidateLayer.TEMPORAL_BASE)
             val basePrediction = filter.predict(baseState, session.at, TemporalCandidateLayer.TEMPORAL_BASE).second
+            frozenPredictionBySession[session.sessionId] = FrozenContextPrediction(
+                predictionId = "frozen:${session.sessionId}",
+                predictedAt = session.at,
+                evidenceThrough = basePrediction.evidenceThrough,
+                meanLogResidual = basePrediction.mean,
+                variance = basePrediction.variance,
+                modelIdentity = temporalConfig.semanticVersion,
+            )
             val pre = runtime.evaluate(moduleStates) { descriptor ->
                 ContextReadViewV1(
                     ContextModulePhase.PRE_SESSION_PUBLICATION, session.at, ContextScope.SYSTEMIC,
@@ -307,13 +323,15 @@ class NBio7EStateContextAcceptanceRunner(
                     if (layer == TemporalCandidateLayer.CONTEXT_TEMPORAL) adjustment else TemporalContextAdjustment(),
                 ).posterior
             }
+            learningResidualBySession[session.sessionId] = session.observedLogResidual - basePrediction.mean
             evidence.doseBySession[session.sessionId]?.let(priorDoses::add)
+            applyContextEvents(session.at, inclusive = true, onlySessionId = session.sessionId)
         }
         val lastHorizon = maxOf(
             evidence.residuals.lastOrNull()?.at ?: firstAt,
             evidence.contextBySession.values.flatten().maxOfOrNull { it.observedAt } ?: firstAt,
         )
-        applyContextEvents(lastHorizon)
+        applyContextEvents(lastHorizon, inclusive = true)
         val finalPre = runtime.evaluate(moduleStates) { descriptor ->
             ContextReadViewV1(ContextModulePhase.PRE_SESSION_PUBLICATION, lastHorizon, ContextScope.SYSTEMIC, descriptor.requiredReadCapabilities)
         }
@@ -321,7 +339,7 @@ class NBio7EStateContextAcceptanceRunner(
         failures += finalPre.failures
         latestSignals = finalPre.signals
         val episodeCounts = moduleStates.mapValues { (_, state) ->
-            (state as? dev.kian.mymettle.context.modules.EpisodeAssociationStateV1)?.independentEpisodeCount ?: 0
+            (state as? dev.kian.mymettle.context.modules.EpisodeAssociationStateV2)?.independentEpisodeCount ?: 0
         }
         val support = latestSignals.associate { it.sourceModuleId to it.evidenceMaturity.name }.toMutableMap()
         registry.modules.forEach { support.putIfAbsent(it.descriptor.moduleId, "NO_EVIDENCE") }

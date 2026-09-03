@@ -122,6 +122,39 @@ class ContextInterpretationRoomTest {
     }
 
     @Test
+    fun persistedReinterpretationInvalidatesOnlyDependent7EState() = runBlocking {
+        seedNBio7ERun()
+        assertEquals(1, count("n_bio_7e_run"))
+        database.openHelper.writableDatabase.execSQL(
+            "UPDATE session_review SET note = ?, updatedAt = ? WHERE sessionId = 'session-1'",
+            arrayOf(ILLNESS_NOTE, T1),
+        )
+        val source = sessionSource(ILLNESS_NOTE, T1)
+
+        repository.persist(
+            source,
+            RulesNoteInterpreter().interpret(NoteInterpretationRequest(source.text, source.scope)),
+            InterpretationExecutionOutcome.SUCCESS,
+            createdAt = Instant.parse("2026-08-27T10:01:00Z"),
+        )
+
+        assertEquals(1, count("n_bio_7e_run"))
+        assertEquals(0, countWhere("SELECT COUNT(*) FROM n_bio_7e_temporal_state WHERE candidateLayer = 'context_temporal'"))
+        assertEquals(1, countWhere("SELECT COUNT(*) FROM n_bio_7e_temporal_state WHERE candidateLayer = 'temporal_base'"))
+        assertEquals(0, countWhere("SELECT COUNT(*) FROM n_bio_7e_context_module_state WHERE moduleId = 'context.illness.episode.v1'"))
+        assertEquals(1, countWhere("SELECT COUNT(*) FROM n_bio_7e_context_module_state WHERE moduleId = 'context.time_pressure.observation_variance.v1'"))
+        assertEquals(0, countWhere("SELECT COUNT(*) FROM n_bio_7e_context_signal WHERE sourceModuleId = 'context.illness.episode.v1'"))
+        assertEquals(1, countWhere("SELECT COUNT(*) FROM n_bio_7e_context_signal WHERE sourceModuleId = 'context.time_pressure.observation_variance.v1'"))
+        assertEquals(0, countWhere("SELECT COUNT(*) FROM n_bio_7e_context_module_status WHERE moduleId = 'context.illness.episode.v1'"))
+        assertEquals(1, countWhere("SELECT COUNT(*) FROM n_bio_7e_context_module_status WHERE moduleId = 'context.time_pressure.observation_variance.v1'"))
+        assertEquals(1, count("note_interpretation_run"))
+        assertEquals(ILLNESS_NOTE, scalarText("SELECT note FROM session_review WHERE sessionId = 'session-1'"))
+        assertEquals(1, count("set_observation"))
+        assertEquals(1, count("set_metric_value"))
+        assertForeignKeysClean()
+    }
+
+    @Test
     fun uxOnlyAndCandidateCovariateRemainStructurallySeparated() = runBlocking {
         val rules = RulesNoteInterpreter()
         val sessionSource = sessionSource(SESSION_NOTE_A, T0)
@@ -289,6 +322,106 @@ class ContextInterpretationRoomTest {
         assertForeignKeysClean()
     }
 
+    private fun seedNBio7ERun() {
+        val db = database.openHelper.writableDatabase
+        db.execSQL(
+            "INSERT INTO user_profile(id, displayName, units, dietaryPreference, cycleStartDay, createdAt, updatedAt) " +
+                "VALUES ('user-7e', 'Fixture', 'metric', 'omnivore', 1, ?, ?)",
+            arrayOf(T0, T0),
+        )
+        db.execSQL(
+            "INSERT INTO reference_profile(id, version, populationSex, populationAgeSummary, populationDescription, datasetVersion, modelVersion) " +
+                "VALUES ('reference-7e', 1, 'mixed', 'adult', 'fixture', 'fixture', 'fixture')",
+        )
+        db.execSQL("INSERT INTO inference_model_manifest(id, createdAt) VALUES ('manifest-7e', ?)", arrayOf(T0))
+        db.execSQL(
+            """
+            INSERT INTO inference_run(
+                id, userProfileId, modelVersion, referenceProfileId, referenceProfileVersion,
+                referenceModelVersion, recruitmentModelVersion, stimulusModelVersion,
+                muscleStateModelVersion, exerciseTranslationModelVersion, modelManifestId,
+                executionMode, semanticsMode, calculatedAt, evidenceThrough, evidenceSetCount,
+                evidenceObservationCount, effectiveIndependentSessionCount
+            ) VALUES (
+                'source-run-7e', 'user-7e', '7d', 'reference-7e', 1, 'reference', 'recruitment',
+                'stimulus', 'state', 'translation', 'manifest-7e', 'shadow_candidate', 'typed_v7',
+                ?, NULL, 0, 0, 0
+            )
+            """.trimIndent(),
+            arrayOf(T0),
+        )
+        db.execSQL(
+            """
+            INSERT INTO n_bio_7e_run(
+                id, userProfileId, sourceInferenceRunId, temporalModelConfigId,
+                contextProtocolVersion, signalSchemaVersion, solverIdentity, executionMode,
+                pd001Status, pd002Status, pd003Status, calculatedAt
+            ) VALUES (
+                'derived-7e', 'user-7e', 'source-run-7e', 'temporal-v1', 1, 1,
+                'solver-v1', 'shadow_candidate', 'OPEN', 'OPEN', 'OPEN', ?
+            )
+            """.trimIndent(),
+            arrayOf(T0),
+        )
+        listOf("temporal_base", "context_temporal").forEach { layer ->
+            db.execSQL(
+                """
+                INSERT INTO n_bio_7e_temporal_state(
+                    runId, candidateLayer, scopeKind, scopeId, stateSchemaVersion,
+                    persistentMean, transientMean, doseCoefficientMean, covariancePp,
+                    covariancePt, covariancePd, covarianceTt, covarianceTd, covarianceDd,
+                    horizon, observationCount, independentSessionCount
+                ) VALUES ('derived-7e', ?, 'SYSTEMIC', '', 1, 0.0, 0.0, 0.0,
+                    0.04, 0.0, 0.0, 0.02, 0.0, 0.0004, ?, 1, 1)
+                """.trimIndent(),
+                arrayOf(layer, T0),
+            )
+        }
+        listOf(
+            "context.illness.episode.v1" to "ILLNESS_REPORTED",
+            "context.time_pressure.observation_variance.v1" to "TIME_PRESSURE_REPORTED",
+        ).forEach { (moduleId, featureId) ->
+            db.execSQL(
+                """
+                INSERT INTO n_bio_7e_context_module_state(
+                    runId, moduleId, moduleModelVersion, moduleConfigId, stateSchemaVersion,
+                    encodedState, evidenceThrough, updatedAt
+                ) VALUES ('derived-7e', ?, 'model-v1', 'config-v1', 2, 'fixture', ?, ?)
+                """.trimIndent(),
+                arrayOf(moduleId, T0, T0),
+            )
+            db.execSQL(
+                """
+                INSERT INTO n_bio_7e_context_signal(
+                    runId, signalId, signalSchemaVersion, sourceModuleId, moduleModelVersion,
+                    moduleConfigId, sourceFeatureId, sourceFeatureSchemaVersion, target,
+                    scopeKind, scopeId, effectiveFrom, effectiveUntil, effectRepresentation,
+                    locationMean, variance, evidenceRowCount, independentSessionCount,
+                    independentEpisodeCount, evidenceMaturity, correlationGroupId, episodeId,
+                    encodedSourceEvidenceIds, encodedUpstreamModelIdentities, publishedAt,
+                    status, failureCode
+                ) VALUES (
+                    'derived-7e', ?, 1, ?, 'model-v1', 'config-v1', ?, 1,
+                    'SYSTEMIC_TRANSIENT_STATE', 'SYSTEMIC', '', ?, NULL,
+                    'LOG_PERFORMANCE_LOCATION_SHIFT', 0.0, 0.1, 1, 1, 1,
+                    'PRIOR_DOMINATED', 'fixture', NULL, '1:e', '4:base', ?,
+                    'PRIOR_DOMINATED', NULL
+                )
+                """.trimIndent(),
+                arrayOf("signal:$moduleId", moduleId, featureId, T0, T0),
+            )
+            db.execSQL(
+                """
+                INSERT INTO n_bio_7e_context_module_status(
+                    runId, moduleId, phase, status, failureCode, failureSummary, recordedAt
+                ) VALUES ('derived-7e', ?, 'PRE_SESSION_PUBLICATION', 'OK', NULL, NULL, ?)
+                """.trimIndent(),
+                arrayOf(moduleId, T0),
+            )
+        }
+        assertForeignKeysClean()
+    }
+
     private fun sessionSource(note: String, updatedAt: String): CanonicalNoteSource = requireNotNull(
         CanonicalNoteSource.from(
             SessionReviewEntity(
@@ -327,6 +460,11 @@ class ContextInterpretationRoomTest {
             cursor.getInt(0)
         }
 
+    private fun countWhere(sql: String): Int = database.openHelper.writableDatabase.query(sql).use { cursor ->
+        assertTrue(cursor.moveToFirst())
+        cursor.getInt(0)
+    }
+
     private fun scalarText(sql: String): String? = database.openHelper.writableDatabase.query(sql).use { cursor ->
         assertTrue(cursor.moveToFirst())
         if (cursor.isNull(0)) null else cursor.getString(0)
@@ -338,8 +476,10 @@ class ContextInterpretationRoomTest {
 
     companion object {
         private const val T0 = "2026-08-27T10:00:00Z"
+        private const val T1 = "2026-08-27T10:00:01Z"
         private const val SESSION_NOTE_A = "I slept about 4 hours and feel wrecked today"
         private const val SESSION_NOTE_B = "I slept 7 hours"
+        private const val ILLNESS_NOTE = "I was ill today"
         private const val EXERCISE_NOTE_A = "remember to move the seat one notch lower next time"
     }
 }

@@ -69,7 +69,9 @@ class NBio7EHistoricalEvidenceReader(
                 sessionId = sessionId,
                 at = observations.maxOf { it.heldOutAt },
                 observedLogResidual = residualValues.average(),
-                capabilityPredictiveVariance = predictiveVariances.sum() / (predictiveVariances.size * predictiveVariances.size),
+                // Same-session profile observations share context and are not independent draws.
+                // Keep a conservative fully-dependent variance rather than shrinking by row count.
+                capabilityPredictiveVariance = predictiveVariances.average(),
                 profileObservationCount = observations.size,
             )
         }.sortedWith(compareBy<NBio7ESessionResidualV1> { it.at }.thenBy { it.sessionId })

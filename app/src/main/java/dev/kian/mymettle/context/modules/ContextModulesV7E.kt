@@ -35,6 +35,7 @@ import dev.kian.mymettle.domain.context.NoteScope
 import dev.kian.mymettle.domain.context.TemporalApplicability
 import java.time.Duration
 import java.time.Instant
+import java.util.Base64
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.max
@@ -136,10 +137,11 @@ object LegacyContextEvidenceAdapterV1 {
     }
 }
 
-data class EpisodeAssociationStateV1(
+data class EpisodeAssociationStateV2(
     override val ownerModuleId: String = EpisodeAssociationModuleV1.MODULE_ID,
     val processedEvidenceIds: Set<String> = emptySet(),
     val learnedEpisodeIds: Set<String> = emptySet(),
+    val countedSessionKeys: Set<String> = emptySet(),
     val activeEpisodeId: String? = null,
     val episodeStartedAt: Instant? = null,
     val lastPositiveAt: Instant? = null,
@@ -151,22 +153,36 @@ data class EpisodeAssociationStateV1(
     val associationVariance: Double = 0.0100,
     val persistenceAlpha: Double = 1.0,
     val persistenceBeta: Double = 1.0,
-) : ContextModuleStateV7E
+) : ContextModuleStateV7E {
+    init {
+        require(ownerModuleId == EpisodeAssociationModuleV1.MODULE_ID)
+        require(evidenceRowCount >= 0 && independentSessionCount in 0..evidenceRowCount)
+        require(independentEpisodeCount in 0..independentSessionCount)
+        require(countedSessionKeys.size == independentSessionCount)
+        require(learnedEpisodeIds.size <= independentEpisodeCount)
+        require(associationMean.isFinite())
+        require(associationVariance.isFinite() && associationVariance > 0.0)
+        require(persistenceAlpha.isFinite() && persistenceAlpha > 0.0)
+        require(persistenceBeta.isFinite() && persistenceBeta > 0.0)
+        require(episodeStartedAt == null || lastPositiveAt == null || !lastPositiveAt.isBefore(episodeStartedAt))
+    }
+}
 
-object EpisodeAssociationStateCodecV1 : ContextModuleStateCodecV7E {
+object EpisodeAssociationStateCodecV2 : ContextModuleStateCodecV7E {
     override val moduleId: String = EpisodeAssociationModuleV1.MODULE_ID
-    override val schemaVersion: Int = 1
+    override val schemaVersion: Int = 2
 
     override fun encode(state: ContextModuleStateV7E): String {
-        require(state is EpisodeAssociationStateV1 && state.ownerModuleId == moduleId)
+        require(state is EpisodeAssociationStateV2 && state.ownerModuleId == moduleId)
         return listOf(
-            "1",
-            state.processedEvidenceIds.sorted().joinToString(","),
-            state.learnedEpisodeIds.sorted().joinToString(","),
-            state.activeEpisodeId.orEmpty(),
+            "2",
+            state.processedEvidenceIds.encodedSet(),
+            state.learnedEpisodeIds.encodedSet(),
+            state.countedSessionKeys.encodedSet(),
+            state.activeEpisodeId.orEmpty().encodedString(),
             state.episodeStartedAt?.toString().orEmpty(),
             state.lastPositiveAt?.toString().orEmpty(),
-            state.lastEvidenceId.orEmpty(),
+            state.lastEvidenceId.orEmpty().encodedString(),
             state.evidenceRowCount,
             state.independentSessionCount,
             state.independentEpisodeCount,
@@ -179,21 +195,22 @@ object EpisodeAssociationStateCodecV1 : ContextModuleStateCodecV7E {
 
     override fun decode(encoded: String): ContextModuleStateV7E {
         val p = encoded.split('|')
-        require(p.size == 14 && p[0] == "1") { "Unsupported episode state codec." }
-        return EpisodeAssociationStateV1(
-            processedEvidenceIds = p[1].csvSet(),
-            learnedEpisodeIds = p[2].csvSet(),
-            activeEpisodeId = p[3].ifBlank { null },
-            episodeStartedAt = p[4].ifBlank { null }?.let(Instant::parse),
-            lastPositiveAt = p[5].ifBlank { null }?.let(Instant::parse),
-            lastEvidenceId = p[6].ifBlank { null },
-            evidenceRowCount = p[7].toInt(),
-            independentSessionCount = p[8].toInt(),
-            independentEpisodeCount = p[9].toInt(),
-            associationMean = p[10].toDouble(),
-            associationVariance = p[11].toDouble(),
-            persistenceAlpha = p[12].toDouble(),
-            persistenceBeta = p[13].toDouble(),
+        require(p.size == 15 && p[0] == "2") { "Unsupported episode state codec." }
+        return EpisodeAssociationStateV2(
+            processedEvidenceIds = p[1].decodedSet(),
+            learnedEpisodeIds = p[2].decodedSet(),
+            countedSessionKeys = p[3].decodedSet(),
+            activeEpisodeId = p[4].decodedString().ifBlank { null },
+            episodeStartedAt = p[5].ifBlank { null }?.let(Instant::parse),
+            lastPositiveAt = p[6].ifBlank { null }?.let(Instant::parse),
+            lastEvidenceId = p[7].decodedString().ifBlank { null },
+            evidenceRowCount = p[8].toInt(),
+            independentSessionCount = p[9].toInt(),
+            independentEpisodeCount = p[10].toInt(),
+            associationMean = p[11].toDouble(),
+            associationVariance = p[12].toDouble(),
+            persistenceAlpha = p[13].toDouble(),
+            persistenceBeta = p[14].toDouble(),
         )
     }
 }
@@ -205,19 +222,19 @@ class EpisodeAssociationModuleV1 : ContextModuleV7E {
         learnerFamily = "episode_persistence_conjugate_association",
         modelVersion = "illness-episode-association-v1",
         configId = "context-module:illness-episode:v1",
-        stateSchemaVersion = 1,
+        stateSchemaVersion = 2,
         consumedFeatures = setOf(ProductionContextFeaturesV7E.illness.key),
         requiredReadCapabilities = ProductionContextFeaturesV7E.illness.requiredReadCapabilities,
         allowedTargets = setOf(ContextSignalTarget.SYSTEMIC_TRANSIENT_STATE),
         deterministicReplay = true,
     )
-    override val stateCodec: ContextModuleStateCodecV7E = EpisodeAssociationStateCodecV1
+    override val stateCodec: ContextModuleStateCodecV7E = EpisodeAssociationStateCodecV2
 
-    override fun initialState(): ContextModuleStateV7E = EpisodeAssociationStateV1()
+    override fun initialState(): ContextModuleStateV7E = EpisodeAssociationStateV2()
 
     override fun evaluate(state: ContextModuleStateV7E, view: ContextReadViewV1): ContextModuleResultV7E {
-        require(state is EpisodeAssociationStateV1 && state.ownerModuleId == MODULE_ID)
-        var next: EpisodeAssociationStateV1 = state
+        require(state is EpisodeAssociationStateV2 && state.ownerModuleId == MODULE_ID)
+        var next: EpisodeAssociationStateV2 = state
         val newEvidence = view.ownFeatureEvidence()
             .filter { it.featureKey == ProductionContextFeaturesV7E.illness.key && it.evidenceId !in state.processedEvidenceIds }
             .sortedWith(compareBy({ it.observedAt }, { it.evidenceId }))
@@ -235,12 +252,14 @@ class EpisodeAssociationModuleV1 : ContextModuleV7E {
             )
         }
 
-        val signal = publishSignal(next, view.horizon)
+        val signal = publishSignal(next, view.horizon())
         return ContextModuleResultV7E(next, listOfNotNull(signal))
     }
 
-    private fun applyEvidence(state: EpisodeAssociationStateV1, evidence: ContextFeatureEvidenceV7E): EpisodeAssociationStateV1 {
+    private fun applyEvidence(state: EpisodeAssociationStateV2, evidence: ContextFeatureEvidenceV7E): EpisodeAssociationStateV2 {
         val processed = state.processedEvidenceIds + evidence.evidenceId
+        val sessionKey = evidence.independentSessionKey()
+        val newSession = sessionKey !in state.countedSessionKeys
         if (evidence.missingness == ContextEvidenceMissingness.NOT_REPORTED ||
             evidence.missingness == ContextEvidenceMissingness.NOT_MEASURED ||
             evidence.missingness == ContextEvidenceMissingness.UNKNOWN
@@ -253,7 +272,8 @@ class EpisodeAssociationModuleV1 : ContextModuleV7E {
                 episodeStartedAt = null,
                 lastEvidenceId = evidence.evidenceId,
                 evidenceRowCount = state.evidenceRowCount + 1,
-                independentSessionCount = state.independentSessionCount + 1,
+                countedSessionKeys = state.countedSessionKeys + sessionKey,
+                independentSessionCount = state.independentSessionCount + if (newSession) 1 else 0,
                 persistenceBeta = state.persistenceBeta + if (state.activeEpisodeId != null) 1.0 else 0.0,
             )
         }
@@ -269,13 +289,14 @@ class EpisodeAssociationModuleV1 : ContextModuleV7E {
             lastPositiveAt = evidence.observedAt,
             lastEvidenceId = evidence.evidenceId,
             evidenceRowCount = state.evidenceRowCount + 1,
-            independentSessionCount = state.independentSessionCount + 1,
+            countedSessionKeys = state.countedSessionKeys + sessionKey,
+            independentSessionCount = state.independentSessionCount + if (newSession) 1 else 0,
             independentEpisodeCount = state.independentEpisodeCount + if (continueEpisode) 0 else 1,
             persistenceAlpha = state.persistenceAlpha + if (continueEpisode) 1.0 else 0.0,
         )
     }
 
-    private fun publishSignal(state: EpisodeAssociationStateV1, horizon: Instant): ContextSignalV1? {
+    private fun publishSignal(state: EpisodeAssociationStateV2, horizon: Instant): ContextSignalV1? {
         val last = state.lastPositiveAt ?: return null
         val episodeId = state.activeEpisodeId ?: return null
         val ageDays = max(0.0, Duration.between(last, horizon).toMillis() / 86_400_000.0)
@@ -326,7 +347,7 @@ object EpisodeAssociationModuleProviderV1 : ContextModuleProviderV7E {
     override fun create(): ContextModuleV7E = EpisodeAssociationModuleV1()
 }
 
-data class ObservationVarianceStateV1(
+data class ObservationVarianceStateV2(
     override val ownerModuleId: String = ObservationVarianceAssociationModuleV1.MODULE_ID,
     val processedEvidenceIds: Set<String> = emptySet(),
     val evidenceRowCount: Int = 0,
@@ -334,36 +355,53 @@ data class ObservationVarianceStateV1(
     val falseSessionCount: Int = 0,
     val presentSquaredResidualSum: Double = 0.0,
     val falseSquaredResidualSum: Double = 0.0,
+    val countedPresentSessionKeys: Set<String> = emptySet(),
+    val countedFalseSessionKeys: Set<String> = emptySet(),
     val currentPresence: ContextEvidenceMissingness = ContextEvidenceMissingness.NOT_REPORTED,
     val lastEvidenceId: String? = null,
     val currentEffectiveFrom: Instant? = null,
     val currentEffectiveUntil: Instant? = null,
-) : ContextModuleStateV7E
+) : ContextModuleStateV7E {
+    init {
+        require(ownerModuleId == ObservationVarianceAssociationModuleV1.MODULE_ID)
+        require(evidenceRowCount >= 0)
+        require(presentSessionCount >= 0 && falseSessionCount >= 0)
+        require(presentSessionCount + falseSessionCount <= evidenceRowCount)
+        require(countedPresentSessionKeys.size == presentSessionCount)
+        require(countedFalseSessionKeys.size == falseSessionCount)
+        require(presentSquaredResidualSum.isFinite() && presentSquaredResidualSum >= 0.0)
+        require(falseSquaredResidualSum.isFinite() && falseSquaredResidualSum >= 0.0)
+        require((currentEffectiveFrom == null) == (currentEffectiveUntil == null))
+        require(currentEffectiveFrom == null || !requireNotNull(currentEffectiveUntil).isBefore(currentEffectiveFrom))
+    }
+}
 
-object ObservationVarianceStateCodecV1 : ContextModuleStateCodecV7E {
+object ObservationVarianceStateCodecV2 : ContextModuleStateCodecV7E {
     override val moduleId: String = ObservationVarianceAssociationModuleV1.MODULE_ID
-    override val schemaVersion: Int = 1
+    override val schemaVersion: Int = 2
 
     override fun encode(state: ContextModuleStateV7E): String {
-        require(state is ObservationVarianceStateV1 && state.ownerModuleId == moduleId)
+        require(state is ObservationVarianceStateV2 && state.ownerModuleId == moduleId)
         return listOf(
-            "1", state.processedEvidenceIds.sorted().joinToString(","), state.evidenceRowCount,
+            "2", state.processedEvidenceIds.encodedSet(), state.evidenceRowCount,
             state.presentSessionCount, state.falseSessionCount, state.presentSquaredResidualSum,
-            state.falseSquaredResidualSum, state.currentPresence.name, state.lastEvidenceId.orEmpty(),
+            state.falseSquaredResidualSum, state.countedPresentSessionKeys.encodedSet(), state.countedFalseSessionKeys.encodedSet(),
+            state.currentPresence.name, state.lastEvidenceId.orEmpty().encodedString(),
             state.currentEffectiveFrom?.toString().orEmpty(), state.currentEffectiveUntil?.toString().orEmpty(),
         ).joinToString("|")
     }
 
     override fun decode(encoded: String): ContextModuleStateV7E {
         val p = encoded.split('|')
-        require(p.size == 11 && p[0] == "1") { "Unsupported variance state codec." }
-        return ObservationVarianceStateV1(
-            processedEvidenceIds = p[1].csvSet(), evidenceRowCount = p[2].toInt(),
+        require(p.size == 13 && p[0] == "2") { "Unsupported variance state codec." }
+        return ObservationVarianceStateV2(
+            processedEvidenceIds = p[1].decodedSet(), evidenceRowCount = p[2].toInt(),
             presentSessionCount = p[3].toInt(), falseSessionCount = p[4].toInt(),
             presentSquaredResidualSum = p[5].toDouble(), falseSquaredResidualSum = p[6].toDouble(),
-            currentPresence = ContextEvidenceMissingness.valueOf(p[7]), lastEvidenceId = p[8].ifBlank { null },
-            currentEffectiveFrom = p[9].ifBlank { null }?.let(Instant::parse),
-            currentEffectiveUntil = p[10].ifBlank { null }?.let(Instant::parse),
+            countedPresentSessionKeys = p[7].decodedSet(), countedFalseSessionKeys = p[8].decodedSet(),
+            currentPresence = ContextEvidenceMissingness.valueOf(p[9]), lastEvidenceId = p[10].decodedString().ifBlank { null },
+            currentEffectiveFrom = p[11].ifBlank { null }?.let(Instant::parse),
+            currentEffectiveUntil = p[12].ifBlank { null }?.let(Instant::parse),
         )
     }
 }
@@ -375,18 +413,18 @@ class ObservationVarianceAssociationModuleV1 : ContextModuleV7E {
         learnerFamily = "two_group_robust_variance_ratio",
         modelVersion = "time-pressure-observation-variance-v1",
         configId = "context-module:time-pressure-variance:v1",
-        stateSchemaVersion = 1,
+        stateSchemaVersion = 2,
         consumedFeatures = setOf(ProductionContextFeaturesV7E.timePressure.key),
         requiredReadCapabilities = ProductionContextFeaturesV7E.timePressure.requiredReadCapabilities,
         allowedTargets = setOf(ContextSignalTarget.OBSERVATION_VARIANCE),
         deterministicReplay = true,
     )
-    override val stateCodec: ContextModuleStateCodecV7E = ObservationVarianceStateCodecV1
-    override fun initialState(): ContextModuleStateV7E = ObservationVarianceStateV1()
+    override val stateCodec: ContextModuleStateCodecV7E = ObservationVarianceStateCodecV2
+    override fun initialState(): ContextModuleStateV7E = ObservationVarianceStateV2()
 
     override fun evaluate(state: ContextModuleStateV7E, view: ContextReadViewV1): ContextModuleResultV7E {
-        require(state is ObservationVarianceStateV1 && state.ownerModuleId == MODULE_ID)
-        var next: ObservationVarianceStateV1 = state
+        require(state is ObservationVarianceStateV2 && state.ownerModuleId == MODULE_ID)
+        var next: ObservationVarianceStateV2 = state
         val newEvidence = view.ownFeatureEvidence()
             .filter { it.featureKey == ProductionContextFeaturesV7E.timePressure.key && it.evidenceId !in state.processedEvidenceIds }
             .sortedWith(compareBy({ it.observedAt }, { it.evidenceId }))
@@ -401,25 +439,29 @@ class ObservationVarianceAssociationModuleV1 : ContextModuleV7E {
             )
         }
         val residual = if (view.phase == ContextModulePhase.POST_SESSION_UPDATE) view.realisedPostSessionResidual() else null
-        val learnedPresence = newEvidence.lastOrNull()?.missingness
+        val learnedEvidence = newEvidence.lastOrNull()
+        val learnedPresence = learnedEvidence?.missingness
         if (residual != null && learnedPresence in setOf(ContextEvidenceMissingness.PRESENT, ContextEvidenceMissingness.KNOWN_FALSE)) {
             val boundedSquare = min(MAX_SQUARED_RESIDUAL, residual * residual)
+            val sessionKey = requireNotNull(learnedEvidence).independentSessionKey()
             next = when (learnedPresence) {
-                ContextEvidenceMissingness.PRESENT -> next.copy(
+                ContextEvidenceMissingness.PRESENT -> if (sessionKey in next.countedPresentSessionKeys) next else next.copy(
                     presentSessionCount = next.presentSessionCount + 1,
                     presentSquaredResidualSum = next.presentSquaredResidualSum + boundedSquare,
+                    countedPresentSessionKeys = next.countedPresentSessionKeys + sessionKey,
                 )
-                ContextEvidenceMissingness.KNOWN_FALSE -> next.copy(
+                ContextEvidenceMissingness.KNOWN_FALSE -> if (sessionKey in next.countedFalseSessionKeys) next else next.copy(
                     falseSessionCount = next.falseSessionCount + 1,
                     falseSquaredResidualSum = next.falseSquaredResidualSum + boundedSquare,
+                    countedFalseSessionKeys = next.countedFalseSessionKeys + sessionKey,
                 )
                 else -> next // Missing/unmentioned is never a negative/control row.
             }
         }
-        return ContextModuleResultV7E(next, listOfNotNull(publish(next, view.horizon)))
+        return ContextModuleResultV7E(next, listOfNotNull(publish(next, view.horizon())))
     }
 
-    private fun publish(state: ObservationVarianceStateV1, horizon: Instant): ContextSignalV1? {
+    private fun publish(state: ObservationVarianceStateV2, horizon: Instant): ContextSignalV1? {
         if (state.currentPresence != ContextEvidenceMissingness.PRESENT ||
             state.currentEffectiveFrom?.let(horizon::isBefore) != false ||
             state.currentEffectiveUntil?.let(horizon::isAfter) != false
@@ -481,6 +523,24 @@ object ProductionContextModuleRegistryV7E {
     fun create(): ContextModuleRegistryV7E = ContextModuleRegistryV7E(providers, ProductionContextFeaturesV7E.all)
 }
 
-private fun String.csvSet(): Set<String> = ifBlank { null }?.split(',')?.filter(String::isNotBlank)?.toSet().orEmpty()
+private fun ContextFeatureEvidenceV7E.independentSessionKey(): String = when (scope.kind) {
+    ContextScopeKind.SESSION -> scope.canonical
+    else -> "evidence:$evidenceId"
+}
+
+private fun Set<String>.encodedSet(): String = sorted().joinToString(",") { it.encodedString() }
+
+private fun String.decodedSet(): Set<String> = ifBlank { null }
+    ?.split(',')
+    ?.mapTo(linkedSetOf()) { it.decodedString() }
+    .orEmpty()
+
+private fun String.encodedString(): String = Base64.getUrlEncoder().withoutPadding()
+    .encodeToString(toByteArray(Charsets.UTF_8))
+
+private fun String.decodedString(): String = if (isEmpty()) "" else String(
+    Base64.getUrlDecoder().decode(this),
+    Charsets.UTF_8,
+)
 
 private fun <T : Any> setOfNotNull(value: T?): Set<T> = if (value == null) emptySet() else setOf(value)

@@ -345,8 +345,8 @@ class ContextCapabilityViolationException(message: String) : IllegalStateExcepti
 
 class ContextReadViewV1(
     val phase: ContextModulePhase,
-    val horizon: Instant,
-    val scope: ContextScope,
+    horizon: Instant,
+    scope: ContextScope,
     val grantedCapabilities: Set<ContextReadCapability>,
     ownFeatureEvidence: List<ContextFeatureEvidenceV7E> = emptyList(),
     frozenPrediction: FrozenContextPrediction? = null,
@@ -354,6 +354,8 @@ class ContextReadViewV1(
     sessionDoseSummary: Double? = null,
     approvedExecutionSemantics: Map<String, String> = emptyMap(),
 ) {
+    private val horizonValue = horizon
+    private val scopeValue = scope
     private val ownEvidence = ownFeatureEvidence.toList()
     private val prediction = frozenPrediction
     private val residual = realisedPostSessionResidual
@@ -369,6 +371,8 @@ class ContextReadViewV1(
     }
 
     fun ownFeatureEvidence(): List<ContextFeatureEvidenceV7E> = read(ContextReadCapability.OWN_FEATURE_EVIDENCE, ownEvidence)
+    fun horizon(): Instant = read(ContextReadCapability.TIME_AND_SCOPE, horizonValue)
+    fun scope(): ContextScope = read(ContextReadCapability.TIME_AND_SCOPE, scopeValue)
     fun frozenPrediction(): FrozenContextPrediction? = read(ContextReadCapability.FROZEN_PRE_SESSION_PREDICTION, prediction)
     fun realisedPostSessionResidual(): Double? = read(ContextReadCapability.REALISED_POST_SESSION_RESIDUAL, residual)
     fun sessionDoseSummary(): Double? = read(ContextReadCapability.SESSION_DOSE_SUMMARY, dose)
@@ -412,6 +416,8 @@ class ContextModuleRegistryV7E(
             }
             require(module.stateCodec.moduleId == module.descriptor.moduleId)
             require(module.stateCodec.schemaVersion == module.descriptor.stateSchemaVersion)
+            require(ContextReadCapability.OWN_FEATURE_EVIDENCE in module.descriptor.requiredReadCapabilities)
+            require(ContextReadCapability.TIME_AND_SCOPE in module.descriptor.requiredReadCapabilities)
         }
     }
 
@@ -457,7 +463,7 @@ class ContextModuleRuntimeV7E(
                 view.ownFeatureEvidence().forEach(registry::validateEvidence)
                 val result = module.evaluate(previous, view)
                 require(result.state.ownerModuleId == module.descriptor.moduleId)
-                result.signals.forEach { signal -> ContextSignalValidatorV1.validate(signal, module.descriptor, view.horizon) }
+                result.signals.forEach { signal -> ContextSignalValidatorV1.validate(signal, module.descriptor, view.horizon()) }
                 states[module.descriptor.moduleId] = result.state
                 signals += result.signals
             } catch (cancelled: CancellationException) {

@@ -143,7 +143,7 @@ Human/3P extension impact: module authors implement the protocol and emit only a
 DECISION 7E-API-004
 Date / HEAD: 2026-09-03 / 487705c
 Component: persistence
-Decision: Room15 is semantically required; add dedicated feature-definition, module-state, signal/failure and neutral temporal-state tables.
+Decision: Room15 is semantically required. Initial wording proposed a feature-definition table; implementation corrected this to five derived tables: run/provenance, temporal state, module state, signal and module status/failure. Feature definitions are immutable build-integrated provider metadata, not database observations.
 Why: Room14 has generic configs/runs but no semantic home for module identity/state/signals; abusing profile capability state or biologically named adaptive_muscle_state would destroy scope and ownership meaning.
 Alternatives considered: opaque all-module blob in capability_parameter_state (wrong FK/scope); adaptive_muscle_state columns (premature biology and no systemic/module identity); memory-only 7E (fails replay/backup).
 Compatibility impact: additive tested 14→15 migration; old rows unchanged.
@@ -161,6 +161,28 @@ Compatibility impact: blocking/I/O modules violate the TCK/contract.
 Chronology/replay impact: events sort by time, evidence ID, module ID.
 Failure behaviour: module exception isolated; failed atomic run persists no partial 7E state.
 Human/3P extension impact: authors write pure transformations/codecs, not Android lifecycle services.
+
+DECISION 7E-API-006
+Date / HEAD: 2026-09-03 / after 5bda3b7
+Component: correction/reannotation invalidation
+Decision: map changed feature IDs through the immutable provider descriptors; delete only consuming module memory/status/signals plus combined `CONTEXT_TEMPORAL` state. Preserve unrelated module memory, `TEMPORAL_BASE`, `DOSE_TEMPORAL`, raw evidence and 7C/7D state. Deleting all interpretations clears all context-conditioned/module-derived rows but still preserves non-context temporal candidates.
+Why: the first conservative implementation deleted whole 7E runs and therefore discarded unrelated derived work. That was safe but broader than the mission permits.
+Alternatives considered: whole-run invalidation (safe but over-broad); feature-specific switches (Core coupling); parsing opaque module codecs (breaks ownership/versioning); a sixth dependency table (not earned while provider descriptors already define feature→module dependency).
+Compatibility impact: adding a provider automatically extends the invalidation map through `consumedFeatures`; no central tag switch is edited.
+Chronology/replay impact: missing context-conditioned state explicitly requires replay; preserved base/dose state cannot masquerade as context state.
+Failure behaviour: an unknown/unconsumed legacy tag invalidates no module. Removing the entire interpretation substrate fails closed by clearing all context-derived rows.
+Human/3P extension impact: authors must declare every consumed feature accurately; this descriptor is also the invalidation contract.
+
+DECISION 7E-API-007
+Date / HEAD: 2026-09-03 / after 5bda3b7
+Component: normalised temporal contract/source reconciliation
+Decision: the exact v1 filter state is `[persistent, transient, doseCoefficient]`; dose enters the observation design `H=[1,1,d]`, not the transient transition. The normative contract was corrected during diff review before physical acceptance.
+Why: source correctly implemented a static shrunk regression coefficient, while one preregistered equation paragraph still described dose as a transient-state impulse. Leaving that mismatch would make replay/model identity ambiguous.
+Alternatives considered: mutate source to the stale paragraph (rejected because it would change preregistered code behaviour after tests); retain two conflicting descriptions (rejected).
+Compatibility impact: no source/model/config change; documentation now matches the immutable payload and persisted covariance.
+Chronology/replay impact: only prior SessionDose enters `d`; missing dose uses design coordinate zero and cannot update the dose coefficient.
+Failure behaviour: typed dose availability remains false; base-equivalent prediction/update remains available.
+Human/3P extension impact: modules publish observation adjustments only and never inject impulses into the transition.
 
 ---
 
@@ -222,7 +244,9 @@ Questions that must eventually be answerable from this section:
 
 ### Current concrete shape
 
-_TBD during implementation._
+`ContextFeatureDefinitionV7E` contains `ContextFeatureKey(featureId, schemaVersion)`, human meaning, `ContextFeatureValueSchema`, allowed scope/source sets, temporal semantics, missingness semantics, allowed signal targets, required read capabilities and explicit compatible evidence versions. Value kinds are boolean, ordinal, continuous with canonical unit/bounds, categorical with closed allowed values, anatomy-scoped and structured reference.
+
+`ContextFeatureEvidenceV7E` is separate and contains stable evidence/revision IDs, feature key, typed value only when `PRESENT`, one of six missingness states, typed scope, observed/effective timestamps, source kind and optional extraction confidence. Registry validation rejects unknown versions, wrong source/scope/value/unit/bounds. Legacy 7A.5 rows are adapted, never rewritten; only `CANDIDATE_COVARIATE` rows are eligible. V1 production definitions are `ILLNESS_REPORTED@1` and `TIME_PRESSURE_REPORTED@1`; adding another definition/provider does not edit Core arbitration.
 
 ---
 
@@ -257,7 +281,7 @@ Questions to answer:
 
 ### Current lifecycle
 
-_TBD during implementation._
+`ProductionContextModuleRegistryV7E.providers` is the explicit composition root. `ContextModuleProviderV7E.create()` constructs an I/O-free module; the registry sorts by stable module ID and rejects duplicate IDs, protocol mismatch or descriptor/codec mismatch before execution. The host supplies a capability-checked view, calls each module serially in deterministic ID order, validates state ownership and every signal, then atomically persists a complete run. Bootstrap is full chronological replay from canonical evidence; incremental use passes prior decoded state. A missing/stale provider, codec, model/config or protocol fails closed on reload. There is no reflection, `ServiceLoader`, downloaded dex or runtime marketplace.
 
 ---
 
@@ -296,7 +320,7 @@ Availability does not imply permission.
 
 ### Implemented read views
 
-_TBD during implementation._
+`ContextReadViewV1` is host-owned and immutable. It exposes only methods guarded by `ContextReadCapability`: own feature evidence; time/horizon and typed scope; frozen pre-session prediction; realised post-session residual; SessionDose summary; and approved execution semantics. Realised residual is illegal in pre-session phase. The runtime verifies the grant contains the descriptor request and that every evidence row belongs to a declared feature. It exposes no DAO, raw note, Health data, arbitrary history or mutable Core state. Replay reconstructs the same view from authorised canonical/derived inputs and retained upstream identities.
 
 ---
 
@@ -324,7 +348,7 @@ Questions to answer:
 
 ### Current signal envelope
 
-_TBD during implementation._
+`ContextSignalV1` contains stable signal/schema identity; source module model/config and feature version; target and typed scope; effective interval; effect representation; location/variance summary; row/session/independent-episode support; evidence maturity; correlation group and optional episode; bounded source/upstream provenance; publication time; and applicability/failure status. Applicable/prior signals require finite bounded mean and positive bounded variance; unavailable/rejected signals carry no numeric substitute. The validator rejects unknown schema, stale module/config, wrong feature/target/scope, future effective time, NaN/Inf, incompatible effect representation and duplicates before arbitration. Signals are immutable derived replay products; retraction/supersession occurs by invalidation and replay.
 
 ---
 
@@ -346,7 +370,7 @@ Questions to answer:
 
 ### Current arbitration path
 
-_TBD during implementation._
+Core routes by generic `(target, exact scope)` only. Within each `correlationGroupId`, it retains one deterministic strongest representative, preventing naive double counting. Representatives from distinct groups are precision-combined; between-signal disagreement inflates variance and opposite directions set `contradictory=true`. V1 accepts systemic/local log-location shifts and observation log-variance shifts only; every reserved/later target fails the target policy. No signal yields a zero adjustment, not a fabricated effect. `CAPABILITY_BASELINE`, `TEMPORAL_BASE`, `DOSE_TEMPORAL` and `CONTEXT_TEMPORAL` are frozen/scored separately in predict-then-update order; all remain SHADOW.
 
 ---
 
@@ -373,7 +397,11 @@ Do not describe association parameters as causal effects unless a separate causa
 
 ### Module memory implementations
 
-_TBD during implementation._
+`context.illness.episode.v1` uses `episode_persistence_conjugate_association`: processed/learned IDs, active episode timestamps, distinct session keys, row/session/independent-episode counts, a normal association posterior and Beta persistence parameters. It learns one residual at most once per independent active episode, publishes a decaying systemic location signal, and cannot write Core.
+
+`context.time_pressure.observation_variance.v1` uses `two_group_robust_variance_ratio`: processed IDs, distinct explicit-present/explicit-false session keys, bounded squared-residual sums and the current session interval. Repeated evidence rows from the same session may increase the row count but never the independent-session count or residual sum. It learns a robust present-versus-false variance ratio, never treats no mention as false, publishes observation variance only inside the source session interval, and has no episode/location equation.
+
+Each has its own codec/model/config/state schema. Both start neutral/broad, are replay-idempotent by evidence ID, and persist one opaque module-owned state row whose ownership/version is checked by the host. Module state-schema v2 base64url-encodes arbitrary evidence/episode/session identifiers before deterministic delimiter framing; codec round-trip tests include commas and pipes. The pre-acceptance v1 checkpoint layout is intentionally rejected rather than silently decoded, and derived state is rebuilt by replay. Feature-specific invalidation is derived generically from descriptor `consumedFeatures`.
 
 ---
 
@@ -393,7 +421,7 @@ Questions to answer:
 
 ### Current episode implementation
 
-_TBD during implementation._
+Illness `PRESENT` opens `episode:<firstEvidenceId>`; another positive within seven days continues it and increments row/session support without increasing independent-episode support. `NOT_REPORTED`, `NOT_MEASURED` and `UNKNOWN` do not resolve it. `KNOWN_FALSE` closes it and updates persistence-resolution evidence. Publication uses last-positive age, a three-day association half-life, Beta-posterior persistence and a hard 14-day maximum age. No raw evidence is copied forward: only module-owned derived episode state persists. One residual updates the association once per episode, preventing repeated rows/sessions from manufacturing independent confidence.
 
 ---
 
@@ -415,7 +443,9 @@ Must eventually cover:
 
 ### Current implementation
 
-_TBD during implementation._
+Room15 adds exactly five derived tables: `n_bio_7e_run`, `n_bio_7e_temporal_state`, `n_bio_7e_context_module_state`, `n_bio_7e_context_signal` and `n_bio_7e_context_module_status`. Runs reference the user and upstream inference run; child rows cascade only from the 7E run. A single Room transaction writes a complete run. Reload checks protocol/signal/module/config/codec versions and validates decoded signals. Repository provenance sets use a deterministic length-prefixed codec; module-owned state-schema v2 uses base64url elements inside its versioned framing.
+
+Whole-run deletion removes only 7E derived rows. Source-inference deletion cascades the dependent 7E run. A feature reannotation maps feature→consumer from provider descriptors and deletes those module states/statuses/signals plus `context_temporal`; unrelated modules and base/dose temporal rows survive. Full annotation deletion clears all context-derived/module rows but preserves non-context temporal candidates. Native full backup enumerates the schema generically. Deterministic full replay is canonical and expected byte/value equivalent apart from deliberate new run identity/timestamps.
 
 ---
 
@@ -441,7 +471,7 @@ Do not silently replace a failed module signal with a plausible default.
 
 ### Current behaviour
 
-_TBD during implementation._
+Provider/registry incompatibility fails before execution. During execution, a module exception, capability violation, state-owner mismatch or invalid signal restores that module's previous state, emits no signal and records a bounded failure; peer modules continue. `CancellationException` is rethrown. Signal construction/validation rejects NaN/Inf, invalid variance/bounds, unknown schema/target, wrong scope, stale identity and duplicate IDs. Module-state constructors enforce finite posterior/sufficient-statistic values, coherent counts and valid effective intervals; reload rejects absent modules and stale or malformed codecs/configs. No plausible default signal is substituted, no stack/raw note is persisted, and BASE prediction remains available.
 
 ---
 
@@ -462,7 +492,7 @@ Questions:
 
 ### Current rules
 
-_TBD during implementation._
+The caller owns dispatcher, coroutine and cancellation. Module methods are synchronous pure transforms: no thread, scope, blocking I/O, database handle or global mutable state. For one user/replay, the host orders evidence chronologically and modules by stable ID; each module instance updates serially. Cross-module parallelism is reserved but only permitted if immutable results are collected then validated/published in deterministic ID order. Room persistence is one host-owned transaction after all computations succeed. Cancellation before commit publishes no partial run.
 
 ---
 
@@ -472,12 +502,12 @@ Track concrete compatibility rules as they appear.
 
 | Component | Identity/version field | Backward compatible? | Forward compatible? | Unknown version behaviour | Migration/reanalysis rule |
 |---|---|---|---|---|---|
-| Feature definition | TBD | | | fail closed? | |
-| Feature evidence | TBD | | | | |
-| Module model/config | TBD | | | | |
-| Module state codec | TBD | | | | |
-| ContextSignal | TBD | | | | |
-| Core arbitration config | TBD | | | | |
+| Feature definition | `featureId@schemaVersion` + compatible versions | only explicit declared versions | no | unknown key/version rejected | add adapter/new definition; replay |
+| Feature evidence | feature key + stable evidence/revision IDs | legacy v1 via explicit adapter | no | rejected/unavailable | preserve raw row; re-adapt/replay |
+| Module model/config | module ID + model version + config ID + protocol | exact identity only in v1 | no | provider/reload fails closed | new immutable module/config; replay |
+| Module state codec | owner module ID + state schema version | exact codec only | no | decode/load fails closed | module-owned migration or replay |
+| ContextSignal | schema v1 + source identities | exact v1 only | no | validator rejects | republish through replay |
+| Core arbitration config | target-policy v1 + deterministic rules | exact source version | no | unsupported target rejected | new arbitration identity/tests |
 
 Do not make silent compatibility assumptions.
 
@@ -510,7 +540,7 @@ Important: this does not authorise arbitrary downloaded runtime code. Document t
 
 ### Current authoring path
 
-_TBD during implementation._
+Author a versioned `ContextFeatureDefinitionV7E`, a `ContextModuleV7E` with immutable descriptor, independent `ContextModuleStateV7E` and codec, and a zero-argument provider. Add that provider/definition to the controlled production composition root, then run `ContextModuleContractTckV1` plus feature-specific chronology/missingness/scope/replay tests. The descriptor declares consumed feature versions, requested capabilities and allowed targets; it also drives invalidation. Authors may read only granted `ContextReadViewV1` methods and publish validated `ContextSignalV1` envelopes. They may not access DAOs/raw notes, start background work, mutate raw/Core/product state, dynamically load code or publish reserved/later-phase targets. Adding a module requires no feature branch in `NeutralTemporalStateFilterV1` or `ContextSignalArbitratorV1`.
 
 ---
 
@@ -536,7 +566,7 @@ Potential invariants:
 
 ### Current harness
 
-_TBD during implementation._
+`ContextModuleContractTckV1.run(provider, viewFactory)` performs reusable identity/protocol/codec/deterministic-replay/state-owner/signal-validation checks. `ContextModuleV7ETest` adds duplicate/unsupported registration, denied capability, malformed/NaN/wrong-scope signals, missingness, episodes, independent counts, two learner families, inert/predictive context, correlation/contradiction and failure isolation. `NBio7ESyntheticValidation` mirrors 25 module and 17 temporal properties on device. Room instrumentation covers codec persistence, individual derived deletion, migration/foreign keys, backup enumeration and feature-targeted reannotation invalidation. Future authors invoke the TCK for their provider and add domain fixtures; passing generic checks does not validate scientific usefulness.
 
 ---
 
@@ -661,6 +691,16 @@ Useful lesson: an availability pattern can be predictive without licensing the s
 Known caveat / mismatch with My Mettle: runner career/discipline data is population-level and unlike one user's resistance sessions.
 Action taken / no action: 7E reports availability and typed missingness; it does not add a missingness latent or population hierarchy without evidence.
 Related API decision: normative contract §§12, 20–21.
+
+RESEARCH 7E-R-011
+Date / HEAD: 2026-09-03 / 5bda3b7
+Question: may multiple rows or sessions inside one context episode be counted as statistically independent support?
+Source/project: Bhaumik et al., “Sample Size Determination for Studies with Repeated Continuous Outcomes,” *Psychiatric Annals* 2008 — https://pmc.ncbi.nlm.nih.gov/articles/PMC2743342/
+What problem they were solving: repeated outcomes have within-unit correlation, so information and precision depend on the covariance structure rather than the raw observation count.
+Useful lesson: repeated observations are useful but cannot be assigned independent-event confidence merely because they occupy separate rows; the independence unit must be explicit.
+Known caveat / mismatch with My Mettle: this is study-design mathematics, not a personalised context-effect learner, and 7E lacks enough episodes to estimate a within-episode correlation reliably.
+Action taken / no action: v1 records rows, distinct session keys and independent episode IDs separately. Association-posterior precision increases once per episode (a conservative perfect-dependence assumption within an episode); duplicate same-session rows cannot increase either learner's independent-session support.
+Related API decision: 7E-API-003 and module memory contract §10.
 
 ---
 
@@ -820,6 +860,32 @@ Scope check: SHADOW only; PD-001/PD-002 remain open; no product authority, 7F, 7
 Reset: reread the mission’s exact-head/physical acceptance conditions and the current journal target matrix. The next block is restricted to integration repair, schema capture, explicit PD-003 and evidence-backed checkpoint documentation.
 
 Next block: push the two-line repair plus this review, let the full workflow reach instrumentation/lint/schema stages, then consume the generated Room15 schema artifact and address any further exact errors.
+
+REVIEW 5 — 2026-09-03T22:03Z / 5bda3b7
+
+Block objective: inspect the repaired exact-head CI, reconcile normative equations with implementation, and audit chronology, confidence accounting and targeted invalidation before another push.
+
+Completed: CI run 668 passed the full JVM unit suite and debug APK build. Corrected Android-test annotations from `kotlin.test` to JUnit 4; reconciled the normative state vector/equations with the actual optional dose coefficient; made equal-timestamp dose unavailable pre-session; reordered installed-history replay so current-session context is learned only after its frozen prediction/outcome; added an explicit future-leakage report field; made session residual variance conservative across correlated profile observations; implemented descriptor-driven feature-targeted invalidation; added PD-003; and updated README/PLAN/current Room15 semantics.
+
+Diff / architecture notes: review found three substantive risks. First, the acceptance runner exposed current-session evidence before freezing that session prediction, creating same-session look-ahead. Second, same-session profile residuals were averaged with an independence variance formula. Third, module row counts were still being reused as independent-session support. The runner now follows strict prior-evidence → freeze → score/update → module learn ordering; profile residual variance assumes full within-session dependence; module states retain separate base64url-safe row/session/episode identities. Core still contains no production feature switch.
+
+Tests/builds/background tasks: GitHub run 668 reports `:app:testDebugUnitTest` and `:app:assembleDebug` SUCCESS. `:app:compileDebugAndroidTestKotlin` failed solely because the two new instrumentation files used unavailable `kotlin.test` annotations; production compilation had no errors and lint/schema stages were consequently skipped. The imports are corrected locally. The direct production/source compiler and on-device-mirror harness pass all 17 temporal plus 25 context cases after the chronology/capability/accounting changes. No background Gradle/Java process remains; local Android plugin resolution remains environmentally unavailable.
+
+Errors/warnings: exact-head instrumentation/lint/schema evidence is still pending the next push. Room15 exported schema is not yet present locally and must be recovered from a successful workflow artifact. The full Android reannotation test is newly added and has not yet run. Physical installed-history acceptance remains unavailable in this environment and must not be fabricated.
+
+Extension/API decisions recorded: 7E-API-006 targeted invalidation; 7E-API-007 equation/source reconciliation; `TIME_AND_SCOPE` is now capability-checked rather than publicly readable; per-session keys are persisted independently from evidence IDs; module codec framing escapes arbitrary IDs; both module state codecs advance to schema v2 so the earlier derived v1 layout fails closed and replays.
+
+Internet check:
+- question: whether repeated rows/sessions inside an episode may increase independent confidence;
+- source/project: Bhaumik et al. repeated-continuous-outcomes design paper;
+- lesson: precision depends on within-unit covariance, not row count;
+- implementation effect: preserve three support units and conservatively learn the location association once per episode.
+
+Scope check: all outputs remain SHADOW; persistent/transient names remain statistical; PD-001, PD-002 and PD-003 remain open; no normal workout behaviour, equipment translation, conditioning, policy or health-product integration changed.
+
+Reset: reread the mission chronology, independent-episode and exact-head closure clauses plus the current extension target table. The next block is compilation/CI/schema evidence and only source corrections demonstrated by those results.
+
+Next block: compile-check current pure contracts, commit/push the repaired integration checkpoint, inspect every CI job, capture Room15 schema, then finish the exact-head implementation checkpoint and physical handoff.
 
 ---
 

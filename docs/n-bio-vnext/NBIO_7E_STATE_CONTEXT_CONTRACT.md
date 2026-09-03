@@ -16,7 +16,7 @@ Read with `PLAN.md`, `ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md`, `CONTEXT_INTERPR
 - a slowly moving **persistent performance component**;
 - a mean-reverting **transient performance component**;
 - robust observation noise;
-- optionally, a separately scoped local transient component when local evidence exists;
+- a separately scoped local-transient signal route, without adding an independently evolving local latent dimension until identifiable evidence exists;
 - optional, strongly-shrunk candidate contributions from prior SessionDose and validated ContextSignals.
 
 These quantities are not measured hypertrophy, neural adaptation, fatigue, physical repair, illness causation or coaching decisions. They remain derived SHADOW/CANDIDATE state. `BENCHMARK_V0` remains normal-product authority.
@@ -54,7 +54,7 @@ y_t = log(observedPerformanceCoordinate_t / frozenCapabilityMedian_t)
 
 The exact family adapter and upstream capability model/solver identity are retained in provenance. Unsupported, non-positive, semantically incompatible or absent coordinates fail closed. 7C-dependent coordinates retain PD-001 quarantine.
 
-The first candidate consumes profile-local residuals. It does not translate kilograms across profiles and does not infer a shared muscle-development quantity from them.
+The v1 installed-history adapter then takes one arithmetic mean log residual per session. It conservatively retains the mean component predictive variance rather than dividing by profile-row count, because same-session profiles share context and cannot be treated as independent longitudinal draws. This produces a session-level shared residual signal after profile-local capability has already been modelled upstream; it does not translate kilograms across profiles or infer a shared muscle-development quantity. Profile-specific skill/trajectory remains owned by the upstream capability state.
 
 ## 4. Candidate model family comparison
 
@@ -69,28 +69,30 @@ An exponential prior-dose impulse is retained as a transparent challenger/input 
 
 ## 5. Selected neutral state mathematics
 
-For elapsed time `Δ_t` in days, latent state is:
+For elapsed time `Δ_t` in days, the persisted filter state is:
 
 ```text
-x_t = [p_t, z_t]ᵀ
+x_t = [p_t, z_t, β_D]ᵀ
 ```
 
 where:
 
 - `p_t` is the persistent log-performance component;
 - `z_t` is the systemic transient log-performance component.
+- `β_D` is a static, zero-centred and strongly-shrunk coefficient for the optional prior-dose covariate. It is a statistical regression parameter, not a latent dose or fatigue state.
 
 Transition before session `t`:
 
 ```text
 p_t^- = p_(t-1)^+
-z_t^- = φ(Δ_t) z_(t-1)^+ + β_D d_t
+z_t^- = φ(Δ_t) z_(t-1)^+
+β_D,t^- = β_D,t-1^+
 
 φ(Δ_t) = exp(-ln(2) Δ_t / h_z)
 
 P_t^- = F_t P_(t-1)^+ F_tᵀ + Q_t
-F_t = diag(1, φ(Δ_t))
-Q_t = diag(q_p Δ_t, q_z (1 - φ(Δ_t)^2))
+F_t = diag(1, φ(Δ_t), 1)
+Q_t = diag(q_p Δ_t, q_z (1 - φ(Δ_t)^2), 0)
 ```
 
 `d_t` is the pre-session recent-dose covariate computed only from resolved prior SessionDose outputs:
@@ -99,18 +101,20 @@ Q_t = diag(q_p Δ_t, q_z (1 - φ(Δ_t)^2))
 d_t = Σ_j standardise(SessionDose_j) exp(-ln(2) ageDays_j / h_D), j < t
 ```
 
-For `TEMPORAL_BASE`, `β_D = 0` and `d_t = 0`. For `DOSE_TEMPORAL`, `β_D` is a static, strongly-shrunk zero-centred parameter represented by its own Gaussian posterior/sufficient statistics. Missing/unresolved dose contributes no fabricated zero-dose observation: the covariate is marked unavailable and the dose-aware candidate fails closed to a typed BASE-equivalent prediction for that horizon.
+For `TEMPORAL_BASE`, the observation design fixes the dose coordinate to zero, so `β_D` cannot influence or learn from that layer. For `DOSE_TEMPORAL` and `CONTEXT_TEMPORAL`, `β_D` is represented in the joint Gaussian posterior and the observation design uses `d_t`. Missing/unresolved dose contributes no fabricated observed dose: the design coordinate is zero, availability is reported false, and the dose-aware candidate falls back to a BASE-equivalent prediction/update for that horizon without changing the dose coefficient.
 
 Observation equation before robustification:
 
 ```text
-y_t = p_t + z_t + c_t + ε_t
+y_t = p_t + z_t + β_D d_t + c_t + ε_t
 ε_t ~ Normal(0, r_t)
 ```
 
 `c_t` is zero for BASE/DOSE and is the validated centrally-arbitrated context location shift for CONTEXT. An accepted `OBSERVATION_VARIANCE` signal modifies `r_t` in log-variance space. Modules never write `p_t`, `z_t`, `P_t` or `r_t` directly.
 
-The initial production/reference solver is a deterministic Gaussian state-space filter using exact linear-Gaussian predict/update equations plus bounded robust innovation weighting. A dense deterministic grid/oracle is retained for selected synthetic fixtures where tractable; solver claims compare the same equations and priors.
+Equivalently, the filter uses `H_t = [1, 1, 0]` for `TEMPORAL_BASE` and `H_t = [1, 1, d_t]` for dose-aware layers. Context location and context uncertainty enter the observation prediction, not the latent transition. This prevents a module from directly altering either persistent or transient Core state.
+
+The initial production/reference solver is a deterministic Gaussian state-space filter using exact linear-Gaussian predict/update equations after deterministic bounded robust variance inflation. Because each conditional update remains linear-Gaussian, this filter is itself the high-fidelity sequential reference for the declared v1 approximation; independent closed-form transition/observation invariants and latent-truth fixtures check it. 7E makes no claim that Adaptive Sparse, Dense-grid, Laplace or particle backends implement this model, and does not reopen the 7B.X solver tournament.
 
 ## 6. Robust observation treatment
 
@@ -182,7 +186,7 @@ The candidate prevents all explanations moving freely:
 - dose coefficient starts at zero with strong shrinkage and is estimated only from prior-dose/future-residual pairs;
 - context modules start neutral/broad and cannot update from the same outcome they predicted;
 - no separate Skill or Development latent is added in 7E v1;
-- local transient state is kept in a separate scope and cannot update systemic state directly;
+- local transient signals remain anatomy-scoped and cannot update systemic state directly; v1 does not add a separately evolving local latent dimension;
 - semantic profile/version boundaries partition replay;
 - broad posterior overlap or competing explanations must remain broad; synthetic truth recovery is not forced.
 
@@ -190,7 +194,7 @@ The candidate prevents all explanations moving freely:
 
 `SYSTEMIC_TRANSIENT_STATE` signals may apply across eligible profile streams for the same user and horizon only through central arbitration.
 
-`LOCAL_TRANSIENT_STATE` signals require an anatomy scope ID and apply only to a profile observation whose immutable historical recruitment semantics include that scope. The v1 route is implemented and strongly regularised, but no production v1 note tag is promoted to local biological authority merely to exercise it; synthetic fixtures prove the route.
+`LOCAL_TRANSIENT_STATE` signals require an anatomy scope ID and may apply only to a profile observation whose immutable historical recruitment semantics include that scope. V1 implements and tests the envelope/validation/arbitration route, but deliberately does not add a separately evolving local latent dimension or promote a production note tag merely to exercise it. A future local learner must first earn identifiability and define the authorised recruitment-scoped read adapter under a new immutable model/config.
 
 Execution-profile-only offsets are not local biological state and remain a later capability/execution/equipment concern.
 
@@ -231,6 +235,8 @@ A module declares:
 - learner family.
 
 The runtime grants a narrow immutable `ContextReadView`. A module receives only capabilities it both declares and the host approves.
+
+The two initial production modules persist state schema v2. Arbitrary evidence/session/episode identifiers are base64url-framed inside the module-owned codec. The earlier pre-acceptance v1 checkpoint layout is not silently compatible: reload fails closed and canonical replay rebuilds derived state.
 
 ## 13. Read capabilities
 
@@ -327,14 +333,15 @@ Cancellation occurs only between event/module operations. One transaction atomic
 
 ## 19. Persistence, invalidation and replay
 
-Room14 cannot represent module-owned state, generic signals and neutral temporal dimensions without abusing capability/profile or biologically named adaptive-state rows. Room15 is therefore semantically required with explicit additive tables for:
+Room14 cannot represent module-owned state, generic signals and neutral temporal dimensions without abusing capability/profile or biologically named adaptive-state rows. Room15 is therefore semantically required with five explicit additive tables for:
 
-- registered feature definitions;
+- 7E run/provenance identity;
+- neutral temporal state estimates;
 - module-owned state;
-- ContextSignals and failure provenance;
-- neutral temporal state estimates.
+- ContextSignals;
+- module execution/failure status.
 
-The 14→15 migration is additive and must preserve every existing table/row. Full backup remains generic and must round-trip the new tables. Derived-run deletion cascades only 7E derived rows. Feature reannotation invalidates dependent module/signal/context state via explicit dependency IDs; raw note, annotation and workout evidence remain untouched. Full replay is canonical.
+Feature definitions remain immutable build-integrated provider metadata in v1; they are not falsely represented as database observations. The 14→15 migration is additive and preserves every existing table/row. Full backup remains generic and round-trips the five tables. Derived-run deletion cascades only 7E derived rows. Feature reannotation maps the affected feature identity through the immutable provider registry, deletes only the consuming module state/status/signals plus the combined `CONTEXT_TEMPORAL` state, and preserves unrelated module memory and the context-free/dose temporal candidates. Deleting the complete annotation substrate clears all module-derived/context-conditioned rows while still preserving context-free/dose state. Raw notes, annotations, workouts and 7C/7D rows retain their existing owners. Full replay is canonical.
 
 ## 20. Evidence maturity
 

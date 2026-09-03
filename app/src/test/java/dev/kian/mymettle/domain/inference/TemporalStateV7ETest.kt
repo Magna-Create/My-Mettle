@@ -30,6 +30,11 @@ class TemporalStateV7ETest {
     }
 
     @Test
+    fun `equal timestamp SessionDose is not treated as causally prior`() {
+        assertEquals(null, RecentDoseCovariateV1.calculate(listOf(DatedSessionDose(start, 2.0)), start))
+    }
+
+    @Test
     fun `stable state remains centred after repeated neutral observations`() {
         var state = filter.initial(start)
         repeat(12) { index ->
@@ -115,6 +120,23 @@ class TemporalStateV7ETest {
             ).posterior
         }
         assertTrue(state.doseCoefficientMean < 0.0)
+        assertTrue(state.covariance.dd < filter.config.doseCoefficientPriorVariance)
+    }
+
+    @Test
+    fun `varied dose with neutral outcomes learns no dose effect rather than inventing one`() {
+        var state = filter.initial(start)
+        repeat(12) { index ->
+            val dose = if (index % 2 == 0) 1.0 else 0.15
+            state = filter.update(
+                state,
+                start.plusSeconds((index + 1L) * 2 * 86_400),
+                observedLogResidual = 0.0,
+                layer = TemporalCandidateLayer.DOSE_TEMPORAL,
+                standardisedRecentDose = dose,
+            ).posterior
+        }
+        assertEquals(0.0, state.doseCoefficientMean, 1e-12)
         assertTrue(state.covariance.dd < filter.config.doseCoefficientPriorVariance)
     }
 
