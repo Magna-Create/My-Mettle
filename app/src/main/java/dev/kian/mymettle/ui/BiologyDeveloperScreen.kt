@@ -273,6 +273,13 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 }
 
                 item {
+                    NBio7DAcceptanceDeveloperCard(
+                        viewModel = viewModel,
+                        state = state,
+                    )
+                }
+
+                item {
                     DebugCard("N‑BIO‑7B dynamic-resistance acceptance") {
                         Text(
                             "Explicit foreground acceptance over the installed Room14 history. Runs chronological held-out validation, final shadow fits, persist/reload/delete/full replay checks and raw-evidence invariance. Candidate rows remain non-authoritative SHADOW state.",
