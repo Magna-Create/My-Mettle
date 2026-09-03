@@ -4,7 +4,7 @@
 >
 > The complete pre-adaptive plan is preserved verbatim as [`PLAN_LEGACY_PRE_ADAPTIVE.md`](./PLAN_LEGACY_PRE_ADAPTIVE.md). It remains useful historical planning, but assumptions superseded below are not forward requirements.
 >
-> Read this document with [`ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md`](./ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md). The adaptive-inference document is an authoritative additive supplement for mathematical-model, inference-solver and backend architecture. [`PRODUCT_ROADMAP_GATES.md`](./PRODUCT_ROADMAP_GATES.md) remains authoritative for collaboration/research/Figma and product-safety gates.
+> Read this document with [`ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md`](./ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md). The adaptive-inference document is an authoritative additive supplement for mathematical-model, inference-solver and backend architecture. [`CONTEXT_MODULE_ARCHITECTURE.md`](./CONTEXT_MODULE_ARCHITECTURE.md) is an authoritative additive supplement for the future N-BIO-7E context-feature/module/associative-learning architecture. [`PRODUCT_ROADMAP_GATES.md`](./PRODUCT_ROADMAP_GATES.md) remains authoritative for collaboration/research/Figma and product-safety gates.
 
 ## 1. Purpose
 
@@ -63,11 +63,11 @@ Changes to equations, latent dimensions, priors, likelihoods, pooling, regime ha
 4. **Capability is not action policy.** What performance is plausibly available and what load/reps the user actually chooses/performs are distinct probabilistic questions.
 5. **Capability is not automatically biology.** Statistical drift is not automatically development, skill, fatigue or recovery.
 6. **Pool statistical behaviour, not physical capability.** Absolute resistance coordinates and profile/side capability remain local unless a separately validated translation model exists.
-7. **Context is typed and gated.** Current N-BIO-7B dynamic candidates consume `NONE`; sleep/HRV/illness/stress/notes cannot be used to rescue them.
+7. **Context is typed, modular and gated.** Current N-BIO-7B Candidate-v2 and N-BIO-7D consume `NONE`; sleep/HRV/illness/stress/notes cannot be used to rescue them. Future N-BIO-7E context consumption must flow through versioned `ContextFeature`/`ContextModule` contracts with module-owned replayable memory, explicit allowed inputs/targets and standard uncertainty-aware signals. No tag may directly mutate N-BIO core state merely because it exists.
 8. **Derived inference is rebuildable.** Deleting candidate state cannot cascade into raw evidence.
 9. **Product authority is explicit.** SHADOW/CANDIDATE runs do not alter normal prescriptions, workout UX or `BENCHMARK_V0` authority.
-10. **Room migrations require semantics, not convenience.** Room14 remains sufficient for the completed 7B.X model/solver state and the completed N-BIO-7C structural/pre-validation mission; PD-001 remains open for deferred empirical calibration.
-11. **Backup/replay are acceptance gates.** Full Native backup remains generic; model/solver state must reload and raw evidence must replay within documented tolerance.
+10. **Room migrations require semantics, not convenience.** Room14 remains sufficient for the completed 7B.X model/solver state, the completed N-BIO-7C structural/pre-validation mission and the implemented N-BIO-7D SHADOW pipeline; PD-001/PD-002 remain explicit deferred empirical-calibration boundaries where applicable.
+11. **Backup/replay are acceptance gates.** Full Native backup remains generic; model/solver/module state must reload and raw evidence must replay within documented tolerance.
 12. **Collaboration gates remain mandatory.** `PRODUCT_ROADMAP_GATES.md` is not superseded by backend capability.
 
 ## 4. Corrected forward state architecture
@@ -116,7 +116,9 @@ Recovery
 
 Those names remain useful future semantic destinations/interfaces, but their presence in persistence/domain scaffolding does not require an inference candidate to populate them. Health Connect or HR correlation alone does not prove a latent component is recovery or fatigue.
 
-Likewise, `SetDemand`, `Exposure`, `EffectiveDose` and downstream muscle-state redesign remain later work. N-BIO-7B.X does not implement them.
+Context follows the same rule. An extracted tag is not automatically a biological modifier. N-BIO-7E may let a feature-specific module learn a user-specific predictive association with transient state, observation reliability, recovery dynamics or another explicitly allowed target, but the module must publish uncertainty-aware evidence to N-BIO Core rather than directly write a biological state. Association is not automatically causation.
+
+`SetDemand`, `Exposure`, `EffectiveDose` and `SessionDose` now exist as N-BIO-7D SHADOW/candidate derived state under their own contract and PD-002 quarantine. They remain non-authoritative and must not be treated as calibrated physiology merely because the structural pipeline exists.
 
 ## 5. Capability and action/observation policy
 
@@ -164,6 +166,8 @@ Strictly local by default:
 
 Possible future weakly poolable hypotheses include dimensionless rep slope, observation variability, process volatility, action-policy behaviour, outlier prevalence and selected nuisance parameters. None is enabled as a behavioural truth merely because the contract supports it. Semantic-family pooling requires an explicit versioned mapping and held-out evidence.
 
+ContextModule learning follows the same maturity discipline: direct personal context episodes should dominate generic priors as evidence accumulates, repeated rows from one episode must not masquerade as independent evidence, and unsupported modules remain broad/neutral rather than producing dramatic user-specific effects.
+
 ## 8. Parameter-level evidence maturity
 
 Do not collapse support into a single confidence/maturity scalar.
@@ -178,6 +182,8 @@ DATA_INFORMED
 ```
 
 plus explicit semantic-regime continuity and solver diagnostics. Different parameters may be at different evidence maturity simultaneously.
+
+The same principle applies to future context modules: interpreter/extractor certainty is distinct from the module's predictive evidence maturity, and neither may be silently relabelled as biological certainty.
 
 ## 9. Mathematical model vs inference solver vs compute backend
 
@@ -256,6 +262,8 @@ Track at minimum where the predictive representation supports them:
 
 Historical data already inspected during development remains development evidence. Fresh future workouts provide the strongest confirmatory evidence.
 
+Future ContextModules must be judged similarly where their output is predictive: compare a context-free baseline with the context-aware candidate chronologically. A tag does not earn state influence because it is intuitive, common or confidently extracted.
+
 ## 12. N-BIO-7B record and completed 7B.X mission
 
 ### Candidate v1
@@ -326,21 +334,23 @@ Do not port backup/acceptance overhead and claim inference improved. Model compu
 
 ## 15. Persistence and replay
 
-Room remains **14** through the completed N-BIO-7C structural/pre-validation mission unless a genuine semantic impossibility is demonstrated.
+Room remains **14** through the implemented N-BIO-7D SHADOW demand/dose pipeline unless a genuine semantic impossibility is demonstrated.
 
 Reuse existing inference run/model config/manifest/capability/parameter-state storage where semantically sufficient.
 
-Solver/model parameter codecs require:
+Solver/model/module parameter codecs require:
 
 - explicit schema/version;
 - deterministic encode/decode where claimed;
 - unknown versions fail closed;
-- explicit mathematical-model and solver identity;
+- explicit mathematical-model and solver/module identity;
 - frozen v1 state remains readable;
 - Candidate-v2 state remains readable;
 - no duplication of raw evidence as derived state.
 
-For deterministic solvers, replay equivalence must be explicit. Approximate solvers must document both deterministic replay behaviour and approximation tolerance.
+For deterministic solvers/modules, replay equivalence must be explicit. Approximate solvers/modules must document both replay behaviour and approximation tolerance.
+
+Future ContextModule memory and ContextSignals are derived state. They must be deletable/rebuildable from authorised canonical evidence plus declared upstream versions and must never become a hidden non-replayable memory store.
 
 ## 16. Factor/dependency architecture
 
@@ -349,17 +359,64 @@ N-BIO retains the minimum explicit dependency/invalidation abstraction required 
 - local invalidation after correction;
 - semantic boundaries;
 - model-version reanalysis;
+- context reannotation/module-model reanalysis;
 - incremental recomputation.
 
 A literal factor-graph/iSAM2 dependency is not required unless future posterior/factor structure demonstrates a material benefit.
 
 ## 17. Context / Health boundary
 
-Current Candidate-v2 context consumption remains `NONE`.
+Current Candidate-v2 context consumption remains `NONE`. N-BIO-7D also does not add note/sleep/HR/HRV context consumption.
 
-Do not use sleep, HRV, illness, stress, Nano interpretations or review notes to repair Candidate v1/v2.
+Do not use sleep, HRV, illness, stress, Nano interpretations or review notes to repair Candidate v1/v2 or retroactively justify 7D.
 
 Future separately versioned models may test typed exogenous evidence only after independent evidence and privacy/type-boundary review.
+
+### 17.1 N-BIO-7E ContextModule platform
+
+N-BIO-7E is the first phase that must provide a mathematical path from typed context evidence into state inference. It must do this through the modular architecture in [`CONTEXT_MODULE_ARCHITECTURE.md`](./CONTEXT_MODULE_ARCHITECTURE.md), not through one giant hard-coded tag coefficient table.
+
+Required shape:
+
+```text
+ContextFeatureDefinition
+        ↓
+ContextFeatureEvidence / ContextEvidenceView
+        ↓
+stateful versioned ContextModule
+        ↓
+module-owned replayable memory + learner
+        ↓
+ContextSignal
+        ↓
+N-BIO Core arbitration / context-conditioned state
+```
+
+Each module may read explicitly authorised typed N-BIO evidence/state summaries to improve its own learner. Each module may use a different internal model where semantics justify it. Each module must publish through a common signal protocol and may not directly mutate core latent state.
+
+This allows new tags/features to be added over time, allows their schemas to evolve through explicit versions, and allows feature-specific associative learning without hard-coding every context concept into N-BIO Core.
+
+The core owns combination/arbitration because modules can be correlated or redundant. `ILLNESS`, `POOR_SLEEP` and `LOW_ENERGY`, for example, must not be naively added as three independent penalties.
+
+Context modules learn predictive associations, not automatic causal effects. Unsupported tags remain broad/neutral. A confidently extracted tag has not earned biological influence until its module has evidence.
+
+Some modules may infer temporal episodes/persistence so a Monday illness report can remain relevant later in the week without copying the raw annotation onto future sessions. Such episode state is derived, uncertain and replayable.
+
+Execution/equipment context is not merely an observation-validity flag. A machine/grip/ROM difference may later explain performance offsets, variance or recruitment/translation differences through permitted domain-specific modules, while canonical execution/equipment metadata remains authoritative and text-extracted warnings never silently rewrite it.
+
+### 17.2 Nano boundary
+
+The invariant remains:
+
+> Nano extracts structured context. N-BIO decides what context means mathematically.
+
+Nano is one producer of typed evidence. It does not learn the user's biological/context association, does not receive unrestricted N-BIO history and does not output recovery penalties, performance modifiers or programme actions.
+
+### 17.3 N-BIO-9 boundary
+
+N-BIO-9 remains the later product/integration phase for broader context UX, additional producers such as Health Connect/wearables, Nano rollout/reannotation controls, recomputation lifecycle, dashboards/notifications and analysis export.
+
+It must plug those sources into the 7E context-module protocol rather than inventing a parallel context-learning architecture. N-BIO-9 no longer owns creation of the core context-learning platform.
 
 ## 18. Forward N-BIO roadmap
 
@@ -373,14 +430,20 @@ N-BIO-7B.3/4 historical validation + installed-history acceptance infrastructure
 N-BIO-7B.X complete — corrected adaptive-inference consolidation; Sparse selected, Dense oracle retained, Laplace rejected production
 N-BIO-7C   complete structural/pre-validation — loaded-hold, duration-only and repeated-contraction contracts accepted physically; numerical outputs remain SHADOW under PD-001
 PD-001     OPEN — empirical human calibration postponed where longitudinal evidence is insufficient; downstream quarantine remains binding
-N-BIO-7D   NOT STARTED — next-phase work requires explicit instruction and must consume 7C contracts without treating PD-001 as a pass
-later 7E–7G retain their intended product/domain destinations under the same quarantine
-N-BIO-8   later constrained programme-resolution/decision layer; collaboration gates mandatory
-N-BIO-9   later context/Health/intelligence/data integration
+N-BIO-7D   implementation complete — SetDemand/Exposure/EffectiveDose/SessionDose SHADOW pipeline implemented; consolidated installed-device physical acceptance still pending; PD-002 OPEN
+PD-002     OPEN — 7D empirical SetDemand/EffectiveDose calibration remains quarantined from structural success
+N-BIO-7E   NOT STARTED — next state phase; context-module/associative-learning platform is a mandatory infrastructure requirement, not optional metadata enrichment
+N-BIO-7F   later cross-profile/equipment translation under dedicated equipment contracts
+N-BIO-7G   later conditioning capability
+N-BIO-7H   later replay/validation closure where retained by the active roadmap
+N-BIO-8    later constrained programme-resolution/decision layer; collaboration gates mandatory
+N-BIO-9    later context/Health/product integration and recomputation lifecycle; must consume the 7E context protocol
 Native Cutover last
 ```
 
-Later loaded-hold, duration-only, repeated-contraction, SetDemand, Exposure/Dose, Fatigue, Recovery, SkillState, Development, cross-profile translation, equipment intelligence, Health Connect and conditioning implementations remain outside 7B.X.
+N-BIO-7E must establish acute/transient/recovery state and the generic context-association substrate without silently starting N-BIO-8 coaching policy. Later Skill/Development naming remains evidence-dependent rather than mandatory merely because persistence scaffolding exists.
+
+Cross-profile translation, equipment intelligence, conditioning, broader Health Connect/HR integration and product-facing adaptive programme behaviour remain later phases under their own gates.
 
 ## 19. N-BIO-8 / V8 direction
 
@@ -388,7 +451,9 @@ Do not freeze V8 as model-free reinforcement learning.
 
 The leading architecture is **constrained Bayesian decision-making**, with stochastic/robust Model Predictive Control a leading multi-step option once N-BIO has earned a credible action→state transition model.
 
-No V8 prescription behaviour is implemented in 7B.X.
+N-BIO-8 should preferentially consume N-BIO's combined context-conditioned state/prediction rather than contain a second ad-hoc per-tag learner or a growing hard-coded table such as `ILLNESS → reduce load`.
+
+No V8 prescription behaviour is implemented merely by establishing the 7E context platform.
 
 `PRODUCT_ROADMAP_GATES.md` collaboration/research/Figma requirements remain mandatory before behaviour-driving programme-resolution work.
 
@@ -401,7 +466,7 @@ An N-BIO phase/candidate is not complete because code compiles. Closure requires
 - synthetic recovery/invariants;
 - retrospective development evaluation;
 - fresh prequential evidence where required;
-- solver fidelity diagnostics;
+- solver/module fidelity diagnostics;
 - performance/RAM/device evidence;
 - persistence/replay;
 - backup safety;
@@ -409,5 +474,7 @@ An N-BIO phase/candidate is not complete because code compiles. Closure requires
 - product-authority invariants;
 - documentation;
 - exact-head CI.
+
+For N-BIO-7E specifically, structural closure also requires proving that context modules are truly modular/stateful/replayable, new features do not require feature-specific branching in N-BIO Core, module scope/missingness/temporal semantics are enforced, correlated signals are not naively double-counted, and context-aware candidates can be compared against context-free baselines.
 
 When empirical evidence is insufficient, the correct result is `INCONCLUSIVE`/deferred—not invented certainty.
