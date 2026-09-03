@@ -19,6 +19,8 @@ Never:
 LLM OUTPUT → HIDDEN BIOLOGICAL MODIFIER
 ```
 
+The later N-BIO-7E architecture extends the right-hand side of this boundary through versioned stateful context modules. That future work does not change the 7A.5 guarantee that interpretation itself has no biological authority.
+
 ## Canonical note ownership
 
 The current shared `ReviewNotesDialog` writes two live review-note sources:
@@ -64,6 +66,8 @@ Eligibility is structural, not a confidence score:
 - `PROHIBITED_FROM_INFERENCE` — never eligible for N-BIO consumption.
 
 `NEXT_SESSION_ACTION` and other UX memory cannot enter `ContextEvidenceView` simply because they share persistence with biological-context tags.
+
+Tag schema v1 is not the permanent ceiling of the context system. N-BIO-7E may introduce richer versioned `ContextFeatureDefinition` schemas and adapters for future typed producers, but historical v1 annotations must remain interpretable under their original schema. A later richer feature version must never silently reinterpret an old value merely because the human-readable tag name is similar.
 
 ## Assertion and temporal semantics
 
@@ -131,6 +135,8 @@ Nano does **not** receive Health Connect records, HR/HRV traces, structured slee
 
 A user-written sentence such as `Only slept four hours` is language material and may yield a user-reported context tag. A structured sleep record from Health Connect is not language material and is never routed through Nano.
 
+The future existence of stateful ContextModules does not widen Nano's privacy scope. Modules consume approved typed evidence/state views; Nano remains an extractor rather than a general N-BIO reader.
+
 ## N-BIO input boundary
 
 `ContextEvidenceView` is the only 7A.5 boundary intended for later N-BIO consumption. Each item retains tag/schema identity, typed value, scope, temporal/assertion semantics, source hash and interpretation provenance.
@@ -139,7 +145,40 @@ It contains **no penalty, multiplier, capability adjustment, observation-noise a
 
 Future models must explicitly declare consumed tag IDs/schema versions in behaviour-driving model configuration. Performance-only and context-aware candidates must then compete under the existing chronological held-out evaluation rules before context can affect user-facing behaviour.
 
-Execution-semantic warning tags (`TECHNIQUE_CHANGE_REPORTED`, `ROM_CHANGE_REPORTED`, `GRIP_CHANGE_REPORTED`, `EQUIPMENT_DIFFERENCE_REPORTED`, `SETUP_CHANGE_REPORTED`) signal only a possible reported change. They never mutate an historical `ExecutionProfileVersion`.
+N-BIO-7E must not bypass this boundary by hard-coding tag-specific biological effects inside N-BIO Core. Instead, eligible context evidence may enter a versioned `ContextModule` that owns its own derived memory/learner and publishes a standard uncertainty-aware `ContextSignal` to the central state-inference layer. The detailed requirements are in [`CONTEXT_MODULE_ARCHITECTURE.md`](./CONTEXT_MODULE_ARCHITECTURE.md).
+
+Conceptually:
+
+```text
+ContextEvidenceView
+→ versioned ContextModule
+→ module-owned replayable learning state
+→ ContextSignal
+→ N-BIO Core arbitration / context-conditioned state
+```
+
+The module may read only explicitly authorised typed upstream views, and it may not directly mutate core latent state. Its learned state and signals are derived/replayable, not canonical context evidence.
+
+Execution-semantic warning tags (`TECHNIQUE_CHANGE_REPORTED`, `ROM_CHANGE_REPORTED`, `GRIP_CHANGE_REPORTED`, `EQUIPMENT_DIFFERENCE_REPORTED`, `SETUP_CHANGE_REPORTED`) signal a possible reported change and never mutate an historical `ExecutionProfileVersion` or canonical equipment binding. They are also not permanently restricted to binary validity warnings: a future validated ContextModule may learn that confirmed/explained execution or equipment context predicts an offset, variance change or another allowed target. Canonical execution/equipment metadata always outranks a text-extracted warning when available.
+
+## Future context-module boundary
+
+N-BIO-7E owns the generic context-learning infrastructure, not the interpreter.
+
+Requirements include:
+
+- extensible/versioned feature definitions rather than one permanently frozen enum;
+- stateful per-feature/per-family modules with independent derived memory;
+- module-specific learners behind a common lifecycle/protocol;
+- least-privilege typed read declarations;
+- standard uncertainty-aware `ContextSignal` outputs;
+- central N-BIO handling of correlated/competing module signals;
+- temporal episode/persistence support where the feature definition permits it;
+- evidence maturity and chronological predictive evaluation;
+- replay/invalidation/provenance of module memory and signals;
+- no automatic effect merely because a tag was extracted.
+
+Nano remains one producer of feature evidence. Explicit user inputs, equipment bindings, deterministic app events, Health Connect and other future sources may become additional producers through their own privacy/provenance contracts.
 
 ## Persistence and backup
 
@@ -149,9 +188,14 @@ A Room 13 Native backup therefore does not silently restore into Room 14; exact-
 
 Lite migration does not invent annotations. The shipped Lite bootstrap UI/importer remains out of scope and is not reintroduced by 7A.5.
 
+Any future ContextModule memory is derived state and must obey the same raw/derived separation: deleting/rebuilding module state cannot edit or delete the underlying note, annotation or other canonical source evidence.
+
 ## Phase boundary
 
 - **7A** — posterior/model-configuration/inference provenance foundation.
-- **7A.5** — bounded note interpretation and external exercise-authoring contracts.
-- **7B** — dynamic-resistance capability modelling, after this contract passes its acceptance gates.
-- **N-BIO-9** — later product/integration work such as broader context UX, explicit reannotation controls, rollout/download management, notification/dashboard consumers, Health Connect/HR experiments and Analysis Export. It no longer owns creation of the note-annotation architecture itself.
+- **7A.5** — bounded note interpretation and external exercise-authoring contracts; zero mathematical context effect.
+- **7B–7D** — performance capability and demand/dose models; current candidates do not consume note/sleep/HR/HRV context.
+- **7E** — context-conditioned state infrastructure: extensible feature definitions, stateful ContextModules, module-owned associative learning/memory, temporal context episodes, standard ContextSignals and N-BIO Core arbitration alongside acute/recovery/state modelling. This phase provides the platform; it does not itself author N-BIO-8 coaching policy.
+- **7F+** — later domain-specific consumers such as equipment translation may plug into the same context protocol where their own contracts permit it.
+- **N-BIO-8** — later decision layer consumes validated combined state/prediction rather than inventing a second ad-hoc per-tag learner.
+- **N-BIO-9** — later product/integration work such as broader context UX, additional structured producers, explicit reannotation/recompute controls, rollout/download management, notification/dashboard consumers, Health Connect/HR experiments and Analysis Export. It no longer owns creation of either the note-annotation architecture or the context-learning architecture itself.
