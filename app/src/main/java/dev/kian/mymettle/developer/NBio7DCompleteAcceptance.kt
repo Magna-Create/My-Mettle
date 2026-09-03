@@ -14,7 +14,15 @@ data class NBio7DCompleteAcceptanceReport(
     val benchmarkV0RunIdAfter: String?,
 ) {
     val validationBundlePassed: Boolean get() = sensitivity.passed && correctionBoundary.passed && downstreamFidelity.passed
-    val benchmarkV0AuthorityUnchanged: Boolean get() = benchmarkV0RunIdBefore != null && benchmarkV0RunIdBefore == benchmarkV0RunIdAfter
+    val benchmarkV0PresentBefore: Boolean get() = benchmarkV0RunIdBefore != null
+    val benchmarkV0PresentAfter: Boolean get() = benchmarkV0RunIdAfter != null
+    val benchmarkV0AuthorityUnchanged: Boolean get() = benchmarkV0PresentBefore && benchmarkV0RunIdBefore == benchmarkV0RunIdAfter
+    val benchmarkV0Status: String get() = when {
+        !benchmarkV0PresentBefore -> "MISSING_PRECONDITION"
+        !benchmarkV0PresentAfter -> "AUTHORITY_REMOVED"
+        benchmarkV0AuthorityUnchanged -> "PRESENT_AND_UNCHANGED"
+        else -> "AUTHORITY_CHANGED"
+    }
     val structuralVerdict: NBio7DStructuralVerdict get() = if (
         core.structuralVerdict == NBio7DStructuralVerdict.PASS && validationBundlePassed && benchmarkV0AuthorityUnchanged
     ) NBio7DStructuralVerdict.PASS else NBio7DStructuralVerdict.FAIL
@@ -25,7 +33,11 @@ data class NBio7DCompleteAcceptanceReport(
 
     fun toJson(): String {
         val root = JSONObject(core.toJson())
-        root.put("formatVersion", 2)
+        root.put("formatVersion", 3)
+        root.put(
+            "normalProductAuthority",
+            if (benchmarkV0AuthorityUnchanged) "BENCHMARK_V0_UNCHANGED" else "BENCHMARK_V0_${benchmarkV0Status}",
+        )
         root.put("sensitivity", sensitivity.toJson7dComplete())
         root.put("correctionBoundary", correctionBoundary.toJson7dComplete())
         root.put("downstreamSolverFidelity", downstreamFidelity.toJson7dComplete())
@@ -33,7 +45,15 @@ data class NBio7DCompleteAcceptanceReport(
         root.put("benchmarkV0Authority", JSONObject()
             .put("runIdBefore", benchmarkV0RunIdBefore ?: JSONObject.NULL)
             .put("runIdAfter", benchmarkV0RunIdAfter ?: JSONObject.NULL)
-            .put("unchanged", benchmarkV0AuthorityUnchanged))
+            .put("presentBefore", benchmarkV0PresentBefore)
+            .put("presentAfter", benchmarkV0PresentAfter)
+            .put("unchanged", benchmarkV0AuthorityUnchanged)
+            .put("status", benchmarkV0Status)
+            .put(
+                "requiredAction",
+                if (benchmarkV0PresentBefore) JSONObject.NULL
+                else "Run Recompute biological state before N-BIO-7D acceptance so a BENCHMARK_V0 authority baseline exists.",
+            ))
         root.put("verdicts", JSONObject()
             .put("structural", structuralVerdict.storageValue)
             .put("empiricalCalibration", empiricalCalibrationStatus.storageValue)
