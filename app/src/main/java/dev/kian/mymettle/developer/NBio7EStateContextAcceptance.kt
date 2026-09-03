@@ -361,7 +361,7 @@ class NBio7EStateContextAcceptanceRunner(
         failures = failures,
     )
 
-    private class MetricAccumulator {
+    private inner class MetricAccumulator {
         private var count = 0
         private var logScore = 0.0
         private var crps = 0.0

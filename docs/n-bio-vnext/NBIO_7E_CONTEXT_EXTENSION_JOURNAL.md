@@ -799,6 +799,28 @@ Reset: reread mission, target matrix and journal; next work is limited to the co
 
 Next block: compile-check the installed-history runner, wire the single developer card, generate/verify Room15 schema, complete PD-003/closure docs, then run full CI.
 
+REVIEW 4 — 2026-09-03T21:41Z / 64cea60
+
+Block objective: inspect the first pushed foundation checkpoint against exact-head Android CI and audit the committed contract/persistence/device-integration diff while the build ran.
+
+Completed: reconciled local and remote at the same tree and commit; reviewed the 4,723-line additive diff; inspected the Room entities/DAO/migration, generic backup path, acceptance runner, developer card, repository codecs and context-reannotation invalidation. Corrected the one whitespace defect found by `git diff --check` and the Kotlin receiver defect reported by CI.
+
+Diff / architecture notes: the compile failure was local to reporting mathematics: a nested metrics accumulator called two acceptance-runner instance helpers without an outer receiver. Making the accumulator `inner` preserves the preregistered equations and changes no inference behaviour. Room15 still contains derived-only state and no module receives a DAO or raw note.
+
+Tests/builds/background tasks: GitHub Android CI run 667 reached all pre-build guards, reference validation, exercise schema validation, context/privacy validation and whitespace validation successfully. `:app:compileDebugKotlin` then failed at `NBio7EStateContextAcceptance.kt:381`; instrumentation compile, lint and Room-schema verification were correctly skipped. The exact log was inspected; there was no hidden second compiler error.
+
+Errors/warnings: Kotlin nested classes do not hold an outer instance, so the CRPS accumulator could not resolve `normalCdf`/`normalPdf`. The source-only test harness did not compile the Android acceptance runner, which is why focused pure tests did not expose this. Keep exact-head Android CI as the integration authority. Also removed trailing whitespace from the preregistration date line.
+
+Extension/API decisions recorded: none changed. This was an Android integration repair; provider, read-view, signal, lifecycle and persistence contracts are unchanged.
+
+Internet check: no lookup was justified for a compiler receiver rule already demonstrated by the exact compiler diagnostic. The next external check remains contingent on a substantive migration/lint/API issue rather than generic searching.
+
+Scope check: SHADOW only; PD-001/PD-002 remain open; no product authority, 7F, 7G, 8 or 9 work.
+
+Reset: reread the mission’s exact-head/physical acceptance conditions and the current journal target matrix. The next block is restricted to integration repair, schema capture, explicit PD-003 and evidence-backed checkpoint documentation.
+
+Next block: push the two-line repair plus this review, let the full workflow reach instrumentation/lint/schema stages, then consume the generated Room15 schema artifact and address any further exact errors.
+
 ---
 
 # 21. Post-7E cleanup handoff

@@ -2,7 +2,7 @@
 
 Status: **NORMATIVE CANDIDATE CONTRACT — PRE-REGISTERED BEFORE 7E REAL-HISTORY INSPECTION**
 
-Date pre-registered: 2026-09-03  
+Date pre-registered: 2026-09-03
 Starting source head: `487705cc5810ced4da75bb56dd71c1fbcafc348b`
 
 This contract governs the first N-BIO-7E SHADOW candidate. It is written after the authority/source audit and targeted architecture/science reconnaissance, but before any 7E real-history output is inspected or used to choose constants. A later mathematical change requires a new immutable model/config identity; it must not silently mutate this candidate.
