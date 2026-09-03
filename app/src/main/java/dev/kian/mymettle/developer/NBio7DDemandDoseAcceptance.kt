@@ -106,7 +106,7 @@ data class NBio7DDemandDoseAcceptanceReport(
         it.persistReloadEquivalent && it.deleteDerivedConfirmed
     }
     val structuralVerdict: NBio7DStructuralVerdict get() = if (
-        roomSchemaVersion == 14 && synthetic.allPassed && history.evaluatedSets > 0 &&
+        roomSchemaVersion == 15 && synthetic.allPassed && history.evaluatedSets > 0 &&
         persistenceChecksPass && representativeFullReplayEquivalent && backupRoundTrip.passed &&
         rawEvidenceUnchanged && prescriptionStateUnchanged && benchmarkAuthorityUnchanged && foreignKeysCleanAfter
     ) NBio7DStructuralVerdict.PASS else NBio7DStructuralVerdict.FAIL
@@ -209,7 +209,7 @@ class NBio7DDemandDoseAcceptanceRunner(
         val execution = executor.execute(plan, dynamicHistory, nonDynamicHistory)
         val historyAudit = historyAudit(plan, execution)
 
-        onProgress(NBio7BAcceptanceProgress(2, 4, "N-BIO-7D · Room14 persist/reload/delete/replay"))
+        onProgress(NBio7BAcceptanceProgress(2, 4, "N-BIO-7D · Room15 persist/reload/delete/replay"))
         val repository = NBio7DShadowRepository(database)
         val retainedForBackup = mutableListOf<InferenceRunId>()
         val persistenceReports = mutableListOf<NBio7DSessionPersistenceAcceptance>()

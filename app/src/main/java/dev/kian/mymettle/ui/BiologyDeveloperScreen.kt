@@ -258,7 +258,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                         OutlinedButton(
                             onClick = { confirmReset = true },
                             enabled = state.task.phase != BiologyTaskPhase.RUNNING && !state.nBio7BAcceptanceRunning &&
-                                !state.adaptiveInferenceRunning,
+                                !state.adaptiveInferenceRunning && !state.nBio7DRunning && !state.nBio7ERunning,
                             modifier = Modifier.fillMaxWidth(),
                         ) { Text("Reset Native development database") }
                         if (state.task.phase != BiologyTaskPhase.IDLE) {
@@ -273,6 +273,13 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 }
 
                 item {
+                    NBio7EAcceptanceDeveloperCard(
+                        viewModel = viewModel,
+                        state = state,
+                    )
+                }
+
+                item {
                     NBio7DAcceptanceDeveloperCard(
                         viewModel = viewModel,
                         state = state,
@@ -282,7 +289,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 item {
                     DebugCard("N‑BIO‑7B dynamic-resistance acceptance") {
                         Text(
-                            "Explicit foreground acceptance over the installed Room14 history. Runs chronological held-out validation, final shadow fits, persist/reload/delete/full replay checks and raw-evidence invariance. Candidate rows remain non-authoritative SHADOW state.",
+                            "Explicit foreground acceptance over the installed Room15 history. Runs chronological held-out validation, final shadow fits, persist/reload/delete/full replay checks and raw-evidence invariance. Candidate rows remain non-authoritative SHADOW state.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Button(
@@ -411,7 +418,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 item {
                     DebugCard("N‑BIO Adaptive Inference acceptance") {
                         Text(
-                            "Single N-BIO-7B.X physical acceptance over installed Room14 history. Full chronology compares same-mathematics adaptive sparse and conditional-Laplace Candidate-v2 solvers; the expensive dense tensor remains a bounded high-fidelity oracle on the richest current profile/side posteriors. Includes corrected median-MAE evaluation, shared replay, solver-substrate benchmarks and safety fingerprints. No product authority is changed.",
+                            "Single N-BIO-7B.X physical acceptance over installed Room15 history. Full chronology compares same-mathematics adaptive sparse and conditional-Laplace Candidate-v2 solvers; the expensive dense tensor remains a bounded high-fidelity oracle on the richest current profile/side posteriors. Includes corrected median-MAE evaluation, shared replay, solver-substrate benchmarks and safety fingerprints. No product authority is changed.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Button(
@@ -503,7 +510,7 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 item {
                     DebugCard("N-BIO-7C capability acceptance") {
                         Text(
-                            "One consolidated structural/pre-validation action for loaded holds, duration-only and repeated-contraction capability. Runs synthetic latent-truth recovery, audits installed Room14 history, compares Adaptive Sparse with Dense, verifies SHADOW persistence/delete/replay and Native backup safety. PD-001 keeps empirical accuracy explicitly pending where longitudinal evidence is insufficient.",
+                            "One consolidated structural/pre-validation action for loaded holds, duration-only and repeated-contraction capability. Runs synthetic latent-truth recovery, audits installed Room15 history, compares Adaptive Sparse with Dense, verifies SHADOW persistence/delete/replay and Native backup safety. PD-001 keeps empirical accuracy explicitly pending where longitudinal evidence is insufficient.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Button(

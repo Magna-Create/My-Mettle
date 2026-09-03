@@ -68,8 +68,8 @@ jobs:
       - name: Verify exported Room schema
         shell: bash
         run: |
-          test -f app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/14.json
-          grep -q '"version": 14' app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/14.json
+          test -f app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/15.json
+          grep -q '"version": 15' app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/15.json
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

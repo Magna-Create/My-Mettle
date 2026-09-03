@@ -57,7 +57,7 @@ fun NBio7DAcceptanceDeveloperCard(
         ) {
             Text("N-BIO-7D Demand & Dose Acceptance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Text(
-                "One structural acceptance over SetDemand, exact historical muscle Exposure, posterior EffectiveDose and SessionDose. Includes causal real-history replay, Dense/Adaptive-Sparse downstream fidelity, delta/tau sensitivity, correction boundaries, Room14 persistence/delete/replay, Native backup integrity and BENCHMARK_V0 authority checks. PD-001 and PD-002 remain open.",
+                "One structural acceptance over SetDemand, exact historical muscle Exposure, posterior EffectiveDose and SessionDose. Includes causal real-history replay, Dense/Adaptive-Sparse downstream fidelity, delta/tau sensitivity, correction boundaries, Room15 persistence/delete/replay, Native backup integrity and BENCHMARK_V0 authority checks. PD-001 and PD-002 remain open.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(

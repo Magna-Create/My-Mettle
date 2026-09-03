@@ -106,3 +106,137 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         )
     }
 }
+
+/** Additive 7E-only derived storage. No canonical workout/context or earlier N-BIO row is rewritten. */
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `n_bio_7e_run` (
+                `id` TEXT NOT NULL,
+                `userProfileId` TEXT NOT NULL,
+                `sourceInferenceRunId` TEXT NOT NULL,
+                `temporalModelConfigId` TEXT NOT NULL,
+                `contextProtocolVersion` INTEGER NOT NULL,
+                `signalSchemaVersion` INTEGER NOT NULL,
+                `solverIdentity` TEXT NOT NULL,
+                `executionMode` TEXT NOT NULL,
+                `pd001Status` TEXT NOT NULL,
+                `pd002Status` TEXT NOT NULL,
+                `pd003Status` TEXT NOT NULL,
+                `calculatedAt` TEXT NOT NULL,
+                PRIMARY KEY(`id`),
+                FOREIGN KEY(`userProfileId`) REFERENCES `user_profile`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`sourceInferenceRunId`) REFERENCES `inference_run`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_n_bio_7e_run_userProfileId` ON `n_bio_7e_run` (`userProfileId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_n_bio_7e_run_sourceInferenceRunId` ON `n_bio_7e_run` (`sourceInferenceRunId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_n_bio_7e_run_calculatedAt` ON `n_bio_7e_run` (`calculatedAt`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `n_bio_7e_temporal_state` (
+                `runId` TEXT NOT NULL,
+                `candidateLayer` TEXT NOT NULL,
+                `scopeKind` TEXT NOT NULL,
+                `scopeId` TEXT NOT NULL,
+                `stateSchemaVersion` INTEGER NOT NULL,
+                `persistentMean` REAL NOT NULL,
+                `transientMean` REAL NOT NULL,
+                `doseCoefficientMean` REAL NOT NULL,
+                `covariancePp` REAL NOT NULL,
+                `covariancePt` REAL NOT NULL,
+                `covariancePd` REAL NOT NULL,
+                `covarianceTt` REAL NOT NULL,
+                `covarianceTd` REAL NOT NULL,
+                `covarianceDd` REAL NOT NULL,
+                `horizon` TEXT NOT NULL,
+                `observationCount` INTEGER NOT NULL,
+                `independentSessionCount` INTEGER NOT NULL,
+                PRIMARY KEY(`runId`, `candidateLayer`, `scopeKind`, `scopeId`),
+                FOREIGN KEY(`runId`) REFERENCES `n_bio_7e_run`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_n_bio_7e_temporal_state_runId` ON `n_bio_7e_temporal_state` (`runId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_n_bio_7e_temporal_state_scopeKind_scopeId` ON `n_bio_7e_temporal_state` (`scopeKind`, `scopeId`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `n_bio_7e_context_module_state` (
+                `runId` TEXT NOT NULL,
+                `moduleId` TEXT NOT NULL,
+                `moduleModelVersion` TEXT NOT NULL,
+                `moduleConfigId` TEXT NOT NULL,
+                `stateSchemaVersion` INTEGER NOT NULL,
+                `encodedState` TEXT NOT NULL,
+                `evidenceThrough` TEXT,
+                `updatedAt` TEXT NOT NULL,
+                PRIMARY KEY(`runId`, `moduleId`),
+                FOREIGN KEY(`runId`) REFERENCES `n_bio_7e_run`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_n_bio_7e_context_module_state_runId` ON `n_bio_7e_context_module_state` (`runId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_n_bio_7e_context_module_state_moduleId` ON `n_bio_7e_context_module_state` (`moduleId`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `n_bio_7e_context_signal` (
+                `runId` TEXT NOT NULL,
+                `signalId` TEXT NOT NULL,
+                `signalSchemaVersion` INTEGER NOT NULL,
+                `sourceModuleId` TEXT NOT NULL,
+                `moduleModelVersion` TEXT NOT NULL,
+                `moduleConfigId` TEXT NOT NULL,
+                `sourceFeatureId` TEXT NOT NULL,
+                `sourceFeatureSchemaVersion` INTEGER NOT NULL,
+                `target` TEXT NOT NULL,
+                `scopeKind` TEXT NOT NULL,
+                `scopeId` TEXT NOT NULL,
+                `effectiveFrom` TEXT NOT NULL,
+                `effectiveUntil` TEXT,
+                `effectRepresentation` TEXT NOT NULL,
+                `locationMean` REAL,
+                `variance` REAL,
+                `evidenceRowCount` INTEGER NOT NULL,
+                `independentSessionCount` INTEGER NOT NULL,
+                `independentEpisodeCount` INTEGER NOT NULL,
+                `evidenceMaturity` TEXT NOT NULL,
+                `correlationGroupId` TEXT NOT NULL,
+                `episodeId` TEXT,
+                `encodedSourceEvidenceIds` TEXT NOT NULL,
+                `encodedUpstreamModelIdentities` TEXT NOT NULL,
+                `publishedAt` TEXT NOT NULL,
+                `status` TEXT NOT NULL,
+                `failureCode` TEXT,
+                PRIMARY KEY(`runId`, `signalId`),
+                FOREIGN KEY(`runId`) REFERENCES `n_bio_7e_run`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_n_bio_7e_context_signal_runId` ON `n_bio_7e_context_signal` (`runId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_n_bio_7e_context_signal_sourceModuleId` ON `n_bio_7e_context_signal` (`sourceModuleId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_n_bio_7e_context_signal_target_scopeKind_scopeId` ON `n_bio_7e_context_signal` (`target`, `scopeKind`, `scopeId`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `n_bio_7e_context_module_status` (
+                `runId` TEXT NOT NULL,
+                `moduleId` TEXT NOT NULL,
+                `phase` TEXT NOT NULL,
+                `status` TEXT NOT NULL,
+                `failureCode` TEXT,
+                `failureSummary` TEXT,
+                `recordedAt` TEXT NOT NULL,
+                PRIMARY KEY(`runId`, `moduleId`, `phase`),
+                FOREIGN KEY(`runId`) REFERENCES `n_bio_7e_run`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_n_bio_7e_context_module_status_runId` ON `n_bio_7e_context_module_status` (`runId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_n_bio_7e_context_module_status_moduleId` ON `n_bio_7e_context_module_status` (`moduleId`)")
+    }
+}

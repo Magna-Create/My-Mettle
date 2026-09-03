@@ -115,7 +115,7 @@ class NativeFullBackupRepositoryTest {
 
         val result = repository.restoreJson(backup)
 
-        assertEquals(14, result.schemaVersion)
+        assertEquals(15, result.schemaVersion)
         val restoredNote = sqlite.query(
             "SELECT note FROM session_review WHERE sessionId = 'session-context'",
         ).use { cursor ->
@@ -207,7 +207,7 @@ class NativeFullBackupRepositoryTest {
 
         val failure = runCatching { repository.restoreJson(backup) }.exceptionOrNull()
         assertTrue(failure is IllegalArgumentException)
-        assertTrue(failure!!.message.orEmpty().contains("Backup schema 13 does not match current Native schema 14"))
+        assertTrue(failure!!.message.orEmpty().contains("Backup schema 13 does not match current Native schema 15"))
         assertTrue(failure.message.orEmpty().contains("Translate the backup to the current Native format"))
 
         val current = sqlite.query(

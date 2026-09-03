@@ -39,7 +39,7 @@ data class NBio7DBackupRoundTripResult(
     val candidateRowsMatch: Boolean get() = sourceCandidateCounts == restoredCandidateCounts
     val candidateRowsPresent: Boolean get() = sourceCandidateCounts.hasCandidateRows
     val sevenEStateEmpty: Boolean get() = sourceCandidateCounts.sevenEStateEmpty && restoredCandidateCounts.sevenEStateEmpty
-    val passed: Boolean get() = schemaVersion == 14 &&
+    val passed: Boolean get() = schemaVersion == 15 &&
         rawEvidenceMatches && prescriptionStateMatches && candidateRowsMatch &&
         candidateRowsPresent && sevenEStateEmpty && foreignKeysClean
 }

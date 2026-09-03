@@ -1,5 +1,6 @@
 package dev.kian.mymettle.context
 
+import androidx.room.withTransaction
 import dev.kian.mymettle.data.local.MyMettleDatabase
 import dev.kian.mymettle.data.local.entity.ContextAnnotationEntity
 import dev.kian.mymettle.data.local.entity.ExerciseReflectionEntity
@@ -117,7 +118,12 @@ class ContextInterpretationRepository(
             fallbackReason = fallbackReason,
         )
         val entities = result.annotations.mapIndexed { index, annotation -> annotation.toEntity(runId, index) }
-        dao.insertInterpretation(run, entities)
+        database.withTransaction {
+            dao.insertInterpretation(run, entities)
+            // A changed interpretation revision invalidates only disposable 7E context-conditioned
+            // products. Raw notes/annotations and unrelated 7C/7D state retain their existing owners.
+            database.nBio7EDao().deleteAllDerived()
+        }
         return run
     }
 
@@ -148,9 +154,21 @@ class ContextInterpretationRepository(
         return ContextEvidenceProjector.project(source.text, current.annotations, provenance, registry)
     }
 
-    suspend fun deleteRun(runId: String): Boolean = dao.deleteRun(runId) > 0
+    suspend fun deleteRun(runId: String): Boolean {
+        return database.withTransaction {
+            val deleted = dao.deleteRun(runId) > 0
+            if (deleted) database.nBio7EDao().deleteAllDerived()
+            deleted
+        }
+    }
 
-    suspend fun deleteAllDerivedInterpretations(): Int = dao.deleteAllInterpretations()
+    suspend fun deleteAllDerivedInterpretations(): Int {
+        return database.withTransaction {
+            val deleted = dao.deleteAllInterpretations()
+            if (deleted > 0) database.nBio7EDao().deleteAllDerived()
+            deleted
+        }
+    }
 
     suspend fun recentRuns(limit: Int = 40): List<NoteInterpretationRunEntity> = dao.recentRuns(limit)
 

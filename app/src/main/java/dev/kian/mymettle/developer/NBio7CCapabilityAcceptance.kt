@@ -127,7 +127,7 @@ data class NBio7CCapabilityAcceptanceReport(
     val benchmarkAuthorityUnchanged: Boolean get() = benchmarkRunIdBefore == benchmarkRunIdAfter
     val allRealPersistenceReplayChecksPass: Boolean get() = profileReports.all { it.structuralPassed }
     val structuralVerdict: NBio7CStructuralVerdict get() = if (
-        roomSchemaVersion == 14 &&
+        roomSchemaVersion == 15 &&
         synthetic.passed &&
         allRealPersistenceReplayChecksPass &&
         rawEvidenceUnchanged &&
@@ -336,7 +336,7 @@ class NBio7CCapabilityAcceptanceRunner(
             )
         }
 
-        onProgress(NBio7BAcceptanceProgress(groupDescriptors.size, groupDescriptors.size + 1, "N-BIO-7C · Native Room14 backup round-trip"))
+        onProgress(NBio7BAcceptanceProgress(groupDescriptors.size, groupDescriptors.size + 1, "N-BIO-7C · Native Room15 backup round-trip"))
         val backup = try {
             backupVerifier.verify()
         } finally {

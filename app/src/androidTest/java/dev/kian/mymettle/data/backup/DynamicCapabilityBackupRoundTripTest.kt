@@ -40,7 +40,7 @@ class DynamicCapabilityBackupRoundTripTest {
 
         val backup = repository.exportJson()
         val json = JSONObject(backup)
-        assertEquals(14, json.getInt("databaseSchemaVersion"))
+        assertEquals(15, json.getInt("databaseSchemaVersion"))
         val tableNames = json.getJSONArray("tables").let { tables ->
             buildSet {
                 for (index in 0 until tables.length()) add(tables.getJSONObject(index).getString("name"))
@@ -59,7 +59,7 @@ class DynamicCapabilityBackupRoundTripTest {
         assertEquals(1, rowCount("execution_profile_version"))
 
         val restored = repository.restoreJson(backup)
-        assertEquals(14, restored.schemaVersion)
+        assertEquals(15, restored.schemaVersion)
         assertEquals(1, rowCount("capability_state"))
         assertEquals(1, rowCount("capability_parameter_state"))
 

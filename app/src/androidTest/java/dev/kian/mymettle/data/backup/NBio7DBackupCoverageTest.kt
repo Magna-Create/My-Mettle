@@ -31,9 +31,9 @@ class NBio7DBackupCoverageTest {
     }
 
     @Test
-    fun room14FullBackupEnumeratesEvery7DPersistenceTableWithoutSpecialCaseSchema() = runBlocking {
+    fun room15FullBackupEnumerates7DAnd7EDerivedTablesWithoutSpecialCases() = runBlocking {
         val backup = JSONObject(NativeFullBackupRepository(database).exportJson())
-        assertEquals(14, backup.getInt("databaseSchemaVersion"))
+        assertEquals(15, backup.getInt("databaseSchemaVersion"))
         val tableNames = backup.getJSONArray("tables").let { tables ->
             buildSet {
                 for (index in 0 until tables.length()) add(tables.getJSONObject(index).getString("name"))
@@ -49,5 +49,10 @@ class NBio7DBackupCoverageTest {
         assertTrue("set_demand_estimate" in tableNames)
         assertTrue("muscle_set_dose" in tableNames)
         assertTrue("muscle_session_dose" in tableNames)
+        assertTrue("n_bio_7e_run" in tableNames)
+        assertTrue("n_bio_7e_temporal_state" in tableNames)
+        assertTrue("n_bio_7e_context_module_state" in tableNames)
+        assertTrue("n_bio_7e_context_signal" in tableNames)
+        assertTrue("n_bio_7e_context_module_status" in tableNames)
     }
 }

@@ -34,7 +34,7 @@ data class NBio7CBackupRoundTripResult(
     val prescriptionStateMatches: Boolean get() = sourcePrescriptionFingerprint == restoredPrescriptionFingerprint
     val candidateRowsMatch: Boolean get() = sourceCandidateCounts == restoredCandidateCounts
     val candidateRowsPresent: Boolean get() = sourceCandidateCounts.hasCandidateRows
-    val passed: Boolean get() = schemaVersion == 14 && rawEvidenceMatches && prescriptionStateMatches && candidateRowsMatch && foreignKeysClean
+    val passed: Boolean get() = schemaVersion == 15 && rawEvidenceMatches && prescriptionStateMatches && candidateRowsMatch && foreignKeysClean
 }
 
 /** Isolated Native full-backup verification scoped to the disposable N-BIO-7C SHADOW rows. */

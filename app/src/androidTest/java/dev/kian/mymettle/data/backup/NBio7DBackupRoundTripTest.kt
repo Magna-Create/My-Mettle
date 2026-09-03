@@ -56,7 +56,7 @@ class NBio7DBackupRoundTripTest {
         assert7EEmpty()
 
         val restored = repository.restoreJson(backup)
-        assertEquals(14, restored.schemaVersion)
+        assertEquals(15, restored.schemaVersion)
         assertEquals(1, rowCount("capability_state"))
         assertEquals(1, rowCount("capability_parameter_state"))
         assertEquals(1, rowCount("set_demand_estimate"))

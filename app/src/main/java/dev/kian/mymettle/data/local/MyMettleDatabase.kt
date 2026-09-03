@@ -6,6 +6,7 @@ import dev.kian.mymettle.data.local.dao.ContextDao
 import dev.kian.mymettle.data.local.dao.HistoryDao
 import dev.kian.mymettle.data.local.dao.InferenceDao
 import dev.kian.mymettle.data.local.dao.LibraryDao
+import dev.kian.mymettle.data.local.dao.NBio7EDao
 import dev.kian.mymettle.data.local.dao.ReferenceDao
 import dev.kian.mymettle.data.local.dao.TemporalEvidenceDao
 import dev.kian.mymettle.data.local.dao.WorkoutDao
@@ -46,6 +47,11 @@ import dev.kian.mymettle.data.local.entity.MuscleSegmentEntity
 import dev.kian.mymettle.data.local.entity.MuscleSessionDoseEntity
 import dev.kian.mymettle.data.local.entity.MuscleSetDoseEntity
 import dev.kian.mymettle.data.local.entity.MuscleStateSnapshotEntity
+import dev.kian.mymettle.data.local.entity.NBio7EContextModuleStateEntity
+import dev.kian.mymettle.data.local.entity.NBio7EContextModuleStatusEntity
+import dev.kian.mymettle.data.local.entity.NBio7EContextSignalEntity
+import dev.kian.mymettle.data.local.entity.NBio7ERunEntity
+import dev.kian.mymettle.data.local.entity.NBio7ETemporalStateEntity
 import dev.kian.mymettle.data.local.entity.NoteInterpretationRunEntity
 import dev.kian.mymettle.data.local.entity.ObservationTraceLinkEntity
 import dev.kian.mymettle.data.local.entity.PerformanceSchemaEntity
@@ -152,8 +158,13 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         SkillStateEntity::class,
         ExerciseTranslationPredictionEntity::class,
         ExerciseTranslationSourceEntity::class,
+        NBio7ERunEntity::class,
+        NBio7ETemporalStateEntity::class,
+        NBio7EContextModuleStateEntity::class,
+        NBio7EContextSignalEntity::class,
+        NBio7EContextModuleStatusEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
 )
 abstract class MyMettleDatabase : RoomDatabase() {
@@ -164,4 +175,5 @@ abstract class MyMettleDatabase : RoomDatabase() {
     abstract fun inferenceDao(): InferenceDao
     abstract fun temporalEvidenceDao(): TemporalEvidenceDao
     abstract fun contextDao(): ContextDao
+    abstract fun nBio7EDao(): NBio7EDao
 }
