@@ -60,6 +60,11 @@ fun NBio7DAcceptanceDeveloperCard(
                 "One structural acceptance over SetDemand, exact historical muscle Exposure, posterior EffectiveDose and SessionDose. Includes causal real-history replay, Dense/Adaptive-Sparse downstream fidelity, delta/tau sensitivity, correction boundaries, Room14 persistence/delete/replay, Native backup integrity and BENCHMARK_V0 authority checks. PD-001 and PD-002 remain open.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text(
+                "Prerequisite: run ‘Recompute biological state’ in Lifecycle and diagnostics at least once so a BENCHMARK_V0 authority baseline exists before this SHADOW acceptance starts.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Button(
                 onClick = viewModel::runNBio7DAcceptance,
                 enabled = !state.nBio7DRunning && !state.nBio7CCapabilityRunning && !state.nBio7BAcceptanceRunning &&
@@ -104,7 +109,7 @@ fun NBio7DAcceptanceDeveloperCard(
                 NBio7DCardLine("Native backup", if (core.backupRoundTrip.passed) "PASS" else "FAIL")
                 NBio7DCardLine("Raw evidence", if (core.rawEvidenceUnchanged) "UNCHANGED" else "CHANGED")
                 NBio7DCardLine("Prescriptions", if (core.prescriptionStateUnchanged) "UNCHANGED" else "CHANGED")
-                NBio7DCardLine("BENCHMARK_V0", if (report.benchmarkV0AuthorityUnchanged) "UNCHANGED" else "FAIL / MISSING")
+                NBio7DCardLine("BENCHMARK_V0", report.benchmarkV0Status)
                 NBio7DCardLine("7E state", "NOT STARTED")
                 NBio7DCardLine("Runtime", "${core.totalElapsedMillis} ms + fidelity validation")
                 Text(
