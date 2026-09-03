@@ -387,11 +387,13 @@ class NBio7DDemandDoseAcceptanceRunner(
         columns: PosteriorColumns?,
         summary: dev.kian.mymettle.domain.inference.PosteriorSummary?,
     ): Boolean {
-        if (columns == null || summary == null) return columns == null && summary == null
-        return closeNullable(columns.p05, summary.credibleLower05) &&
-            closeNullable(columns.p50, summary.estimateMedian) &&
-            closeNullable(columns.p95, summary.credibleUpper95) &&
-            closeNullable(columns.variance, summary.posteriorVariance)
+        val columnsResolved = columns?.let { listOf(it.p05, it.p50, it.p95, it.variance).all { value -> value != null } } == true
+        if (summary == null) return columns == null || !columnsResolved
+        if (!columnsResolved) return false
+        return close(requireNotNull(columns?.p05), summary.credibleLower05) &&
+            close(requireNotNull(columns?.p50), summary.estimateMedian) &&
+            close(requireNotNull(columns?.p95), summary.credibleUpper95) &&
+            close(requireNotNull(columns?.variance), summary.posteriorVariance)
     }
 
     private fun sessionResultsEquivalent(left: NBio7DSessionResult, right: NBio7DSessionResult): Boolean {
