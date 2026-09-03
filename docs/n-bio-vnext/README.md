@@ -36,7 +36,8 @@ Use this directory in the following order.
 - [`SET_DEMAND_AND_DOSE_CONTRACT.md`](./SET_DEMAND_AND_DOSE_CONTRACT.md) — normative N-BIO-7D SetDemand, exact historical Exposure, candidate EffectiveDose, same-session dependence and SessionDose contract.
 - [`POSTPONED_DEVELOPMENT.md`](./POSTPONED_DEVELOPMENT.md) — deferred-validation register; PD-001 quarantines 7C empirical accuracy and PD-002 quarantines 7D SetDemand/EffectiveDose empirical calibration.
 - [`NBIO_7C_CAPABILITY_ACCEPTANCE_CHECKPOINT_2026-09-02.md`](./NBIO_7C_CAPABILITY_ACCEPTANCE_CHECKPOINT_2026-09-02.md) — physical Room14 structural/pre-validation closure record; the full personal acceptance export remains outside the public repository.
-- [`NBIO_7D_DEMAND_DOSE_IMPLEMENTATION_CHECKPOINT_2026-09-03.md`](./NBIO_7D_DEMAND_DOSE_IMPLEMENTATION_CHECKPOINT_2026-09-03.md) — implementation-complete checkpoint and physical installed-device acceptance procedure. It is not itself a physical acceptance PASS.
+- [`NBIO_7D_DEMAND_DOSE_IMPLEMENTATION_CHECKPOINT_2026-09-03.md`](./NBIO_7D_DEMAND_DOSE_IMPLEMENTATION_CHECKPOINT_2026-09-03.md) — historical implementation-complete checkpoint and physical installed-device acceptance procedure written before the acceptance run.
+- [`NBIO_7D_DEMAND_DOSE_PHYSICAL_CLOSURE_2026-09-03.md`](./NBIO_7D_DEMAND_DOSE_PHYSICAL_CLOSURE_2026-09-03.md) — physical Room14 N-BIO-7D structural/pre-validation PASS record; PD-001/PD-002 remain open and the full personal export remains outside the repository.
 - [`INFERENCE_BACKEND_AUDIT.md`](./INFERENCE_BACKEND_AUDIT.md) — current Android numerical-backend audit and profiling-first JVM/native/SIMD/Vulkan/LiteRT decision ladder.
 - [`exercise-import.schema.json`](./exercise-import.schema.json) — Draft 2020-12 machine-readable structural exchange schema, format v1.
 - [`exercise-import-example.json`](./exercise-import-example.json) — canonical validated authoring example.
@@ -51,7 +52,7 @@ Use this directory in the following order.
 7B.3/4  complete as historical validation infrastructure — correction-aware chronology, SHADOW persistence, diagnostics, installed-history acceptance
 7B.X    complete — Adaptive Sparse selected for forward Candidate-v2 inference; Dense retained oracle; Conditional Laplace rejected production
 7C      complete structural/pre-validation — physical Room14 capability acceptance PASS; PD-001 empirical accuracy remains pending where evidence is insufficient
-7D      implementation complete — SetDemand/Exposure/EffectiveDose/SessionDose SHADOW pipeline and consolidated device acceptance action implemented; physical installed-history acceptance still pending; PD-002 OPEN
+7D      complete structural/pre-validation — physical Room14 demand/dose acceptance PASS; PD-001/PD-002 remain OPEN and all 7D output remains SHADOW
 7E      NOT STARTED — architecture requirements are now frozen in CONTEXT_MODULE_ARCHITECTURE.md before implementation
 ```
 
@@ -67,11 +68,11 @@ The completed same-mathematics Candidate-v2 solver comparison uses **Dense** as 
 
 The consolidated **N-BIO Adaptive Inference Acceptance** installed-Room14 evidence established that solver decision while preserving SHADOW/development-only authority. Historical results remain development evidence; fresh future workouts are stronger confirmatory evidence.
 
-### N-BIO-7D implementation status
+### N-BIO-7D structural closure status
 
-N-BIO-7D now consumes the already-frozen 7B.X/7C capability contracts without treating capability as an action policy or treating PD-001 as closed.
+N-BIO-7D consumes the already-frozen 7B.X/7C capability contracts without treating capability as an action policy or treating PD-001 as closed.
 
-The implementation provides:
+The physically accepted implementation provides:
 
 - causal pre-session capability replay;
 - posterior frontier-gap SetDemand;
@@ -88,7 +89,7 @@ The implementation provides:
 - Dense-vs-Adaptive-Sparse downstream fidelity checks;
 - one consolidated installed-device developer action and privacy-bounded JSON export.
 
-The implementation checkpoint is not a physical acceptance result. The consolidated action must still be run against the installed Room14 history before physical 7D structural closure is recorded. PD-002 remains OPEN regardless of structural success.
+The physical Room14 acceptance passed on the alpha31-dev build: all 18 session-scoped persist/reload/delete checks passed, representative replay equivalence passed, backup/restore matched all 7D candidate rows, raw evidence and prescription fingerprints were unchanged, the exact `BENCHMARK_V0` run remained unchanged, foreign keys were clean and no N-BIO-7E state appeared. Structural closure does not establish physiological calibration: PD-001 and PD-002 remain OPEN and all 7D outputs remain SHADOW/developer-only.
 
 ## Current product and safety authority
 
@@ -150,4 +151,4 @@ Do not load both full raw research bodies into ordinary implementation context.
 
 Existing `docs/N_BIO_*.md` files remain historical implementation-stage documentation. The vNext authority stack above governs forward work where they conflict.
 
-N-BIO-7C structural/pre-validation is physically closed under PD-001 quarantine. N-BIO-7D implementation is complete and awaiting the consolidated installed-device acceptance run; PD-002 remains open. N-BIO-7E has not started, but its context-module/associative-learning architecture is now an explicit forward requirement rather than an optional later enhancement.
+N-BIO-7C and N-BIO-7D structural/pre-validation are physically closed under PD-001/PD-002 quarantine. N-BIO-7E has not started, but its context-module/associative-learning architecture is now an explicit forward requirement rather than an optional later enhancement.
