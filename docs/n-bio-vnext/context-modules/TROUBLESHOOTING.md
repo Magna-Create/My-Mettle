@@ -1,6 +1,6 @@
 # Troubleshoot a Context Module
 
-Start with what you observe. The runtime fails a bad module call closed so that peer modules and the context-free baseline can continue.
+Start with what you observe. If a module call fails, the runtime isolates it so other modules and the context-free baseline can continue.
 
 ## My module does not register
 
