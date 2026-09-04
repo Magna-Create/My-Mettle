@@ -49,7 +49,7 @@ LAB-1 deliberately does **not** introduce a generic free-form generation API. Fu
 
 ## LAB-2A — Proven Android VLM Implementation Research Gate
 
-**Status:** COMPLETE — AWAITING REVIEW. LAB-2B remains **NOT STARTED**.
+**Status:** COMPLETE — HUMAN ACCEPTED. LAB-2B is authorised.
 
 **Purpose:** learn from implementations that have actually succeeded before My Mettle attempts serious local multimodal integration. This is implementation archaeology and deployment-playbook authoring, not merely a hardware/API capability survey.
 
@@ -132,17 +132,19 @@ The completed research covers those required implementation dimensions in the re
 
 **Mandatory STOP for research:** satisfied. No serious Qualcomm/Qwen/local-VLM Android integration was begun inside My Mettle during LAB-2A. The explicit goal remains to avoid repeating previous native-runtime work characterised by benchmark hell, repeated rebuild failures, opaque native errors, uncertain runtime compatibility and implementation without first understanding how successful projects avoided those traps.
 
-**STOP condition:** satisfied for research. The deployment playbook and one recommended route exist and now await human review. LAB-2A does **not** modify My Mettle or prove the runtime itself; that proof belongs to LAB-2B. **Do not begin LAB-2B by assumption.**
+**STOP condition:** satisfied for research and human review. The deployment playbook and primary route were explicitly accepted before LAB-2B began. LAB-2A did **not** modify My Mettle or prove the runtime itself; that proof belongs to LAB-2B.
 
 **Must not pull forward:** My Mettle runtime integration, polished product integration, equipment vision workflow, canonical persistence, or multiple competing runtime stacks “just in case”.
 
 ## LAB-2B — Minimal Standalone VLM Harness
 
-**Status:** NOT STARTED.
+**Status:** IN PROGRESS — B0/B1 Qualcomm reference-app reproduction and physical gate. B2 has **NOT STARTED**.
 
 **Purpose:** prove the LAB-2A-recommended route in the smallest possible Kotlin Android harness before My Mettle depends on it.
 
-**Entry condition:** LAB-2A has produced a reviewed deployment playbook and selected one credible route.
+**Entry condition:** satisfied. LAB-2A was explicitly human-accepted. LAB-2B pre-flight observed `agent/ui-ml-lab` at `13fcff8e608e18e3ac4faa232d17c98da25750df` and live `agent/n-bio-vnext-inference` at `5727ea95cf692c8ea0145bdb4cc0ac5a4dc705de`; no N-BIO sync was required. B0 source inspection confirmed the accepted Qualcomm reference app still pins GenieX AAR `0.3.5`, AGP `8.13.0`, Kotlin `2.2.0`, Java 17, NDK `27.3.13750724`, compile/target SDK 34, minSdk 31 and legacy JNI packaging. Its own toolchain script additionally pins Gradle `9.1.0`.
+
+**Current hard gate:** reproduce the unchanged Qualcomm `geniex_chat_android` app at commit `db3f9772d4e423dee2df517335009c703845dba8`, then physically initialise it on the Samsung Galaxy S25 Ultra. The repository-operation sandbox cannot perform an Android build because it has no Android SDK or outbound shell network access; this environment limitation is recorded in `research/LAB_2B_IMPLEMENTATION_NOTES.md`. It is not treated as B0 success or failure. B2 harness code remains prohibited until the unchanged reference build and B1 physical native/ModelManager evidence are reported from Kian's device/build environment.
 
 **The harness must remain deliberately tiny.** It should prove the runtime, not the product. Conceptually:
 
@@ -162,7 +164,7 @@ No Room, N-BIO, OCR pipeline, equipment schema, equipment UX or My Mettle produc
 
 If the recommended route fails, diagnose it against LAB-2A evidence. Do not convert the harness into an open-ended benchmark project or try many native stacks in parallel. Material route changes return to a short research/review decision before another harness attempt.
 
-**STOP condition:** stop only when one route is stable enough on the target device to justify My Mettle integration, or when evidence says the chosen route should be rejected/researched again.
+**STOP condition:** stop only when one route is stable enough on the target device to justify My Mettle integration, or when evidence says the chosen route should be rejected/researched again. Build success alone is not a physical runtime pass.
 
 **Must not pull forward:** My Mettle provider integration, OCR/equipment semantics, canonical equipment persistence, polished UX or server contribution.
 
@@ -174,7 +176,7 @@ If the recommended route fails, diagnose it against LAB-2A evidence. Do not conv
 
 **Major deliverables:** Lab-only local provider implementation; downloaded/app-private model-asset lifecycle as required; install/readiness/removal states; capability/failure diagnostics suitable for development; provider-boundary tests; clean removal path; confirmation that provider-specific details do not leak into product/UI contracts.
 
-The local model remains a compatibility bridge unless a later explicit product decision changes that rule. A successful local model does not justify maintaining two competing normal-user AI experiences if the system provider later satisfies the same task.
+The local model remains a compatibility bridge unless a later explicit product decision changes that rule. A successful local model does not justify maintaining two competing normal-user AI experiences if the system provider later satisfies the task.
 
 **STOP condition:** stop when the proven local runtime can satisfy the selected typed task through the LAB-1 provider boundary without pulling equipment-specific interpretation into the provider itself.
 
