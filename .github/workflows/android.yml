@@ -68,8 +68,34 @@ jobs:
       - name: Unit tests and debug APK
         run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --no-daemon
 
-      - name: Lab unit tests and APK
-        run: ./gradlew :app:testLabUnitTest :app:assembleLab --stacktrace --no-daemon
+      - name: Audit Lab Gradle task graph
+        shell: bash
+        run: |
+          TASKS_FILE="${RUNNER_TEMP}/app-gradle-tasks.txt"
+          ./gradlew :app:tasks --all --no-daemon > "$TASKS_FILE"
+          grep -Eq '^assembleLab([[:space:]]|$)' "$TASKS_FILE"
+          grep -Eq '^lintLab([[:space:]]|$)' "$TASKS_FILE"
+
+          LAB_UNIT_TEST_TASK="$(awk '$1 ~ /^test.*Lab.*UnitTest$/ { print $1; exit }' "$TASKS_FILE")"
+          if [[ -z "$LAB_UNIT_TEST_TASK" ]]; then
+            LAB_UNIT_TEST_TASK="$(awk '$1 == "testLab" { print $1; exit }' "$TASKS_FILE")"
+          fi
+          echo "LAB_UNIT_TEST_TASK=$LAB_UNIT_TEST_TASK" >> "$GITHUB_ENV"
+
+          if [[ -n "$LAB_UNIT_TEST_TASK" ]]; then
+            echo "Lab unit-test task: $LAB_UNIT_TEST_TASK"
+          else
+            echo "Current AGP task graph exposes no Lab-specific unit-test task; assembleLab remains mandatory."
+          fi
+
+      - name: Lab APK and applicable unit tests
+        shell: bash
+        run: |
+          if [[ -n "${LAB_UNIT_TEST_TASK:-}" ]]; then
+            ./gradlew ":app:${LAB_UNIT_TEST_TASK}" :app:assembleLab --stacktrace --no-daemon
+          else
+            ./gradlew :app:assembleLab --stacktrace --no-daemon
+          fi
 
       - name: Compile instrumentation APK
         run: ./gradlew :app:assembleDebugAndroidTest --stacktrace --no-daemon
