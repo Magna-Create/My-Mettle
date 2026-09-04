@@ -52,14 +52,15 @@ Prefer a rough note now over a polished explanation later.
 ```text
 N-BIO-7C: structurally closed; PD-001 open
 N-BIO-7D: structurally closed; PD-002 open
-N-BIO-7E: not started at creation of this journal
+N-BIO-7E: implementation complete; exact-head CI green; physical installed-history acceptance pending; PD-003 open
 ```
 
 Starting documentation head before 7E work should be recorded by the implementation agent here.
 
 ```text
 7E_START_HEAD = 487705cc5810ced4da75bb56dd71c1fbcafc348b
-CURRENT_HEAD = 487705cc5810ced4da75bb56dd71c1fbcafc348b
+LAST_IMPLEMENTATION_HEAD = 59a47b05e269dc3cdedb553f9dcd00031291675d
+LAST_EXACT_HEAD_CI = Android CI run 670 / SUCCESS
 ```
 
 ---
@@ -70,14 +71,14 @@ Keep this table current as the implementation develops.
 
 | Surface | Owner | Producer/caller | Consumer | Versioned? | Replay role | Human/3P relevance | Status/notes |
 |---|---|---|---|---|---|---|---|
-| ContextFeatureDefinition | feature registry | controlled author/provider | adapter/modules/runtime | yes: feature + schema | definition snapshot retained | high | concrete code pending |
+| ContextFeatureDefinition | feature registry | controlled author/provider | adapter/modules/runtime | yes: feature + schema | immutable build definition plus retained identities | high | implemented as `ContextFeatureDefinitionV7E`; no raw-row rewrite |
 | ContextFeatureEvidence | existing 7A.5 + 7E adapter | Nano/rules/explicit/future producers | own-feature module only | yes | canonical/correction-aware input | high | legacy rows never rewritten |
-| ContextModule | module provider | registered implementation | host runtime | protocol/model/config/state versions | derived/rebuildable | very high | pure state transform |
+| ContextModule | module provider | registered implementation | host runtime | protocol/model/config/state versions + canonical config payload | derived/rebuildable | very high | implemented pure state transform; two learner families |
 | ContextReadView | host | typed evidence/state provider | one module | view/capability version | deterministic replay input | very high | no DB/raw-note handle |
 | ContextSignal | module through host validator | module | Core arbitrator | schema v1 + module/config | derived/rebuildable | very high | immutable envelope |
-| Context arbitration/combiner | N-BIO Core | validated signals + base state | 7E state inference | immutable config | derived/replayable | medium | no feature-ID branch |
-| Module memory/state codec | module/runtime | module learner | module/replay | independent codec version | required | high | Room15 dedicated row |
-| Module registry/discovery | app composition root | controlled build integration | runtime | protocol/descriptor compatibility | canonical deterministic order | very high | explicit registry; no runtime loading |
+| Context arbitration/combiner | N-BIO Core | validated signals + base state | 7E state inference | immutable target-policy/config | derived/replayable | medium | implemented; correlation-group collapse; no feature-ID branch |
+| Module memory/state codec | module/runtime | module learner | module/replay | independent codec version | required | high | implemented in dedicated Room15 row; current production codecs v2 |
+| Module registry/discovery | app composition root | controlled build integration | runtime | protocol/descriptor compatibility | canonical deterministic order | very high | implemented explicit immutable registry; no runtime loading |
 
 Add/remove rows as real interfaces emerge.
 
@@ -908,6 +909,28 @@ Scope check: all outputs remain SHADOW; persistent/transient names remain statis
 Reset: reread the mission chronology, independent-episode and exact-head closure clauses plus the current extension target table. The next block is compilation/CI/schema evidence and only source corrections demonstrated by those results.
 
 Next block: compile-check current pure contracts, commit/push the repaired integration checkpoint, inspect every CI job, capture Room15 schema, then finish the exact-head implementation checkpoint and physical handoff.
+
+REVIEW 6 — 2026-09-04T03:35Z / 59a47b0
+
+Block objective: resume after the interrupted agent turn, verify the latest pushed implementation checkpoint, capture the authoritative Room15 schema and prepare the physical-acceptance boundary without overstating closure.
+
+Completed: confirmed local and remote refs both point to `59a47b05e269dc3cdedb553f9dcd00031291675d` with a clean implementation tree; inspected GitHub Android CI run 670 and every job step; confirmed all guards, JVM tests/debug APK, instrumentation APK compilation, lint and exported Room-schema verification passed; downloaded the exact-run Room-schema artifact and added generated `15.json`; began the implementation checkpoint/physical handoff; corrected stale README and journal status wording.
+
+Diff / architecture notes: the only new repository artefact before documentation is the generated Room15 schema whose SHA-256 is `d0a6103e72b11dd4c84d418bf9fd08e50cb06869d378f329d50ed66f4d44b6cd`. No inference/source behaviour changed after the green implementation SHA. Review confirmed the accepted target split remains honest: systemic transient and observation variance are effectful; local transient is protocol-only; every other enum target remains rejected/reserved/later-phase.
+
+Tests/builds/background tasks: GitHub run 670 job `100836788081` is SUCCESS. Exact steps passed: reference assets, exercise schema, context boundary, whitespace, `:app:testDebugUnitTest :app:assembleDebug`, `:app:assembleDebugAndroidTest`, `:app:lintDebug`, and Room schema export verification. Build stages reported SUCCESS in 5m08s, 37s and 2m39s respectively. No background build remains. Warnings are pre-existing compiler cleanup items plus GitHub Action runtime deprecations; none is a 7E correctness failure.
+
+Errors/warnings: the preceding run 669 failure was understood rather than bypassed: its test double still advertised codec schema v1 after the descriptor/state moved to v2. The fixture now uses v2 and run 670 validates the repair. Physical installed-history execution, native backup/restore and real-device fingerprints cannot be produced by hosted CI; the implementation checkpoint must remain `PHYSICAL_ACCEPTANCE_PENDING` rather than structural PASS.
+
+Extension/API decisions recorded: 7E-API-008/009 from the previous block are now integration-verified. No new SPI decision was needed; the closure document records actual surfaces and the remaining physical gate.
+
+Internet check: no new lookup was warranted. The block verified generated schema and exact CI evidence against the already researched Room migration, deterministic registry, cancellation and replay decisions; external research could not substitute for the missing installed-device run.
+
+Scope check: all 7E outputs remain SHADOW/CANDIDATE under PD-003; PD-001/PD-002 remain open; no normal prescription/UX, 7F, 7G, 8 or 9 integration changed.
+
+Reset: reread the mission objective, current journal, structural closure criteria and next-block requirement. The remaining work is documentation/schema checkpoint, a final exact-head CI run, and an explicit device-action handoff—not model tuning.
+
+Next block: commit and push the generated schema plus implementation checkpoint, require final exact-head CI green, then stop only at the genuine physical-device capability boundary with exact commands and requested privacy-bounded JSON.
 
 ---
 

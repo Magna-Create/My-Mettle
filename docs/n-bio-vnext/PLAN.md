@@ -432,7 +432,7 @@ N-BIO-7C   complete structural/pre-validation — loaded-hold, duration-only and
 PD-001     OPEN — empirical human calibration postponed where longitudinal evidence is insufficient; downstream quarantine remains binding
 N-BIO-7D   structurally closed — physical installed-history SetDemand/Exposure/EffectiveDose/SessionDose acceptance passed; SHADOW only
 PD-002     OPEN — 7D empirical SetDemand/EffectiveDose calibration remains quarantined from structural success
-N-BIO-7E   implementation complete; exact-head/physical acceptance pending — neutral persistent/transient candidates, modular context SPI, two learner families and Room15 persistence; SHADOW under PD-003
+N-BIO-7E   implementation complete; exact-head CI green; physical acceptance pending — neutral persistent/transient candidates, modular context SPI, two learner families and Room15 persistence; SHADOW under PD-003
 PD-003     OPEN — 7E temporal/context calibration, biological interpretation and prospective usefulness remain quarantined
 N-BIO-7F   later cross-profile/equipment translation under dedicated equipment contracts
 N-BIO-7G   later conditioning capability
