@@ -98,6 +98,7 @@ internal fun MettleGlassSurface(
     content: @Composable () -> Unit,
 ) {
     val hazeState = LocalMettleHazeState.current
+    val performanceLabState = MettleGlassPerformanceLab.state
     val interactionSource = remember { MutableInteractionSource() }
     val glassStyle = remember(
         shape,
@@ -138,11 +139,16 @@ internal fun MettleGlassSurface(
         }
     }
 
-    val materialModifier = if (hazeState != null) {
+    val performanceMode = when (performanceLabState.mode) {
+        MettleGlassLabMode.Adaptive -> HazePerformanceMode.Default
+        MettleGlassLabMode.Fixed -> HazePerformanceMode.Fixed(performanceLabState.fixedQuality)
+    }
+
+    val materialModifier = if (hazeState != null && performanceLabState.hazeEnabled) {
         Modifier.hazeGlass(
             input = HazeInput.Sources(hazeState),
             style = glassStyle,
-            performanceMode = HazePerformanceMode.Default,
+            performanceMode = performanceMode,
             expandLayerBounds = true,
             interactionSource = if (onClick != null) interactionSource else null,
             interactionTransformTarget = GlassTransformTarget.MaterialAndContent,
@@ -150,8 +156,11 @@ internal fun MettleGlassSurface(
             interactionReducedMotionPolicy = GlassReducedMotionPolicy.System,
         )
     } else {
-        // Preview and test fallback; runtime always supplies a Haze backdrop.
-        Modifier.background(tint, shape)
+        // Diagnostic bypass (and preview/test fallback): keep the same geometry/material tint while
+        // removing Haze's capture/refraction/blur/render-effect path from the frame.
+        Modifier
+            .background(baseColor, shape)
+            .background(tint, shape)
     }
 
     // Compose's elevation shadow reads weakly through a highly transparent Haze material. Draw a
