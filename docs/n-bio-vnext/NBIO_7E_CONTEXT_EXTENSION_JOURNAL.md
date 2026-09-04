@@ -685,7 +685,7 @@ Source/project: Kotlin structured-concurrency and cancellation documentation —
 What problem they were solving: bound child work to an explicit scope and preserve cooperative cancellation through suspending call stacks.
 Useful lesson: the host owns the scope/lifetime; modules do not create global scopes; `CancellationException` must propagate rather than becoming an ordinary module failure.
 Known caveat / mismatch with My Mettle: 7E v1 invokes modules sequentially for deterministic replay, so it does not need concurrent child jobs yet.
-Action taken / no action: module calls are suspendable, host-ordered, and cancellation is rethrown while ordinary module failures are isolated.
+Action taken / no action: the module API is a synchronous, I/O-free transform invoked inside the caller-owned coroutine. Calls are host-ordered; `CancellationException` is rethrown if it crosses the boundary, while ordinary module failures are isolated. No module may create its own scope or suspend for I/O.
 Related API decision: 7E-API-005.
 
 RESEARCH 7E-R-007
@@ -1032,6 +1032,28 @@ Scope check: structural closure is explicitly separated from empirical promotion
 Reset: reread the mission final-documentation, exact-head-CI and 101-item handoff requirements. The next and final block is publish, wait for exact-head CI, verify branch cleanliness/remote equality, and report the complete closure evidence.
 
 Next block: publish the coherent closure documentation commit, require every Android CI step to pass on that exact SHA, then issue the final numbered handoff.
+
+REVIEW 11 — 2026-09-04T16:12Z / 354f738
+
+Block objective: verify the final handoff claims directly against source signatures after closure CI.
+
+Completed: Android CI run 688 passed all 20 workflow steps on the closure commit. Source inspection confirmed the exact feature/evidence/module/read-view/signal/registry/arbitrator/TCK shapes. It also exposed one stale sentence in research entry 7E-R-006: it described module calls as suspendable even though the implemented and normative contract deliberately uses synchronous, I/O-free transforms under a caller-owned coroutine.
+
+Diff / architecture notes: corrected the rough research entry to match source and the journal's final threading section. No interface or runtime behaviour changed. The host still owns dispatch/cancellation/order; modules remain synchronous pure transforms; ordinary exceptions are isolated and any `CancellationException` crossing the boundary is rethrown.
+
+Tests/builds/background tasks: run 688 passed reference/exercise/context/whitespace guards, unit tests/debug APK, instrumentation APK compilation, lint, Room15 schema verification and artifact uploads. This documentation correction requires one final exact-head run after publication.
+
+Errors/warnings: the mismatch was documentation drift, not a code defect. Leaving it would violate the mission requirement that future module authors can trust the recorded lifecycle surface, so it is corrected rather than hidden as rough chronology.
+
+Extension/API decisions recorded: clarifies 7E-API-005; no new decision.
+
+Internet check: no additional lookup was needed; Kotlin structured-concurrency guidance still supports caller-owned lifecycle, while the exact sync-versus-suspend surface is established by repository source.
+
+Scope check: documentation-only; all scientific, persistence, privacy, product-authority and later-phase boundaries remain unchanged.
+
+Reset: reread the exact-source/documentation parity and exact-head CI closure criteria. Publish this correction, wait for the final run, then report closure.
+
+Next block: publish, verify exact-head CI and branch cleanliness, then complete the handoff.
 
 ---
 
