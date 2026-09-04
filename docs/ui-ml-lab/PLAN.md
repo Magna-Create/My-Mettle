@@ -6,33 +6,54 @@
 
 ## LAB-0 — Parallel Build Isolation, Governance & Integration Structure
 
+**Status:** COMPLETE.
+
 **Purpose:** create a separately installable Lab variant and the governance needed for a long-lived parallel branch.
 
 **Entry condition:** branch from a coherent live `agent/n-bio-vnext-inference` checkpoint and record its exact SHA.
 
 **Major deliverables:** separate Android application identity/label; compile-time Lab identity; sandbox/component-collision audit; governance docs; seeded integration ledger; CI coverage for normal and Lab builds.
 
-**STOP condition:** stop when both build lines are protected, Room/schema is unchanged, documentation is complete and the branch is pushed. Do not begin LAB-1 automatically.
+**STOP condition:** satisfied. LAB-0 closed without beginning LAB-1 automatically.
 
 **Must not pull forward:** AI runtime implementation, OCR/vision dependencies, equipment persistence, camera/equipment UX, workout/library redesign, or N-BIO behaviour changes.
 
 ## LAB-1 — AI Provider / Model Lifecycle Shell
 
-**Purpose:** define a typed, replaceable prompt-provider boundary and lifecycle/capability shell without committing the product to a specific model/runtime.
+**Status:** COMPLETE. LAB-2A remains blocked until explicitly started.
 
-**Entry condition:** LAB-0 is explicitly complete and its CI/build isolation remains green.
+**Purpose:** define a typed, replaceable prompt-provider boundary and lifecycle/capability shell without committing the product to a specific local model/runtime.
 
-**Major deliverables:** typed provider interfaces; task-specific capability model; provider selection/lifecycle shell; explicit failure/unavailable states; test doubles/fixtures; boundaries for separately downloaded local assets.
+**Entry condition:** satisfied. LAB-0 was complete/green. Pre-flight observed `agent/n-bio-vnext-inference` at `3652b8974f60baa4df389f458dd10f5591541f9c`; its three post-`SYNC-000` commits changed only Context Module documentation/examples/tests and a small CI documentation verification, so no N-BIO sync was required for LAB-1.
 
-**STOP condition:** stop when provider/lifecycle contracts can be exercised with fakes and no serious local-VLM integration has begun.
+**Implemented deliverables:**
+
+- Lab-owned `SYSTEM` / `LOCAL` provider identity;
+- tri-state task capability model where `UNKNOWN` never satisfies a requirement;
+- deterministic `AUTO` / `SYSTEM` / `LOCAL` provider resolver;
+- distinct system `READY`, `SETUP_REQUIRED`, `SETUP_IN_PROGRESS`, `UNAVAILABLE` and `UNKNOWN` semantics mapped from the pinned ML Kit Prompt API;
+- read-only ML Kit system probe using `checkStatus()`, Structured Output/system-prompt feature checks and optional base-model identity without calling `download()` or generation APIs;
+- future local-model lifecycle/metadata contract plus a no-op `NOT_INSTALLED` implementation;
+- task-specific system-over-local transition and local-retirement states;
+- coalesced, non-blocking Lab-only process-start refresh behind one `BuildConfig.UI_ML_LAB` activation boundary;
+- Lab developer diagnostics and ephemeral provider overrides;
+- deterministic fake-driven resolver/lifecycle/concurrency tests;
+- no persistence of transient provider state or developer override;
+- no change to `NanoNoteInterpreter`, Context Interpretation fallback semantics, N-BIO behaviour or Room.
+
+LAB-1 deliberately does **not** introduce a generic free-form generation API. Future typed tasks should define task-specific request/result contracts rather than normalising all AI work to arbitrary text/JSON.
+
+**STOP condition:** satisfied when the implementation, diagnostics, tests, documentation and normal/Lab verification chain are green. LAB-1 stops here; it does not begin local-runtime research or integration.
 
 **Must not pull forward:** Qwen/Qualcomm/native-runtime integration, serious VLM benchmarking, equipment scanning, canonical equipment persistence, final AI product UX.
 
 ## LAB-2A — Proven Android VLM Implementation Research Gate
 
+**Status:** NOT STARTED.
+
 **Purpose:** learn from implementations that have actually succeeded before My Mettle attempts serious local multimodal integration. This is implementation archaeology and deployment-playbook authoring, not merely a hardware/API capability survey.
 
-**Entry condition:** LAB-1 provider shell is stable enough to describe what the product actually needs.
+**Entry condition:** LAB-1 provider shell is stable enough to describe what the product actually needs, and LAB-2A is explicitly started as a separate mission.
 
 **Research priority:** start with proven Kotlin/Android implementations of `Qwen3-VL-2B-Instruct`, especially Qualcomm-optimised variants on Snapdragon-class hardware. If direct examples are sparse, expand carefully to closely related Qualcomm/QNN-optimised Qwen/VLM implementations whose build/runtime lessons transfer. Prefer evidence in this order:
 

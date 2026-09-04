@@ -1,6 +1,6 @@
 # UI/ML Lab
 
-> **Status:** authoritative landing page for the long-lived `agent/ui-ml-lab` development line.
+> **Status:** authoritative landing page for the long-lived `agent/ui-ml-lab` development line. LAB-0 is closed; LAB-1 provides the typed AI provider/lifecycle shell. LAB-2A remains the next gated phase.
 >
 > **Initial upstream checkpoint:** `agent/n-bio-vnext-inference` at `ec1406fcaa371241974031a4c2740d433a9e8f55`.
 >
@@ -23,14 +23,14 @@ The Lab is **not** an alternative permanent My Mettle architecture. Production s
 
 ## Build isolation
 
-LAB-0 uses an additional Android **build type** rather than a product flavour or second application module.
+The Lab uses an additional Android **build type** rather than a product flavour or second application module.
 
-This is the least disruptive mechanism for this repository because:
+This remains the least disruptive mechanism for this repository because:
 
 1. the existing `debug` build type and its ordinary Gradle task names remain intact;
 2. release continues to use the existing base application identity and release assumptions;
 3. all production Kotlin/Compose source remains in the existing `:app` module;
-4. Lab-only build configuration can be added later without multiplying every source set by a flavour dimension;
+4. Lab-only build configuration can be added without multiplying every source set by a flavour dimension;
 5. a second app module would duplicate application configuration and create avoidable drift.
 
 Current identities are:
@@ -41,9 +41,9 @@ Current identities are:
 | Existing debug | `dev.kian.mymettle.dev` | `My Mettle Dev` |
 | UI/ML Lab | `dev.kian.mymettle.ailab` | `My Mettle AI Lab` |
 
-The existing debug identity is deliberately preserved. LAB-0 does not rename Kotlin/Java packages or the `dev.kian.mymettle` namespace.
+The existing debug identity is deliberately preserved. The Lab does not rename Kotlin/Java packages or the `dev.kian.mymettle` namespace.
 
-Code can identify the Lab at compile time through `BuildConfig.UI_ML_LAB`. It is `false` for ordinary builds and `true` for the Lab build. LAB-0 does not attach product behaviour to this flag.
+Code identifies the Lab at compile time through `BuildConfig.UI_ML_LAB`. It is `false` for ordinary builds and `true` for the Lab build. LAB-1 centralises its process-start activation in `LabAiRuntime`; normal builds do not probe the system AI provider.
 
 ## Android sandbox isolation
 
@@ -54,19 +54,21 @@ This isolates, without a second schema or renamed database:
 - Room database files such as `my-mettle.db`;
 - Preferences DataStore files such as `my_mettle_settings`;
 - SharedPreferences if later/elsewhere used through the normal app sandbox;
-- app-private model files;
+- future app-private model files;
 - internal files;
 - cache files.
 
-LAB-0 deliberately leaves Room at schema version 15 and leaves the database filename unchanged.
+Room remains at schema version 15 and the database filename remains unchanged.
 
 ## Android component coexistence audit
 
-At the initial LAB-0 checkpoint the application manifest declares one exported launcher activity and a non-exported rest-timer service. It declares no `FileProvider`, custom content provider, provider authority, custom package-scoped permission, deep link or custom URI scheme. No WorkManager provider is explicitly declared. The project also has no Lab-specific manifest placeholder or provider authority to rewrite.
+At the initial LAB-0 checkpoint the application manifest declared one exported launcher activity and a non-exported rest-timer service. It declared no `FileProvider`, custom content provider, provider authority, custom package-scoped permission, deep link or custom URI scheme. No WorkManager provider was explicitly declared.
+
+LAB-1 adds the shared `MyMettleApplication` class solely to provide a process-start hook. The hook delegates to the central Lab activation boundary and performs no AI probe in ordinary builds. It adds no exported component or provider authority.
 
 Provider authorities added in future must derive from `${applicationId}` (or another collision-safe variant-specific value) unless a reviewed interoperability contract requires otherwise.
 
-The manifest contains no `INTERNET` permission. LAB-0 does not add one.
+The manifest contains no `INTERNET` permission. LAB-1 does not add one.
 
 ## Data and backup behaviour
 
@@ -74,17 +76,25 @@ The Lab uses the same production database and backup code inside its own Android
 
 Do not create a separate Room schema merely to isolate Lab data. Canonical shared schema changes require the LAB-5 cross-branch database gate.
 
-## AI dependency baseline
+LAB-1 does not persist transient provider probe snapshots or the developer provider override. `AUTO` remains the normal process default.
 
-The upstream branch already contains ML Kit Prompt API dependencies for existing N-BIO context-interpretation work. LAB-0 does not add, upgrade or repurpose any AI/ML runtime dependency. New Lab runtime choices are deferred to LAB-1 and the LAB-2A research gate.
+## AI provider baseline
+
+The upstream branch already contains ML Kit Prompt API dependencies for existing N-BIO context interpretation. LAB-1 does not add or upgrade an AI/ML dependency and does not alter `NanoNoteInterpreter`.
+
+LAB-1 adds a separate Lab-owned provider/capability/lifecycle shell around a **read-only** system Prompt API probe plus a no-op local-fallback lifecycle. The system probe uses the existing pinned ML Kit API only to inspect status/capabilities/optional model identity; it does not generate content or call the model-download API.
+
+The local side remains a contract only. There is no local model, local runtime, model URL, downloader or network path. Local-runtime research begins only at LAB-2A, followed by the isolated LAB-2B proof and LAB-2C integration gate.
+
+See [`AI_RUNTIME_CONTRACT.md`](./AI_RUNTIME_CONTRACT.md) for the implemented LAB-1 semantics.
 
 ## Where to go next
 
-- [`PLAN.md`](./PLAN.md): programme phases and STOP gates.
+- [`PLAN.md`](./PLAN.md): programme phases and STOP gates; LAB-2A is next only after LAB-1 closure.
 - [`INTEGRATION_LEDGER.md`](./INTEGRATION_LEDGER.md): intentional loose seams and future owners.
-- [`AI_RUNTIME_CONTRACT.md`](./AI_RUNTIME_CONTRACT.md): replaceable prompt-provider principles.
-- [`EQUIPMENT_VISION_CONTRACT.md`](./EQUIPMENT_VISION_CONTRACT.md): observation → interpretation → derivation → validation contract.
-- [`UX_DECISIONS.md`](./UX_DECISIONS.md): agreed UX decisions that LAB-0 records but does not implement.
+- [`AI_RUNTIME_CONTRACT.md`](./AI_RUNTIME_CONTRACT.md): implemented provider/capability/lifecycle contract.
+- [`EQUIPMENT_VISION_CONTRACT.md`](./EQUIPMENT_VISION_CONTRACT.md): observation → interpretation → derivation → validation contract for later phases.
+- [`UX_DECISIONS.md`](./UX_DECISIONS.md): agreed UX decisions that remain unimplemented until their gates.
 - [`SYNC_POLICY.md`](./SYNC_POLICY.md): N-BIO ↔ Lab checkpoint and history policy.
 
-LAB-0 ends after build isolation, governance, verification and CI protection are complete. It does **not** start LAB-1 automatically.
+LAB-1 stops after its provider/lifecycle shell, diagnostics, tests, documentation and verification are complete. It does **not** start LAB-2A automatically.

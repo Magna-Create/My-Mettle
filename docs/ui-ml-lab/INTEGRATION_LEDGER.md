@@ -23,7 +23,7 @@
 
 - **Feature / Surface:** workout exercise-card suggested load.
 - **Lab implementation:** explicit `SuggestionProvider` boundary; static/mock fixture initially.
-- **Current data source:** none in LAB-0; provider is planned, not implemented.
+- **Current data source:** none in LAB-1; provider is planned, not implemented.
 - **Future canonical owner:** N-BIO V8 session/programme resolver.
 - **Expected future input/contract:** versioned prescription/suggestion output including usable load target/range, provenance/uncertainty presentation inputs and equipment feasibility where relevant.
 - **Current intentional limitation:** Lab UI may later show fixture state before V8 exists.
@@ -35,7 +35,7 @@
 
 - **Feature / Surface:** workout exercise-card suggested repetitions.
 - **Lab implementation:** same explicit suggestion-provider class as load; fixture-backed initially.
-- **Current data source:** none in LAB-0.
+- **Current data source:** none in LAB-1.
 - **Future canonical owner:** N-BIO V8 session/programme resolver.
 - **Expected future input/contract:** feasible rep target/range coupled to load/set prescription and current programme/session intent.
 - **Current intentional limitation:** disconnected from biological inference until V8 contract exists.
@@ -47,7 +47,7 @@
 
 - **Feature / Surface:** wording such as `Aim for`, `Try`, `You could try`.
 - **Lab implementation:** presentation policy boundary; fixtures may demonstrate states after LAB-3 design approval.
-- **Current data source:** none in LAB-0.
+- **Current data source:** none in LAB-1.
 - **Future canonical owner:** later V8 uncertainty/usability presentation policy.
 - **Expected future input/contract:** semantic support/uncertainty class or other validated presentation input, not an exposed raw posterior-width shortcut.
 - **Current intentional limitation:** wording hierarchy is not behaviourally mapped yet.
@@ -59,7 +59,7 @@
 
 - **Feature / Surface:** faded actual-input placeholder showing prior comparable performance.
 - **Lab implementation:** simple/mock comparable-history provider as appropriate during LAB-3.
-- **Current data source:** none in LAB-0.
+- **Current data source:** none in LAB-1.
 - **Future canonical owner:** canonical workout/history evidence semantics coordinated with N-BIO comparison rules.
 - **Expected future input/contract:** `ExecutionProfileVersion`, side, equipment binding/calibration and comparable-evidence semantics; actual historical value remains distinct from current-session entry.
 - **Current intentional limitation:** a fixture may stand in for comparable history before all canonical comparability inputs are connected.
@@ -71,7 +71,7 @@
 
 - **Feature / Surface:** exercise-card equipment state/chip.
 - **Lab implementation:** mock/local Lab equipment source later, after LAB-3 design approval.
-- **Current data source:** none in LAB-0.
+- **Current data source:** none in LAB-1.
 - **Future canonical owner:** shared equipment contract with N-BIO-7F-facing equipment semantics.
 - **Expected future input/contract:** equipment model/instance/calibration/binding identity and user-facing label with provenance/selection semantics.
 - **Current intentional limitation:** chip can communicate visible state before canonical persistence exists.
@@ -83,7 +83,7 @@
 
 - **Feature / Surface:** `Switch` interaction entering equipment choice/path.
 - **Lab implementation:** interaction shell only after LAB-3 design confirmation; fixture options are acceptable.
-- **Current data source:** none in LAB-0.
+- **Current data source:** none in LAB-1.
 - **Future canonical owner:** shared equipment instance/binding selection semantics.
 - **Expected future input/contract:** session-only binding versus persistent/default equipment choice and available equipment instances.
 - **Current intentional limitation:** final binding persistence is absent before LAB-5.
@@ -95,10 +95,10 @@
 
 - **Feature / Surface:** Add Machine workflow.
 - **Lab implementation:** Semi-auto/Auto workflows only in their explicit later phases.
-- **Current data source:** none in LAB-0.
+- **Current data source:** none in LAB-1.
 - **Future canonical owner:** shared equipment domain contract.
 - **Expected future input/contract:** `EquipmentModel`, `EquipmentInstance`, `EquipmentCalibrationVersion`, location/gym association where useful, session-only/default semantics and provenance.
-- **Current intentional limitation:** no equipment persistence or capture workflow exists in LAB-0.
+- **Current intentional limitation:** no equipment persistence or capture workflow exists in LAB-1.
 - **Connection gate:** LAB-5 data contract → LAB-6 validation → LAB-7 Semi-auto → LAB-8 Auto.
 - **Do-not-do notes:** do not let OCR/VLM output silently become canonical; do not collapse “use today” and regular/default semantics.
 - **Status:** `PLANNED`.
@@ -107,7 +107,7 @@
 
 - **Feature / Surface:** translation of performance/suggestions across equipment contexts.
 - **Lab implementation:** no biological/mechanical translation implementation in the Lab UI.
-- **Current data source:** none in LAB-0.
+- **Current data source:** none in LAB-1.
 - **Future canonical owner:** N-BIO-7F.
 - **Expected future input/contract:** equipment instance/model/calibration features, execution profile, direct-history strength, raw entered load and versioned modelling coordinate with uncertainty.
 - **Current intentional limitation:** Lab may display equipment context without claiming universal resistance equivalence.
@@ -119,7 +119,7 @@
 
 - **Feature / Surface:** mid-workout changes to load/reps/sets/order/swap/remaining session.
 - **Lab implementation:** UI fixtures may demonstrate approved states after LAB-3; no adaptive decision engine in the Lab.
-- **Current data source:** none in LAB-0.
+- **Current data source:** none in LAB-1.
 - **Future canonical owner:** N-BIO V8.
 - **Expected future input/contract:** programme intent, current session evidence, remaining target need, equipment feasibility, uncertainty and explicit user-control policy.
 - **Current intentional limitation:** no behaviour-driving adaptation exists.
@@ -130,14 +130,18 @@
 ## LAB-INT-010 — AI prompt backend
 
 - **Feature / Surface:** typed prompt/image reasoning used by future Lab features.
-- **Lab implementation:** provider abstraction planned for LAB-1; concrete local runtime only after LAB-2A evidence.
-- **Current data source:** no new Lab provider/runtime in LAB-0.
-- **Future canonical owner:** system Android/ML Kit Prompt API when task capabilities are sufficient; local fallback otherwise, subject to explicit later product/runtime decisions.
-- **Expected future input/contract:** typed task request/result, task-specific capabilities, lifecycle, structured failure/unavailable states and optional image/multi-image support.
-- **Current intentional limitation:** no runtime choice is locked by LAB-0.
-- **Connection gate:** LAB-1 provider shell; LAB-2A research; LAB-2B spike if needed.
-- **Do-not-do notes:** do not expose two competing AI experiences merely because two providers exist; do not bake local model assets into the APK.
-- **Status:** `PLANNED`.
+- **Lab implementation:** LAB-1 implements the Lab-owned provider identity/capability/lifecycle/resolver shell, a read-only ML Kit system-provider probe, coalesced Lab-only startup refresh, developer diagnostics, and a no-op local lifecycle. It deliberately does not define a generic free-form generation API.
+- **Current data source:** system state comes from the pinned ML Kit Prompt API capability/readiness probe; local state is `NoOpLocalModelLifecycle` and reports no installed local provider.
+- **Future canonical owner:** system Android/ML Kit Prompt API when the **specific task** is ready and capability-sufficient; a proven local compatibility provider otherwise. LAB-1 does not make a permanent local-runtime choice.
+- **Expected future input/contract:** each future task declares `PromptTaskRequirements` and uses typed task-specific request/result contracts. Equipment extraction owns its later task requirements; the generic provider resolver must not hardcode equipment assumptions.
+- **Current intentional limitation:** the system adapter probes readiness/capabilities but LAB-1 does not expose generic task execution. `IMAGE_INPUT`/`MULTI_IMAGE` remain unknown until verifiable for the actual task. No local runtime/model exists.
+- **Connection gate:** LAB-2A research → LAB-2B standalone runtime proof → LAB-2C local-provider integration. Later equipment work declares/validates its task capability set at its own gate.
+- **Do-not-do notes:** do not expose two competing normal-user AI experiences; do not bake model assets into the APK; do not infer capability from a model/marketing name; do not treat `UNKNOWN` as supported; do not pull local runtime work into LAB-1.
+- **Status:** `EXPERIMENTAL`.
+
+### Existing N-BIO Nano boundary
+
+`NanoNoteInterpreter` and `ContextInterpretationCoordinator` remain independent production/N-BIO source truth. LAB-1 learns from their typed Structured Output and Prompt API status handling but does not route them through `LAB-INT-010`, change their fallback semantics, or alter context evidence. Any future consolidation requires an explicit integration decision after the provider shell has proven useful; it is not implied by LAB-1.
 
 ## LAB-INT-011 — Super-library contribution
 
