@@ -20,7 +20,7 @@
 
 ## LAB-1 — AI Provider / Model Lifecycle Shell
 
-**Status:** COMPLETE. LAB-2A remains blocked until explicitly started.
+**Status:** COMPLETE.
 
 **Purpose:** define a typed, replaceable prompt-provider boundary and lifecycle/capability shell without committing the product to a specific local model/runtime.
 
@@ -49,11 +49,11 @@ LAB-1 deliberately does **not** introduce a generic free-form generation API. Fu
 
 ## LAB-2A — Proven Android VLM Implementation Research Gate
 
-**Status:** NOT STARTED.
+**Status:** IN PROGRESS.
 
 **Purpose:** learn from implementations that have actually succeeded before My Mettle attempts serious local multimodal integration. This is implementation archaeology and deployment-playbook authoring, not merely a hardware/API capability survey.
 
-**Entry condition:** LAB-1 provider shell is stable enough to describe what the product actually needs, and LAB-2A is explicitly started as a separate mission.
+**Entry condition:** satisfied. LAB-1 is complete. At LAB-2A pre-flight, `agent/ui-ml-lab` was `5e3fa1752945ea7baba73f7477fbc43db5d489e4` and live `agent/n-bio-vnext-inference` was `5727ea95cf692c8ea0145bdb4cc0ac5a4dc705de`; no N-BIO sync was required. Physical LAB-1 probing on the target Samsung Galaxy S25 Ultra / Snapdragon 8 Elite found the pinned ML Kit GenAI Prompt API `1.0.0-beta4` system provider `UNAVAILABLE` on two successive process launches, so a local fallback is currently required for local AI on that device. Unknown/unverified system capability fields remain unknown rather than being reinterpreted as hardware non-support.
 
 **Research priority:** start with proven Kotlin/Android implementations of `Qwen3-VL-2B-Instruct`, especially Qualcomm-optimised variants on Snapdragon-class hardware. If direct examples are sparse, expand carefully to closely related Qualcomm/QNN-optimised Qwen/VLM implementations whose build/runtime lessons transfer. Prefer evidence in this order:
 
@@ -118,6 +118,8 @@ Fallback decision if the route fails
 **Must not pull forward:** My Mettle runtime integration, polished product integration, equipment vision workflow, canonical persistence, or multiple competing runtime stacks “just in case”.
 
 ## LAB-2B — Minimal Standalone VLM Harness
+
+**Status:** NOT STARTED.
 
 **Purpose:** prove the LAB-2A-recommended route in the smallest possible Kotlin Android harness before My Mettle depends on it.
 
