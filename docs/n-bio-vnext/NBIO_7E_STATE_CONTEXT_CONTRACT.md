@@ -1,6 +1,6 @@
 # N-BIO-7E — Temporal State & Context Contract
 
-Status: **NORMATIVE CANDIDATE CONTRACT — PRE-REGISTERED BEFORE 7E REAL-HISTORY INSPECTION; IMPLEMENTED AT `59a47b05`; PHYSICAL ACCEPTANCE PENDING**
+Status: **NORMATIVE CANDIDATE CONTRACT — PRE-REGISTERED BEFORE 7E REAL-HISTORY INSPECTION; PHYSICALLY STRUCTURALLY CLOSED UNDER PD-003**
 
 Date pre-registered: 2026-09-03
 Starting source head: `487705cc5810ced4da75bb56dd71c1fbcafc348b`
@@ -387,3 +387,11 @@ PD-003 is required at structural closure unless fresh prospective human evidence
 - prospective usefulness of context-conditioned predictions.
 
 Later phases may consume 7E interfaces and explicitly quarantined SHADOW candidates, but may not treat them as validated biological truth or coaching authority.
+
+## 23. Physical closure result
+
+The format-v2 installed-history acceptance passed on Room15. All 17 temporal and 25 module synthetic cases passed together with chronology, persistence, deletion/replay, targeted reannotation invalidation, Native backup, foreign-key and protected-fingerprint guards. The accepted upstream path was selected 7B.X Candidate-v2/Adaptive Sparse plus causal in-memory 7D replay.
+
+On 15 evaluable real-history sessions, the upstream capability baseline retained the best log predictive score and CRPS. The temporal base improved signed bias and marginally improved MAE but worsened proper scores and coverage; the dose-aware candidate worsened log score, CRPS and MAE; no eligible context evidence existed, so the context-aware candidate equalled the dose-aware candidate and both modules remained `NO_EVIDENCE`. These observations do not alter the pre-registered model or constants.
+
+The exact verdict is `N-BIO-7E STRUCTURALLY CLOSED — EMPIRICAL CALIBRATION PENDING (PD-003 OPEN)`. Full evidence is recorded in [`NBIO_7E_STATE_CONTEXT_PHYSICAL_CLOSURE_2026-09-04.md`](./NBIO_7E_STATE_CONTEXT_PHYSICAL_CLOSURE_2026-09-04.md).

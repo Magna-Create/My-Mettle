@@ -306,13 +306,13 @@ Closure does not require pretending every latent quantity is directly measurable
 
 ## Status
 
-**OPEN — STRUCTURAL TEMPORAL/MODULE PLATFORM MAY PROCEED; HUMAN CALIBRATION AND BIOLOGICAL INTERPRETATION ARE NOT ESTABLISHED**
+**OPEN — 7E STRUCTURALLY CLOSED; HUMAN CALIBRATION, PREDICTIVE PROMOTION AND BIOLOGICAL INTERPRETATION ARE NOT ESTABLISHED**
 
 This entry covers N-BIO-7E's neutral persistent/transient decomposition, the optional association with N-BIO-7D SessionDose, and personalised ContextModule signals. It is additive to PD-001 and PD-002; it does not close either upstream quarantine.
 
 ## What is structurally established
 
-The 7E implementation may close structurally after exact-head and physical acceptance prove its declared mathematics and boundaries:
+The 7E implementation closed structurally after exact-head CI and Room15 physical acceptance proved its declared mathematics and boundaries:
 
 - a versioned causal/pre-session neutral state-space candidate and a surviving context-free baseline;
 - a slowly varying persistent performance component and a mean-reverting transient performance component, without labelling either as measured growth, fatigue or physical repair;
@@ -324,6 +324,8 @@ The 7E implementation may close structurally after exact-head and physical accep
 - replayable derived episodes, independent-episode accounting, failure isolation and fail-closed version behaviour;
 - chronological baseline/dose/context comparison, persistence, deletion, replay, reannotation invalidation and Native backup safety;
 - SHADOW-only outputs with unchanged raw evidence, prescriptions and `BENCHMARK_V0` authority.
+
+The accepted 15-session chronological comparison retained the context-free capability baseline as champion by log predictive score and CRPS. Temporal state improved signed bias but not the proper scores; adding candidate SessionDose worsened log score, CRPS and MAE; and no eligible real context evidence existed, so both modules remained `NO_EVIDENCE`. This is direct evidence for continued quarantine, not a reason to tune the candidate after inspection. See [`NBIO_7E_STATE_CONTEXT_PHYSICAL_CLOSURE_2026-09-04.md`](./NBIO_7E_STATE_CONTEXT_PHYSICAL_CLOSURE_2026-09-04.md).
 
 ## What remains uncalibrated
 

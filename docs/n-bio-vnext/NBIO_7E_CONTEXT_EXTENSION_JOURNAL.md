@@ -52,7 +52,7 @@ Prefer a rough note now over a polished explanation later.
 ```text
 N-BIO-7C: structurally closed; PD-001 open
 N-BIO-7D: structurally closed; PD-002 open
-N-BIO-7E: implementation complete; exact-head CI green; physical installed-history acceptance pending; PD-003 open
+N-BIO-7E: structurally closed after format-v2 Room15 physical acceptance; all outputs remain SHADOW and PD-003 is open
 ```
 
 Starting documentation head before 7E work should be recorded by the implementation agent here.
@@ -988,6 +988,50 @@ Scope check: all output remains SHADOW/CANDIDATE. PD-001, PD-002 and PD-003 rema
 Reset: reread the mission physical-acceptance, upstream-quarantine and exact-head rules. The only remaining evidence is a replacement format-v2 7E export from the updated build.
 
 Next block: user installs/builds exact head, runs only `N-BIO 7E State & Context Acceptance`, returns the JSON, then inspect it and either close structurally with PD-003 or repair a concrete demonstrated defect.
+
+REVIEW 9 — 2026-09-04T13:40Z / 6a46e3c
+
+Block objective: inspect the replacement format-v2 physical report, compare the candidate layers honestly, and either record structural closure under quarantine or identify a demonstrated defect.
+
+Completed: validated report schema/version, exact composite execution config, selected 7B.X Candidate-v2/Adaptive Sparse identities, corrected evidence policy, causal in-memory 7D model/config provenance and open upstream PD statuses. Confirmed Room15, 17/17 temporal fixtures, 25/25 context-module fixtures, future-leakage guard, all persistence/deletion/replay/invalidation checks, Native backup, clean foreign keys, unchanged protected fingerprints and all later-phase flags false. The report file was 16,965 bytes with SHA-256 `f1144ef1f5a0c18fa283f23bdd6c256def0a8b6d5fe069a22e9c66ae81dc71e9`.
+
+Diff / architecture notes: 15 residual sessions and 173 profile observations were evaluable. Causal 7D replay found 18 eligible prior-dose sessions and 15 resolved dose inputs. There were zero eligible context tags and zero independent episodes, so both modules remained `NO_EVIDENCE`; context temporal correctly equalled dose temporal. The capability baseline had the best mean log predictive score (`0.545860`) and CRPS (`0.077660`). Temporal base nearly removed signed bias and marginally improved MAE but worsened log score, CRPS and 90% coverage. Dose temporal further worsened log score, CRPS and MAE. The capability baseline therefore remains the real-history champion; no 7E layer is promoted or tuned.
+
+Tests/builds/background tasks: exact implementation-head GitHub CI run 687 (`33874794103`) passed every job on `6a46e3c4cd7b664b2206a9de25169b9dbeb4d810`. The physical action completed in 978,548 ms on Samsung SM-S938B / SDK 36. No background process remained. A documentation-only closure commit and its own exact-head CI remain for the final block.
+
+Errors/warnings: no replacement-report defect was found. The absence of context evidence prevents empirical module evaluation but does not prevent structural closure. Dose's adverse comparison is retained rather than made aesthetically favourable. The acceptance-bundle runtime is approximately 16 minutes 19 seconds and is not an interactive-latency claim.
+
+Extension/API decisions recorded: no SPI shape changed. Physical evidence confirms the explicit build-time registry, two learner families, v2 codecs, least-privilege reads, signal validation/arbitration, target split and Room15 persistence surface. `LOCAL_TRANSIENT_STATE` remains protocol-only, not an evolving local latent.
+
+Internet check: no new external lookup was warranted. This block concerns exact project/device evidence and pre-registered scoring rules; external architecture material cannot change the observed proper-score comparison.
+
+Scope check: PD-001, PD-002 and PD-003 remain OPEN. All 7E state/signals/memory remain SHADOW/CANDIDATE; `BENCHMARK_V0` and normal workout behaviour are unchanged; 7F, 7G, 8 and N-BIO-9 product integration remain unstarted.
+
+Reset: reread the mission structural-closure, empirical-honesty, exact-head-CI and final-documentation clauses plus the target table. The remaining work is documentation-only closure, exact-head CI, and the comprehensive final handoff.
+
+Next block: write the privacy-bounded physical closure record, reconcile README/PLAN/contract/checkpoint/PD-003 status, review the full documentation diff, publish one coherent closure commit, and require exact-head CI green before reporting completion.
+
+REVIEW 10 — 2026-09-04T13:55Z / 6a46e3c
+
+Block objective: perform the final pre-publication closure review after documentation reconciliation.
+
+Completed: added the privacy-bounded physical closure record and reconciled README, PLAN, normative contract, implementation checkpoint and PD-003. Re-ran a machine assertion over the complete format-v2 report; every required schema, provenance, synthetic, chronology, persistence, backup, fingerprint, authority and later-phase condition evaluated true. Reviewed the full documentation diff and searched current 7E authority documents for stale physical-pending verdicts.
+
+Diff / architecture notes: the closure diff is documentation-only. It records the capability baseline as real-history champion, the adverse dose comparison, zero real context evidence, exact target split, automatic additive Room15 migration and continued PD quarantine. No candidate equation, constant, schema, module contract or product behaviour is changed after observing the report.
+
+Tests/builds/background tasks: the first unstaged `git diff --check` passed, but it cannot inspect an untracked file. The required staged check then caught Markdown hard-break whitespace in the new closure document; the whitespace was removed before commit and the staged check passed. The repository was clean before this closure diff and remained based on `6a46e3c`. Exact implementation CI run 687 remains green. No build or acceptance process is running. Final closure-commit CI is pending publication.
+
+Errors/warnings: the staged whitespace catch above prevented a noisy closure commit. The stale `N-BIO-7E not started` strings found by repository-wide search occur only in frozen 7D-era historical checkpoint/contract documents and correctly describe their own time boundary. They were not rewritten. No stale pending claim remains in current 7E authority/status documents.
+
+Extension/API decisions recorded: none added. The rough journal remains deliberately chronological and includes superseded pre-closure states for the later author-guide cleanup.
+
+Internet check: no lookup was useful for a documentation-only evidence reconciliation against immutable device JSON and repository CI.
+
+Scope check: structural closure is explicitly separated from empirical promotion. PD-001/PD-002/PD-003 stay open; all 7E output stays SHADOW; normal behaviour and `BENCHMARK_V0` stay unchanged; 7F/7G/8/9 remain unstarted.
+
+Reset: reread the mission final-documentation, exact-head-CI and 101-item handoff requirements. The next and final block is publish, wait for exact-head CI, verify branch cleanliness/remote equality, and report the complete closure evidence.
+
+Next block: publish the coherent closure documentation commit, require every Android CI step to pass on that exact SHA, then issue the final numbered handoff.
 
 ---
 

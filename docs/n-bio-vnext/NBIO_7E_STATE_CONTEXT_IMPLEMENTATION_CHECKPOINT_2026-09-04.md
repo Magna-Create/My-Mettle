@@ -6,11 +6,11 @@ Branch: `agent/n-bio-vnext-inference`
 
 Mission start: `487705cc5810ced4da75bb56dd71c1fbcafc348b`
 
-Green implementation checkpoint: `30714819b406e03d44ba8a289903f3461689ec4e`
+Green implementation checkpoint: `6a46e3c4cd7b664b2206a9de25169b9dbeb4d810`
 
-Verdict: **IMPLEMENTATION COMPLETE — HOSTED EXACT-HEAD CI PASS — PHYSICAL INSTALLED-HISTORY ACCEPTANCE PENDING**
+Verdict: **IMPLEMENTATION COMPLETE — HOSTED EXACT-HEAD CI PASS — PHYSICAL STRUCTURAL ACCEPTANCE PASS**
 
-This checkpoint records what is implemented and verified without converting incomplete physical evidence into a structural PASS. Exact-head hosted CI is green; a replacement format-v2 device export remains required.
+This is the implementation-stage checkpoint. The subsequently accepted format-v2 device evidence and final structural decision are recorded in [`NBIO_7E_STATE_CONTEXT_PHYSICAL_CLOSURE_2026-09-04.md`](./NBIO_7E_STATE_CONTEXT_PHYSICAL_CLOSURE_2026-09-04.md).
 
 ## 1. Phase and authority status
 
@@ -21,7 +21,7 @@ This checkpoint records what is implemented and verified without converting inco
 | N-BIO-7D | structurally closed; accepted physical Room14 evidence retained |
 | PD-002 | OPEN |
 | N-BIO-7E implementation | complete on the working branch |
-| N-BIO-7E structural closure | pending installed-device/history acceptance |
+| N-BIO-7E structural closure | PASS; installed-device/history acceptance complete |
 | PD-003 | OPEN; temporal/context calibration and biological interpretation quarantined |
 | Product authority | `BENCHMARK_V0`; all 7E outputs remain SHADOW/CANDIDATE |
 | N-BIO-7F / 7G / 8 / 9 product integration | not started by this work |
@@ -146,31 +146,31 @@ GitHub Android CI run 686 (`33873951924`) executed against `30714819b406e03d44ba
 | Exported Room15 schema verification | PASS |
 | Debug APK and Room schema artifacts | uploaded |
 
-The device-mirror consolidated synthetic runner reports 17/17 temporal cases and 25/25 context-module cases. Focused JVM tests additionally exercise 19 temporal test methods and 28 context-module test methods, while instrumentation source covers Room migration, state/signal persistence/reload/deletion, descriptor-targeted reannotation invalidation and Native backup integration.
+The device-mirror consolidated synthetic runner reports 17/17 temporal cases and 25/25 context-module cases. Focused JVM tests additionally exercise 20 temporal test methods and 28 context-module test methods, while instrumentation source covers Room migration, state/signal persistence/reload/deletion, descriptor-targeted reannotation invalidation and Native backup integration.
 
 The synthetic suites include stable/improving/declining persistent state, anomalies/outliers, transient suppression/recovery, dose effect/no-effect, high noise, sparse history, regime boundaries, systemic/local scope, simultaneous persistent/transient movement, identifiability stress and no-evidence failure. Module fixtures include registration/version failures, two learners, state isolation, malformed/NaN/permission/scope rejection, missing/false/negated evidence, episode persistence/resolution, row/session/episode accounting, inert/predictive context, correlation/contradiction, delete/replay, invalidation, failure isolation, BASE-versus-CONTEXT comparison and extraction-confidence separation.
 
 The one failed integration checkpoint before run 670 exposed a stale test-double codec schema after the production codec advanced to v2. The fixture was corrected to advertise its actual state schema; no production compatibility check was weakened.
 
-## 7. Physical acceptance still required
+## 7. Physical acceptance result
 
-Hosted CI cannot open the user's installed database or prove real-history counts, fingerprints, foreign keys and Native backup/restore on the target device. Run the single developer action:
+The single developer action was run on the updated format-v2 build:
 
 ```text
 N-BIO 7E State & Context Acceptance
 ```
 
-It exports one privacy-bounded JSON without note text. Format v2 includes app/device/schema and 7E model/config/solver identities; exact selected 7B.X capability protocol/model/solver/evidence-policy provenance; causal in-memory 7D model/config provenance and eligible/resolved dose-session counts; PD status; 17+25 synthetic results; registered modules/learner types/support/episodes/target declarations; chronological BASE/DOSE/CONTEXT metrics and ablations; future-leakage guard; persistence/reload/deletion/replay/invalidation; raw/context/prescription/`BENCHMARK_V0` fingerprints; Native backup/restore; foreign keys; runtime; normal-behaviour and later-phase flags.
+Its privacy-bounded JSON contained no note text and included app/device/schema and 7E model/config/solver identities; exact selected 7B.X capability protocol/model/solver/evidence-policy provenance; causal in-memory 7D model/config provenance and eligible/resolved dose-session counts; PD status; 17+25 synthetic results; registered modules/learner types/support/episodes/target declarations; chronological BASE/DOSE/CONTEXT metrics; future-leakage guard; persistence/reload/deletion/replay/invalidation; raw/context/prescription/`BENCHMARK_V0` fingerprints; Native backup/restore; foreign keys; runtime; normal-behaviour and later-phase flags.
 
 The first device export (format v1, 2026-09-04) passed its internal synthetic/persistence/integrity checks but is not closure evidence: it reported zero dose sessions because 7D acceptance runs are intentionally temporary, and the 7E history adapter used the rejected Candidate-v1 predictor. Format v2 corrects acquisition to selected Candidate-v2/Adaptive Sparse plus causal in-memory 7D replay and makes those identities part of structural PASS. Do not run 7B.X or 7D acceptance as a prerequisite; their deliberate cleanup cannot populate 7E.
 
-Until that JSON passes review, the exact structural verdict is:
+The replacement JSON passed review. The exact structural verdict is:
 
 ```text
-READY_FOR_7E_PHYSICAL_ACCEPTANCE_EMPIRICAL_CALIBRATION_PENDING
+N-BIO-7E STRUCTURALLY CLOSED — EMPIRICAL CALIBRATION PENDING (PD-003 OPEN)
 ```
 
-It is not `N-BIO-7E STRUCTURAL PASS`. Sparse or absent real context is an acceptable empirical result and must remain `NO_EVIDENCE`/`PRIOR_DOMINATED`; outputs must not be tuned to look intuitively clean.
+The context-free capability baseline remained the real-history champion by log predictive score and CRPS. The temporal base improved bias but not the proper scores; the dose-aware candidate performed worse; no eligible real context existed, so both modules correctly remained `NO_EVIDENCE`. Sparse or absent context is an acceptable empirical result and was not tuned away. Full counts, metrics, fingerprints and invariants are in the physical closure record.
 
 ## 8. Known limitations and handoff
 
@@ -180,6 +180,6 @@ It is not `N-BIO-7E STRUCTURAL PASS`. Sparse or absent real context is an accept
 - Existing typed illness/time-pressure evidence may be too sparse for data-informed personal learning.
 - Within-session profile residuals are conservatively dependent; richer joint modelling is deferred.
 - Local transient is deliberately protocol-only; equipment translation, conditioning and coaching policy remain later phases.
-- The rough extension journal intentionally retains chronology and superseded reasoning. A separate documentation-cleanup mission should turn it into a stable author guide only after physical acceptance confirms the implemented surface.
+- The rough extension journal intentionally retains chronology and superseded reasoning. A separate documentation-cleanup mission should now turn the physically confirmed surface into a stable author guide.
 
 Fresh causal sessions with explicit present/false/resolution semantics, multiple independent episodes, stable semantic profiles, prior-dose coverage and frozen pre-session predictions are the most valuable evidence for PD-003.

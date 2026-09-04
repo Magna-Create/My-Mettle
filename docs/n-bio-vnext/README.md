@@ -12,7 +12,7 @@ Use this directory in the following order.
 
 `ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md` does not authorise later biological-state implementations, V8 prescription behaviour or normal-user UX changes. It corrects the inference architecture used to reach those later gates.
 
-`CONTEXT_MODULE_ARCHITECTURE.md` likewise does not make tags behaviour-driving. It prevents the future 7E implementation from degenerating into passive context metadata or hard-coded per-tag logic inside N-BIO Core.
+`CONTEXT_MODULE_ARCHITECTURE.md` likewise does not make tags behaviour-driving. It is the requirement set that kept the implemented 7E platform from degenerating into passive context metadata or hard-coded per-tag logic inside N-BIO Core.
 
 ## Core biological/performance research
 
@@ -29,14 +29,15 @@ Use this directory in the following order.
 - [`TEMPORAL_FOUNDATION.md`](./TEMPORAL_FOUNDATION.md) — concrete N-BIO-6 temporal storage, scope, codec, revision and compatibility decisions. The live development database has since advanced to Room14; historical schema numbers in this document describe the stage at which the contract was introduced.
 - [`DEVICE_VERIFICATION.md`](./DEVICE_VERIFICATION.md) — reproducible Termux build and isolated on-device scalar/temporal acceptance procedure.
 - [`CONTEXT_INTERPRETATION_CONTRACT.md`](./CONTEXT_INTERPRETATION_CONTRACT.md) — N-BIO-7A.5 canonical-note ownership, bounded tag ontology, interpreter/fallback/privacy boundary, provenance and zero-effect N-BIO context interface.
-- [`CONTEXT_MODULE_ARCHITECTURE.md`](./CONTEXT_MODULE_ARCHITECTURE.md) — future N-BIO-7E context-learning architecture: versioned feature definitions, independent module memory/learners, authorised read/write boundaries, temporal episodes, personalised association learning, generic signal protocol and central correlation/arbitration.
+- [`CONTEXT_MODULE_ARCHITECTURE.md`](./CONTEXT_MODULE_ARCHITECTURE.md) — implemented N-BIO-7E context-learning requirements: versioned feature definitions, independent module memory/learners, authorised read/write boundaries, temporal episodes, personalised association learning, generic signal protocol and central correlation/arbitration.
 - [`EXERCISE_AUTHORING_CONTRACT.md`](./EXERCISE_AUTHORING_CONTRACT.md) — authoritative protocol for externally proposed exercise/execution/recruitment semantics before they enter the existing Native authoring pathway.
 - [`DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md`](./DYNAMIC_RESISTANCE_CAPABILITY_CONTRACT.md) — N-BIO-7B evidence/coordinate contract, frozen Candidate-v1 record, chronological validation, SHADOW persistence and Candidate-v2 development evidence. Read it together with the adaptive-inference supplement for current capability/policy and solver semantics.
 - [`NON_DYNAMIC_CAPABILITY_CONTRACT.md`](./NON_DYNAMIC_CAPABILITY_CONTRACT.md) — normative N-BIO-7C loaded-hold, duration-only and repeated-contraction capability contract.
 - [`SET_DEMAND_AND_DOSE_CONTRACT.md`](./SET_DEMAND_AND_DOSE_CONTRACT.md) — normative N-BIO-7D SetDemand, exact historical Exposure, candidate EffectiveDose, same-session dependence and SessionDose contract.
 - [`NBIO_7E_STATE_CONTEXT_CONTRACT.md`](./NBIO_7E_STATE_CONTEXT_CONTRACT.md) — preregistered and source-reconciled neutral temporal-state, modular context, chronology, arbitration and Room15 contract.
 - [`NBIO_7E_CONTEXT_EXTENSION_JOURNAL.md`](./NBIO_7E_CONTEXT_EXTENSION_JOURNAL.md) — intentionally rough implementation/API/SPI/research/review record for the dedicated post-7E authoring-guide cleanup.
-- [`NBIO_7E_STATE_CONTEXT_IMPLEMENTATION_CHECKPOINT_2026-09-04.md`](./NBIO_7E_STATE_CONTEXT_IMPLEMENTATION_CHECKPOINT_2026-09-04.md) — green hosted implementation evidence, actual extension surface and the remaining installed-device acceptance gate.
+- [`NBIO_7E_STATE_CONTEXT_IMPLEMENTATION_CHECKPOINT_2026-09-04.md`](./NBIO_7E_STATE_CONTEXT_IMPLEMENTATION_CHECKPOINT_2026-09-04.md) — historical green implementation checkpoint and format-v2 installed-device acceptance procedure.
+- [`NBIO_7E_STATE_CONTEXT_PHYSICAL_CLOSURE_2026-09-04.md`](./NBIO_7E_STATE_CONTEXT_PHYSICAL_CLOSURE_2026-09-04.md) — physical Room15 N-BIO-7E structural/pre-validation PASS record; the context-free capability baseline remained the real-history champion and PD-001/PD-002/PD-003 remain open.
 - [`POSTPONED_DEVELOPMENT.md`](./POSTPONED_DEVELOPMENT.md) — deferred-validation register; PD-001 quarantines 7C empirical accuracy, PD-002 quarantines 7D dose calibration and PD-003 quarantines 7E temporal/context calibration and biological interpretation.
 - [`NBIO_7C_CAPABILITY_ACCEPTANCE_CHECKPOINT_2026-09-02.md`](./NBIO_7C_CAPABILITY_ACCEPTANCE_CHECKPOINT_2026-09-02.md) — physical Room14 structural/pre-validation closure record; the full personal acceptance export remains outside the public repository.
 - [`NBIO_7D_DEMAND_DOSE_IMPLEMENTATION_CHECKPOINT_2026-09-03.md`](./NBIO_7D_DEMAND_DOSE_IMPLEMENTATION_CHECKPOINT_2026-09-03.md) — historical implementation-complete checkpoint and physical installed-device acceptance procedure written before the acceptance run.
@@ -56,7 +57,7 @@ Use this directory in the following order.
 7B.X    complete — Adaptive Sparse selected for forward Candidate-v2 inference; Dense retained oracle; Conditional Laplace rejected production
 7C      complete structural/pre-validation — physical Room14 capability acceptance PASS; PD-001 empirical accuracy remains pending where evidence is insufficient
 7D      complete structural/pre-validation — physical Room14 demand/dose acceptance PASS; PD-001/PD-002 remain OPEN and all 7D output remains SHADOW
-7E      implementation complete; exact-head CI green; physical acceptance pending — neutral temporal candidates, modular context SPI, two learner families and Room15 derived persistence remain SHADOW under PD-003
+7E      complete structural/pre-validation — physical Room15 state/context acceptance PASS; capability baseline retained as real-history champion and all 7E outputs remain SHADOW under PD-003
 ```
 
 ### Candidate-v1 record
@@ -154,4 +155,4 @@ Do not load both full raw research bodies into ordinary implementation context.
 
 Existing `docs/N_BIO_*.md` files remain historical implementation-stage documentation. The vNext authority stack above governs forward work where they conflict.
 
-N-BIO-7C and N-BIO-7D structural/pre-validation are physically closed under PD-001/PD-002 quarantine. N-BIO-7E implementation and exact-head hosted CI are complete; installed-device/history acceptance is still required before structural closure. PD-003 keeps temporal/context calibration and biological interpretation quarantined.
+N-BIO-7C, N-BIO-7D and N-BIO-7E structural/pre-validation are physically closed under PD-001/PD-002/PD-003 quarantine. The 7E installed-history comparison retained the context-free capability baseline as champion; temporal, dose and context candidates remain SHADOW and PD-003 keeps their calibration and biological interpretation quarantined.
