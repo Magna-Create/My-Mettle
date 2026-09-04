@@ -1,6 +1,6 @@
 # UI/ML Lab
 
-> **Status:** authoritative landing page for the long-lived `agent/ui-ml-lab` development line. LAB-0 and LAB-1 are closed. LAB-2A research is complete and awaits human review; LAB-2B has **not** started.
+> **Status:** authoritative landing page for the long-lived `agent/ui-ml-lab` development line. LAB-0 and LAB-1 are closed. LAB-2A research is complete and human-accepted. LAB-2B is **IN PROGRESS** at the B0/B1 Qualcomm reference-app physical gate.
 >
 > **Initial upstream checkpoint:** `agent/n-bio-vnext-inference` at `ec1406fcaa371241974031a4c2740d433a9e8f55`.
 >
@@ -68,7 +68,7 @@ LAB-1 adds the shared `MyMettleApplication` class solely to provide a process-st
 
 Provider authorities added in future must derive from `${applicationId}` (or another collision-safe variant-specific value) unless a reviewed interoperability contract requires otherwise.
 
-The manifest contains no `INTERNET` permission. LAB-2A is documentation/research only and does not add one.
+The My Mettle manifest contains no `INTERNET` permission. LAB-2B remains isolated from the My Mettle `:app` runtime; any future standalone harness lives under its own Gradle root and does not alter this product manifest.
 
 ## Data and backup behaviour
 
@@ -78,29 +78,33 @@ Do not create a separate Room schema merely to isolate Lab data. Canonical share
 
 LAB-1 does not persist transient provider probe snapshots or the developer provider override. `AUTO` remains the normal process default.
 
-## AI provider and LAB-2A research baseline
+## AI provider and local-runtime proof baseline
 
 The upstream branch already contains ML Kit Prompt API dependencies for existing N-BIO context interpretation. LAB-1 does not add or upgrade an AI/ML dependency and does not alter `NanoNoteInterpreter`.
 
 LAB-1 adds a separate Lab-owned provider/capability/lifecycle shell around a **read-only** system Prompt API probe plus a no-op local-fallback lifecycle. The system probe uses the existing pinned ML Kit API only to inspect status/capabilities/optional model identity; it does not generate content or call the model-download API.
 
-Physical LAB-1 probing on the target Samsung Galaxy S25 Ultra found that current system provider `UNAVAILABLE` on repeated launches. LAB-2A therefore researched a real local fallback rather than a hypothetical one, while retaining `UNKNOWN / UNVERIFIED` capability states as unknown rather than claiming hardware non-support.
+Physical LAB-1 probing on the target Samsung Galaxy S25 Ultra found the current system provider `UNAVAILABLE` on repeated launches. LAB-2A therefore researched a real local fallback rather than a hypothetical one, while retaining `UNKNOWN / UNVERIFIED` capability states as unknown rather than claiming hardware non-support.
 
-LAB-2A is research only. It recommends **Qualcomm GenieX Android AAR + Qwen3-VL-2B-Instruct GGUF Q4_0 through GenieX `llama_cpp`** as the primary route for the future standalone LAB-2B proof. It does not add that runtime or model to My Mettle. The recommendation and evidence are in [`research/LAB_2A_ANDROID_VLM_IMPLEMENTATION_RESEARCH.md`](./research/LAB_2A_ANDROID_VLM_IMPLEMENTATION_RESEARCH.md), with a dedicated source ledger, failure archaeology and LAB-2B playbook beside it.
+LAB-2A recommended **Qualcomm GenieX Android AAR + Qwen3-VL-2B-Instruct GGUF Q4_0 through GenieX `llama_cpp`** as the primary standalone proof route. That research was human-accepted before LAB-2B started.
 
-See [`AI_RUNTIME_CONTRACT.md`](./AI_RUNTIME_CONTRACT.md) for the implemented LAB-1 semantics. LAB-2A did not find a contradiction that justified changing the generic provider contract.
+LAB-2B is now executing the physical validation sequence without integrating anything into My Mettle. Its first hard gate is Qualcomm's unchanged `geniex_chat_android` app at commit `db3f9772d4e423dee2df517335009c703845dba8`, AAR `0.3.5`. B2 harness code is prohibited until that reference app builds and physically reaches GenieX/ModelManager on the target S25 Ultra. The physical/evidence record lives in [`research/LAB_2B_PHYSICAL_ACCEPTANCE.md`](./research/LAB_2B_PHYSICAL_ACCEPTANCE.md) and implementation decisions in [`research/LAB_2B_IMPLEMENTATION_NOTES.md`](./research/LAB_2B_IMPLEMENTATION_NOTES.md).
+
+See [`AI_RUNTIME_CONTRACT.md`](./AI_RUNTIME_CONTRACT.md) for the implemented LAB-1 semantics. LAB-2B does not connect GenieX to that contract; that future integration belongs to LAB-2C only after a physical LAB-2B PASS.
 
 ## Where to go next
 
-- [`PLAN.md`](./PLAN.md): programme phases and STOP gates; LAB-2A awaits review and LAB-2B remains blocked.
-- [`research/LAB_2A_ANDROID_VLM_IMPLEMENTATION_RESEARCH.md`](./research/LAB_2A_ANDROID_VLM_IMPLEMENTATION_RESEARCH.md): primary research conclusion and route comparison.
+- [`PLAN.md`](./PLAN.md): programme phases and STOP gates; LAB-2B is in progress at the B0/B1 reference-app physical gate.
+- [`research/LAB_2A_ANDROID_VLM_IMPLEMENTATION_RESEARCH.md`](./research/LAB_2A_ANDROID_VLM_IMPLEMENTATION_RESEARCH.md): accepted research conclusion and route comparison.
 - [`research/LAB_2A_SOURCE_LEDGER.md`](./research/LAB_2A_SOURCE_LEDGER.md): traceable evidence ledger.
 - [`research/LAB_2A_FAILURE_ARCHAEOLOGY.md`](./research/LAB_2A_FAILURE_ARCHAEOLOGY.md): failures, fixes and preventative rules.
-- [`research/LAB_2B_IMPLEMENTATION_PLAYBOOK.md`](./research/LAB_2B_IMPLEMENTATION_PLAYBOOK.md): implementation handoff; not authority to start LAB-2B.
+- [`research/LAB_2B_IMPLEMENTATION_PLAYBOOK.md`](./research/LAB_2B_IMPLEMENTATION_PLAYBOOK.md): authoritative LAB-2B implementation handoff.
+- [`research/LAB_2B_PHYSICAL_ACCEPTANCE.md`](./research/LAB_2B_PHYSICAL_ACCEPTANCE.md): physical target-device acceptance state; no physical PASS is pre-filled.
+- [`research/LAB_2B_IMPLEMENTATION_NOTES.md`](./research/LAB_2B_IMPLEMENTATION_NOTES.md): frozen matrix, implementation decisions and deviations.
 - [`INTEGRATION_LEDGER.md`](./INTEGRATION_LEDGER.md): intentional loose seams and future owners.
-- [`AI_RUNTIME_CONTRACT.md`](./AI_RUNTIME_CONTRACT.md): implemented provider/capability/lifecycle contract.
+- [`AI_RUNTIME_CONTRACT.md`](./AI_RUNTIME_CONTRACT.md): implemented provider/capability/lifecycle contract; unchanged by LAB-2B so far.
 - [`EQUIPMENT_VISION_CONTRACT.md`](./EQUIPMENT_VISION_CONTRACT.md): observation → interpretation → derivation → validation contract for later phases.
 - [`UX_DECISIONS.md`](./UX_DECISIONS.md): agreed UX decisions that remain unimplemented until their gates.
 - [`SYNC_POLICY.md`](./SYNC_POLICY.md): N-BIO ↔ Lab checkpoint and history policy.
 
-LAB-2A stops at evidence-backed route selection and a paper specification for LAB-2B. **LAB-2B has not started and requires explicit human acceptance.**
+LAB-2B remains isolated validation. **LAB-2C has not started.**
