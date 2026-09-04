@@ -12,9 +12,13 @@ import dev.kian.mymettle.domain.context.ContextScope
 import dev.kian.mymettle.domain.context.ContextScopeKind
 import dev.kian.mymettle.domain.inference.DatedSessionDose
 import dev.kian.mymettle.domain.inference.DynamicHeldOutStatus
+import dev.kian.mymettle.domain.inference.InferenceModelComponent
+import dev.kian.mymettle.domain.inference.ModelConfigDefinition
+import dev.kian.mymettle.domain.inference.NBio7DConfig
+import dev.kian.mymettle.domain.inference.NBio7DModelConfigs
+import dev.kian.mymettle.domain.inference.NBio7DModelIdentity
+import dev.kian.mymettle.domain.inference.TemporalStateConfigV1
 import dev.kian.mymettle.domain.performance.Laterality
-import dev.kian.mymettle.engine.inference.DynamicResistanceHistoricalEvaluator
-import dev.kian.mymettle.inference.NBio7DShadowRepository
 import java.time.Instant
 import kotlin.math.ln
 import kotlin.math.max
@@ -33,8 +37,77 @@ data class NBio7EHistoricalEvidenceV1(
     val doseBySession: Map<String, DatedSessionDose>,
     val contextTagCounts: Map<String, Int>,
     val currentContextEvidenceFingerprintInputs: List<String>,
-    val sourceDoseRunId: String?,
+    val upstreamProvenance: NBio7EUpstreamProvenanceV1,
 )
+
+data class NBio7EUpstreamProvenanceV1(
+    val capabilityModelIdentity: String,
+    val capabilitySolverIdentity: String,
+    val capabilityEvidencePolicyIdentity: String,
+    val capabilityEvaluationProtocol: String,
+    val doseSourceMode: String,
+    val doseModelIdentities: Map<String, String>,
+    val doseConfigIds: Map<String, String>,
+    val doseEligibleSessions: Int,
+    val pd001Status: String = "OPEN",
+    val pd002Status: String = "OPEN",
+) {
+    init {
+        require(capabilityModelIdentity.isNotBlank())
+        require(capabilitySolverIdentity.isNotBlank())
+        require(capabilityEvidencePolicyIdentity.isNotBlank())
+        require(capabilityEvaluationProtocol.isNotBlank())
+        require(doseSourceMode == DOSE_SOURCE_MODE)
+        require(doseModelIdentities == expectedDoseModelIdentities)
+        require(doseConfigIds == expectedDoseConfigIds)
+        require(doseEligibleSessions >= 0)
+        require(pd001Status == "OPEN" && pd002Status == "OPEN")
+    }
+
+    companion object {
+        const val DOSE_SOURCE_MODE = "CAUSAL_IN_MEMORY_7D_REPLAY"
+        val expectedDoseModelIdentities: Map<String, String> = mapOf(
+            "set_demand" to NBio7DModelIdentity.DEMAND,
+            "exposure" to NBio7DModelIdentity.EXPOSURE,
+            "effective_dose" to NBio7DModelIdentity.EFFECTIVE_DOSE,
+            "session_dose" to NBio7DModelIdentity.SESSION_DOSE,
+        ).toSortedMap()
+        val expectedDoseConfigIds: Map<String, String> = NBio7DModelConfigs.definitions(NBio7DConfig())
+            .associate { it.component.storageValue to it.id.value }
+            .toSortedMap()
+    }
+}
+
+/** Immutable identity persisted in the legacy-named temporalModelConfigId Room15 column. */
+object NBio7EExecutionConfigV2 {
+    const val SEMANTIC_VERSION = "n-bio-7e-state-context-execution-v2"
+    private val CREATED_AT: Instant = Instant.parse("2026-09-04T00:00:00Z")
+
+    fun definition(
+        temporal: TemporalStateConfigV1,
+        upstream: NBio7EUpstreamProvenanceV1,
+    ): ModelConfigDefinition = ModelConfigDefinition.create(
+        component = InferenceModelComponent.SYSTEMIC_CONTEXT,
+        modelFamily = "neutral_temporal_state_with_versioned_upstream_inputs",
+        modelName = "n_bio_7e_state_context_execution",
+        semanticVersion = SEMANTIC_VERSION,
+        configSchemaVersion = 2,
+        parameters = mapOf(
+            "temporalConfig" to temporal.canonicalPayload,
+            "capabilityModelIdentity" to upstream.capabilityModelIdentity,
+            "capabilitySolverIdentity" to upstream.capabilitySolverIdentity,
+            "capabilityEvidencePolicyIdentity" to upstream.capabilityEvidencePolicyIdentity,
+            "capabilityEvaluationProtocol" to upstream.capabilityEvaluationProtocol,
+            "doseSourceMode" to upstream.doseSourceMode,
+            "doseModelIdentities" to upstream.doseModelIdentities.entries.joinToString(";") { "${it.key}=${it.value}" },
+            "doseConfigIds" to upstream.doseConfigIds.entries.joinToString(";") { "${it.key}=${it.value}" },
+            "pd001Status" to upstream.pd001Status,
+            "pd002Status" to upstream.pd002Status,
+            "authority" to "SHADOW_CANDIDATE_ONLY",
+        ),
+        createdAt = CREATED_AT,
+    )
+}
 
 /**
  * Privacy-bounded acceptance reader. Raw note text is read only long enough to verify interpretation
@@ -45,15 +118,33 @@ class NBio7EHistoricalEvidenceReader(
 ) {
     fun read(): NBio7EHistoricalEvidenceV1 {
         val dynamic = NBio7BRawHistoryReader(database).read()
-        val evaluator = DynamicResistanceHistoricalEvaluator()
-        val heldOut = dynamic.profiles.values.flatMap { descriptor ->
-            val version = descriptor.semantics.executionProfileVersionId.value
-            dynamic.revisions.asSequence()
-                .filter { it.evidence.executionProfileVersionId.value == version }
-                .map { it.evidence.laterality }
-                .distinct()
-                .sortedBy(Laterality::storageValue)
-                .flatMap { side -> evaluator.evaluate(descriptor.semantics, side, dynamic.revisions).observations }
+        val capabilitySolver = NBioCorrectedCandidateV2Bundle.sparseSolver()
+        val capabilityBakeoffs = dynamic.profiles.values
+            .sortedBy { it.semantics.executionProfileVersionId.value }
+            .flatMap { descriptor ->
+                val version = descriptor.semantics.executionProfileVersionId.value
+                dynamic.revisions.asSequence()
+                    .filter { it.evidence.executionProfileVersionId.value == version }
+                    .map { it.evidence.laterality }
+                    .distinct()
+                    .sortedBy(Laterality::storageValue)
+                    .map { side ->
+                        NBioCorrectedCandidateV2Bundle.evaluateHistorical(
+                            solvers = listOf(capabilitySolver),
+                            profile = descriptor.semantics,
+                            side = side,
+                            revisions = dynamic.revisions,
+                        )
+                    }
+                    .toList()
+            }
+        val evaluationProtocols = capabilityBakeoffs.map { it.protocolVersion }.distinct()
+        require(evaluationProtocols.size <= 1) { "7E capability inputs must share one evaluation protocol." }
+        val heldOut = capabilityBakeoffs.flatMap { bakeoff ->
+            require(bakeoff.candidates.size == 1)
+            val candidate = bakeoff.candidates.single()
+            require(candidate.solverIdentity == capabilitySolver.solverIdentity)
+            candidate.observations
         }.filter { it.status == DynamicHeldOutStatus.EVALUABLE && it.candidatePredictive != null }
 
         val residuals = heldOut.groupBy { it.sessionId }.map { (sessionId, observations) ->
@@ -77,7 +168,7 @@ class NBio7EHistoricalEvidenceReader(
         }.sortedWith(compareBy<NBio7ESessionResidualV1> { it.at }.thenBy { it.sessionId })
 
         val context = currentSessionContext()
-        val dose = sessionDose()
+        val dose = replaySessionDose(dynamic)
         return NBio7EHistoricalEvidenceV1(
             residuals = residuals,
             contextBySession = context.groupBy { it.sessionId }.mapValues { (_, rows) -> rows.map { it.evidence } },
@@ -92,9 +183,29 @@ class NBio7EHistoricalEvidenceReader(
                     row.evidence.sourceRevisionId,
                 ).joinToString("|")
             }.sorted(),
-            sourceDoseRunId = dose.first,
+            upstreamProvenance = NBio7EUpstreamProvenanceV1(
+                capabilityModelIdentity = NBioCorrectedCandidateV2Bundle.mathematicalModelIdentity.identity,
+                capabilitySolverIdentity = capabilitySolver.solverIdentity.identity,
+                capabilityEvidencePolicyIdentity = NBioCorrectedCandidateV2Bundle.evidencePolicy.identity,
+                capabilityEvaluationProtocol = evaluationProtocols.singleOrNull()
+                    ?: "NOT_EVALUATED_NO_DYNAMIC_PROFILE_SIDE",
+                doseSourceMode = NBio7EUpstreamProvenanceV1.DOSE_SOURCE_MODE,
+                doseModelIdentities = NBio7EUpstreamProvenanceV1.expectedDoseModelIdentities,
+                doseConfigIds = NBio7EUpstreamProvenanceV1.expectedDoseConfigIds,
+                doseEligibleSessions = dose.first,
+            ),
         )
     }
+
+    fun currentContextEvidenceFingerprintInputs(): List<String> = currentSessionContext().map { row ->
+        listOf(
+            row.sessionId,
+            row.evidence.evidenceId,
+            row.evidence.featureKey.canonical,
+            row.evidence.missingness.name,
+            row.evidence.sourceRevisionId,
+        ).joinToString("|")
+    }.sorted()
 
     private data class SessionContextRow(val sessionId: String, val evidence: ContextFeatureEvidenceV7E)
 
@@ -194,32 +305,23 @@ class NBio7EHistoricalEvidenceReader(
         }
     }
 
-    private fun sessionDose(): Pair<String?, Map<String, DatedSessionDose>> {
-        val db = database.openHelper.readableDatabase
-        val runId = db.query(
-            "SELECT id FROM inference_run WHERE modelVersion = ? ORDER BY calculatedAt DESC, id DESC LIMIT 1",
-            arrayOf(NBio7DShadowRepository.SHADOW_RUN_MODEL_VERSION),
-        ).use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
-        if (runId == null) return null to emptyMap()
-        val bySession = linkedMapOf<String, Pair<Instant, Double>>()
-        db.query(
-            """
-            SELECT msd.sessionId AS sessionId, s.completedAt AS completedAt,
-                   SUM(msd.posterior_p50) AS dose
-            FROM muscle_session_dose msd
-            INNER JOIN session s ON s.id = msd.sessionId
-            WHERE msd.inferenceRunId = ? AND msd.posterior_p50 IS NOT NULL
-            GROUP BY msd.sessionId, s.completedAt
-            ORDER BY s.completedAt, msd.sessionId
-            """.trimIndent(),
-            arrayOf(runId),
-        ).use { cursor ->
-            while (cursor.moveToNext()) {
-                val completedAt = cursor.string("completedAt")
-                bySession[cursor.string("sessionId")] = Instant.parse(completedAt) to cursor.double("dose")
-            }
-        }
-        return runId to bySession.mapValues { (_, value) -> DatedSessionDose(value.first, value.second) }
+    private fun replaySessionDose(dynamic: NBio7BRawHistory): Pair<Int, Map<String, DatedSessionDose>> {
+        val nonDynamic = NBio7CRawHistoryReader(database).read()
+        val inputs = NBio7DHistoricalInputReader(database).read()
+        val replayKnowledgeAt = listOfNotNull(
+            dynamic.revisions.maxOfOrNull { it.recordedAt },
+            nonDynamic.revisions.maxOfOrNull { it.recordedAt },
+            inputs.sessions.values.maxOfOrNull { it.completedAt },
+        ).maxOrNull() ?: Instant.EPOCH
+        val plan = NBio7DHistoricalReplayPlanner.plan(dynamic, nonDynamic, inputs, replayKnowledgeAt)
+        val execution = NBio7DHistoricalReplayExecutor(NBio7DConfig()).execute(plan, dynamic, nonDynamic)
+        val doses = execution.sessions.mapNotNull { session ->
+            val resolvedMuscleMedians = session.result.muscleResults.mapNotNull { it.dose.rawSummary?.estimateMedian }
+            if (resolvedMuscleMedians.isEmpty()) return@mapNotNull null
+            val completedAt = inputs.sessions.getValue(session.sessionId).completedAt
+            session.sessionId to DatedSessionDose(completedAt, resolvedMuscleMedians.sum())
+        }.toMap()
+        return plan.sessions.size to doses
     }
 
     companion object {

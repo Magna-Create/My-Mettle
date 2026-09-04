@@ -40,13 +40,17 @@ data class NBio7ERealHistoryAudit(
     val contextTagCounts: Map<String, Int>,
     val independentEpisodeCounts: Map<String, Int>,
     val moduleSupportStates: Map<String, String>,
-    val sourceDoseRunId: String?,
+    val upstreamProvenance: NBio7EUpstreamProvenanceV1,
     val doseSessions: Int,
     val capabilityBaseline: NBio7EPredictiveMetrics,
     val temporalBase: NBio7EPredictiveMetrics,
     val doseTemporal: NBio7EPredictiveMetrics,
     val contextTemporal: NBio7EPredictiveMetrics,
-)
+) {
+    init {
+        require(doseSessions in 0..upstreamProvenance.doseEligibleSessions)
+    }
+}
 
 data class NBio7EPersistenceAcceptance(
     val persistReloadEquivalent: Boolean,
@@ -81,18 +85,28 @@ data class NBio7EStateContextAcceptanceReport(
     val foreignKeysClean: Boolean,
     val runtimeMillis: Long,
 ) {
+    private val executionConfig: ModelConfigDefinition
+        get() = NBio7EExecutionConfigV2.definition(temporalConfig, history.upstreamProvenance)
+
     val structuralVerdict: NBio7EStructuralVerdict get() = if (
         roomSchemaVersion == 15 && synthetic.allPassed && persistence.persistReloadEquivalent &&
         persistence.moduleStateDeletionConfirmed && persistence.signalDeletionConfirmed &&
         persistence.derivedRunDeletionConfirmed && persistence.fullReplayEquivalent &&
         persistence.targetedReannotationInvalidationConfirmed && nativeBackupRoundTrip &&
         rawFingerprintBefore == rawFingerprintAfter && contextFingerprintBefore == contextFingerprintAfter &&
-        prescriptionBefore == prescriptionAfter && benchmarkRunIdBefore == benchmarkRunIdAfter && foreignKeysClean
+        prescriptionBefore == prescriptionAfter && benchmarkRunIdBefore == benchmarkRunIdAfter && foreignKeysClean &&
+        history.upstreamProvenance.capabilityModelIdentity ==
+        NBioCorrectedCandidateV2Bundle.mathematicalModelIdentity.identity &&
+        history.upstreamProvenance.capabilitySolverIdentity ==
+        NBioCorrectedCandidateV2Bundle.sparseSolver().solverIdentity.identity &&
+        history.upstreamProvenance.capabilityEvidencePolicyIdentity ==
+        NBioCorrectedCandidateV2Bundle.evidencePolicy.identity &&
+        history.upstreamProvenance.doseSourceMode == NBio7EUpstreamProvenanceV1.DOSE_SOURCE_MODE
     ) NBio7EStructuralVerdict.PASS else NBio7EStructuralVerdict.FAIL
 
     fun toJson(): String = JSONObject()
         .put("format", "my-mettle-n-bio-7e-state-context-acceptance")
-        .put("formatVersion", 1)
+        .put("formatVersion", 2)
         .put("generatedAt", generatedAt.toString())
         .put("mission", "N-BIO-7E")
         .put("app", JSONObject().put("applicationId", app.applicationId).put("versionName", app.versionName).put("versionCode", app.versionCode).put("buildType", app.buildType).put("debug", app.debug))
@@ -100,6 +114,9 @@ data class NBio7EStateContextAcceptanceReport(
         .put("roomSchemaVersion", roomSchemaVersion)
         .put("modelIdentity", temporalConfig.semanticVersion)
         .put("modelConfig", temporalConfig.canonicalPayload)
+        .put("executionConfigId", executionConfig.id.value)
+        .put("executionConfigVersion", executionConfig.semanticVersion)
+        .put("executionConfig", executionConfig.canonicalConfigPayload)
         .put("solverIdentity", "deterministic-robust-gaussian-filter-v1")
         .put("postponedDevelopment", JSONObject()
             .put("PD-001", JSONObject().put("status", "OPEN").put("scope", "7C_CAPABILITY_EMPIRICAL_ACCURACY"))
@@ -158,7 +175,7 @@ class NBio7EStateContextAcceptanceRunner(
         val inferenceDao = database.inferenceDao()
         val userProfileId = inferenceDao.userProfileIds().singleOrNull()
             ?: error("N-BIO-7E acceptance requires exactly one Native user profile.")
-        val sourceRun = inferenceDao.inferenceRuns(userProfileId).firstOrNull()
+        val sourceRun = inferenceDao.latestInferenceRun(userProfileId)
             ?: error("Run the existing biological recomputation before N-BIO-7E acceptance.")
         database.nBio7EDao().deleteDerivedForUser(userProfileId)
         val rawBefore = NBio7BRawEvidenceFingerprinter.capture(database)
@@ -187,7 +204,10 @@ class NBio7EStateContextAcceptanceRunner(
         val signalsDeleted = repository.load(runId)?.signals?.isEmpty() == true
         repository.deleteDerivedRun(runId)
         val runDeleted = repository.load(runId) == null
-        val replay = compute(NBio7EHistoricalEvidenceReader(database).read())
+        // Rebuild every 7E-owned state/signal from the immutable, privacy-bounded input snapshot.
+        // Upstream 7B.X and 7D causal replay is performed once while producing that snapshot; their
+        // own acceptance suites establish solver replay, while this proves 7E delete-derived replay.
+        val replay = compute(evidenceBefore)
         val replayEquivalent = first == replay
 
         val invalidationRunId = "n-bio-7e-invalidation-${UUID.randomUUID()}"
@@ -216,7 +236,7 @@ class NBio7EStateContextAcceptanceRunner(
         val backupPass = NBio7EBackupRoundTripVerifier(context, database).verify(retainedId)
 
         onProgress(NBio7BAcceptanceProgress(4, 5, "N-BIO-7E · privacy/product-authority fingerprints"))
-        val evidenceAfter = NBio7EHistoricalEvidenceReader(database).read()
+        val contextAfter = NBio7EHistoricalEvidenceReader(database).currentContextEvidenceFingerprintInputs()
         val rawAfter = NBio7BRawEvidenceFingerprinter.capture(database)
         val prescriptionAfter = NBio7BPrescriptionStateFingerprinter.capture(database)
         val benchmarkAfter = inferenceDao.latestInferenceRun(userProfileId)?.id
@@ -243,7 +263,7 @@ class NBio7EStateContextAcceptanceRunner(
             rawFingerprintBefore = rawBefore,
             rawFingerprintAfter = rawAfter,
             contextFingerprintBefore = contextBefore,
-            contextFingerprintAfter = fingerprint(evidenceAfter.currentContextEvidenceFingerprintInputs),
+            contextFingerprintAfter = fingerprint(contextAfter),
             prescriptionBefore = prescriptionBefore,
             prescriptionAfter = prescriptionAfter,
             benchmarkRunIdBefore = benchmarkBefore,
@@ -275,7 +295,7 @@ class NBio7EStateContextAcceptanceRunner(
         val processedContextSessions = mutableSetOf<String>()
         val frozenPredictionBySession = mutableMapOf<String, FrozenContextPrediction>()
         val learningResidualBySession = mutableMapOf<String, Double>()
-        val priorDoses = mutableListOf<DatedSessionDose>()
+        val doseTimeline = CausalDoseTimelineV1(evidence.doseBySession)
         var latestSignals = emptyList<ContextSignalV1>()
 
         fun applyContextEvents(through: Instant, inclusive: Boolean, onlySessionId: String? = null) {
@@ -309,6 +329,9 @@ class NBio7EStateContextAcceptanceRunner(
         }
 
         evidence.residuals.forEach { session ->
+            // Include every prior 7D session, even when that session had no evaluable 7B.X held-out
+            // residual. The current/equal-time dose remains excluded from its own prediction.
+            val priorDoses = doseTimeline.priorTo(session.at)
             // Evidence tied to this session is deliberately excluded until after every candidate
             // prediction has been frozen and scored. Equal timestamps do not imply causal order.
             applyContextEvents(session.at, inclusive = false)
@@ -356,7 +379,6 @@ class NBio7EStateContextAcceptanceRunner(
                 ).posterior
             }
             learningResidualBySession[session.sessionId] = session.observedLogResidual - basePrediction.mean
-            evidence.doseBySession[session.sessionId]?.let(priorDoses::add)
             applyContextEvents(session.at, inclusive = true, onlySessionId = session.sessionId)
         }
         val lastHorizon = maxOf(
@@ -382,7 +404,7 @@ class NBio7EStateContextAcceptanceRunner(
                 contextTagCounts = evidence.contextTagCounts,
                 independentEpisodeCounts = episodeCounts,
                 moduleSupportStates = support.toSortedMap(),
-                sourceDoseRunId = evidence.sourceDoseRunId,
+                upstreamProvenance = evidence.upstreamProvenance,
                 doseSessions = evidence.doseBySession.size,
                 capabilityBaseline = metrics.getValue(TemporalCandidateLayer.CAPABILITY_BASELINE).result(evidence.residuals.size),
                 temporalBase = metrics.getValue(TemporalCandidateLayer.TEMPORAL_BASE).result(evidence.residuals.size),
@@ -401,7 +423,7 @@ class NBio7EStateContextAcceptanceRunner(
         id = id,
         userProfileId = userId,
         sourceInferenceRunId = sourceRunId,
-        temporalModelConfigId = config.semanticVersion,
+        temporalModelConfigId = NBio7EExecutionConfigV2.definition(config, audit.upstreamProvenance).id.value,
         calculatedAt = evidenceThrough,
         temporalStates = finalStates.map { (layer, state) -> NBio7ETemporalStateRecordV1(layer, ContextScope.SYSTEMIC, state) }
             .sortedBy { it.layer.storageValue },
@@ -476,10 +498,23 @@ private fun ContextModuleDescriptor.toJson() = JSONObject()
 private fun NBio7ERealHistoryAudit.toJson() = JSONObject()
     .put("residualSessions", residualSessions).put("profileObservations", profileObservations)
     .put("contextTagCounts", JSONObject(contextTagCounts)).put("independentEpisodeCounts", JSONObject(independentEpisodeCounts))
-    .put("moduleSupportStates", JSONObject(moduleSupportStates)).put("sourceDoseRunId", sourceDoseRunId ?: JSONObject.NULL)
+    .put("moduleSupportStates", JSONObject(moduleSupportStates))
+    .put("upstreamProvenance", upstreamProvenance.toJson())
     .put("doseSessions", doseSessions)
     .put("capabilityBaseline", capabilityBaseline.toJson()).put("temporalBase", temporalBase.toJson())
     .put("doseTemporal", doseTemporal.toJson()).put("contextTemporal", contextTemporal.toJson())
+
+private fun NBio7EUpstreamProvenanceV1.toJson() = JSONObject()
+    .put("capabilityModelIdentity", capabilityModelIdentity)
+    .put("capabilitySolverIdentity", capabilitySolverIdentity)
+    .put("capabilityEvidencePolicyIdentity", capabilityEvidencePolicyIdentity)
+    .put("capabilityEvaluationProtocol", capabilityEvaluationProtocol)
+    .put("doseSourceMode", doseSourceMode)
+    .put("doseModelIdentities", JSONObject(doseModelIdentities))
+    .put("doseConfigIds", JSONObject(doseConfigIds))
+    .put("doseEligibleSessions", doseEligibleSessions)
+    .put("pd001Status", pd001Status)
+    .put("pd002Status", pd002Status)
 
 private fun NBio7EPredictiveMetrics.toJson() = JSONObject()
     .put("evaluableSessions", evaluableSessions).put("meanLogPredictiveScore", meanLogPredictiveScore ?: JSONObject.NULL)

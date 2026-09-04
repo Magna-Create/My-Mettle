@@ -160,7 +160,9 @@ Hosted CI cannot open the user's installed database or prove real-history counts
 N-BIO 7E State & Context Acceptance
 ```
 
-It exports one privacy-bounded JSON without note text. The required result includes app/device/schema and model/config/solver identities; PD status; 17+25 synthetic results; registered modules/learner types/support/episodes/target declarations; chronological BASE/DOSE/CONTEXT metrics and ablations; future-leakage guard; persistence/reload/deletion/replay/invalidation; raw/context/prescription/`BENCHMARK_V0` fingerprints; Native backup/restore; foreign keys; runtime; normal-behaviour and later-phase flags.
+It exports one privacy-bounded JSON without note text. Format v2 includes app/device/schema and 7E model/config/solver identities; exact selected 7B.X capability protocol/model/solver/evidence-policy provenance; causal in-memory 7D model/config provenance and eligible/resolved dose-session counts; PD status; 17+25 synthetic results; registered modules/learner types/support/episodes/target declarations; chronological BASE/DOSE/CONTEXT metrics and ablations; future-leakage guard; persistence/reload/deletion/replay/invalidation; raw/context/prescription/`BENCHMARK_V0` fingerprints; Native backup/restore; foreign keys; runtime; normal-behaviour and later-phase flags.
+
+The first device export (format v1, 2026-09-04) passed its internal synthetic/persistence/integrity checks but is not closure evidence: it reported zero dose sessions because 7D acceptance runs are intentionally temporary, and the 7E history adapter used the rejected Candidate-v1 predictor. Format v2 corrects acquisition to selected Candidate-v2/Adaptive Sparse plus causal in-memory 7D replay and makes those identities part of structural PASS. Do not run 7B.X or 7D acceptance as a prerequisite; their deliberate cleanup cannot populate 7E.
 
 Until that JSON passes review, the exact structural verdict is:
 

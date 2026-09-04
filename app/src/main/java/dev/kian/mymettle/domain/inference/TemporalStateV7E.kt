@@ -323,6 +323,31 @@ data class DatedSessionDose(
     init { require(value.isFinite() && value >= 0.0) }
 }
 
+/**
+ * Stateful causal cursor over all resolved SessionDose events. Observation availability does not
+ * define dose availability: a dose-only session still becomes visible to later horizons, while an
+ * equal-time/current-session dose remains excluded.
+ */
+class CausalDoseTimelineV1(dosesBySession: Map<String, DatedSessionDose>) {
+    private val ordered = dosesBySession.entries
+        .sortedWith(compareBy<Map.Entry<String, DatedSessionDose>> { it.value.at }.thenBy { it.key })
+    private val prior = mutableListOf<DatedSessionDose>()
+    private var cursor = 0
+    private var previousHorizon: Instant? = null
+
+    fun priorTo(horizon: Instant): List<DatedSessionDose> {
+        previousHorizon?.let { priorHorizon ->
+            require(!horizon.isBefore(priorHorizon)) { "Dose replay horizons must be chronological." }
+        }
+        while (cursor < ordered.size && ordered[cursor].value.at.isBefore(horizon)) {
+            prior += ordered[cursor].value
+            cursor++
+        }
+        previousHorizon = horizon
+        return prior.toList()
+    }
+}
+
 object RecentDoseCovariateV1 {
     fun calculate(
         priorDoses: List<DatedSessionDose>,

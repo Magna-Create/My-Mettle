@@ -52,7 +52,7 @@ For an eligible profile/version/side/session observation, define a dimensionless
 y_t = log(observedPerformanceCoordinate_t / frozenCapabilityMedian_t)
 ```
 
-The exact family adapter and upstream capability model/solver identity are retained in provenance. Unsupported, non-positive, semantically incompatible or absent coordinates fail closed. 7C-dependent coordinates retain PD-001 quarantine.
+The installed-history v1 adapter uses the selected N-BIO-7B.X Candidate-v2 mathematical model through the deterministic Adaptive Sparse solver and corrected evidence policy. It does not use the rejected Candidate-v1 demonstration predictor. The exact evaluation protocol, mathematical-model identity, solver identity and evidence-policy identity are retained in the acceptance provenance. Unsupported, non-positive, semantically incompatible or absent coordinates fail closed. 7C-dependent coordinates retain PD-001 quarantine.
 
 The v1 installed-history adapter then takes one arithmetic mean log residual per session. It conservatively retains the mean component predictive variance rather than dividing by profile-row count, because same-session profiles share context and cannot be treated as independent longitudinal draws. This produces a session-level shared residual signal after profile-local capability has already been modelled upstream; it does not translate kilograms across profiles or infer a shared muscle-development quantity. Profile-specific skill/trajectory remains owned by the upstream capability state.
 
@@ -100,6 +100,8 @@ Q_t = diag(q_p Δ_t, q_z (1 - φ(Δ_t)^2), 0)
 ```text
 d_t = Σ_j standardise(SessionDose_j) exp(-ln(2) ageDays_j / h_D), j < t
 ```
+
+The installed-history adapter reconstructs 7D SessionDose causally in memory from canonical Room evidence because the 7D acceptance runner intentionally deletes its temporary SHADOW runs. It exports all four 7D model/config identities and PD-002 status; it does not require or manufacture a persisted 7D run. Every resolved prior dose session enters the timeline even when that session has no evaluable 7B.X held-out residual. Equal-time/current-session dose is excluded.
 
 For `TEMPORAL_BASE`, the observation design fixes the dose coordinate to zero, so `β_D` cannot influence or learn from that layer. For `DOSE_TEMPORAL` and `CONTEXT_TEMPORAL`, `β_D` is represented in the joint Gaussian posterior and the observation design uses `d_t`. Missing/unresolved dose contributes no fabricated observed dose: the design coordinate is zero, availability is reported false, and the dose-aware candidate falls back to a BASE-equivalent prediction/update for that horizon without changing the dose coefficient.
 

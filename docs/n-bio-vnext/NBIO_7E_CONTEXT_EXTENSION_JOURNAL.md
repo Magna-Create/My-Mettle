@@ -207,6 +207,19 @@ Chronology/replay impact: protocol-only local signals remain derived and replaya
 Failure behaviour: wrong local scope still fails closed; absence of a consumer never falls back to systemic state.
 Human/3P extension impact: an author can test local envelopes now but must not claim an effectful plug-in point until a later model/version adds a consumer.
 
+DECISION 7E-API-010
+Date / HEAD: 2026-09-04 / after db2565a
+Component: upstream capability/dose acquisition and provenance
+Decision: installed-history 7E obtains capability residuals from the selected 7B.X Candidate-v2 mathematical model using Adaptive Sparse and the corrected evidence policy. It reconstructs 7D SessionDose causally in memory from canonical evidence and exports exact capability protocol/model/solver/evidence-policy plus 7D model/config identities and open PD statuses. It does not depend on temporary acceptance runs being left in Room.
+Why: the first device report revealed that the adapter used the rejected Candidate-v1 demonstration prediction and searched for a persisted 7D SHADOW run, while both 7B.X and 7D acceptance correctly delete their temporary runs. The resulting zero-dose report could pass structural checks and the temporal component could compensate for an upstream Candidate-v1 bias.
+Alternatives considered: require users to run 7B.X/7D first (ineffective because cleanup is deliberate); make 7B.X/7D acceptance outputs persistent (changes those accepted cleanup contracts); silently fall back to Candidate-v1/no dose (scientifically invalid); copy prior acceptance JSON into Room (non-canonical and brittle).
+Compatibility impact: acceptance JSON advances to format v2. Existing pre-closure 7E derived runs remain deletable and replayable; canonical evidence and Room15 schema do not change.
+Chronology/replay impact: all dose sessions strictly before a prediction horizon enter the prior-dose timeline, including sessions without a 7E residual. Equal-time dose is excluded. 7E delete-derived replay uses one immutable privacy-bounded input snapshot after upstream causal construction; upstream solver replay remains covered by its own accepted suites.
+Failure behaviour: structural PASS now requires the selected capability identities, exact 7D model/config identities and the in-memory 7D replay mode. Zero resolved dose sessions remains a legitimate reported outcome when all eligible outputs are unresolved; it is no longer confounded with an absent temporary run.
+Human/3P extension impact: no module SPI change. Module authors still receive only the approved typed view; upstream provenance is host-owned and cannot be forged by a module.
+Internet/source input if any: none; this correction follows repository acceptance cleanup semantics and the submitted physical evidence.
+Supersedes / superseded by: tightens the installed-history acquisition implicit in 7E-API-007; does not alter the preregistered temporal equations.
+
 ---
 
 # 4. What a feature/tag is allowed to plug into
@@ -931,6 +944,28 @@ Scope check: all 7E outputs remain SHADOW/CANDIDATE under PD-003; PD-001/PD-002 
 Reset: reread the mission objective, current journal, structural closure criteria and next-block requirement. The remaining work is documentation/schema checkpoint, a final exact-head CI run, and an explicit device-action handoff—not model tuning.
 
 Next block: commit and push the generated schema plus implementation checkpoint, require final exact-head CI green, then stop only at the genuine physical-device capability boundary with exact commands and requested privacy-bounded JSON.
+
+REVIEW 7 — 2026-09-04T12:45Z / db2565a
+
+Block objective: inspect the first physical 7E JSON, decide whether prior 7B.X/7D debug actions are prerequisites, and accept or reject the report without tuning to appearance.
+
+Completed: parsed the privacy-bounded device report. Its internal checks passed: Room15, 17/17 temporal cases, 25/25 module cases, future-leakage guard, persistence/deletion/replay/invalidation, Native backup, unchanged raw/context/prescription/BENCHMARK fingerprints and clean foreign keys. Real context was honestly absent (`NO_EVIDENCE`). Audited the 7B.X and 7D runners and confirmed both delete temporary SHADOW runs by design. Audited the 7E adapter and found it consumed Candidate-v1 predictions and only persisted 7D rows.
+
+Diff / architecture notes: physical report 1 is not accepted for closure despite its self-reported PASS. It had `sourceDoseRunId=null`, zero dose sessions, and a capability baseline signed bias of about -0.084 log units. That result cannot adjudicate dose and risks treating correction of a rejected upstream predictor as temporal state. The adapter is being changed to selected Candidate-v2/Adaptive Sparse and causal in-memory 7D replay with explicit upstream provenance. Dose chronology is being widened from residual-matched sessions to every strictly prior dose session.
+
+Tests/builds/background tasks: started focused Kotlin compilation after the correction. Local Gradle initially had to download 9.3.1; no hidden prior acceptance job was running. Exact-head CI and a replacement physical report remain pending.
+
+Errors/warnings: running 7B.X and 7D device acceptances before 7E would waste time and still leave no rows because cleanup is intentional. The prior `structuralVerdict` omitted an upstream-source guard; format v2 adds one. The 27-minute first run also repeated expensive history reconstruction three times; the replacement reads expensive upstream evidence once and replays 7E-owned derivations from that immutable snapshot, with a lightweight raw-context fingerprint re-read.
+
+Extension/API decisions recorded: 7E-API-010.
+
+Internet check: no lookup was useful; the issue is exact repository lifecycle/provenance behaviour established directly from source and the physical JSON, not an external architectural ambiguity.
+
+Scope check: equations, Room schema, module SPI, product authority and normal workout behaviour remain unchanged. PD-001/PD-002/PD-003 remain OPEN; no 7F/7G/8/9 work.
+
+Reset: reread the mission chronology, upstream-quarantine and physical-closure requirements plus this journal entry. The next block is source compilation, targeted regression coverage, exact-head CI and one replacement 7E device run only.
+
+Next block: finish compilation/tests, review actual diff, push a coherent correction, require exact-head CI green, then request a format-v2 7E report without asking the user to pre-run 7B.X or 7D.
 
 ---
 

@@ -35,6 +35,23 @@ class TemporalStateV7ETest {
     }
 
     @Test
+    fun `dose-only sessions enter later horizons while equal-time dose stays excluded`() {
+        val timeline = CausalDoseTimelineV1(
+            mapOf(
+                "dose-only" to DatedSessionDose(start.plusSeconds(86_400), 1.5),
+                "same-time" to DatedSessionDose(start.plusSeconds(2 * 86_400), 2.0),
+                "future" to DatedSessionDose(start.plusSeconds(3 * 86_400), 2.5),
+            ),
+        )
+        assertEquals(
+            listOf(DatedSessionDose(start.plusSeconds(86_400), 1.5)),
+            timeline.priorTo(start.plusSeconds(2 * 86_400)),
+        )
+        assertEquals(2, timeline.priorTo(start.plusSeconds(3 * 86_400)).size)
+        assertFailsWith<IllegalArgumentException> { timeline.priorTo(start) }
+    }
+
+    @Test
     fun `stable state remains centred after repeated neutral observations`() {
         var state = filter.initial(start)
         repeat(12) { index ->
