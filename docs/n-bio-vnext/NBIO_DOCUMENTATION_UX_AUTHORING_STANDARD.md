@@ -124,7 +124,7 @@ Does not initially need:
 
 Needs:
 
-- plain-English model of evidence, signals and uncertainty;
+- a straightforward model of evidence, signals and uncertainty;
 - concrete examples;
 - clear separation between association, uncertainty and authority.
 
@@ -431,7 +431,8 @@ Use:
 - present tense for behaviour;
 - imperative mood for instructions;
 - direct, literal language;
-- precise technical nouns;
+- basic English where a more elaborate phrase adds nothing;
+- precise technical nouns when they carry necessary meaning;
 - calm failure language.
 
 Prefer:
@@ -456,21 +457,41 @@ Do not use patronising language.
 
 Do not over-explain ordinary Kotlin concepts to experienced developers unless the page is explicitly introductory.
 
-Explain N-BIO-specific semantics thoroughly.
+Explain N-BIO-specific semantics thoroughly, but use the simplest wording that remains correct.
 
-## 11.2 Friendly does not mean vague
+## 11.2 Friendly means easy to read
 
-Friendly:
+Do not add conversational padding to make documentation sound friendly.
+
+Friendly documentation is straightforward, well organised and easy to understand.
+
+Prefer:
 
 > Your module owns its derived state. N-BIO owns the combined inference state.
 
-Vague:
+not:
 
-> Your module generally works with state in a safe way.
+> Think of your module as having its own little memory while N-BIO looks after the bigger picture.
 
-Precision wins.
+The second version is less precise and takes longer to understand.
 
-## 11.3 Contractions are allowed
+## 11.3 Do not translate simple explanations back into jargon
+
+Do not write a plain explanation and then restate the same point in more technical language simply to sound rigorous.
+
+If one straightforward sentence carries the full meaning, stop there.
+
+Use a technical term when the reader needs that term to understand source, reference, logs, configuration or later documentation.
+
+When a technical term is needed, introduce it inside the same clear explanation where possible.
+
+For example:
+
+> If your module has only been activated once, its learned relationship to its context target will remain uncertain.
+
+This is preferable to splitting the same point into a friendly sentence followed by a separate "technically" sentence.
+
+## 11.4 Contractions are allowed
 
 Do not ban contractions mechanically.
 
@@ -478,7 +499,7 @@ Do not ban contractions mechanically.
 
 Reference contracts and warnings may use a slightly more formal tone when precision benefits.
 
-## 11.4 Humour
+## 11.5 Humour
 
 Humour is optional and rare.
 
@@ -503,6 +524,8 @@ House rules:
 - one main thought per sentence;
 - one logical idea per paragraph;
 - put the important sentence first;
+- use the shortest natural wording that preserves the meaning;
+- remove filler before adding explanation;
 - split nested or clause-heavy sentences;
 - use lists when the reader is comparing or executing multiple items;
 - use prose when relationships or nuance matter.
@@ -742,17 +765,29 @@ Software stability does not imply scientific truth.
 
 # 18. Probabilistic and scientific language
 
-N-BIO documentation must remain approachable without hiding the actual statistical concepts.
+Explain probabilistic and scientific concepts in straightforward language. Do not make the wording more elaborate merely because the underlying model is complex.
 
-Use progressive disclosure:
+Use the simplest technically correct sentence.
 
-> The module has too little independent evidence to estimate this relationship precisely.
->
-> Technically, the signal remains prior-dominated and its posterior variance is broad.
+Prefer:
 
-Do not replace every technical uncertainty concept with the generic word `confidence`.
+> If your module has only been activated once, its learned relationship to its context target will remain uncertain.
 
-Keep these distinctions explicit:
+Avoid:
+
+> Your module has seen only one independent episode, so its learned relationship remains uncertain.
+
+when the extra terminology does not add information the reader needs at that point.
+
+Also avoid immediately restating a clear sentence as:
+
+> Technically, the module remains `PARTIALLY_LEARNED` and publishes a broad posterior variance.
+
+If the reader later needs `PARTIALLY_LEARNED` or posterior variance to understand an API field, status value, log or mathematical contract, explain that term there in equally direct language.
+
+Do not replace real concepts with a generic word such as `confidence` when it changes the meaning.
+
+Keep these distinctions accurate where they matter:
 
 - extraction confidence;
 - evidence support;
@@ -760,13 +795,29 @@ Keep these distinctions explicit:
 - empirical calibration;
 - model/prediction authority.
 
-They are not interchangeable.
+They are not interchangeable, but they do not all need to be introduced every time uncertainty is mentioned.
 
-## 18.1 Association is not causation
+## 18.1 Prefer direct explanations over terminology displays
+
+Do not write documentation to demonstrate that N-BIO uses sophisticated statistics.
+
+Write it so the developer knows what happens and what they need to do.
+
+For example:
+
+> A module with little independent evidence should make only a weak contribution to the combined state.
+
+is usually better introductory documentation than:
+
+> A prior-dominated module with broad posterior variance is precision-weighted during arbitration.
+
+The second sentence belongs only where the exact arbitration or posterior contract is being explained.
+
+## 18.2 Association is not causation
 
 Prefer:
 
-> Illness evidence has been associated with lower predicted performance for this user.
+> For this user, illness reports have tended to occur alongside lower predicted performance.
 
 Do not write:
 
@@ -774,7 +825,7 @@ Do not write:
 
 unless a separately justified causal model establishes that claim.
 
-## 18.2 Plain English before equations
+## 18.3 Plain language before equations
 
 When mathematics materially helps:
 
@@ -787,7 +838,7 @@ Do not hide essential contract mathematics merely because it is mathematical.
 
 Do not put dense equations in the quickstart.
 
-## 18.3 No fake universal confidence or action threshold
+## 18.4 No fake universal confidence or action threshold
 
 Do not document patterns like:
 
@@ -1030,7 +1081,9 @@ Every author-facing documentation change must satisfy the following.
 ## 24.4 Language
 
 - Active/direct voice predominates.
-- N-BIO-specific jargon is defined.
+- The simplest technically correct wording is used.
+- N-BIO-specific jargon appears only where it helps the reader understand the real interface or model.
+- Plain explanations are not immediately duplicated in more technical wording.
 - Terminology is consistent.
 - Association/causation language is correct.
 - Uncertainty types are not collapsed into generic confidence.
@@ -1225,6 +1278,8 @@ Do not ship author docs that exhibit these patterns:
 15. Vague failure wording such as "it should work".
 16. Unversioned examples or migration assumptions.
 17. Documentation that requires reading implementation internals for routine author tasks.
+18. Simple ideas rewritten in ornate, conversational or unnecessarily statistical language.
+19. A clear explanation immediately repeated as a "technical" translation that adds no new information.
 
 ---
 
@@ -1263,6 +1318,8 @@ Before publishing a page, ask:
 
 **Can an expert retrieve the exact semantics without reverse-engineering source?**
 
+**Is every sentence as simple as it can be without losing technical meaning?**
+
 **Does every technical claim match the actual implementation?**
 
-If the final answer to the last question is not demonstrably yes, the page is not ready.
+If the final answer to either of the last two questions is not demonstrably yes, the page is not ready.
