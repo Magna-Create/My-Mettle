@@ -59,6 +59,12 @@ FORBIDDEN_FICTIONAL_API = {
 }
 
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
+HEADING_PATTERN = re.compile(r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE)
+
+
+def github_heading_slug(heading: str) -> str:
+    plain = re.sub(r"[^\w\- ]", "", heading.lower())
+    return re.sub(r" +", "-", plain.strip())
 
 
 def fail(message: str, errors: list[str]) -> None:
@@ -77,12 +83,22 @@ def main() -> int:
     for path in markdown_files:
         text = path.read_text(encoding="utf-8")
         for raw_target in LINK_PATTERN.findall(text):
-            target = raw_target.strip().split("#", 1)[0]
-            if not target or target.startswith(("http://", "https://", "mailto:")):
+            target_parts = raw_target.strip().split("#", 1)
+            target = target_parts[0]
+            anchor = target_parts[1] if len(target_parts) == 2 else ""
+            if target.startswith(("http://", "https://", "mailto:")):
                 continue
-            resolved = (path.parent / target).resolve()
+            resolved = (path.parent / target).resolve() if target else path.resolve()
             if not resolved.exists():
                 fail(f"Broken internal link in {path.relative_to(ROOT)}: {raw_target}", errors)
+                continue
+            if anchor and resolved.suffix == ".md":
+                headings = {
+                    github_heading_slug(value)
+                    for value in HEADING_PATTERN.findall(resolved.read_text(encoding="utf-8"))
+                }
+                if anchor not in headings:
+                    fail(f"Broken Markdown anchor in {path.relative_to(ROOT)}: {raw_target}", errors)
 
     kotlin_text = "\n".join(
         path.read_text(encoding="utf-8")

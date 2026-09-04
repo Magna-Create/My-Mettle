@@ -6,7 +6,7 @@ Context Modules have several independent version axes. Change the axis that matc
 
 | Axis | Source field | Change it when | Current compatibility rule |
 |---|---|---|---|
-| Feature schema | `ContextFeatureKey.schemaVersion` | The feature value or meaning changes incompatibly | Only versions in `compatibleEvidenceVersions` are accepted |
+| Feature schema | `ContextFeatureKey.schemaVersion` | The feature value or meaning changes incompatibly | Exact registered key plus the compatibility guard |
 | Evidence compatibility | `compatibleEvidenceVersions` | The exact registered evidence definition needs an additional version guard | No inferred compatibility or adaptation |
 | Module protocol | `ContextModuleDescriptor.protocolVersion` | The host-wide SPI contract changes | Exact protocol `1` only |
 | Learner model | `modelVersion` | Learner mathematics or interpretation changes | Exact match on reload |
@@ -69,3 +69,12 @@ It preserves unrelated module memory, the context-free and dose temporal candida
 Room15 stores five 7E-derived concepts: run provenance, temporal state, module state, signals, and module status. The 14→15 migration is automatic and additive. Module authors do not migrate the database manually and do not write these tables directly.
 
 See the [authoring state workflow](./AUTHORING.md#3-create-module-owned-state-and-a-codec), [persistence source](../../../app/src/main/java/dev/kian/mymettle/inference/NBio7EShadowRepository.kt), and [Room migration test](../../../app/src/androidTest/java/dev/kian/mymettle/data/local/NBio7ERoomMigrationTest.kt).
+
+## Authoring API follow-up
+
+Two current surfaces are workable but awkward:
+
+- `compatibleEvidenceVersions` does not provide cross-version adaptation because registry lookup already requires an exact feature key. A future API revision should either formalise an adapter registry or narrow this field's name and contract.
+- `ContextModuleContractTckV1` lives in this app's test source and checks only the provider/initial-state contract. A future reusable authoring package could expose it with a host-view fixture for evaluate/signal tests.
+
+This documentation mission does not change either accepted API.

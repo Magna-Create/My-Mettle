@@ -12,6 +12,10 @@ Both are build-integrated and SHADOW-only. At 7E physical closure, installed his
 
 **Learner family:** `episode_persistence_conjugate_association`
 
+**Model/config:** `illness-episode-association-v1` / `context-module:illness-episode:v1`
+
+**State codec:** `EpisodeAssociationStateCodecV2`, schema `2`
+
 **Feature:** `ILLNESS_REPORTED@1`
 
 **Target:** `SYSTEMIC_TRANSIENT_STATE`
@@ -64,6 +68,10 @@ It does not claim that illness caused a performance change, measure illness seve
 **Implementation:** `ObservationVarianceAssociationModuleV1`
 
 **Learner family:** `two_group_robust_variance_ratio`
+
+**Model/config:** `time-pressure-observation-variance-v1` / `context-module:time-pressure-variance:v1`
+
+**State codec:** `ObservationVarianceStateCodecV2`, schema `2`
 
 **Feature:** `TIME_PRESSURE_REPORTED@1`
 

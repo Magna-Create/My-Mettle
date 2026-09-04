@@ -79,4 +79,6 @@ The author-facing SPI is currently **EXPERIMENTAL**. That label describes compat
 
 PD-001, PD-002, and PD-003 all remain open. They cover upstream capability calibration, SessionDose calibration, and 7E temporal/context calibration respectively. Structural closure did not convert any of them into product authority.
 
+N-BIO-7F, N-BIO-7G, N-BIO-8, and N-BIO-9 product integration remain unstarted. The documentation fixture and its tests do not change production registration or normal workout behaviour.
+
 Current source is the final API authority. The [7E state/context contract](../NBIO_7E_STATE_CONTEXT_CONTRACT.md) and [physical closure record](../NBIO_7E_STATE_CONTEXT_PHYSICAL_CLOSURE_2026-09-04.md) explain the accepted scientific and product boundaries. The [rough extension journal](../NBIO_7E_CONTEXT_EXTENSION_JOURNAL.md) is historical design evidence, not the author guide.
