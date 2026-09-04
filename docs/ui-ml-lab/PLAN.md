@@ -88,13 +88,51 @@ LAB-1 deliberately does **not** introduce a generic free-form generation API. Fu
 - `docs/ui-ml-lab/research/LAB_2A_FAILURE_ARCHAEOLOGY.md`;
 - `docs/ui-ml-lab/research/LAB_2B_IMPLEMENTATION_PLAYBOOK.md`.
 
-The research examined the implementation details that commonly decide whether these integrations work, including exact model/runtime path, Android/Kotlin integration, Snapdragon backend applicability, native/toolchain compatibility, model packaging, image preprocessing, context/image-token behaviour, lifecycle/concurrency, backend verification, failure modes, Android 16 KB native-library risk, licensing and version pinning.
+The research must seek hard evidence about the implementation details that commonly decide whether these integrations work, including where relevant:
 
-**Failure archaeology is complete for this gate.** The research explicitly covers obsolete SDK paths, native-version/symbol failures, artefact/download integrity, QNN/HTP initialisation, accelerator-specific crashes, concurrent native-handle races, VLM context/media-history failures, image geometry, runtime/model registry mismatch, repeat-init lifecycle failures and runtime-version regressions. Future LAB-2B failures should extend the table rather than restarting the search from scratch.
+- exact model artefact/quantisation and target hardware;
+- Android runtime/API actually used by successful implementations;
+- Snapdragon 8 Elite / Qualcomm backend applicability;
+- NPU/GPU/CPU backend selection and how successful projects verify the backend actually used;
+- AGP, Kotlin, NDK, CMake, ABI and native-library compatibility;
+- `.so` packaging/loading and dependency/version alignment;
+- model packaging/download/storage and large-file handling;
+- mmap/asset-compression/file-access pitfalls;
+- image preprocessing and multimodal prompt path;
+- context/image-token memory behaviour;
+- lifecycle, singleton/session ownership, warm-up, cancellation and concurrency;
+- app background/resume behaviour and model reload/unload stability;
+- RAM/storage/thermal considerations;
+- R8/ProGuard and Gradle packaging collisions where relevant;
+- firmware/driver/Android-version dependencies;
+- redistribution/licensing constraints;
+- known-good samples, commits, issue threads and forum shortcuts that prevent rebuilding failed approaches from ground zero.
 
-**Mandatory STOP for research:** satisfied. No serious Qualcomm/Qwen/local-VLM integration was begun inside My Mettle during LAB-2A.
+**Failure archaeology is mandatory.** Specifically look for recurring classes of failure such as ABI mismatch, `UnsatisfiedLinkError`, linker/native dependency errors, wrong SDK/runtime/model pairing, wrong SoC/backend artefacts, missing DSP/NPU libraries, silent CPU fallback, model-file access failures, repeated lifecycle leaks/crashes, and benchmark-only setups that do not translate into a stable Kotlin app.
 
-**STOP condition:** satisfied for research. One primary route and implementation playbook exist, but they require human review before implementation. **Do not begin LAB-2B by assumption.**
+The final playbook should end with one concrete recommended route, conceptually documenting:
+
+```text
+Model artefact / quantisation
+Runtime + exact relevant version
+Target SoC/backend
+Known-good Android/Kotlin reference
+AGP/Kotlin/NDK/CMake requirements where applicable
+Native artefacts / packaging rules
+Model storage and load pattern
+Image preprocessing/input path
+Generation call shape
+Lifecycle/threading pattern
+Backend-verification method
+Known traps + confirmed fixes
+Fallback decision if the route fails
+```
+
+The completed research covers those required implementation dimensions in the report, source ledger, failure archaeology and playbook. Future LAB-2B failures should extend those artefacts rather than restarting the search from scratch.
+
+**Mandatory STOP for research:** satisfied. No serious Qualcomm/Qwen/local-VLM Android integration was begun inside My Mettle during LAB-2A. The explicit goal remains to avoid repeating previous native-runtime work characterised by benchmark hell, repeated rebuild failures, opaque native errors, uncertain runtime compatibility and implementation without first understanding how successful projects avoided those traps.
+
+**STOP condition:** satisfied for research. The deployment playbook and one recommended route exist and now await human review. LAB-2A does **not** modify My Mettle or prove the runtime itself; that proof belongs to LAB-2B. **Do not begin LAB-2B by assumption.**
 
 **Must not pull forward:** My Mettle runtime integration, polished product integration, equipment vision workflow, canonical persistence, or multiple competing runtime stacks “just in case”.
 
