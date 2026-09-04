@@ -1,13 +1,14 @@
 # N-BIO-7E — Context Extension Working Journal
 
-> **Status:** living rough implementation journal for N-BIO-7E.
+> **Status:** preserved rough historical implementation journal for the structurally closed N-BIO-7E mission.
 >
-> This file is intentionally not polished. It exists to capture extension/API/SPI decisions while they are still fresh, so a later post-7E cleanup mission can turn the proven implementation into a clean human/third-party integration contract without reverse-engineering intent from source code.
+> This file remains intentionally unpolished and chronological. It records decisions as they developed, so earlier entries may be superseded by later entries or final source.
 >
-> Do not delete rough history merely because a later decision supersedes it. Mark superseded entries clearly and point to the newer decision.
+> Module authors should start with the source-verified [`context-modules` documentation](./context-modules/README.md). Do not use an early journal entry as final API authority.
 
 Read with:
 
+- [`context-modules/README.md`](./context-modules/README.md)
 - [`CONTEXT_MODULE_ARCHITECTURE.md`](./CONTEXT_MODULE_ARCHITECTURE.md)
 - [`NBIO_7E_WORK_PROTOCOL.md`](./NBIO_7E_WORK_PROTOCOL.md)
 - [`PLAN.md`](./PLAN.md)

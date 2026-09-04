@@ -50,6 +50,9 @@ jobs:
       - name: Verify context interpretation architecture
         run: python3 tools/context_interpretation/verify_boundary.py
 
+      - name: Verify Context Module author documentation
+        run: python3 tools/context_modules/verify_docs.py
+
       - name: Check whitespace errors
         run: git diff --check
 

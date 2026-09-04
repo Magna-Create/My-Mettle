@@ -14,6 +14,10 @@ Use this directory in the following order.
 
 `CONTEXT_MODULE_ARCHITECTURE.md` likewise does not make tags behaviour-driving. It is the requirement set that kept the implemented 7E platform from degenerating into passive context metadata or hard-coded per-tag logic inside N-BIO Core.
 
+## Context Module authors
+
+Start with the [`context-modules` author documentation](./context-modules/README.md) if you want to add or maintain a module. It provides a compile-tested quickstart, the current author-facing SPI reference, real production examples, versioning/replay guidance, and symptom-based troubleshooting. You do not need to read N-BIO Core or the rough 7E journal first.
+
 ## Core biological/performance research
 
 6. [`RESEARCH_GUIDE.md`](./RESEARCH_GUIDE.md) — implementation-facing evaluation/navigation.
@@ -35,7 +39,8 @@ Use this directory in the following order.
 - [`NON_DYNAMIC_CAPABILITY_CONTRACT.md`](./NON_DYNAMIC_CAPABILITY_CONTRACT.md) — normative N-BIO-7C loaded-hold, duration-only and repeated-contraction capability contract.
 - [`SET_DEMAND_AND_DOSE_CONTRACT.md`](./SET_DEMAND_AND_DOSE_CONTRACT.md) — normative N-BIO-7D SetDemand, exact historical Exposure, candidate EffectiveDose, same-session dependence and SessionDose contract.
 - [`NBIO_7E_STATE_CONTEXT_CONTRACT.md`](./NBIO_7E_STATE_CONTEXT_CONTRACT.md) — preregistered and source-reconciled neutral temporal-state, modular context, chronology, arbitration and Room15 contract.
-- [`NBIO_7E_CONTEXT_EXTENSION_JOURNAL.md`](./NBIO_7E_CONTEXT_EXTENSION_JOURNAL.md) — intentionally rough implementation/API/SPI/research/review record for the dedicated post-7E authoring-guide cleanup.
+- [`context-modules/README.md`](./context-modules/README.md) — source-verified Context Module author entry point and reading paths.
+- [`NBIO_7E_CONTEXT_EXTENSION_JOURNAL.md`](./NBIO_7E_CONTEXT_EXTENSION_JOURNAL.md) — intentionally rough historical implementation/API/SPI/research/review record. Use the Context Module author docs for the final source-verified extension surface.
 - [`NBIO_7E_STATE_CONTEXT_IMPLEMENTATION_CHECKPOINT_2026-09-04.md`](./NBIO_7E_STATE_CONTEXT_IMPLEMENTATION_CHECKPOINT_2026-09-04.md) — historical green implementation checkpoint and format-v2 installed-device acceptance procedure.
 - [`NBIO_7E_STATE_CONTEXT_PHYSICAL_CLOSURE_2026-09-04.md`](./NBIO_7E_STATE_CONTEXT_PHYSICAL_CLOSURE_2026-09-04.md) — physical Room15 N-BIO-7E structural/pre-validation PASS record; the context-free capability baseline remained the real-history champion and PD-001/PD-002/PD-003 remain open.
 - [`POSTPONED_DEVELOPMENT.md`](./POSTPONED_DEVELOPMENT.md) — deferred-validation register; PD-001 quarantines 7C empirical accuracy, PD-002 quarantines 7D dose calibration and PD-003 quarantines 7E temporal/context calibration and biological interpretation.
@@ -146,6 +151,8 @@ PLAN.md
 → relevant research guides
 → current source code
 ```
+
+If your task is only to author a Context Module, begin with [`context-modules/README.md`](./context-modules/README.md) instead of this full architecture path.
 
 For later non-inference work, start with `PLAN.md` and follow the relevant authority links above.
 
