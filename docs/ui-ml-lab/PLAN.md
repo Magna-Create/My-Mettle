@@ -28,31 +28,113 @@
 
 **Must not pull forward:** Qwen/Qualcomm/native-runtime integration, serious VLM benchmarking, equipment scanning, canonical equipment persistence, final AI product UX.
 
-## LAB-2A — Local Multimodal AI Research Gate
+## LAB-2A — Proven Android VLM Implementation Research Gate
 
-**Purpose:** determine one credible Android local multimodal deployment route before My Mettle integration.
+**Purpose:** learn from implementations that have actually succeeded before My Mettle attempts serious local multimodal integration. This is implementation archaeology and deployment-playbook authoring, not merely a hardware/API capability survey.
 
 **Entry condition:** LAB-1 provider shell is stable enough to describe what the product actually needs.
 
-**Major deliverables:** current research on candidate deployment routes; device/runtime compatibility evidence; one selected route; a known-good minimal standalone image+prompt sample; documented failure modes and fallback decision.
+**Research priority:** start with proven Kotlin/Android implementations of `Qwen3-VL-2B-Instruct`, especially Qualcomm-optimised variants on Snapdragon-class hardware. If direct examples are sparse, expand carefully to closely related Qualcomm/QNN-optimised Qwen/VLM implementations whose build/runtime lessons transfer. Prefer evidence in this order:
 
-**Mandatory STOP for research:** do not begin serious Qualcomm/Qwen/local-VLM Android integration before this gate. The explicit goal is to avoid repeating previous native-runtime work characterised by benchmark hell, repeated rebuild failures, opaque native errors, uncertain runtime compatibility and integration without a known-good minimal sample.
+1. working maintained app/repository or reproducible sample;
+2. confirmed GitHub issue/discussion solution with successful follow-up;
+3. Qualcomm/Google/runtime-vendor sample and official integration guidance;
+4. developer forum/community reports with concrete working configuration;
+5. speculative blog/forum advice only as leads, not as proof.
 
-The gate succeeds only after **one** credible deployment route proves a minimal standalone image+prompt path outside My Mettle.
+**Major deliverables:**
 
-**STOP condition:** stop after the route decision and standalone proof. Review the evidence before integrating it into My Mettle.
+- a catalogue of real successful Android/Kotlin implementations and the exact stacks they used where discoverable;
+- a failure-archaeology catalogue showing mistakes people repeatedly make and confirmed fixes/workarounds;
+- practical best practices for stable model packaging, loading, lifecycle, threading, image input and backend use;
+- one recommended deployment route for the minimal harness in LAB-2B;
+- an implementation playbook detailed enough that LAB-2B follows a known recipe rather than improvising from SDK documentation.
 
-**Must not pull forward:** polished product integration, equipment vision workflow, canonical persistence, or multiple competing runtime stacks “just in case”.
+The research must seek hard evidence about the implementation details that commonly decide whether these integrations work, including where relevant:
 
-## LAB-2B — Local VLM Runtime Spike
+- exact model artefact/quantisation and target hardware;
+- Android runtime/API actually used by successful implementations;
+- Snapdragon 8 Elite / Qualcomm backend applicability;
+- NPU/GPU/CPU backend selection and how successful projects verify the backend actually used;
+- AGP, Kotlin, NDK, CMake, ABI and native-library compatibility;
+- `.so` packaging/loading and dependency/version alignment;
+- model packaging/download/storage and large-file handling;
+- mmap/asset-compression/file-access pitfalls;
+- image preprocessing and multimodal prompt path;
+- context/image-token memory behaviour;
+- lifecycle, singleton/session ownership, warm-up, cancellation and concurrency;
+- app background/resume behaviour and model reload/unload stability;
+- RAM/storage/thermal considerations;
+- R8/ProGuard and Gradle packaging collisions where relevant;
+- firmware/driver/Android-version dependencies;
+- redistribution/licensing constraints;
+- known-good samples, commits, issue threads and forum shortcuts that prevent rebuilding failed approaches from ground zero.
 
-**Purpose:** integrate the LAB-2A-selected route behind the LAB-1 provider boundary as an experimental compatibility bridge.
+**Failure archaeology is mandatory.** Specifically look for recurring classes of failure such as ABI mismatch, `UnsatisfiedLinkError`, linker/native dependency errors, wrong SDK/runtime/model pairing, wrong SoC/backend artefacts, missing DSP/NPU libraries, silent CPU fallback, model-file access failures, repeated lifecycle leaks/crashes, and benchmark-only setups that do not translate into a stable Kotlin app.
 
-**Entry condition:** LAB-2A has selected and independently proven one route.
+The final playbook should end with one concrete recommended route, conceptually documenting:
 
-**Major deliverables:** minimal Lab-only runtime spike; downloaded/private model-asset lifecycle as required; capability/failure telemetry suitable for development; provider-boundary tests; removal path documented.
+```text
+Model artefact / quantisation
+Runtime + exact relevant version
+Target SoC/backend
+Known-good Android/Kotlin reference
+AGP/Kotlin/NDK/CMake requirements where applicable
+Native artefacts / packaging rules
+Model storage and load pattern
+Image preprocessing/input path
+Generation call shape
+Lifecycle/threading pattern
+Backend-verification method
+Known traps + confirmed fixes
+Fallback decision if the route fails
+```
 
-**STOP condition:** stop when the spike can answer the selected test task reproducibly enough to evaluate. A spike passing does not make it the universal production backend.
+**Mandatory STOP for research:** do not begin serious Qualcomm/Qwen/local-VLM Android integration inside My Mettle during LAB-2A. The explicit goal is to avoid repeating previous native-runtime work characterised by benchmark hell, repeated rebuild failures, opaque native errors, uncertain runtime compatibility and implementation without first understanding how successful projects avoided those traps.
+
+**STOP condition:** stop after the deployment playbook and one recommended route are reviewed. LAB-2A does **not** need to modify My Mettle or prove the runtime itself; that proof belongs to LAB-2B.
+
+**Must not pull forward:** My Mettle runtime integration, polished product integration, equipment vision workflow, canonical persistence, or multiple competing runtime stacks “just in case”.
+
+## LAB-2B — Minimal Standalone VLM Harness
+
+**Purpose:** prove the LAB-2A-recommended route in the smallest possible Kotlin Android harness before My Mettle depends on it.
+
+**Entry condition:** LAB-2A has produced a reviewed deployment playbook and selected one credible route.
+
+**The harness must remain deliberately tiny.** It should prove the runtime, not the product. Conceptually:
+
+```text
+launch
+→ load model
+→ select/capture one image
+→ submit image + text prompt
+→ receive sensible response
+→ close/reopen app
+→ repeat reliably
+```
+
+No Room, N-BIO, OCR pipeline, equipment schema, equipment UX or My Mettle product integration belongs in this proof.
+
+**Major deliverables:** reproducible image+prompt inference on the target device; verified model/backend path where possible; model load/reload behaviour; lifecycle/background/resume stability; cancellation/concurrency boundaries; storage/RAM/timing/thermal observations; documented deviations from the LAB-2A playbook; a clear PASS / REVISE ROUTE / REJECT ROUTE verdict.
+
+If the recommended route fails, diagnose it against LAB-2A evidence. Do not convert the harness into an open-ended benchmark project or try many native stacks in parallel. Material route changes return to a short research/review decision before another harness attempt.
+
+**STOP condition:** stop only when one route is stable enough on the target device to justify My Mettle integration, or when evidence says the chosen route should be rejected/researched again.
+
+**Must not pull forward:** My Mettle provider integration, OCR/equipment semantics, canonical equipment persistence, polished UX or server contribution.
+
+## LAB-2C — Local VLM Provider Integration
+
+**Purpose:** integrate the LAB-2B-proven route behind the LAB-1 provider boundary as a replaceable local compatibility provider.
+
+**Entry condition:** LAB-2B has a reproducible target-device PASS and its runtime/lifecycle constraints are documented.
+
+**Major deliverables:** Lab-only local provider implementation; downloaded/app-private model-asset lifecycle as required; install/readiness/removal states; capability/failure diagnostics suitable for development; provider-boundary tests; clean removal path; confirmation that provider-specific details do not leak into product/UI contracts.
+
+The local model remains a compatibility bridge unless a later explicit product decision changes that rule. A successful local model does not justify maintaining two competing normal-user AI experiences if the system provider later satisfies the same task.
+
+**STOP condition:** stop when the proven local runtime can satisfy the selected typed task through the LAB-1 provider boundary without pulling equipment-specific interpretation into the provider itself.
 
 **Must not pull forward:** final equipment-recognition UX, server contribution, canonical equipment schema, or assumptions that local must remain preferred if a system provider later satisfies the task.
 
