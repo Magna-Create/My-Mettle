@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -51,7 +53,14 @@ jobs:
         run: python3 tools/context_interpretation/verify_boundary.py
 
       - name: Check whitespace errors
-        run: git diff --check
+        shell: bash
+        run: |
+          git diff --check
+          if [[ "${GITHUB_REF_NAME}" == "agent/ui-ml-lab" ]]; then
+            git fetch --no-tags origin agent/n-bio-vnext-inference
+            BASE="$(git merge-base HEAD origin/agent/n-bio-vnext-inference)"
+            git diff --check "$BASE"..HEAD
+          fi
 
       - name: Clean generated Kotlin and Room outputs
         run: ./gradlew clean --stacktrace --no-daemon
@@ -59,11 +68,72 @@ jobs:
       - name: Unit tests and debug APK
         run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --no-daemon
 
+      - name: Lab unit tests and APK
+        run: ./gradlew :app:testLabUnitTest :app:assembleLab --stacktrace --no-daemon
+
       - name: Compile instrumentation APK
         run: ./gradlew :app:assembleDebugAndroidTest --stacktrace --no-daemon
 
       - name: Android lint
-        run: ./gradlew :app:lintDebug --stacktrace --no-daemon
+        run: ./gradlew :app:lintDebug :app:lintLab --stacktrace --no-daemon
+
+      - name: Verify debug and Lab APK identity isolation
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+
+          sdk = Path(os.environ.get("ANDROID_SDK_ROOT") or os.environ["ANDROID_HOME"])
+          aapt = sdk / "build-tools" / "36.0.0" / "aapt"
+          debug_apk = Path("app/build/outputs/apk/debug/app-debug.apk")
+          lab_apk = Path("app/build/outputs/apk/lab/app-lab.apk")
+
+          def run_aapt(*args: str) -> str:
+              return subprocess.check_output([str(aapt), "dump", *args], text=True)
+
+          def identity(apk: Path) -> tuple[str, str]:
+              badging = run_aapt("badging", str(apk))
+              package = re.search(r"^package: name='([^']+)'", badging, re.MULTILINE)
+              label = re.search(r"^application-label:'([^']+)'", badging, re.MULTILINE)
+              if not package or not label:
+                  raise SystemExit(f"Could not resolve package/label from {apk}")
+              return package.group(1), label.group(1)
+
+          def authorities(apk: Path) -> set[str]:
+              xmltree = run_aapt("xmltree", str(apk), "AndroidManifest.xml")
+              return set(re.findall(r'android:authorities[^=]*="([^"]+)"', xmltree))
+
+          debug_id, debug_label = identity(debug_apk)
+          lab_id, lab_label = identity(lab_apk)
+
+          expected = {
+              "debug_id": "dev.kian.mymettle.dev",
+              "debug_label": "My Mettle Dev",
+              "lab_id": "dev.kian.mymettle.ailab",
+              "lab_label": "My Mettle AI Lab",
+          }
+          actual = {
+              "debug_id": debug_id,
+              "debug_label": debug_label,
+              "lab_id": lab_id,
+              "lab_label": lab_label,
+          }
+          if actual != expected:
+              raise SystemExit(f"APK identity mismatch: expected {expected}, got {actual}")
+          if debug_id == lab_id:
+              raise SystemExit("Debug and Lab application IDs collide")
+
+          collisions = authorities(debug_apk) & authorities(lab_apk)
+          if collisions:
+              raise SystemExit(f"Debug/Lab provider-authority collision: {sorted(collisions)}")
+
+          print(f"debug: {debug_id} / {debug_label}")
+          print(f"lab:   {lab_id} / {lab_label}")
+          print("provider authorities: no collisions")
+          PY
 
       - name: Verify exported Room schema
         shell: bash
