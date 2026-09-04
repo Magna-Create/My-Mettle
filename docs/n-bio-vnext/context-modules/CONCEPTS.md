@@ -92,9 +92,9 @@ The docs keep status questions separate.
 |---|---|---|
 | API stability | STABLE, EXPERIMENTAL, DEPRECATED, INTERNAL | Compatibility promise |
 | Capability | IMPLEMENTED, PROTOCOL-ONLY, RESERVED, LATER PHASE, UNSUPPORTED | What the current software can do |
-| Scientific | STRUCTURALLY VALIDATED, CALIBRATION PENDING, EMPIRICALLY SUPPORTED, REJECTED | Evidence for the model or claim |
+| Scientific | NOT YET EVALUATED, STRUCTURALLY VALIDATED, CALIBRATION PENDING, EMPIRICALLY SUPPORTED, REJECTED | Evidence for the model or claim |
 
-The author-facing v1 SPI is **EXPERIMENTAL**. The 7E structure is **STRUCTURALLY VALIDATED**. Personal context effects remain **CALIBRATION PENDING** under PD-003. All 7E outputs remain SHADOW candidates, and `BENCHMARK_V0` remains normal product authority.
+The author-facing v1 SPI is **EXPERIMENTAL**. The 7E structure is **STRUCTURALLY VALIDATED**. Implemented 7E context effects remain **CALIBRATION PENDING** under PD-003. Targets without an effect model are **NOT YET EVALUATED**. All 7E outputs remain SHADOW candidates, and `BENCHMARK_V0` remains normal product authority.
 
 ## Security boundary
 
