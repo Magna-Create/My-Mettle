@@ -189,14 +189,16 @@ The table keeps software stability, capability, and scientific status separate.
 |---|---|---|---|---|
 | `SYSTEMIC_TRANSIENT_STATE` | EXPERIMENTAL | IMPLEMENTED | Changes the context candidate's log-performance location and uncertainty | STRUCTURALLY VALIDATED; CALIBRATION PENDING |
 | `OBSERVATION_VARIANCE` | EXPERIMENTAL | IMPLEMENTED | Changes the context candidate's observation variance in log-variance space | STRUCTURALLY VALIDATED; CALIBRATION PENDING |
-| `LOCAL_TRANSIENT_STATE` | EXPERIMENTAL | PROTOCOL-ONLY | Envelope, anatomy-scope validation, and arbitration exist; no evolving local latent consumer exists | STRUCTURALLY VALIDATED route; CALIBRATION PENDING |
-| `OBSERVATION_RELIABILITY` | EXPERIMENTAL | RESERVED | Rejected by target policy v1 | CALIBRATION PENDING |
-| `PROCESS_VOLATILITY` | EXPERIMENTAL | RESERVED | Rejected by target policy v1 | CALIBRATION PENDING |
-| `RECOVERY_DYNAMICS` | EXPERIMENTAL | RESERVED | Rejected by target policy v1 | CALIBRATION PENDING |
-| `EXECUTION_CONTEXT` | EXPERIMENTAL | RESERVED | Rejected by target policy v1 | CALIBRATION PENDING |
-| `EQUIPMENT_TRANSLATION` | EXPERIMENTAL | LATER PHASE | N-BIO-7F; rejected by target policy v1 | CALIBRATION PENDING |
-| `CAPABILITY_CONDITIONING` | EXPERIMENTAL | LATER PHASE | N-BIO-7G; rejected by target policy v1 | CALIBRATION PENDING |
-| `RECRUITMENT_CONTEXT` | EXPERIMENTAL | LATER PHASE | Requires a later authorised contract; rejected by target policy v1 | CALIBRATION PENDING |
+| `LOCAL_TRANSIENT_STATE` | EXPERIMENTAL | PROTOCOL-ONLY | Envelope, anatomy-scope validation, and arbitration exist; no evolving local latent consumer exists | STRUCTURALLY VALIDATED route; effect model NOT YET EVALUATED |
+| `OBSERVATION_RELIABILITY` | EXPERIMENTAL | RESERVED | Rejected by target policy v1 | NOT YET EVALUATED |
+| `PROCESS_VOLATILITY` | EXPERIMENTAL | RESERVED | Rejected by target policy v1 | NOT YET EVALUATED |
+| `RECOVERY_DYNAMICS` | EXPERIMENTAL | RESERVED | Rejected by target policy v1 | NOT YET EVALUATED |
+| `EXECUTION_CONTEXT` | EXPERIMENTAL | RESERVED | Rejected by target policy v1 | NOT YET EVALUATED |
+| `EQUIPMENT_TRANSLATION` | EXPERIMENTAL | LATER PHASE | N-BIO-7F; rejected by target policy v1 | NOT YET EVALUATED |
+| `CAPABILITY_CONDITIONING` | EXPERIMENTAL | LATER PHASE | N-BIO-7G; rejected by target policy v1 | NOT YET EVALUATED |
+| `RECRUITMENT_CONTEXT` | EXPERIMENTAL | LATER PHASE | Requires a later authorised contract; rejected by target policy v1 | NOT YET EVALUATED |
+
+`NOT YET EVALUATED` means there is no effect model to calibrate yet. It should not be read as a failed or weak calibration result.
 
 No `ContextSignalTarget` has normal product authority. A valid protocol-only signal may still have no effect on the current model.
 
