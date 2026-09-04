@@ -99,8 +99,10 @@ object NBio7EExecutionConfigV2 {
             "capabilityEvidencePolicyIdentity" to upstream.capabilityEvidencePolicyIdentity,
             "capabilityEvaluationProtocol" to upstream.capabilityEvaluationProtocol,
             "doseSourceMode" to upstream.doseSourceMode,
-            "doseModelIdentities" to upstream.doseModelIdentities.entries.joinToString(";") { "${it.key}=${it.value}" },
-            "doseConfigIds" to upstream.doseConfigIds.entries.joinToString(";") { "${it.key}=${it.value}" },
+            "doseModelIdentities" to upstream.doseModelIdentities.entries.sortedBy { it.key }
+                .joinToString(";") { "${it.key}=${it.value}" },
+            "doseConfigIds" to upstream.doseConfigIds.entries.sortedBy { it.key }
+                .joinToString(";") { "${it.key}=${it.value}" },
             "pd001Status" to upstream.pd001Status,
             "pd002Status" to upstream.pd002Status,
             "authority" to "SHADOW_CANDIDATE_ONLY",
