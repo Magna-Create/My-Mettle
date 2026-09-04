@@ -1,6 +1,6 @@
 # N-BIO Context Modules
 
-A Context Module learns from one kind of structured context. It owns its derived learning state and returns candidate `ContextSignalV1` values to N-BIO. It cannot change N-BIO Core, workout prescriptions, or raw evidence directly.
+A Context Module learns from the context evidence it declares. It owns its derived learning state and returns candidate `ContextSignalV1` values to N-BIO. It cannot change N-BIO Core, workout prescriptions, or raw evidence directly.
 
 [Build your first module](./QUICKSTART.md) · [Authoring guide](./AUTHORING.md) · [SPI reference](./REFERENCE.md) · [Troubleshooting](./TROUBLESHOOTING.md)
 
