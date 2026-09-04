@@ -70,17 +70,53 @@ Compose/product surfaces request a typed task and consume a typed result. They s
 
 Provider-specific diagnostics may exist for development without becoming normal product UX.
 
-## Research gate
+## Research-before-integration policy
 
-LAB-2A must stop and research one credible local multimodal route before serious Qualcomm/Qwen/local-VLM Android integration. A minimal standalone image+prompt path must work before that route enters My Mettle.
+Local multimodal integration is deliberately split into three gates.
 
-The research gate exists specifically to avoid repeating native-runtime integration characterised by:
+### LAB-2A — proven implementation research
+
+LAB-2A is not merely a device/API compatibility survey. It must research how developers have **actually succeeded** in shipping or running comparable Qualcomm-optimised multimodal models inside Kotlin/Android applications, especially Qwen3-VL-2B-Instruct where evidence exists.
+
+The research should prioritise working repositories/samples, confirmed issue fixes, runtime-vendor examples and useful forum/community failure reports. It must explicitly study repeated implementation mistakes, confirmed shortcuts/workarounds, stable lifecycle/loading patterns, native-library/ABI/version constraints, backend-verification methods and other practical details that prevent starting from ground zero.
+
+The output is a concrete deployment playbook and one recommended route. LAB-2A must not integrate that route into My Mettle.
+
+This gate exists specifically to avoid repeating native-runtime integration characterised by:
 
 - benchmark hell;
 - repeated rebuild failures;
 - opaque native errors;
 - uncertain runtime compatibility;
-- integration without a known-good minimal sample.
+- SDK/runtime/model version mismatch;
+- silent backend fallback;
+- integration without first learning from known-good Android implementations and known failure modes.
+
+### LAB-2B — minimal standalone proof
+
+LAB-2B must reproduce the selected route in the smallest possible standalone Kotlin Android harness before My Mettle depends on it.
+
+The required proof is intentionally narrow:
+
+```text
+launch
+→ load model
+→ select/capture image
+→ submit image + text prompt
+→ receive sensible response
+→ close/reopen
+→ repeat reliably
+```
+
+The standalone proof must not include Room, N-BIO, OCR/equipment semantics, equipment UX or My Mettle product integration. It exists to isolate runtime/build/lifecycle failures from product complexity.
+
+If the selected route fails materially, return to the research/review decision rather than turning the harness into an open-ended multi-runtime benchmark project.
+
+### LAB-2C — provider integration
+
+Only after LAB-2B proves a reproducible target-device path may the local runtime enter My Mettle behind the LAB-1 typed provider boundary.
+
+Provider-specific runtime details must remain below that boundary. Equipment interpretation remains a later consumer, not part of the local provider itself.
 
 ## LAB-0 non-decisions
 
