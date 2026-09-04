@@ -197,6 +197,9 @@ fun SettingsScreen(
                                 TextButton(onClick = { showScreenDiagnostics = true }) {
                                     Text("Screen diagnostics")
                                 }
+                                HorizontalDivider()
+                                MettleGlassPerformanceLabControls()
+                                HorizontalDivider()
                                 MettleGlassActionButton(
                                     onClick = onOpenDeveloper,
                                     modifier = Modifier.fillMaxWidth(),
