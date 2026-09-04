@@ -6,11 +6,11 @@ Branch: `agent/n-bio-vnext-inference`
 
 Mission start: `487705cc5810ced4da75bb56dd71c1fbcafc348b`
 
-Green implementation checkpoint: `59a47b05e269dc3cdedb553f9dcd00031291675d`
+Green implementation checkpoint: `30714819b406e03d44ba8a289903f3461689ec4e`
 
 Verdict: **IMPLEMENTATION COMPLETE — HOSTED EXACT-HEAD CI PASS — PHYSICAL INSTALLED-HISTORY ACCEPTANCE PENDING**
 
-This checkpoint records what is implemented and verified without converting missing physical evidence into a structural PASS. The final exact-head SHA will advance when this generated Room15 schema and checkpoint are committed. A successful CI run against that final documentation/schema SHA remains required.
+This checkpoint records what is implemented and verified without converting incomplete physical evidence into a structural PASS. Exact-head hosted CI is green; a replacement format-v2 device export remains required.
 
 ## 1. Phase and authority status
 
@@ -132,7 +132,7 @@ An atomic repository transaction writes the run and its derived children. Run de
 
 ## 6. Verification evidence at the green implementation checkpoint
 
-GitHub Android CI run 670 (`33812338221`) executed against `59a47b05e269dc3cdedb553f9dcd00031291675d` and completed SUCCESS.
+GitHub Android CI run 686 (`33873951924`) executed against `30714819b406e03d44ba8a289903f3461689ec4e` and completed SUCCESS. Run 685 (`33873378583`) also passed every step on the main upstream-replay correction before the deterministic map-ordering follow-up.
 
 | CI stage | Result |
 |---|---|

@@ -59,7 +59,7 @@ Starting documentation head before 7E work should be recorded by the implementat
 
 ```text
 7E_START_HEAD = 487705cc5810ced4da75bb56dd71c1fbcafc348b
-LAST_IMPLEMENTATION_HEAD = 59a47b05e269dc3cdedb553f9dcd00031291675d
+LAST_IMPLEMENTATION_HEAD = 30714819b406e03d44ba8a289903f3461689ec4e
 LAST_EXACT_HEAD_CI = Android CI run 670 / SUCCESS
 ```
 
@@ -966,6 +966,28 @@ Scope check: equations, Room schema, module SPI, product authority and normal wo
 Reset: reread the mission chronology, upstream-quarantine and physical-closure requirements plus this journal entry. The next block is source compilation, targeted regression coverage, exact-head CI and one replacement 7E device run only.
 
 Next block: finish compilation/tests, review actual diff, push a coherent correction, require exact-head CI green, then request a format-v2 7E report without asking the user to pre-run 7B.X or 7D.
+
+REVIEW 8 — 2026-09-04T12:55Z / 3071481
+
+Block objective: validate and publish the physical-report correction, inspect background CI, and establish the exact replacement device procedure.
+
+Completed: implemented selected Candidate-v2/Adaptive Sparse residual generation, causal in-memory 7D replay, all-prior-dose chronology, exact upstream JSON provenance and a deterministic composite execution-config ID persisted in Room15. Added regression coverage for dose-only/equal-time chronology, non-chronological cursor rejection, config identity determinism and unknown 7D config rejection. Published two coherent commits and reconciled the local branch to the connector-created remote SHAs.
+
+Diff / architecture notes: Room schema and module SPI are unchanged. The legacy-named `temporalModelConfigId` column now stores the composite v2 execution-config fingerprint, whose exported canonical payload binds temporal constants to exact capability/dose inputs. Map entries are explicitly key-sorted before fingerprint construction. The adapter reuses one immutable 7E input snapshot for delete-derived 7E replay and re-reads only raw context fingerprint inputs afterward, avoiding three costly upstream model replays.
+
+Tests/builds/background tasks: local Gradle stopped before project compilation because Android Gradle Plugin 9.1.1 is unavailable from this environment's reachable repositories. GitHub Android CI run 685 (`33873378583`) passed every step on the main correction. Exact-head run 686 (`33873951924`) passed reference/exercise/context/whitespace guards, `:app:testDebugUnitTest :app:assembleDebug`, `:app:assembleDebugAndroidTest`, `:app:lintDebug`, Room15 schema verification and artifact uploads on `30714819b406e03d44ba8a289903f3461689ec4e`.
+
+Errors/warnings: direct `git push` lacked a resumed-shell credential; the installed GitHub integration created blobs/tree/commits and fast-forwarded only the working branch. Local commits were rebased to the identical remote trees without force. No CI errors remain.
+
+Extension/API decisions recorded: 7E-API-010 is now implemented and exact-head verified. No module-author surface changed.
+
+Internet check: no external lookup was warranted; GitHub CI and the repository's accepted 7B.X/7D lifecycle are the authoritative evidence for this integration correction.
+
+Scope check: all output remains SHADOW/CANDIDATE. PD-001, PD-002 and PD-003 remain OPEN. BENCHMARK_V0 and normal product behaviour are unchanged; 7F/7G/8/9 remain unstarted.
+
+Reset: reread the mission physical-acceptance, upstream-quarantine and exact-head rules. The only remaining evidence is a replacement format-v2 7E export from the updated build.
+
+Next block: user installs/builds exact head, runs only `N-BIO 7E State & Context Acceptance`, returns the JSON, then inspect it and either close structurally with PD-003 or repair a concrete demonstrated defect.
 
 ---
 
