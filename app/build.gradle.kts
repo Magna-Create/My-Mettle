@@ -20,6 +20,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
         resValue("string", "app_name", "My Mettle")
+        buildConfigField("boolean", "UI_ML_LAB", "false")
     }
 
     buildTypes {
@@ -27,6 +28,14 @@ android {
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
             resValue("string", "app_name", "My Mettle Dev")
+        }
+        create("lab") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".ailab"
+            versionNameSuffix = "-lab"
+            resValue("string", "app_name", "My Mettle AI Lab")
+            buildConfigField("boolean", "UI_ML_LAB", "true")
+            matchingFallbacks += listOf("debug")
         }
         release {
             isMinifyEnabled = false
