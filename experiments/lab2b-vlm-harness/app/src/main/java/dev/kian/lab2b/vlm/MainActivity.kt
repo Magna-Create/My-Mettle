@@ -131,7 +131,7 @@ class MainActivity : AppCompatActivity() {
             idleButtons.forEach { it.isEnabled = idle }
             prompt.isEnabled = idle
             val installation = s.installations[s.selectedModelId]
-            download.isEnabled = installation?.phase in setOf(InstallationPhase.NOT_INSTALLED, InstallationPhase.FAILED)
+            download.isEnabled = idle && installation?.phase in setOf(InstallationPhase.NOT_INSTALLED, InstallationPhase.FAILED)
             load.isEnabled = idle && s.loadedModelId == null && installation?.phase == InstallationPhase.INSTALLED
             unload.isEnabled = idle && s.loadedModelId != null
             remove.isEnabled = idle && installation?.phase !in setOf(null, InstallationPhase.NOT_INSTALLED, InstallationPhase.VERIFYING)
@@ -149,7 +149,7 @@ class MainActivity : AppCompatActivity() {
             }
             runtimeText.text = "State: ${s.phase}\nSelected: ${s.selectedModelId}\nLoaded: ${s.loadedModelId ?: "none"}\n" +
                 "REQUESTED BACKEND: ${s.backend}\nEFFECTIVE TEXT: ${s.backendEvidence.effectiveText}\nEFFECTIVE VISION: ${s.backendEvidence.effectiveVision}\n" +
-                "GPU: ${s.backendEvidence.gpuCorrectness}\n" + (s.lastError?.let { "ERROR: $it" } ?: "")
+                "GPU: ${if (s.selectedModelId in s.gpuFailedModels) "FAILED CORRECTNESS (manual observation); use CPU" else s.backendEvidence.gpuCorrectness}\n" + (s.lastError?.let { "ERROR: $it" } ?: "")
             customText.text = "Active preset: ${s.preset}\n" + (s.customPrompt?.let { "${it.name} • ${it.bytes} bytes\nSHA-256: ${it.sha256}\n${if (s.preset == SystemPreset.CUSTOM) "ACTIVE" else "INACTIVE"}" } ?: "No custom prompt file")
             imageText.text = s.selectedImage?.let { i ->
                 "Original: ${i.sourceName}\n${i.sourceWidth} × ${i.sourceHeight} • ${i.sourceBytes} bytes\nSHA-256: ${i.sourceSha256}\n" +

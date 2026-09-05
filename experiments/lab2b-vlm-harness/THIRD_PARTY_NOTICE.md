@@ -1,26 +1,16 @@
 # Third-party notice
 
-LAB-2B includes small source adaptations from Qualcomm AI Hub Apps solely inside this isolated experimental harness.
+## Current runtime
 
-## Qualcomm AI Hub Apps
+MNN 3.6.1, copyright Alibaba Group Holding Limited, Apache License 2.0.
+Source: https://github.com/alibaba/MNN/tree/3.6.1
+Full upstream licence: `third_party/MNN_APACHE2.txt`.
+The small `mnn_bridge.cpp` uses the public Llm API and adapts the Android reference application's incremental generation/status-restoration lifecycle. The inference engine itself is the verified upstream prebuilt; it is not forked or built from source here.
 
-Source repository: `https://github.com/qualcomm/ai-hub-apps`
+Bundled OCR: Google ML Kit Text Recognition v2 Latin `16.0.1`, distributed through Google Maven under its published terms. AndroidX, Kotlin/coroutines, and Material dependencies retain their published licences. Model repositories and their licences are recorded in `model-registry.json`; all three pinned cards declare Apache-2.0. Google also identifies Gemma 4 as Apache-2.0: https://ai.google.dev/gemma/docs/gemma_4_license.
 
-Reference revision:
+## Historical Qualcomm work
 
-`db3f9772d4e423dee2df517335009c703845dba8`
+Earlier revisions adapted the GGUF projector parser and centre-crop approach from `qualcomm/ai-hub-apps` revision `db3f9772d4e423dee2df517335009c703845dba8`, copyright 2025–2026 Qualcomm Technologies, Inc. and/or subsidiaries, BSD 3-Clause. The parser and crop route have been removed; the historical licence remains in `third_party/QUALCOMM_AI_HUB_APPS_BSD3.txt` for provenance. GenieX and Qualcomm runtime binaries are not dependencies of this build.
 
-Adapted material:
-
-- `GgufVisionConfig.kt`: GGUF projector metadata-reading approach and key names;
-- `ImagePreprocessor.kt`: projector-sized square centre-crop strategy.
-
-Original source copyright:
-
-Copyright 2025-2026 Qualcomm Technologies, Inc. and/or its subsidiaries.
-
-Licence: BSD 3-Clause. The full licence text retained for this experiment is in:
-
-`third_party/QUALCOMM_AI_HUB_APPS_BSD3.txt`
-
-No Qualcomm model weights, AAR binaries or other third-party binary artefacts are committed by LAB-2B.
+No third-party native binaries or model weights are committed. Build tooling retrieves and SHA-verifies the pinned MNN release; the installed harness downloads and SHA-verifies selected model assets.

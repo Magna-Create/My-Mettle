@@ -27,10 +27,16 @@ object HarnessRuntimeOwner {
         synchronized(lock) {
             if (this.context != null) return
             this.context = context.applicationContext
+            snapshot = snapshot.copy(phase = HarnessPhase.PREPARING)
         }
         scope.launch {
             try {
+                // Images/transcript are session-only. Reclaim files left by force-close.
+                File(context.filesDir, "lab2b/images").deleteRecursively()
                 downloads = ModelDownloads(context)
+                val failures = context.getSharedPreferences("lab2b-gpu-observations", Context.MODE_PRIVATE)
+                    .getStringSet("failed-models", emptySet()).orEmpty().toSet()
+                publish { it.copy(gpuFailedModels = failures) }
                 publish { it.copy(modelStoragePath = downloads.root.absolutePath) }
                 val folder = File(context.filesDir, "lab2b/prompts")
                 val saved = File(folder, "custom.txt")
@@ -39,6 +45,7 @@ object HarnessRuntimeOwner {
                     runCatching { saved.inputStream().use { PromptFiles.read(metadata.readText(), it) } }
                         .onSuccess { prompt -> publish { it.copy(customPrompt = prompt) } }
                 }
+                publish { it.copy(phase = HarnessPhase.IDLE) }
                 while (isActive) {
                     if (synchronized(lock) { listener != null }) refreshDownloads()
                     delay(1500)
@@ -163,8 +170,8 @@ object HarnessRuntimeOwner {
         publish { it.copy(selectedImage = null, ocr = null, ocrStatus = "NOT RUN") }
         scope.launch { old?.let { File(it.sourcePrivatePath).parentFile?.deleteRecursively() } }
     }
-    fun selectPipeline(mode: PipelineMode) { if (HarnessStateMachine.idle(snapshot.phase)) publish { it.copy(pipeline = mode) } }
-    fun selectPreset(preset: SystemPreset) { if (HarnessStateMachine.idle(snapshot.phase)) publish { it.copy(preset = preset) } }
+    fun selectPipeline(mode: PipelineMode) { if (mode != snapshot.pipeline && HarnessStateMachine.idle(snapshot.phase)) publish { it.copy(pipeline = mode) } }
+    fun selectPreset(preset: SystemPreset) { if (preset != snapshot.preset && HarnessStateMachine.idle(snapshot.phase)) publish { it.copy(preset = preset) } }
     fun promptChanged(value: String) { publish { it.copy(promptText = value) } }
     fun importPrompt(uri: Uri) = idleWork {
         val context = requireContext()
@@ -217,7 +224,6 @@ object HarnessRuntimeOwner {
         scope.launch {
             var turn: InferenceTurn? = null
             var terminal = "FAILED"
-            val started = System.nanoTime()
             try {
                 val image = requireNotNull(request.selectedImage)
                 val ocr = if (request.pipeline.ocr) recognise(image) else null
@@ -253,7 +259,11 @@ object HarnessRuntimeOwner {
     }
     fun clearTranscript() { if (HarnessStateMachine.idle(snapshot.phase)) publish { it.copy(transcript = emptyList(), output = "", lastAssembledPrompt = "") } }
     fun reportGpuFailure() {
-        publish { it.copy(backendEvidence = it.backendEvidence.copy(gpuCorrectness = "FAILED CORRECTNESS (manual observation); use CPU")) }
+        if (!HarnessStateMachine.idle(snapshot.phase)) return
+        val failed = snapshot.gpuFailedModels + snapshot.selectedModelId
+        requireContext().getSharedPreferences("lab2b-gpu-observations", Context.MODE_PRIVATE)
+            .edit().putStringSet("failed-models", failed).apply()
+        publish { it.copy(gpuFailedModels = failed) }
     }
     private fun idleWork(block: suspend () -> Unit) {
         if (!begin(HarnessPhase.PREPARING)) return

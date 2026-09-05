@@ -6,6 +6,7 @@ data class MemorySnapshot(val beforeLoadPssKb: Int? = null, val loadedPssKb: Int
 data class TranscriptTurn(val model: String, val backend: ComputeBackend, val mode: PipelineMode,
     val systemMode: SystemPromptMode, val instruction: String, val imageHash: String?, val response: String, val terminal: String)
 data class HarnessSnapshot(
+    val gpuFailedModels: Set<String> = emptySet(),
     val phase: HarnessPhase = HarnessPhase.IDLE,
     val selectedModelId: String = ModelRegistry.models.first().id,
     val loadedModelId: String? = null,

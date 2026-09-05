@@ -136,50 +136,21 @@ The completed research covers those required implementation dimensions in the re
 
 **Must not pull forward:** My Mettle runtime integration, polished product integration, equipment vision workflow, canonical persistence, or multiple competing runtime stacks “just in case”.
 
-## LAB-2B — Minimal Standalone VLM Harness
+## LAB-2B — Standalone CPU/GPU Multimodal Harness
 
-**Status:** IN PROGRESS — B1 PASS; B2 standalone harness prepared; B3 **REVISE** after corrected physical native/page-size validation. B4 is **BLOCKED** pending controlled newer-AAR comparison and route review.
+**Status:** IMPLEMENTATION VALIDATION IN PROGRESS — physical acceptance pending. Do not mark COMPLETE.
 
-**Purpose:** prove the LAB-2A-recommended route in the smallest possible Kotlin Android harness before My Mettle depends on it.
+The September 5 CPU/GPU mission supersedes the earlier GenieX reproduction plan. The standard GenieX Android AAR failed the mandatory native 16 KB gate; NPU/HTP/QAIRT investigation is closed. Historical decisions and phone findings remain in `research/LAB_2B_B3_ROUTE_DECISION.md` and `research/LAB_2B_PHYSICAL_ACCEPTANCE.md`.
 
-**Entry condition:** satisfied. LAB-2A was explicitly human-accepted. LAB-2B pre-flight observed `agent/ui-ml-lab` at `13fcff8e608e18e3ac4faa232d17c98da25750df` and live `agent/n-bio-vnext-inference` at `5727ea95cf692c8ea0145bdb4cc0ac5a4dc705de`; no N-BIO sync was required. B0 source inspection confirmed the accepted Qualcomm reference app pins GenieX AAR `0.3.5`, AGP `8.13.0`, Kotlin `2.2.0`, Java 17, NDK `27.3.13750724`, compile/target SDK 34, minSdk 31, legacy JNI packaging and Gradle `9.1.0`.
+The replacement standalone root remains `experiments/lab2b-vlm-harness/`, outside root settings. A short source/artefact review selected MNN 3.6.1 with one runtime owner and exact pinned MNN exports for Gemma 4 E2B IT, Qwen3.5-2B and Qwen3-VL-2B-Instruct. CPU is the default. OpenCL text with CPU vision is exposed as experimental; actual GPU operator placement and visual correctness remain unverified on the phone. There is no vendor-specific accelerator dependency.
 
-**Physical progress:** the unchanged Qualcomm `geniex_chat_android` reference app at `db3f9772d4e423dee2df517335009c703845dba8` passed the B1 physical launch/init gate on the target Samsung Galaxy S25 Ultra. The isolated harness now exists under `experiments/lab2b-vlm-harness/` and does not depend on My Mettle source.
+The authorised harness now includes persistent verified model downloads, system presets/custom text files, stateless transcript turns, exact prepared-image inspection and bundled Latin ML Kit OCR. Pipeline modes are VISION ONLY, VISION + OCR (default) and OCR ONLY. OCR is labelled candidate evidence. These are experiment-only capabilities, with no product integration.
 
-**Current hard gate — B3 REVISE:** corrected physical native inspection of `geniex-android:0.3.5` and the harness APK established:
+**Validation gate:** build actual dependencies, test/lint, audit every packaged ELF and APK alignment, publish installable debug APK and source pins. Then perform manual Samsung S25 Ultra control-image, OCR, CPU/GPU correctness, cancellation, recreation, force-close/relaunch, model-switching and storage tests. Build success does not prove phone inference.
 
-- target device Android 16 / API 36 / build `BP4A.251205.006`;
-- actual target-device runtime page size `4096` bytes / 4 KB;
-- APK ABI `arm64-v8a` only;
-- APK `zipalign -P 16`: PASS;
-- native ELF 16 KB acceptance: FAIL because exactly 13 `Machine: Qualcomm Hexagon` payloads have minimum LOAD alignment `2**12`;
-- the failing set includes `libggml-htp-v81.so`, so the finding is directly relevant to the accepted llama.cpp NPU/HTP path rather than unused QAIRT-only baggage.
+**Implementation record:** `research/LAB_2B_RUNTIME_RESELECTION.md`, `research/LAB_2B_IMPLEMENTATION_NOTES.md`, `research/LAB_2B_CHECKPOINTS.md`; install/build instructions in the harness README. Model hashes and exact source revisions live in `experiments/lab2b-vlm-harness/model-registry.json`.
 
-The current 4 KB device runtime means this finding does not contradict the already-passed reference-app launch/init gate, but LAB-2B explicitly made native 16 KB portability a hard acceptance item. Therefore B4 exact-model preparation must not begin while the selected `0.3.5` AAR remains unresolved against that requirement.
-
-A controlled **research-only** static comparison against Qualcomm GenieX `v0.3.19` is permitted to determine whether Qualcomm rebuilt the affected Hexagon payloads. This comparison does not change the harness dependency. If a later AAR materially fixes the exact B3 failure, that is a candidate version revision for human review; do not silently substitute it.
-
-**The harness must remain deliberately tiny.** It should prove the runtime, not the product. Conceptually:
-
-```text
-launch
-→ load model
-→ select/capture one image
-→ submit image + text prompt
-→ receive sensible response
-→ close/reopen app
-→ repeat reliably
-```
-
-No Room, N-BIO, OCR pipeline, equipment schema, equipment UX or My Mettle product integration belongs in this proof.
-
-**Major deliverables:** reproducible image+prompt inference on the target device; verified model/backend path where possible; model load/reload behaviour; lifecycle/background/resume stability; cancellation/concurrency boundaries; storage/RAM/timing/thermal observations; documented deviations from the LAB-2A playbook; a clear PASS / REVISE ROUTE / REJECT ROUTE verdict.
-
-If the recommended route fails, diagnose it against LAB-2A evidence. Do not convert the harness into an open-ended benchmark project or try many native stacks in parallel. Material route changes return to a short research/review decision before another harness attempt.
-
-**STOP condition:** stop only when one route is stable enough on the target device to justify My Mettle integration, or when evidence says the chosen route should be rejected/researched again. Build success alone is not a physical runtime pass. B3's 16 KB failure must be resolved or explicitly reviewed before B4 resumes.
-
-**Must not pull forward:** My Mettle provider integration, OCR/equipment semantics, canonical equipment persistence, polished UX or server contribution.
+**Stop condition for the overnight implementation:** LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING after the build gates pass. Only legitimate physical evidence can change acceptance status. LAB-2C must not start.
 
 ## LAB-2C — Local VLM Provider Integration
 

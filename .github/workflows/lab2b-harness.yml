@@ -24,6 +24,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.1.0'
+      - name: Install source verifier prerequisite
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
       - name: Install pinned Android tools
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.3.13750724' 'cmake;3.22.1'
       - name: Fetch and verify runtime only (no models)
@@ -35,12 +37,16 @@ jobs:
         run: ./gradlew --no-daemon testDebugUnitTest assembleDebug lintDebug
       - name: Verify APK ELF and ZIP 16 KB alignment
         run: python3 experiments/lab2b-vlm-harness/tools/inspect_native_16k.py | tee experiments/lab2b-vlm-harness/app/build/outputs/native-audit.txt
+      - name: Export matching Termux native bundle
+        run: python3 experiments/lab2b-vlm-harness/tools/native_bundle.py export experiments/lab2b-vlm-harness/app/build/outputs/lab2b-native.zip > experiments/lab2b-vlm-harness/app/build/outputs/lab2b-native.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: lab2b-vlm-harness-debug
           path: |
             experiments/lab2b-vlm-harness/app/build/outputs/apk/debug/app-debug.apk
             experiments/lab2b-vlm-harness/app/build/outputs/native-audit.txt
+            experiments/lab2b-vlm-harness/app/build/outputs/lab2b-native.zip
+            experiments/lab2b-vlm-harness/app/build/outputs/lab2b-native.sha256
             experiments/lab2b-vlm-harness/app/build/reports/tests/testDebugUnitTest/
             experiments/lab2b-vlm-harness/app/build/reports/lint-results-debug.html
           if-no-files-found: error

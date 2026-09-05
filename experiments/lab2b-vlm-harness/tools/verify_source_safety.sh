@@ -4,6 +4,7 @@ ROOT="$(git rev-parse --show-toplevel)"
 HARNESS="$ROOT/experiments/lab2b-vlm-harness"
 BASE="${LAB2B_BASE:-3f25ea228dfca24bc898a7c312015d2df0f3ab2d}"
 fail() { echo "LAB2B_SOURCE_SAFETY=FAIL: $*" >&2; exit 1; }
+command -v rg >/dev/null || fail 'ripgrep is required for source checks'
 if rg -n 'lab2b-vlm-harness|dev\.kian\.lab2b' "$ROOT/settings.gradle.kts"; then fail 'harness included by product'; fi
 # Include staged AND unstaged tracked changes, not only the last commit.
 changes="$(git diff --name-only "$BASE" -- app/ build.gradle.kts settings.gradle.kts gradle.properties gradle/ gradlew docs/n-bio-vnext/)"

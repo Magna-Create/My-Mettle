@@ -1,5 +1,28 @@
 # LAB-2B physical acceptance
 
+## Current replacement-runtime acceptance — pending
+
+Test the new MNN 3.6.1 CPU/GPU + bundled OCR APK using the harness README. Build/static validation is separate from actual phone acceptance. Do not mark LAB-2B COMPLETE from a build.
+
+Record phone Android/build, PAGE_SIZE, model revision, requested/configured/effective text and vision backend, system preset/custom hash and actual system mode, pipeline, original/OCR/prepared hashes and dimensions, output, cold load/TTFT/generation timings and PSS.
+
+- Launch; verify all three model choices, CPU default, GPU experimental, no NPU selector.
+- Download Qwen3.5-2B; verify progress/failure/retry, hash activation, enough-storage rejection. Force-close during transfer, relaunch and recover. Once INSTALLED, force-close and relaunch; load without downloading again.
+- Run built-in red-square and HELLO/1234 controls on CPU with the English grounded prompt, then ordinary photograph and equipment placard. Open the exact prepared input. Report only observed responses.
+- Run bundled OCR immediately after APK install (no Play Services recognizer download); inspect text, blocks/lines, geometry, timing, source hash. Repeat image to confirm cache hit, change image to confirm invalidation; Clear OCR and automatic regeneration.
+- Compare VISION ONLY, VISION + OCR and OCR ONLY. Confirm OCR ONLY has no final-model image. OCR is supplementary candidate evidence, not truth.
+- Test NONE/ENGLISH GROUNDED/JSON TEST, custom UTF-8 txt/md, 64 KiB rejection, Clear. Inspect assembled prompt/system role. Reject over-budget inference explicitly.
+- Stop during generation; ensure second Send/switch cannot race. Unload/reload, rotate/recreate, background/resume. Finish/stop generation, switch to a second installed model, then back; no deleted or duplicate weights. Observe memory after unload.
+- Repeat control images with experimental GPU. Text requests OpenCL; vision stays CPU. The runtime cannot attest per-op GPU execution, and this is visible. On load error explicitly choose CPU. If visual correctness worsens, persist the failed-correctness annotation and use CPU.
+- Test Gemma E2B and Qwen3-VL using their pinned assets. No model-specific physical PASS is currently recorded. Test on a 16 KB environment separately from the known S25's 4096-byte runtime.
+
+### Historical Qualcomm control findings — do not transfer to MNN
+
+Kian reported Qwen3.5-2B on the exact HELLO/1234 control: NPU-selected grossly misinterpreted blocks/logo; GPU-selected reported a blank image; CPU-selected recognized HELLO and nearly read 1234 as 1924. Standard GenieX AAR Hexagon objects also failed the mandatory 16 KB LOAD gate. This is why the accelerated Qualcomm route is closed. No corresponding conclusion about MNN has been made.
+
+## Historical acceptance record (superseded route)
+
+
 > **Status:** LAB-2B IN PROGRESS — B1 PASS by user physical attestation; B2 harness source prepared; B3 **REVISE** after corrected native/page-size audit.
 >
 > **Rule:** a requested accelerator is never recorded as a proven accelerator without physical runtime evidence. Build success is not inference success. A 4 KB current device runtime does not waive native 16 KB portability acceptance.

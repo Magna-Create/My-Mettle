@@ -1,5 +1,28 @@
 # LAB-2B implementation notes
 
+## Current CPU/GPU implementation — 2026-09-05
+
+The authorised CPU/GPU + OCR mission supersedes the historical implementation below. One MNN 3.6.1 runtime now serves exact pinned exports for all three target models; see `LAB_2B_RUNTIME_RESELECTION.md` and the harness `model-registry.json`. There is no GenieX dependency or packaged Qualcomm binary. The standalone root and product source isolation remain intact.
+
+Android DownloadManager owns persistent transfers into `<external-files>/lab2b/models/<id>.partial`. Every required file must complete, match its pinned size and SHA-256, then a verified manifest marker and same-filesystem directory rename activate the installation. Restart discovery checks marker and sizes; load rehashes all assets. No second copy of weights is needed during activation. Remove affects only that model and its staging/runtime cache. Download-state tests distinguish complete transfers from verified installation.
+
+Bundled Latin ML Kit `16.0.1` runs on a separate orientation-normalized full-frame PNG capped at 16 MP / 4096 edge. MNN receives an inspectable full-frame PNG capped at 1600 edge. Both derive from the same copied source and preserve dimensions/hashes/path diagnostics. OCR retains full text, blocks/lines, boxes/corners, exposed language metadata and elapsed time; unknown confidence stays unknown. Deterministic labelled candidate evidence warns about OCR errors and image authority. Cache identity is the normalized image SHA, with stale-image rejection. The three pipeline modes are implemented, VISION + OCR default, auto-OCR before inference when required.
+
+A process singleton owns one engine; blocking work is off-main-thread, phase guards reject a second generation or destructive switch while busy. Conversation state is reset every turn and only the current image is supplied. Model/backend switches dispose the owner first, retain downloads, and require explicit Load. Stop uses an atomic cancellation flag between native steps; uninterruptible current vision/prefill work must return. Activity recreation reattaches a snapshot listener. Process death releases the engine; installations are discovered again. No background inference guarantee is claimed.
+
+System presets and safe UTF-8 `.txt`/`.md` import (64 KiB) are implemented. Model templates accept true system messages; explicit user-preface fallback is tested but not needed by this registry. JSON TEST is not schema-constrained. Decoder input + 512 output tokens must fit the harness 8192-token budget; oversized turns fail explicitly. The transcript is display-only and bounded to 20 turns.
+
+CPU is the default for all models. GPU configures OpenCL text and retains each export's separate CPU vision configuration. MNN's public config dump does not attest actual GPU per-op placement/fallback: diagnostics say UNVERIFIED. A manual failed-correctness observation persists per model. No speed or correctness result is inferred from successful initialization.
+
+Initial real dependency build passed 15 tests and lint (warnings, zero errors); all ten packaged native ELF objects and APK ZIP layout passed static 16 KB checks. Later checkpoint/handoff records contain the final build, added tests and artifact hashes. The first CI run failed because Ubuntu lacked ripgrep; the dedicated workflow now installs it explicitly. There were no runtime native compile/link failures in the first complete build.
+
+The workflow builds only the experiment, never model weights, and uploads the debug APK, audit, reports and a source-matched native bundle for Termux rebuilding. The existing repository-wide Android workflow may also trigger on branch pushes; it was not modified.
+
+**Physical acceptance remains pending.** No S25 device or actual model inference result was available in this workspace. Historical records below are retained as evidence and are not current build instructions.
+
+## Historical GenieX implementation record
+
+
 > **Status:** LAB-2B IN PROGRESS. B1 physical Qualcomm reference-app gate passed by user attestation. B2 standalone harness source is prepared. B3 is **REVISE** after corrected native/page-size validation confirmed genuine 4 KB-aligned Qualcomm Hexagon payloads in GenieX `0.3.5`.
 >
 > Nothing here authorises My Mettle `:app`, LAB-1 provider, N-BIO, Room or equipment integration. B4 remains blocked pending the controlled newer-AAR comparison and route review.

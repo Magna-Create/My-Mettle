@@ -65,11 +65,15 @@ class ModelDownloads(context: Context) {
         if (!stage.exists()) return Installation(InstallationPhase.NOT_INSTALLED, totalBytes = model.sizeBytes)
         val downloads = rows()
         val required = model.files.map { downloads[File(stage, it.name).absolutePath] }
-        val doneBytes = required.filterNotNull().sumOf { it.bytes }
-        val failed = required.filterNotNull().firstOrNull { it.status == DownloadManager.STATUS_FAILED }
-        if (failed != null) return Installation(InstallationPhase.FAILED, doneBytes, model.sizeBytes, "Android DownloadManager reason=${failed.reason}; Download retries failed files")
-        if (required.any { it == null }) return Installation(InstallationPhase.FAILED, doneBytes, model.sizeBytes, "Download interrupted before all files queued; Download resumes missing files")
-        if (required.all { it?.status == DownloadManager.STATUS_SUCCESSFUL }) {
+        val state = DownloadState.reduce(required.map { row -> row?.let {
+            Transfer(when (it.status) {
+                DownloadManager.STATUS_FAILED -> TransferPhase.FAILED
+                DownloadManager.STATUS_SUCCESSFUL -> TransferPhase.SUCCESSFUL
+                DownloadManager.STATUS_PAUSED -> TransferPhase.PAUSED
+                else -> TransferPhase.ACTIVE
+            }, it.bytes, it.reason)
+        } }, model.sizeBytes)
+        if (state.phase == InstallationPhase.VERIFYING) {
             onVerifying()
             return try {
                 installation.activate(model)
@@ -77,11 +81,10 @@ class ModelDownloads(context: Context) {
                 Installation(InstallationPhase.INSTALLED, model.sizeBytes, model.sizeBytes)
             } catch (e: Exception) {
                 errors.edit().putString(model.id, "Verification failed: ${e.message}; Remove then Download").commit()
-                Installation(InstallationPhase.FAILED, doneBytes, model.sizeBytes, e.message)
+                Installation(InstallationPhase.FAILED, state.bytes, model.sizeBytes, e.message)
             }
         }
-        val paused = required.filterNotNull().firstOrNull { it.status == DownloadManager.STATUS_PAUSED }
-        return Installation(InstallationPhase.DOWNLOADING, doneBytes, model.sizeBytes, paused?.let { "Android paused download; reason=${it.reason}" })
+        return state
     }
     @Synchronized fun remove(model: HarnessModelSpec) {
         val prefixes = listOf(installation.directory(model).absolutePath + "/", installation.staging(model).absolutePath + "/")

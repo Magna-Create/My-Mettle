@@ -3,9 +3,23 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+def prebuiltNative = providers.gradleProperty('lab2bPrebuiltNative').orNull == 'true'
+if (prebuiltNative) {
+    def manifestFile = file('../.deps/prebuilt/manifest.json')
+    if (!manifestFile.isFile()) throw new GradleException('Import the source-matched native bundle first')
+    def manifest = new groovy.json.JsonSlurper().parse(manifestFile)
+    def sha = { File f -> java.security.MessageDigest.getInstance('SHA-256').digest(f.bytes).encodeHex().toString() }
+    manifest.sources.each { name, hash ->
+        if (sha(file('../' + name)) != hash) throw new GradleException('Native bundle source mismatch: ' + name)
+    }
+    manifest.files.each { name, hash ->
+        if (sha(file('../.deps/prebuilt/arm64-v8a/' + name)) != hash) throw new GradleException('Native bundle file mismatch: ' + name)
+    }
+}
+
 android {
     namespace 'dev.kian.lab2b.vlm'
-    ndkVersion '27.3.13750724'
+    if (!prebuiltNative) ndkVersion '27.3.13750724'
     compileSdk 35
 
     defaultConfig {
@@ -19,7 +33,7 @@ android {
             abiFilters 'arm64-v8a'
         }
 
-        externalNativeBuild { cmake { arguments '-DANDROID_STL=c++_shared' } }
+        if (!prebuiltNative) externalNativeBuild { cmake { arguments '-DANDROID_STL=c++_shared' } }
         buildConfigField 'String', 'RUNTIME_VERSION', '"MNN 3.6.1"'
     }
 
@@ -41,11 +55,13 @@ android {
 
     packaging {
         jniLibs.useLegacyPackaging = false
+        if (prebuiltNative) jniLibs.keepDebugSymbols += ['**/*.so']
         // Use the STL shipped as part of the verified MNN release, consistently.
         jniLibs.pickFirsts += ['**/libc++_shared.so']
     }
-    sourceSets.main.jniLibs.srcDirs = ['../.deps/jniLibs']
-    externalNativeBuild { cmake { path 'src/main/cpp/CMakeLists.txt'; version '3.22.1' } }
+    sourceSets.main.assets.srcDirs += ['../third_party']
+    sourceSets.main.jniLibs.srcDirs = [prebuiltNative ? '../.deps/prebuilt' : '../.deps/jniLibs']
+    if (!prebuiltNative) externalNativeBuild { cmake { path 'src/main/cpp/CMakeLists.txt'; version '3.22.1' } }
 
     buildFeatures {
         buildConfig true

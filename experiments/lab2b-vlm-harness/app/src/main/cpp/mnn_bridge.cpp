@@ -72,7 +72,13 @@ extern "C" JNIEXPORT jlongArray JNICALL JNI_METHOD(generate)(JNIEnv* env, jobjec
         if (!owner->cancelled.load()) {
             // ChatMessages applies the exact installed model template once; Omni then
             // resolves the one current <img> path. Empty terminator prevents <eop> UI noise.
-            llm->response(messages, &output, "", 0);
+            // Equivalent to the no-cache ChatMessages path, with an explicit budget
+            // check before decoder prefill. Omni tokenization prepares image embeddings
+            // once; its vision methods establish their own ExecutorScope.
+            const auto tokens = llm->tokenizer_encode(llm->apply_chat_template(messages));
+            if (tokens.empty() || tokens.size() + maxTokens > 8192)
+                throw std::runtime_error("Current system/instruction/OCR/image exceeds the 8192-token harness budget; shorten the prompt or OCR evidence");
+            if (!owner->cancelled.load()) llm->response(tokens, &output, "", 0);
         }
         for (int step = 0; step < maxTokens && !owner->cancelled.load(); ++step) {
             // Upstream Android 3.6.1 restores MAX_TOKENS_FINISHED between generate(1) calls.
