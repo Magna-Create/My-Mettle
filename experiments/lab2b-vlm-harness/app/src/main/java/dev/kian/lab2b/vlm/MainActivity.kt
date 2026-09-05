@@ -219,7 +219,7 @@ class MainActivity : AppCompatActivity() {
                     "MNN performs its own model-specific resampling/patching after this exact input."
             } ?: "No image selected"
             ocrText.text = "Status: ${s.ocrStatus}\n" + (s.ocr?.let { "${it.processingMs} ms • ${it.blocks.size} blocks / ${it.lineCount} lines\n${it.width} × ${it.height}\nSource SHA-256: ${it.sourceImageSha256}\nCache hit: ${s.ocrCacheHit}\n\n${it.fullText}" } ?: "")
-            output.text = s.output.ifEmpty { if (s.rawOutput.contains("<|channel>thought")) "Thinking channel received; final answer not received yet." else "No response yet" }
+            output.text = s.output.ifEmpty { if (s.rawOutput.contains("<|channel>thought")) if (HarnessStateMachine.canStop(s.phase)) "Thinking channel received; waiting for final answer." else "Generation ended without a final answer. Check token limit and diagnostics." else "No response yet" }
             transcript.text = s.transcript.joinToString("\n\n") { "${it.model} / ${it.backend} / ${it.mode} / ${it.terminal}\nUSER: ${it.instruction}\nMODEL: ${it.response}" }
             diagnostics.text = "Runtime: ${BuildConfig.RUNTIME_VERSION}\nLast system mode: ${s.systemMode}\nContext: stateless; current image only; ${s.options.maxTokens} generated token limit (includes thinking)\nThinking requested: ${s.options.thinking} • stage: ${s.stageLabel}\n" +
                 "${s.measurementSummary}\nFirst raw output: ${s.timing.firstRawOutputMs} ms\nCold load: ${s.timing.loadMs} ms\nFirst final output (includes vision/prefill/thinking): ${s.timing.firstOutputMs} ms\nGeneration: ${s.timing.totalGenerationMs} ms\n" +

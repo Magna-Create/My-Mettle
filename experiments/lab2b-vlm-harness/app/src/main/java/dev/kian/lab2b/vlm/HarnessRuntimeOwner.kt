@@ -245,6 +245,8 @@ object HarnessRuntimeOwner {
             slot.engine!!.arm()
             snapshot = snapshot.copy(phase = HarnessPhase.PREPARING, output = "", rawOutput = "", nativeMetrics = emptyList(), lastError = null,
                 stageLabel = if (localise) "LOCALISE" else "EXTRACT",
+                proposedCrops = if (localise) emptyList() else snapshot.proposedCrops,
+                localisationReport = if (localise) "" else snapshot.localisationReport,
                 timing = snapshot.timing.copy(firstOutputMs = null, firstRawOutputMs = null, totalGenerationMs = null))
         }
         notifySnapshot()
@@ -279,6 +281,10 @@ object HarnessRuntimeOwner {
                 }
                 terminal = if (cancelled.get() || metrics.lastOrNull() == 1L) "STOPPED" else "COMPLETED"
                 publish { it.copy(nativeMetrics = metrics.toList(), timing = it.timing.copy(totalGenerationMs = elapsed(inferenceStart))) }
+                if (terminal == "COMPLETED" && (metrics.getOrNull(1) ?: 0) >= request.options.maxTokens) {
+                    terminal = "TOKEN_LIMIT"
+                    fail("Generated token limit reached; answer may be incomplete. Runtime will unload. Increase the budget if needed, then Load.")
+                }
             } catch (e: Exception) { fail("Inference failed: ${e.message}") }
             finally {
                 val measured = runCatching { measurements.finish() }.getOrElse { org.json.JSONObject().put("error", it.message) }

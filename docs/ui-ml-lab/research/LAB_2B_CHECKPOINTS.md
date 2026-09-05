@@ -46,3 +46,11 @@
 - Route remains MNN 3.6.1. New E4B required download: 4,939,909,375 bytes, no audio.
 - Implemented thinking/budget controls, crop editor and model-proposed reviewed regions, optional OCR top-left ordering, per-turn JSON export and device power-monitor/thermal/PSS measurements. Settings unload engine; aborted turns remain disposal-safe.
 - Source/binary isolation and diff check pass. Android toolchain absent in resumed workspace and direct downloads unavailable; dedicated Actions performs real build/tests/lint/native audit. Compile validation in progress. No production changes, no weights tracked. Continue to fix any build findings and provide Termux rebuild path.
+
+## Extension checkpoint 2 — 2026-09-05 23:08 UTC (account-limit resumption)
+
+- Live Lab resumed at `942379d38bfb4d132473e40b26272bae82885c11`; unpublished local changes survived. Published them as `9107642accf601c1751a9d119d0fa74117134c2d` after refreshing live source.
+- First extension build 33980729611 compiled real Kotlin/JNI dependencies; one old registry test still expected three models. Updated it for four. No runtime integration failure.
+- Added hash-checked Termux reuse of the previously imported native bundle, explicit crop preparation/provenance and raw/final TTFT, collapsible sections and extension documentation. CI now also exercises current/legacy native reuse, rejection of changed C++, and the prebuilt Gradle path.
+- Review found stale proposals could survive a failed re-localisation, and generated-token exhaustion could appear completed. Clear proposals on each localisation attempt; token-limit termination is explicit and disposes before retry.
+- Source isolation/binary safety/diff checks pass. No production or N-BIO changes. Continue through actual APK/lint/native audit before handoff.

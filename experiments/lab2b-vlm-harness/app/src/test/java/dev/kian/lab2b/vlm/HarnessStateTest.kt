@@ -7,6 +7,7 @@ class HarnessStateTest {
     @Test fun interruptedOrRejectedPrefillCannotReusePendingImageState() {
         assertTrue(HarnessStateMachine.mustDisposeAfterTurn("STOPPED"))
         assertTrue(HarnessStateMachine.mustDisposeAfterTurn("FAILED"))
+        assertTrue(HarnessStateMachine.mustDisposeAfterTurn("TOKEN_LIMIT"))
         assertFalse(HarnessStateMachine.mustDisposeAfterTurn("COMPLETED"))
     }
     @Test fun generationRequiresMatchingLoadedModelAndImage() {
