@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-0.3.19}"
+VERSION="${1:-0.6.1}"
 VERBOSE_NATIVE="${LAB2B_VERBOSE_NATIVE:-0}"
 URL="https://github.com/qualcomm/GenieX/releases/download/v${VERSION}/geniex-android-aar-v${VERSION}.aar"
 
-# Published by Qualcomm on the v0.3.19 GitHub release page.
+# Digests published by Qualcomm on the corresponding GitHub release assets.
 EXPECTED_SHA_0_3_19="9bc409ff67ede99c1dcd7d9f732c13eb5e40eb71785795638ac539b32c26b3d8"
+EXPECTED_SHA_0_6_1="2dff6eac964556ba5b002fb935abc9bc22b42abaffe11368ed987d92b3c7619f"
 
 require_cmd() {
     command -v "$1" >/dev/null 2>&1 || { echo "ERROR: required command '$1' not found" >&2; exit 2; }
@@ -47,10 +48,16 @@ curl -fL --retry 3 --retry-delay 2 --connect-timeout 20 -o "$AAR" "$URL"
 
 ACTUAL_SHA="$(sha256sum "$AAR" | awk '{print $1}')"
 echo "AAR_SHA256=$ACTUAL_SHA"
-if [ "$VERSION" = "0.3.19" ]; then
-    echo "EXPECTED_SHA256=$EXPECTED_SHA_0_3_19"
-    if [ "$ACTUAL_SHA" != "$EXPECTED_SHA_0_3_19" ]; then
-        echo "ERROR: v0.3.19 AAR SHA-256 does not match Qualcomm's published release digest." >&2
+EXPECTED_SHA=""
+case "$VERSION" in
+    0.3.19) EXPECTED_SHA="$EXPECTED_SHA_0_3_19" ;;
+    0.6.1) EXPECTED_SHA="$EXPECTED_SHA_0_6_1" ;;
+esac
+
+if [ -n "$EXPECTED_SHA" ]; then
+    echo "EXPECTED_SHA256=$EXPECTED_SHA"
+    if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+        echo "ERROR: v${VERSION} AAR SHA-256 does not match Qualcomm's published release digest." >&2
         exit 2
     fi
     echo "SHA256_MATCH=PASS"
