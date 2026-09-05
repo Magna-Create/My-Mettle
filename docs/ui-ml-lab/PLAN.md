@@ -138,13 +138,26 @@ The completed research covers those required implementation dimensions in the re
 
 ## LAB-2B — Minimal Standalone VLM Harness
 
-**Status:** IN PROGRESS — B0/B1 Qualcomm reference-app reproduction and physical gate. B2 has **NOT STARTED**.
+**Status:** IN PROGRESS — B1 PASS; B2 standalone harness prepared; B3 **REVISE** after corrected physical native/page-size validation. B4 is **BLOCKED** pending controlled newer-AAR comparison and route review.
 
 **Purpose:** prove the LAB-2A-recommended route in the smallest possible Kotlin Android harness before My Mettle depends on it.
 
-**Entry condition:** satisfied. LAB-2A was explicitly human-accepted. LAB-2B pre-flight observed `agent/ui-ml-lab` at `13fcff8e608e18e3ac4faa232d17c98da25750df` and live `agent/n-bio-vnext-inference` at `5727ea95cf692c8ea0145bdb4cc0ac5a4dc705de`; no N-BIO sync was required. B0 source inspection confirmed the accepted Qualcomm reference app still pins GenieX AAR `0.3.5`, AGP `8.13.0`, Kotlin `2.2.0`, Java 17, NDK `27.3.13750724`, compile/target SDK 34, minSdk 31 and legacy JNI packaging. Its own toolchain script additionally pins Gradle `9.1.0`.
+**Entry condition:** satisfied. LAB-2A was explicitly human-accepted. LAB-2B pre-flight observed `agent/ui-ml-lab` at `13fcff8e608e18e3ac4faa232d17c98da25750df` and live `agent/n-bio-vnext-inference` at `5727ea95cf692c8ea0145bdb4cc0ac5a4dc705de`; no N-BIO sync was required. B0 source inspection confirmed the accepted Qualcomm reference app pins GenieX AAR `0.3.5`, AGP `8.13.0`, Kotlin `2.2.0`, Java 17, NDK `27.3.13750724`, compile/target SDK 34, minSdk 31, legacy JNI packaging and Gradle `9.1.0`.
 
-**Current hard gate:** reproduce the unchanged Qualcomm `geniex_chat_android` app at commit `db3f9772d4e423dee2df517335009c703845dba8`, then physically initialise it on the Samsung Galaxy S25 Ultra. The repository-operation sandbox cannot perform an Android build because it has no Android SDK or outbound shell network access; this environment limitation is recorded in `research/LAB_2B_IMPLEMENTATION_NOTES.md`. It is not treated as B0 success or failure. B2 harness code remains prohibited until the unchanged reference build and B1 physical native/ModelManager evidence are reported from Kian's device/build environment.
+**Physical progress:** the unchanged Qualcomm `geniex_chat_android` reference app at `db3f9772d4e423dee2df517335009c703845dba8` passed the B1 physical launch/init gate on the target Samsung Galaxy S25 Ultra. The isolated harness now exists under `experiments/lab2b-vlm-harness/` and does not depend on My Mettle source.
+
+**Current hard gate — B3 REVISE:** corrected physical native inspection of `geniex-android:0.3.5` and the harness APK established:
+
+- target device Android 16 / API 36 / build `BP4A.251205.006`;
+- actual target-device runtime page size `4096` bytes / 4 KB;
+- APK ABI `arm64-v8a` only;
+- APK `zipalign -P 16`: PASS;
+- native ELF 16 KB acceptance: FAIL because exactly 13 `Machine: Qualcomm Hexagon` payloads have minimum LOAD alignment `2**12`;
+- the failing set includes `libggml-htp-v81.so`, so the finding is directly relevant to the accepted llama.cpp NPU/HTP path rather than unused QAIRT-only baggage.
+
+The current 4 KB device runtime means this finding does not contradict the already-passed reference-app launch/init gate, but LAB-2B explicitly made native 16 KB portability a hard acceptance item. Therefore B4 exact-model preparation must not begin while the selected `0.3.5` AAR remains unresolved against that requirement.
+
+A controlled **research-only** static comparison against Qualcomm GenieX `v0.3.19` is permitted to determine whether Qualcomm rebuilt the affected Hexagon payloads. This comparison does not change the harness dependency. If a later AAR materially fixes the exact B3 failure, that is a candidate version revision for human review; do not silently substitute it.
 
 **The harness must remain deliberately tiny.** It should prove the runtime, not the product. Conceptually:
 
@@ -164,7 +177,7 @@ No Room, N-BIO, OCR pipeline, equipment schema, equipment UX or My Mettle produc
 
 If the recommended route fails, diagnose it against LAB-2A evidence. Do not convert the harness into an open-ended benchmark project or try many native stacks in parallel. Material route changes return to a short research/review decision before another harness attempt.
 
-**STOP condition:** stop only when one route is stable enough on the target device to justify My Mettle integration, or when evidence says the chosen route should be rejected/researched again. Build success alone is not a physical runtime pass.
+**STOP condition:** stop only when one route is stable enough on the target device to justify My Mettle integration, or when evidence says the chosen route should be rejected/researched again. Build success alone is not a physical runtime pass. B3's 16 KB failure must be resolved or explicitly reviewed before B4 resumes.
 
 **Must not pull forward:** My Mettle provider integration, OCR/equipment semantics, canonical equipment persistence, polished UX or server contribution.
 
