@@ -88,7 +88,7 @@ object HarnessRuntimeOwner {
         scope.launch {
             try {
                 dispose()
-                publish { it.copy(selectedModelId = id, backend = model.defaultBackend, phase = HarnessPhase.IDLE,
+                publish { it.copy(selectedModelId = id, backend = model.defaultBackend, options = it.options.copy(thinking = false), phase = HarnessPhase.IDLE,
                     backendEvidence = BackendEvidence(model.defaultBackend), lastError = null) }
             } catch (e: Exception) { fail("Model switch failed: ${e.message}", HarnessPhase.FAILED) }
         }
@@ -103,6 +103,17 @@ object HarnessRuntimeOwner {
             } catch (e: Exception) { fail("Backend change failed: ${e.message}", HarnessPhase.FAILED) }
         }
     }
+    fun selectOptions(options: GenerationOptions) {
+        if (options == snapshot.options || !begin(HarnessPhase.UNLOADING)) return
+        scope.launch {
+            try {
+                options.validate(snapshot.selectedModelId)
+                dispose()
+                publish { it.copy(options = options, phase = HarnessPhase.IDLE) }
+            } catch (e: Exception) { fail("Settings change failed: ${e.message}", HarnessPhase.FAILED) }
+        }
+    }
+    fun useWeightPrompt() { if (HarnessStateMachine.idle(snapshot.phase)) publish { it.copy(promptText = ExperimentPrompts.weights) } }
     fun load() {
         if (!::downloads.isInitialized || !begin(HarnessPhase.LOADING)) return
         val selected = snapshot
@@ -116,7 +127,7 @@ object HarnessRuntimeOwner {
                 val before = pss()
                 val start = System.nanoTime()
                 val engine = MnnEngine(model, downloads.installation.directory(model), selected.backend,
-                    File(requireContext().cacheDir, "lab2b-runtime/${model.id}/${selected.backend}"))
+                    File(requireContext().cacheDir, "lab2b-runtime/${model.id}/${selected.backend}"), selected.options)
                 slot.install(model.id, engine)
                 publish { it.copy(phase = HarnessPhase.READY, loadedModelId = model.id,
                     timing = TimingSnapshot(loadMs = elapsed(start)), memory = MemorySnapshot(before, pss()),
@@ -139,8 +150,8 @@ object HarnessRuntimeOwner {
     }
     fun selectImage(uri: Uri) = idleWork {
         val image = StorageIo.copyImage(requireContext(), uri)
-        val old = snapshot.selectedImage
-        publish { it.copy(selectedImage = image, ocr = cache.get(image.normalisedSha256),
+        val old = snapshot.originalImage ?: snapshot.selectedImage
+        publish { it.copy(originalImage = image, crop = null, proposedCrops = emptyList(), localisationReport = "", selectedImage = image, ocr = cache.get(image.normalisedSha256),
             ocrStatus = if (cache.get(image.normalisedSha256) != null) "CACHED" else "NOT RUN", ocrCacheHit = cache.get(image.normalisedSha256) != null) }
         old?.let { File(it.sourcePrivatePath).parentFile?.deleteRecursively() }
     }
@@ -159,18 +170,30 @@ object HarnessRuntimeOwner {
             val source = File(folder, "control.png")
             source.outputStream().use { check(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
             val image = ImagePreprocessor.prepare(source, folder, if (textControl) "HELLO-1234.png" else "red-square.png")
-            val old = snapshot.selectedImage
-            publish { it.copy(selectedImage = image, ocr = cache.get(image.normalisedSha256), ocrStatus = "NOT RUN") }
+            val old = snapshot.originalImage ?: snapshot.selectedImage
+            publish { it.copy(originalImage = image, crop = null, proposedCrops = emptyList(), localisationReport = "", selectedImage = image, ocr = cache.get(image.normalisedSha256), ocrStatus = "NOT RUN") }
             old?.let { File(it.sourcePrivatePath).parentFile?.deleteRecursively() }
         } finally { bitmap.recycle() }
     }
     fun clearImage() {
         if (!HarnessStateMachine.idle(snapshot.phase)) return
-        val old = snapshot.selectedImage
-        publish { it.copy(selectedImage = null, ocr = null, ocrStatus = "NOT RUN") }
+        val old = snapshot.originalImage ?: snapshot.selectedImage
+        publish { it.copy(originalImage = null, crop = null, proposedCrops = emptyList(), localisationReport = "", selectedImage = null, ocr = null, ocrStatus = "NOT RUN") }
         scope.launch { old?.let { File(it.sourcePrivatePath).parentFile?.deleteRecursively() } }
     }
+    fun applyCrop(region: CropRegion) = idleWork {
+        val original = requireNotNull(snapshot.originalImage ?: snapshot.selectedImage) { "Select an image" }
+        val image = CropImages.prepare(original, region)
+        publish { it.copy(selectedImage = image, crop = region, ocr = cache.get(image.normalisedSha256),
+            ocrStatus = if (cache.get(image.normalisedSha256) == null) "NOT RUN" else "CACHED", ocrCacheHit = cache.get(image.normalisedSha256) != null) }
+    }
+    fun restoreFullImage() = idleWork {
+        val image = requireNotNull(snapshot.originalImage) { "Select an image" }
+        publish { it.copy(selectedImage = image, crop = null, ocr = cache.get(image.normalisedSha256),
+            ocrStatus = if (cache.get(image.normalisedSha256) == null) "NOT RUN" else "CACHED") }
+    }
     fun selectPipeline(mode: PipelineMode) { if (mode != snapshot.pipeline && HarnessStateMachine.idle(snapshot.phase)) publish { it.copy(pipeline = mode) } }
+    fun selectOcrOrder(enabled: Boolean) { if (HarnessStateMachine.idle(snapshot.phase)) publish { it.copy(ocrReadingOrder = enabled) } }
     fun selectPreset(preset: SystemPreset) { if (preset != snapshot.preset && HarnessStateMachine.idle(snapshot.phase)) publish { it.copy(preset = preset) } }
     fun promptChanged(value: String) { publish { it.copy(promptText = value) } }
     fun importPrompt(uri: Uri) = idleWork {
@@ -210,38 +233,70 @@ object HarnessRuntimeOwner {
             return result
         } catch (e: Exception) { publish { it.copy(ocrStatus = "FAILED: ${e.message}") }; throw e }
     }
-    fun generate() {
+    fun generate() = runTurn(false)
+    fun proposeCrops() = runTurn(true)
+    private fun runTurn(localise: Boolean) {
         val request: HarnessSnapshot
         synchronized(lock) {
             if (!HarnessStateMachine.canGenerate(snapshot)) return
             request = snapshot
             cancelled.set(false)
             slot.engine!!.arm()
-            snapshot = snapshot.copy(phase = HarnessPhase.PREPARING, output = "", lastError = null,
+            snapshot = snapshot.copy(phase = HarnessPhase.PREPARING, output = "", rawOutput = "", nativeMetrics = emptyList(), lastError = null,
+                stageLabel = if (localise) "LOCALISE" else "EXTRACT",
                 timing = snapshot.timing.copy(firstOutputMs = null, totalGenerationMs = null))
         }
         notifySnapshot()
         scope.launch {
             var turn: InferenceTurn? = null
             var terminal = "FAILED"
+            val stage = if (localise) "LOCALISE" else "EXTRACT"
+            val image = if (localise) request.originalImage ?: request.selectedImage else request.selectedImage
+            var evidence: OcrEvidence? = null
+            var ocrMs = 0L
+            val measurements = RunMeasurements(requireContext())
+            val operationStart = System.nanoTime()
             try {
-                val image = requireNotNull(request.selectedImage)
-                val ocr = if (request.pipeline.ocr) recognise(image) else null
+                measurements.start(this)
+                val ocrStart = System.nanoTime()
+                evidence = if (!localise && request.pipeline.ocr) recognise(requireNotNull(image)) else null
+                ocrMs = if (evidence == null) 0 else elapsed(ocrStart)
                 if (cancelled.get()) { terminal = "STOPPED"; return@launch }
                 val system = if (request.preset == SystemPreset.CUSTOM) requireNotNull(request.customPrompt) { "Select a custom prompt file" }.text else request.preset.prompt
-                turn = PromptAssembler.assemble(request.promptText, system, ModelRegistry.get(request.selectedModelId).systemMode, request.pipeline, image, ocr)
+                turn = ThinkingPrompt.apply(PromptAssembler.assemble(if (localise) ExperimentPrompts.locate else request.promptText,
+                    if (localise) "Return only the requested region JSON. Locate visible objects; do not invent regions." else system,
+                    ModelRegistry.get(request.selectedModelId).systemMode, if (localise) PipelineMode.VISION_ONLY else request.pipeline,
+                    image, evidence, request.ocrReadingOrder), request.options.thinking)
                 publish { it.copy(systemMode = turn.systemMode, lastAssembledPrompt = "SYSTEM (${turn.systemMode}):\n${turn.system ?: "none / preface below"}\n\n${turn.user}") }
                 synchronized(lock) { if (!cancelled.get()) snapshot = snapshot.copy(phase = HarnessPhase.GENERATING) }
                 notifySnapshot()
                 if (cancelled.get()) { terminal = "STOPPED"; return@launch }
                 val inferenceStart = System.nanoTime()
                 val metrics = requireNotNull(slot.engine).generate(turn) { output ->
-                    publish { it.copy(output = output, timing = it.timing.copy(firstOutputMs = it.timing.firstOutputMs ?: if (output.isNotEmpty()) elapsed(inferenceStart) else null)) }
+                    val answer = GemmaOutput.finalAnswer(output)
+                    publish { it.copy(rawOutput = output, output = answer, timing = it.timing.copy(firstOutputMs = it.timing.firstOutputMs ?: if (answer.isNotEmpty()) elapsed(inferenceStart) else null)) }
                 }
                 terminal = if (cancelled.get() || metrics.lastOrNull() == 1L) "STOPPED" else "COMPLETED"
                 publish { it.copy(nativeMetrics = metrics.toList(), timing = it.timing.copy(totalGenerationMs = elapsed(inferenceStart))) }
             } catch (e: Exception) { fail("Inference failed: ${e.message}") }
             finally {
+                val measured = runCatching { measurements.finish() }.getOrElse { org.json.JSONObject().put("error", it.message) }
+                if (localise && terminal == "COMPLETED") {
+                    runCatching { CropImages.parse(snapshot.output) }.onSuccess { regions ->
+                        publish { it.copy(proposedCrops = regions) }
+                    }.onFailure { e ->
+                        terminal = "INVALID_CROP_PROPOSAL"
+                        publish { it.copy(proposedCrops = emptyList(), lastError = "Invalid crop proposal: ${e.message}. Use manual crop.") }
+                    }
+                }
+                val report = TestReport.create(request, snapshot, turn, image, evidence, terminal, stage, ocrMs, elapsed(operationStart), measured)
+                runCatching {
+                    val folder = File(requireContext().filesDir, "lab2b/reports").apply { mkdirs() }
+                    val file = File(folder, "${System.currentTimeMillis()}-${java.util.UUID.randomUUID()}.json")
+                    file.writeText(report)
+                }.onFailure { fail("Result export could not be persisted: ${it.message}") }
+                publish { it.copy(lastReport = report, testReports = (it.testReports + report).takeLast(50),
+                    localisationReport = if (localise) report else it.localisationReport) }
                 // MNN clears pending multimodal embeddings during prefill, not reset().
                 // A cancelled/rejected turn can stop before prefill; never reuse that owner.
                 if (HarnessStateMachine.mustDisposeAfterTurn(terminal)) {
@@ -263,6 +318,18 @@ object HarnessRuntimeOwner {
             snapshot = snapshot.copy(phase = HarnessPhase.STOPPING)
         }
         notifySnapshot()
+    }
+    fun exportReports(uri: Uri) = idleWork {
+        val folder = File(requireContext().filesDir, "lab2b/reports")
+        val reports = folder.listFiles().orEmpty().filter { it.extension == "json" }.sortedBy { it.name }
+        require(reports.isNotEmpty()) { "No saved tests yet" }
+        requireContext().contentResolver.openOutputStream(uri).use { stream ->
+            requireNotNull(stream).bufferedWriter().use { writer ->
+                writer.write("[\n")
+                reports.forEachIndexed { index, file -> if (index > 0) writer.write(",\n"); writer.write(file.readText()) }
+                writer.write("\n]")
+            }
+        }
     }
     fun clearTranscript() { if (HarnessStateMachine.idle(snapshot.phase)) publish { it.copy(transcript = emptyList(), output = "", lastAssembledPrompt = "") } }
     fun reportGpuFailure() {

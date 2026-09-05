@@ -135,5 +135,54 @@
         "sha256": "9feb04848cafad1117a510b43d6c2b58d6c31bef1040598156d266f9b42f581f"
       }
     ]
+  },
+  {
+    "id": "gemma4-e4b",
+    "displayName": "Gemma 4 E4B IT (experimental)",
+    "source": "taobao-mnn/gemma-4-E4B-it-MNN",
+    "revision": "fec885bae19e9363cebd36de22527b340bc6b450",
+    "license": "Apache-2.0",
+    "files": [
+      {
+        "name": "config.json",
+        "bytes": 678,
+        "sha256": "3b1c8caafa2792a64b81d2ef47d3e6afc1c250b280389e77d0d25628108c87a7"
+      },
+      {
+        "name": "llm.mnn",
+        "bytes": 3585584,
+        "sha256": "b55bad1efd4e66217e7ff75b896535fc01a0d07fcc78cc7a3d6b562fd71e8836"
+      },
+      {
+        "name": "llm.mnn.weight",
+        "bytes": 2936840364,
+        "sha256": "1232792a67e05d31525e5d3d8e30d827c55803f5dab9923aab2bbfd7fb9207e7"
+      },
+      {
+        "name": "llm_config.json",
+        "bytes": 1416,
+        "sha256": "c03fc5ccbdab67b7021f56ff255223f7c4308d2fa3a46059573ce309d8757594"
+      },
+      {
+        "name": "ple_embeddings_int4.bin",
+        "bytes": 1761607680,
+        "sha256": "0d91ddc26d4e6a0d7657ead0385781a30da62d5c5457e0498fbe324a979c33af"
+      },
+      {
+        "name": "tokenizer.mtok",
+        "bytes": 10068633,
+        "sha256": "e08a1293e250750949bb1f543edd626cc6cf9f039a2e461958d20f33407d26b9"
+      },
+      {
+        "name": "visual.mnn",
+        "bytes": 1060528,
+        "sha256": "6003978cd06e99eef6679c423f511a280479d858237cd18207019572d45f1327"
+      },
+      {
+        "name": "visual.mnn.weight",
+        "bytes": 226744492,
+        "sha256": "77b5258977b829e8bb3058447c448e396e48442c66fa0d7034013a6735957769"
+      }
+    ]
   }
 ]

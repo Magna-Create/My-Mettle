@@ -19,14 +19,15 @@ object MnnNative {
     external fun stop(handle: Long)
     external fun unload(handle: Long)
 }
-class MnnEngine(model: HarnessModelSpec, directory: File, backend: ComputeBackend, cache: File) : LocalInferenceEngine {
+class MnnEngine(model: HarnessModelSpec, directory: File, backend: ComputeBackend, cache: File, private val options: GenerationOptions = GenerationOptions()) : LocalInferenceEngine {
     private var handle: Long = 0
     override val evidence: BackendEvidence
     init {
+        options.validate(model.id)
         cache.mkdirs()
         val config = JSONObject().put("backend_type", if (backend == ComputeBackend.CPU) "cpu" else "opencl")
             .put("thread_num", 4).put("precision", "normal").put("memory", "low")
-            .put("max_new_tokens", 512).put("max_all_tokens", model.contextLength)
+            .put("max_new_tokens", options.maxTokens).put("max_all_tokens", model.contextLength)
             .put("reuse_kv", false).put("prompt_cache", false)
             .put("use_mmap", true).put("tmp_path", cache.absolutePath + "/")
             .put("sampler_type", "greedy").put("is_audio", false)
@@ -48,7 +49,7 @@ class MnnEngine(model: HarnessModelSpec, directory: File, backend: ComputeBacken
     override fun arm() { check(handle != 0L); MnnNative.arm(handle) }
     override fun generate(turn: InferenceTurn, onOutput: (String) -> Unit): LongArray {
         check(handle != 0L)
-        return MnnNative.generate(handle, turn.system?.toByteArray(), turn.user.toByteArray(), turn.imagePath?.toByteArray(), 512,
+        return MnnNative.generate(handle, turn.system?.toByteArray(), turn.user.toByteArray(), turn.imagePath?.toByteArray(), options.maxTokens,
             object : OutputCallback { override fun onOutput(bytes: ByteArray) { onOutput(bytes.toString(Charsets.UTF_8)) } })
     }
     override fun stop() { if (handle != 0L) MnnNative.stop(handle) }

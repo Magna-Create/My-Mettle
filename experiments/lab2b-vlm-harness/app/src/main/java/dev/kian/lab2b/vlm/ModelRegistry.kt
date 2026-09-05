@@ -23,6 +23,19 @@ data class HarnessModelSpec(
 object ModelRegistry {
     val models = listOf(
         HarnessModelSpec(
+            "gemma4-e4b", "Gemma 4 E4B IT (experimental)", "taobao-mnn/gemma-4-E4B-it-MNN", "fec885bae19e9363cebd36de22527b340bc6b450",
+            listOf(
+                ModelAsset("config.json", 678L, "3b1c8caafa2792a64b81d2ef47d3e6afc1c250b280389e77d0d25628108c87a7"),
+                ModelAsset("llm.mnn", 3585584L, "b55bad1efd4e66217e7ff75b896535fc01a0d07fcc78cc7a3d6b562fd71e8836"),
+                ModelAsset("llm.mnn.weight", 2936840364L, "1232792a67e05d31525e5d3d8e30d827c55803f5dab9923aab2bbfd7fb9207e7"),
+                ModelAsset("llm_config.json", 1416L, "c03fc5ccbdab67b7021f56ff255223f7c4308d2fa3a46059573ce309d8757594"),
+                ModelAsset("ple_embeddings_int4.bin", 1761607680L, "0d91ddc26d4e6a0d7657ead0385781a30da62d5c5457e0498fbe324a979c33af"),
+                ModelAsset("tokenizer.mtok", 10068633L, "e08a1293e250750949bb1f543edd626cc6cf9f039a2e461958d20f33407d26b9"),
+                ModelAsset("visual.mnn", 1060528L, "6003978cd06e99eef6679c423f511a280479d858237cd18207019572d45f1327"),
+                ModelAsset("visual.mnn.weight", 226744492L, "77b5258977b829e8bb3058447c448e396e48442c66fa0d7034013a6735957769"),
+            ),
+        ),
+        HarnessModelSpec(
             "gemma4-e2b", "Gemma 4 E2B IT", "taobao-mnn/gemma-4-E2B-it-MNN", "ce18884f154ce405545f1acda5c5c8fdd9c1280c",
             listOf(
                 ModelAsset("config.json", 678L, "3b1c8caafa2792a64b81d2ef47d3e6afc1c250b280389e77d0d25628108c87a7"),

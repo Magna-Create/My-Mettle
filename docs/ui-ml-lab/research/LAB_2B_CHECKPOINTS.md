@@ -38,3 +38,11 @@
 - Account interruption cleared scratch deliverables before attachment. Restored source from GitHub; final build and complete artifact remain available in Actions. The connector retrieved an artifact reference, but downloading that reference into the resumed workspace returned HTTP 403. Deliver through the successful Actions artifact; do not substitute an older local APK/checksum.
 - Repeated local diff/source/binary safety checks on the restored final implementation pass. Only documentation/Termux copy instructions and final evidence records changed after the built implementation.
 - Status: LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING. LAB-2C NOT STARTED.
+
+## Extension checkpoint 1 — 2026-09-05 17:30 UTC
+
+- Start/live Lab: `dab0c6f452e2fcd2623dc931648ac2f493300206`; N-BIO remains `5727ea95cf692c8ea0145bdb4cc0ac5a4dc705de`.
+- Metadata checkpoint: `37dd0da3d9864e20ff164a01046be88920c2b5b6`. Actions metadata job 101344043734 proves E4B asset pins and exact E2B/E4B simplified MNN templates. Neither template checks enable_thinking; use documented marker at start of actual system message instead.
+- Route remains MNN 3.6.1. New E4B required download: 4,939,909,375 bytes, no audio.
+- Implemented thinking/budget controls, crop editor and model-proposed reviewed regions, optional OCR top-left ordering, per-turn JSON export and device power-monitor/thermal/PSS measurements. Settings unload engine; aborted turns remain disposal-safe.
+- Source/binary isolation and diff check pass. Android toolchain absent in resumed workspace and direct downloads unavailable; dedicated Actions performs real build/tests/lint/native audit. Compile validation in progress. No production changes, no weights tracked. Continue to fix any build findings and provide Termux rebuild path.
