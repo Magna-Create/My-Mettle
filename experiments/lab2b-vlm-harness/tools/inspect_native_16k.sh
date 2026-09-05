@@ -41,6 +41,15 @@ if [ -z "$OBJDUMP" ] || [ ! -x "$OBJDUMP" ]; then
     exit 2
 fi
 
+READELF="${LLVM_READELF_BIN:-}"
+if [ -z "$READELF" ]; then
+    candidate="$(dirname "$OBJDUMP")/llvm-readelf"
+    [ -x "$candidate" ] && READELF="$candidate"
+fi
+if [ -z "$READELF" ]; then
+    READELF="$(command -v llvm-readelf || true)"
+fi
+
 ZIPALIGN="${ZIPALIGN_BIN:-}"
 if [ -z "$ZIPALIGN" ] && [ -n "${ANDROID_HOME:-}" ]; then
     ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 -type f -name zipalign 2>/dev/null | sort -V | tail -n 1)"
@@ -65,6 +74,7 @@ echo "AAR_SHA256=$(sha256sum "$AAR" | awk '{print $1}')"
 echo "APK=$APK"
 echo "APK_SHA256=$(sha256sum "$APK" | awk '{print $1}')"
 echo "LLVM_OBJDUMP=$OBJDUMP"
+echo "LLVM_READELF=${READELF:-not-found}"
 echo "ZIPALIGN=$ZIPALIGN"
 
 echo
@@ -82,36 +92,70 @@ if [ "${#APK_ABIS[@]}" -ne 1 ] || [ "${APK_ABIS[0]:-}" != "arm64-v8a" ]; then
     exit 1
 fi
 
+ELF_FAILURES=()
+
 check_elf_tree() {
     local label="$1"
     local root="$2"
     local found=0
     local failed=0
+
     while IFS= read -r -d '' so; do
         found=1
         echo
         echo "[$label] $so"
+
+        if [ -n "$READELF" ] && [ -x "$READELF" ]; then
+            local machine
+            machine="$($READELF -h "$so" 2>/dev/null | awk -F: '/^[[:space:]]*Machine:/{sub(/^[[:space:]]+/, "", $2); print $2; exit}' || true)"
+            [ -n "$machine" ] && echo "MACHINE=$machine"
+        fi
+
         local loads
         loads="$($OBJDUMP -p "$so" | grep 'LOAD' || true)"
         printf '%s\n' "$loads"
         if [ -z "$loads" ]; then
             echo "FAIL: no LOAD segments reported for $so" >&2
+            ELF_FAILURES+=("$label:${so#$root/}:NO_LOAD")
             failed=1
             continue
         fi
+
+        local file_failed=0
+        local lowest_power=999
+        local token
         while IFS= read -r token; do
             [ -z "$token" ] && continue
-            local power="${token##*2**}"
-            if ! [[ "$power" =~ ^[0-9]+$ ]] || [ "$power" -lt 14 ]; then
-                echo "FAIL: LOAD alignment below 2**14 in $so: $token" >&2
-                failed=1
+            if [[ "$token" =~ align[[:space:]]2\*\*([0-9]+) ]]; then
+                local power="${BASH_REMATCH[1]}"
+                if (( power < lowest_power )); then
+                    lowest_power="$power"
+                fi
+                if (( power < 14 )); then
+                    file_failed=1
+                fi
+            else
+                echo "FAIL: could not parse LOAD alignment token in $so: $token" >&2
+                file_failed=1
             fi
         done < <(printf '%s\n' "$loads" | grep -oE 'align 2\*\*[0-9]+' || true)
 
-        if "$OBJDUMP" -p "$so" | grep -q 'GNU_RELRO'; then
-            echo "RELRO=present"
+        if [ "$file_failed" -eq 1 ]; then
+            echo "ELF_ALIGNMENT=FAIL lowest=2**$lowest_power (< 2**14)" >&2
+            ELF_FAILURES+=("$label:${so#$root/}:2**$lowest_power")
+            failed=1
         else
-            echo "RELRO=not reported"
+            echo "ELF_ALIGNMENT=PASS lowest=2**$lowest_power"
+        fi
+
+        if [ -n "$READELF" ] && [ -x "$READELF" ]; then
+            if "$READELF" -l "$so" 2>/dev/null | grep -q 'GNU_RELRO'; then
+                echo "RELRO=present"
+            else
+                echo "RELRO=not reported"
+            fi
+        else
+            echo "RELRO=not checked (llvm-readelf unavailable)"
         fi
     done < <(find "$root" -type f -name '*.so' -print0)
 
@@ -127,11 +171,24 @@ check_elf_tree "AAR" "$TMP/aar" || ELF_OK=0
 check_elf_tree "APK" "$TMP/apk/lib/arm64-v8a" || ELF_OK=0
 
 echo
-echo "=== Official APK ZIP alignment check ==="
+echo "=== ELF alignment summary ==="
+if [ "${#ELF_FAILURES[@]}" -eq 0 ]; then
+    echo "UNALIGNED=none"
+else
+    printf 'UNALIGNED=%s\n' "${ELF_FAILURES[@]}"
+fi
+
+echo
+echo "=== APK ZIP alignment check ==="
 set +e
-"$ZIPALIGN" -v -c -P 16 4 "$APK"
+"$ZIPALIGN" -c -P 16 4 "$APK"
 ZIP_RC=$?
 set -e
+if [ "$ZIP_RC" -eq 0 ]; then
+    echo "ZIP_ALIGNMENT=PASS"
+else
+    echo "ZIP_ALIGNMENT=FAIL rc=$ZIP_RC" >&2
+fi
 
 if [ "$ELF_OK" -ne 1 ]; then
     echo "LAB2B_NATIVE_16K=FAIL_ELF_ALIGNMENT" >&2
