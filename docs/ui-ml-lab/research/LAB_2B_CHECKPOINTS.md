@@ -54,3 +54,12 @@
 - Added hash-checked Termux reuse of the previously imported native bundle, explicit crop preparation/provenance and raw/final TTFT, collapsible sections and extension documentation. CI now also exercises current/legacy native reuse, rejection of changed C++, and the prebuilt Gradle path.
 - Review found stale proposals could survive a failed re-localisation, and generated-token exhaustion could appear completed. Clear proposals on each localisation attempt; token-limit termination is explicit and disposes before retry.
 - Source isolation/binary safety/diff checks pass. No production or N-BIO changes. Continue through actual APK/lint/native audit before handoff.
+
+
+## Extension final validation — 2026-09-05 23:13 UTC
+
+- Build-ready source: `9e73f921f3ff2016bd81f3aa987db145f87e7da2`; live N-BIO remains `5727ea95cf692c8ea0145bdb4cc0ac5a4dc705de`.
+- Run 33997853838 SUCCESS. 25 unit tests, real APK build, lint, isolation, binary safety, all ten 16 KB ELF checks, APK zipalign and Termux prebuilt rebuild passed. Real native bundle current/legacy migration checks pass and reject changed C++.
+- APK 36,424,525 bytes; SHA-256 `73489ec5024bd15f2eb2b010cb3fa04739ecac41c128271f34a6a86ed95f2c36`; artifact `lab2b-vlm-harness-debug`, ID 9978638064.
+- Intermediate run 33997780098 also passed. No runtime/native change followed validation; this final commit records evidence only.
+- My Mettle app and N-BIO source diff empty; no weights/native binaries tracked. LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING. LAB-2C NOT STARTED.

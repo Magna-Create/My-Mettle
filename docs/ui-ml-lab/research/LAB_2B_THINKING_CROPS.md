@@ -1,6 +1,10 @@
 # LAB-2B 0.3: thinking, crops, E4B and measured test exports
 
-Status: implementation validation in progress; physical acceptance pending. LAB-2C not started.
+Status: LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING. LAB-2C not started.
+
+Validated implementation: `9e73f921f3ff2016bd81f3aa987db145f87e7da2`. [Actions run 33997853838](https://github.com/Magna-Create/My-Mettle/actions/runs/33997853838) SUCCESS: actual dependency/JNI build, 25 unit tests, lint, isolation/binary checks, all ten native ELF LOAD alignments >=16384, APK zipalign, and Termux prebuilt-path rebuild. Current/known-legacy native reuse passes; changed C++ reuse is rejected. Final APK: 36,424,525 bytes, SHA-256 `73489ec5024bd15f2eb2b010cb3fa04739ecac41c128271f34a6a86ed95f2c36`. Artifact `lab2b-vlm-harness-debug`, ID `9978638064`. A Termux build uses the local debug key and may have a different APK hash. See `LAB_2B_03_NATIVE_AUDIT.txt` for every library hash.
+
+Kotlin/JNI compilation, static 16 KB compatibility and packaging are proven. S25 thinking-channel behaviour, E4B loading/inference, power-monitor availability/resolution, crop correctness and new export UI remain physical tests. No model outputs were mocked as inference proof. Production My Mettle, N-BIO, Room/equipment runtime and LAB-2C are unchanged; no model binaries committed. Native runtime/JNI libraries are byte-identical to the accepted prior static audit.
 
 ## Physical evidence driving this build
 
