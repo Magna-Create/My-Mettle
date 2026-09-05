@@ -5,6 +5,7 @@ HARNESS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 AAR_VERSION="0.3.5"
 APK="$HARNESS_DIR/app/build/outputs/apk/debug/app-debug.apk"
 GRADLE_CACHE="${GRADLE_USER_HOME:-$HOME/.gradle}/caches/modules-2/files-2.1/com.qualcomm.qti/geniex-android/$AAR_VERSION"
+VERBOSE_NATIVE="${LAB2B_VERBOSE_NATIVE:-0}"
 
 require_cmd() {
     command -v "$1" >/dev/null 2>&1 || { echo "ERROR: required command '$1' not found" >&2; exit 2; }
@@ -76,20 +77,22 @@ echo "APK_SHA256=$(sha256sum "$APK" | awk '{print $1}')"
 echo "LLVM_OBJDUMP=$OBJDUMP"
 echo "LLVM_READELF=${READELF:-not-found}"
 echo "ZIPALIGN=$ZIPALIGN"
-
-echo
-echo "=== AAR native inventory ==="
-unzip -l "$AAR" | awk '/\.so$/ {print $4}' || true
-
-echo
-echo "=== APK native inventory ==="
-unzip -l "$APK" | awk '/^ *[0-9]+ .*lib\/.*\.so$/ {print $4}' || true
+echo "VERBOSE_NATIVE=$VERBOSE_NATIVE"
 
 mapfile -t APK_ABIS < <(find "$TMP/apk/lib" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort)
 echo "APK_ABIS=${APK_ABIS[*]:-none}"
 if [ "${#APK_ABIS[@]}" -ne 1 ] || [ "${APK_ABIS[0]:-}" != "arm64-v8a" ]; then
     echo "FAIL: harness APK must package only arm64-v8a for LAB-2B." >&2
     exit 1
+fi
+
+if [ "$VERBOSE_NATIVE" = "1" ]; then
+    echo
+echo "=== AAR native inventory ==="
+    unzip -l "$AAR" | awk '/\.so$/ {print $4}' || true
+    echo
+echo "=== APK native inventory ==="
+    unzip -l "$APK" | awk '/^ *[0-9]+ .*lib\/.*\.so$/ {print $4}' || true
 fi
 
 ELF_FAILURES=()
@@ -102,26 +105,25 @@ check_elf_tree() {
 
     while IFS= read -r -d '' so; do
         found=1
-        echo
-        echo "[$label] $so"
+        local relative="${so#$root/}"
+        local machine="unknown"
 
         if [ -n "$READELF" ] && [ -x "$READELF" ]; then
-            local machine
             machine="$($READELF -h "$so" 2>/dev/null | awk -F: '/^[[:space:]]*Machine:/{sub(/^[[:space:]]+/, "", $2); print $2; exit}' || true)"
-            [ -n "$machine" ] && echo "MACHINE=$machine"
+            [ -n "$machine" ] || machine="unknown"
         fi
 
         local loads
         loads="$($OBJDUMP -p "$so" | grep 'LOAD' || true)"
-        printf '%s\n' "$loads"
         if [ -z "$loads" ]; then
-            echo "FAIL: no LOAD segments reported for $so" >&2
-            ELF_FAILURES+=("$label:${so#$root/}:NO_LOAD")
+            echo "[$label] $relative machine=$machine ELF_ALIGNMENT=FAIL reason=NO_LOAD" >&2
+            ELF_FAILURES+=("$label:$relative:NO_LOAD")
             failed=1
             continue
         fi
 
         local file_failed=0
+        local parse_failed=0
         local lowest_power=999
         local token
         while IFS= read -r token; do
@@ -135,27 +137,28 @@ check_elf_tree() {
                     file_failed=1
                 fi
             else
-                echo "FAIL: could not parse LOAD alignment token in $so: $token" >&2
+                parse_failed=1
                 file_failed=1
             fi
         done < <(printf '%s\n' "$loads" | grep -oE 'align 2\*\*[0-9]+' || true)
 
-        if [ "$file_failed" -eq 1 ]; then
-            echo "ELF_ALIGNMENT=FAIL lowest=2**$lowest_power (< 2**14)" >&2
-            ELF_FAILURES+=("$label:${so#$root/}:2**$lowest_power")
-            failed=1
-        else
-            echo "ELF_ALIGNMENT=PASS lowest=2**$lowest_power"
+        if [ "$VERBOSE_NATIVE" = "1" ]; then
+            echo
+            echo "[$label] $relative"
+            echo "MACHINE=$machine"
+            printf '%s\n' "$loads"
         fi
 
-        if [ -n "$READELF" ] && [ -x "$READELF" ]; then
-            if "$READELF" -l "$so" 2>/dev/null | grep -q 'GNU_RELRO'; then
-                echo "RELRO=present"
-            else
-                echo "RELRO=not reported"
-            fi
-        else
-            echo "RELRO=not checked (llvm-readelf unavailable)"
+        if [ "$parse_failed" -eq 1 ] || [ "$lowest_power" -eq 999 ]; then
+            echo "[$label] $relative machine=$machine ELF_ALIGNMENT=FAIL reason=PARSE" >&2
+            ELF_FAILURES+=("$label:$relative:PARSE")
+            failed=1
+        elif [ "$file_failed" -eq 1 ]; then
+            echo "[$label] $relative machine=$machine ELF_ALIGNMENT=FAIL lowest=2**$lowest_power" >&2
+            ELF_FAILURES+=("$label:$relative:2**$lowest_power")
+            failed=1
+        elif [ "$VERBOSE_NATIVE" = "1" ]; then
+            echo "ELF_ALIGNMENT=PASS lowest=2**$lowest_power"
         fi
     done < <(find "$root" -type f -name '*.so' -print0)
 
