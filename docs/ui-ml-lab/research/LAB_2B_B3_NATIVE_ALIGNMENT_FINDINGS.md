@@ -1,12 +1,12 @@
 # LAB-2B B3 native alignment findings
 
-> **Status:** B3 REVISE. The first 16 KB audit exposed one validator bug and one genuine upstream native-alignment constraint. B4 remains blocked.
+> **Status:** B3 REVISE. Corrected physical audit confirms the frozen GenieX `0.3.5` artefact is usable on the target phone's current 4 KB runtime but fails LAB-2B's required native 16 KB portability acceptance because 13 Qualcomm Hexagon payloads use `2**12` LOAD alignment. B4 remains blocked while a controlled newer-AAR static comparison is pending.
 >
 > This note records evidence only. It does not authorise a GenieX version change, My Mettle integration, model download/import, or LAB-2C.
 
-## Physical environment reported
+## Physical environment
 
-The first B3 audit was run from Termux on the target Samsung Galaxy S25 Ultra.
+The corrected B3 audit was run from Termux on the target Samsung Galaxy S25 Ultra.
 
 | Field | Reported value |
 | --- | --- |
@@ -14,78 +14,73 @@ The first B3 audit was run from Termux on the target Samsung Galaxy S25 Ultra.
 | Android SDK | `36` |
 | Build ID | `BP4A.251205.006` |
 | Build fingerprint | `samsung/pa3qxeea/pa3q:16/BP4A.251205.006/S938BXXSBCZG3_OXMBCZG3:user/release-keys` |
-| Runtime page size | **PENDING** — Termux did not have `getconf` on its own PATH |
+| Runtime page size | `4096` bytes / 4 KB |
 
-The missing `getconf` command is not interpreted as a page-size result.
+The runtime page-size value was obtained physically from the device after `/system/bin/getconf` / Python fallback logic. It is not inferred from the device model.
 
-## Artefact under test
+## Artefacts under test
 
-The audit inspected the standalone LAB-2B harness built against the frozen reference dependency:
+Frozen dependency:
 
 ```text
 com.qualcomm.qti:geniex-android:0.3.5
 ```
 
-The APK path reported by the tool was:
+AAR:
+
+```text
+/data/data/com.termux/files/home/.gradle/caches/modules-2/files-2.1/com.qualcomm.qti/geniex-android/0.3.5/a13f1a16d15c5e51bfd32a9408f9b4267d4ec526/geniex-android-0.3.5.aar
+SHA-256 4a6ad5697bded1ce66ee3e691b2ce49fb2b7f5783db61b413b95b2222f1cb653
+```
+
+Harness APK:
 
 ```text
 experiments/lab2b-vlm-harness/app/build/outputs/apk/debug/app-debug.apk
+SHA-256 f845a43bd596ef657fa57178198a7be2387ec7a07019f46e56973d7295bcbcbc
 ```
 
-The app preserves Qualcomm's reference `jniLibs.useLegacyPackaging = true`, so native libraries are compressed in the APK.
-
-## Validator defect discovered
-
-The first version of `tools/inspect_native_16k.sh` printed failures for both:
+The APK contains only:
 
 ```text
-align 2**14
-align 2**12
+arm64-v8a
 ```
 
-That was wrong. Android's documented minimum is `2**14`; `2**14` is valid and only lower values such as `2**13` / `2**12` fail the ELF criterion.
-
-The bug was in Bash extraction of the exponent:
+The app preserves Qualcomm's frozen reference setting:
 
 ```text
-${token##*2**}
+jniLibs.useLegacyPackaging = true
 ```
 
-The `*` characters were interpreted as shell glob syntax, so valid tokens were not parsed as the numeric exponent `14` and were rejected.
+## Validator defect and correction
 
-The validator was fixed in commit:
+The first version of `tools/inspect_native_16k.sh` incorrectly reported valid `align 2**14` segments as failures because the Bash exponent extraction treated literal `*` characters as shell glob syntax.
+
+The parser was corrected in commit:
 
 ```text
 a794e7e22db8b1fda2f840eeb59b9de39ea79993
 ```
 
-The corrected implementation captures the exponent with a Bash regex and fails only when the parsed exponent is `< 14`. It also reports ELF machine identity and emits a compact unaligned-file summary.
+The corrected implementation parses the exponent with a regex and fails only when the parsed exponent is `< 14`. A later output cleanup reports the failing filename, ELF machine and minimum LOAD alignment without dumping every passing library.
 
-## Correct interpretation of the first APK output
+The corrected physical rerun is authoritative for the `0.3.5` classification below.
 
-The large majority of visible GenieX host/runtime libraries reported `align 2**14` and therefore meet the static ELF threshold. Examples include:
+## Corrected `0.3.5` result
 
-- `libgeniex.so`;
-- `libgeniex_core.so`;
-- `libgeniex_vlm.so`;
-- `libgeniex_plugin_llama_cpp.so`;
-- `libgeniex_plugin_qairt.so`;
-- `libggml.so`;
-- `libggml-base.so`;
-- `libggml-cpu.so`;
-- `libggml-hexagon.so`;
-- `libggml-opencl.so`;
-- `libllama.so`;
-- `libllama-common.so`;
-- `libmtmd.so`;
-- `libnpu_jni.so`;
-- `libomp.so`.
+The corrected audit reports exactly 13 failing files in the AAR and the same 13 files in the packaged APK. Every failing file is identified by `llvm-readelf` as:
 
-Those `2**14` entries were false positives from the original checker and are not treated as failures.
+```text
+Machine: Qualcomm Hexagon
+```
 
-### Genuine `2**12` entries visible in the APK
+Each has minimum LOAD alignment:
 
-The user-supplied APK audit contains genuine 4 KB LOAD alignment for at least the following files:
+```text
+2**12
+```
+
+Failing set:
 
 ```text
 libCalculator_skel.so
@@ -103,33 +98,69 @@ libggml-htp-v79.so
 libggml-htp-v81.so
 ```
 
-Each of these showed one or more LOAD segments with:
+This is materially narrower than the original noisy output. The general GenieX / llama.cpp Android host libraries are not the problem: the corrected audit no longer rejects their valid `2**14` LOAD alignment.
+
+### Primary-route significance
+
+The failures are not irrelevant QAIRT-only baggage. The frozen primary route is:
 
 ```text
-align 2**12
+GenieX llama_cpp
+→ compute_unit = npu
+→ Snapdragon HTP
 ```
 
-This is a genuine failure against Android's native 16 KB ELF-alignment criterion.
+and the failing set includes:
 
-The corrected rerun is still required because it will provide a compact complete list and ELF machine identity. The list above is evidence from the visible first APK output, not a claim about files that may have appeared outside the supplied excerpt.
+```text
+libggml-htp-v81.so
+```
+
+The HTP/GGML payload class is therefore directly relevant to the Snapdragon 8 Elite NPU route.
 
 ## APK ZIP alignment
 
-The first run's official `zipalign -P 16` check succeeded. The output showed the native libraries as compressed, matching the frozen Qualcomm reference setting:
+The corrected physical audit reports:
 
 ```text
-jniLibs.useLegacyPackaging = true
+ZIP_ALIGNMENT=PASS
 ```
 
-This means APK ZIP packaging is not the current failure.
+and final static verdict:
 
-Android documents compressed native libraries as a packaging workaround when uncompressed shared-library ZIP alignment is a problem. That workaround does **not** rebuild a precompiled `.so` whose ELF LOAD segments are only 4 KB aligned. ELF alignment and APK ZIP alignment are separate requirements.
+```text
+LAB2B_NATIVE_16K=FAIL_ELF_ALIGNMENT
+```
+
+The native libraries are compressed in the APK, matching `jniLibs.useLegacyPackaging = true`. This means the APK ZIP packaging check passes, but it does not rebuild the 4 KB-aligned Qualcomm Hexagon ELF payloads.
+
+## Device-runtime interpretation
+
+The physical S25 Ultra currently reports:
+
+```text
+PAGE_SIZE=4096
+```
+
+Therefore this phone's current runtime does not itself require 16 KB ELF loading for the LAB-2B physical proof. That is consistent with the earlier Qualcomm reference app physically launching and initialising on this device.
+
+However, LAB-2B explicitly made native 16 KB compatibility a hard acceptance item. The current 4 KB device runtime does not waive that portability requirement.
+
+So the correct interpretation is:
+
+```text
+CURRENT TARGET DEVICE RUNTIME: 4 KB
+GENIEX 0.3.5 CURRENT-DEVICE LOADABILITY: not contradicted by B3
+GENIEX 0.3.5 NATIVE 16 KB PORTABILITY: FAIL
+```
+
+B3 therefore remains `REVISE`, not `PASS` and not a generic GenieX route rejection.
 
 ## Upstream corroboration
 
-Qualcomm GenieX issue `#886`, **[Android] Support 16KB page size alignment for Android 15 compliance**, independently reports the same class of problem in bundled Qualcomm QNN / GGML-HTP dependencies.
+Qualcomm GenieX issue `#886`, **[Android] Support 16KB page size alignment for Android 15 compliance**, independently reports the same class of bundled QNN / GGML-HTP 4 KB-alignment problem.
 
-A later reporter explicitly listed 4 KB alignment in files including:
+The issue explicitly names several files also observed here, including:
 
 ```text
 libCalculator_skel.so
@@ -142,7 +173,7 @@ libggml-htp-v79.so
 libggml-htp-v81.so
 ```
 
-A Qualcomm maintainer subsequently said their initial SDK-side fix had not fully resolved the issue and that another fix would be provided. The issue was ultimately closed as stale on 2026-07-22 rather than with a demonstrated 16 KB-clean artefact.
+A Qualcomm maintainer acknowledged that an initial SDK-side toolchain update had not fully fixed the bundled QNN/GGML-HTP set and said another fix was needed. The issue was later closed stale rather than with a demonstrated clean artefact.
 
 Source:
 
@@ -150,19 +181,16 @@ Source:
 https://github.com/qualcomm/GenieX/issues/886
 ```
 
-The LAB-2B physical audit is stronger evidence for `geniex-android:0.3.5` than the historical issue itself; the issue is retained as corroborating failure archaeology.
+The physical `0.3.5` audit above is the stronger evidence for this LAB-2B pin; the issue is retained as corroborating failure archaeology.
 
 ## Current Android criterion
 
-Current Android guidance states that every shared library in the relevant 64-bit APK ABI should have ELF LOAD alignment of at least:
+Current Android guidance distinguishes two checks:
 
-```text
-2**14
-```
+1. native ELF LOAD alignment for relevant shared libraries, with `2**14` as the minimum 16 KB-compatible alignment;
+2. APK ZIP alignment, checked separately with `zipalign -P 16`.
 
-`2**13`, `2**12`, and lower are not considered 16 KB ELF aligned. Android also requires checking APK ZIP alignment separately with `zipalign -P 16`.
-
-Current guidance also notes Android 16's 16 KB compatibility mode can allow some 4 KB-aligned apps to run on a 16 KB kernel, but that mode is not equivalent to native 16 KB compliance and is not accepted here as proof of a production-clean runtime.
+Compressed native packaging can satisfy the APK packaging side in compatibility scenarios, but it does not change a precompiled ELF whose LOAD alignment is only `2**12`.
 
 Reference:
 
@@ -170,25 +198,9 @@ Reference:
 https://developer.android.com/guide/practices/page-sizes
 ```
 
-## Primary-route significance
+## Newer GenieX comparison — research only
 
-This finding does **not** show that all GenieX Android native code is 4 KB aligned. In the supplied output, the general GenieX / llama.cpp host libraries are predominantly 16 KB aligned.
-
-The genuine failures cluster around HTP/QNN/DSP-related payloads. Critically, the frozen primary route requests:
-
-```text
-GenieX llama_cpp
-→ compute_unit = npu
-→ Snapdragon HTP
-```
-
-and the APK contains `libggml-htp-v81.so` at `2**12`.
-
-Therefore the 16 KB finding is directly relevant to the intended NPU path and cannot be dismissed as an unused QAIRT-only dependency.
-
-## Newer GenieX candidate — research only
-
-As of this B3 review, Qualcomm's latest public GitHub release is `v0.3.19` (2026-08-07).
+Qualcomm's latest public GitHub release observed during B3 review is `v0.3.19` (2026-08-07).
 
 Its Android source uses:
 
@@ -198,9 +210,9 @@ ndkVersion = 29.0.14206865
 jniLibs.useLegacyPackaging = true
 ```
 
-The newer NDK is encouraging for libraries rebuilt by GenieX itself, but the source still copies vendor/HTP prebuilts into the AAR. No release note or resolved Qualcomm issue has yet been found that proves the exact HTP binaries are 16 KB clean.
+A newer NDK can improve libraries rebuilt by GenieX, but the Android packaging source still copies vendor/HTP prebuilts into the AAR. No release note has yet been accepted as proof that the exact failing Hexagon payloads were rebuilt cleanly.
 
-Therefore `0.3.19` is only a **static comparison candidate**. The harness remains pinned to `0.3.5` until a controlled comparison demonstrates a material benefit and the route change is explicitly reviewed.
+`tools/compare_geniex_release_16k.sh` therefore performs a **research-only** static comparison of Qualcomm's published `v0.3.19` AAR. It does not modify the harness dependency. The script's executable bit was corrected after the first invocation returned `Permission denied`.
 
 ## B3 decision
 
@@ -208,15 +220,19 @@ Therefore `0.3.19` is only a **static comparison candidate**. The harness remain
 B3 = REVISE
 ```
 
-Reasons:
+Established facts:
 
-1. the original checker must be rerun after its parser fix so the evidence set is clean;
-2. the frozen `0.3.5` APK contains genuine `2**12` HTP/QNN/GGML-HTP libraries;
-3. the target device's actual runtime page size is still unrecorded;
-4. a newer GenieX AAR may or may not fix the upstream prebuilts and must be tested, not assumed.
+1. corrected `0.3.5` AAR/APK audit is valid;
+2. APK ABI is `arm64-v8a` only;
+3. APK ZIP alignment passes;
+4. exactly 13 Qualcomm Hexagon payloads fail native 16 KB ELF alignment at `2**12`;
+5. the set includes `libggml-htp-v81.so`, directly relevant to the primary NPU/HTP lane;
+6. the target S25 Ultra currently runs a 4 KB (`4096`) page-size environment;
+7. the current device can therefore remain a valid physical runtime target, but `0.3.5` cannot satisfy LAB-2B's separate 16 KB portability acceptance;
+8. `v0.3.19` static comparison remains pending and is not an authorised dependency change.
 
 ### Gate
 
-B4 exact model preparation remains **BLOCKED**.
+B4 exact model preparation remains **BLOCKED** pending the controlled newer-AAR comparison and resulting route decision.
 
 LAB-2C remains **NOT STARTED**.
