@@ -7,7 +7,7 @@ Standalone Android Gradle root. **Never include it from My Mettle root settings.
 
 ## Install and exercise
 
-Install the debug APK from the dedicated **LAB-2B standalone harness** Actions artifact `lab2b-vlm-harness-debug` or the morning handoff attachment. Package: `dev.kian.lab2b.vlm`, label **LAB-2B VLM Harness**, Android 12+ ARM64. If Android reports a signing mismatch against an older harness, uninstall that harness first (this removes its private downloads).
+Install the debug APK from [successful run 33942676654](https://github.com/Magna-Create/My-Mettle/actions/runs/33942676654), artifact `lab2b-vlm-harness-debug`. Final APK SHA-256: `b670336d205837e71d9c0633ec2029f7a0922fb7978792e14b9a9a4edaddb1a2`. Package: `dev.kian.lab2b.vlm`, label **LAB-2B VLM Harness**, Android 12+ ARM64. If Android reports a signing mismatch against an older harness, uninstall that harness first (this removes its private downloads).
 
 1. Choose **Qwen3.5-2B**, **CPU**, and **Download** (1.381 GB; Wi-Fi recommended). Wait for INSTALLED after SHA verification. Downloads may use metered data and continue through process death; system-paused transfers show their reason.
 2. **Load**. Weights are rehashed before native load; LOADING includes that verification, while cold-load timing measures the native constructor only.
@@ -59,8 +59,10 @@ python tools/native_bundle.py import lab2b-native.zip --sha256 "$(awk '{print $1
   -Pandroid.aapt2FromMavenOverride="$(command -v aapt2)" \
   testDebugUnitTest assembleDebug lintDebug
 sha256sum app/build/outputs/apk/debug/app-debug.apk
-termux-open --view app/build/outputs/apk/debug/app-debug.apk
+cp app/build/outputs/apk/debug/app-debug.apk ~/storage/downloads/LAB-2B-VLM-Harness-debug.apk
 ```
+
+Open the copied APK from Samsung My Files to install. `~/storage/downloads` requires Termux storage access (`termux-setup-storage` if not already granted).
 
 The prebuilt Gradle path is validated on the build host; physical Termux execution still needs Kian's device. These commands assume the same existing SDK/Gradle environment used for the earlier harness; `pkg` alone does not install Android SDK platforms or the pinned Gradle distribution. Downloading the already-built APK is the immediate installation route.
 

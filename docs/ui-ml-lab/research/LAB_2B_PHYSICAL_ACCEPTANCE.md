@@ -1,5 +1,8 @@
 # LAB-2B physical acceptance
 
+**Final implementation status:** LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING. Implementation `34fcadf8e25387f4afb534811124fbd6fd456081` passed dedicated Actions run [33942676654](https://github.com/Magna-Create/My-Mettle/actions/runs/33942676654), which published the APK in `lab2b-vlm-harness-debug`. See `LAB_2B_MORNING_HANDOFF.md` for all model pins, build results, install/Termux commands and remaining physical tests, and `LAB_2B_FINAL_NATIVE_AUDIT.txt` for final APK/native hashes. LAB-2B is not COMPLETE; LAB-2C is not started.
+
+
 **Cancellation/rejection lifecycle:** Stop or a failed turn unloads the runtime after the current native operation returns. Tap Load before another turn; model files remain installed. MNN clears multimodal embeddings in prefill, while `reset()` alone does not clear pending embeddings from a turn rejected/cancelled before prefill. Disposal prevents historical-image reuse on that path. Completed turns retain the loaded engine and reset conversation state.
 
 

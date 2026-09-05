@@ -43,10 +43,16 @@ The archive links Vulkan as a dependency of `libllm`; it remains packaged for na
 
 Gemma requires its PLE embedding file as well as decoder/vision assets. Its export also advertises audio. The harness sets `is_audio=false` before `load()`, as supported by MNN's runtime config, and does not download its unused audio graph/weights. Vision remains enabled. No source model metadata is rewritten.
 
-The exact model chat template is applied to explicit system + current user messages by `Llm::response(ChatMessages)`. Only one current image path is added. Every turn resets native state and keeps KV/prompt reuse disabled. Decode uses the upstream Android `generate(1)` stepping pattern with its terminal-step restoration, allowing explicit cancellation between native operations. A running vision/prefill operation must finish before cancellation returns; destroying its handle concurrently is prohibited.
+The exact model chat template is applied to explicit system + current user messages by `apply_chat_template(ChatMessages)`, followed by one multimodal tokenization and `response(tokens)` after the explicit context-budget check. Only one current image path is added. Every turn resets native state and keeps KV/prompt reuse disabled. Decode uses the upstream Android `generate(1)` stepping pattern with its terminal-step restoration, allowing explicit cancellation between native operations. A running vision/prefill operation must finish before cancellation returns; destroying its handle concurrently is prohibited.
 
 ## NPU history remains closed
 
 GenieX standard AARs 0.3.5, 0.3.19 and 0.6.1 failed the required static gate on Qualcomm Hexagon payloads. See `LAB_2B_B3_ROUTE_DECISION.md` for exact historical evidence. No Qualcomm version cycling was performed in this mission.
 
 Historical user-reported Qwen3.5 HELLO/1234 results in the Qualcomm reference app: NPU-selected grossly incorrect block/logo interpretation; GPU-selected blank image; CPU-selected HELLO and 1924. These findings **are not attributed to MNN**. Repeat the controls on MNN CPU and GPU independently.
+
+## Final validation
+
+Implementation HEAD `34fcadf8e25387f4afb534811124fbd6fd456081` passed dedicated Actions run `33942676654`: testDebugUnitTest (19 declared tests), assembleDebug, lintDebug, source/binary safety and every packaged ELF/APK static 16 KB check. Artifact: `lab2b-vlm-harness-debug`, ID `9962381669`. The final APK has 36,326,209 bytes and SHA-256 `b670336d205837e71d9c0633ec2029f7a0922fb7978792e14b9a9a4edaddb1a2`. See `LAB_2B_FINAL_NATIVE_AUDIT.txt`.
+
+Stopped or failed turns dispose the engine after the current native operation returns: MNN clears pending vision embeddings in prefill, while reset alone does not clear a prefill-aborted turn. This deliberately requires Load again and prevents old-image reuse. Completed turns retain the loaded model and reset context. No S25 inference result is claimed.
