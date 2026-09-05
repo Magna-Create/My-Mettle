@@ -25,6 +25,7 @@ data class HarnessSnapshot(
     val modelStoragePath: String = "", val installedBytes: Long = 0, val temporaryBytes: Long = 0,
 )
 object HarnessStateMachine {
+    fun mustDisposeAfterTurn(terminal: String) = terminal != "COMPLETED"
     fun idle(phase: HarnessPhase) = phase in setOf(HarnessPhase.IDLE, HarnessPhase.READY, HarnessPhase.FAILED)
     fun canGenerate(s: HarnessSnapshot) = s.phase == HarnessPhase.READY && s.loadedModelId == s.selectedModelId && s.selectedImage != null
     fun canStop(phase: HarnessPhase) = phase in setOf(HarnessPhase.PREPARING, HarnessPhase.GENERATING)

@@ -242,7 +242,14 @@ object HarnessRuntimeOwner {
                 publish { it.copy(nativeMetrics = metrics.toList(), timing = it.timing.copy(totalGenerationMs = elapsed(inferenceStart))) }
             } catch (e: Exception) { fail("Inference failed: ${e.message}") }
             finally {
+                // MNN clears pending multimodal embeddings during prefill, not reset().
+                // A cancelled/rejected turn can stop before prefill; never reuse that owner.
+                if (HarnessStateMachine.mustDisposeAfterTurn(terminal)) {
+                    publish { it.copy(phase = HarnessPhase.UNLOADING) }
+                    dispose()
+                }
                 publish { it.copy(phase = if (slot.engine != null) HarnessPhase.READY else HarnessPhase.IDLE,
+                    lastError = if (terminal == "STOPPED") "Stopped; runtime unloaded to clear pending image state. Load to run another turn." else if (terminal == "FAILED") (it.lastError ?: "Turn failed") + "\nRuntime unloaded. Load to retry." else it.lastError,
                     transcript = (it.transcript + TranscriptTurn(request.selectedModelId, request.backend, request.pipeline,
                         turn?.systemMode ?: SystemPromptMode.NONE, request.promptText, turn?.imageSha256, it.output, terminal)).takeLast(20)) }
             }

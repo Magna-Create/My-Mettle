@@ -1,5 +1,8 @@
 # LAB-2B VLM Harness
 
+**Cancellation/rejection lifecycle:** Stop or a failed turn unloads the runtime after the current native operation returns. Tap Load before another turn; model files remain installed. MNN clears multimodal embeddings in prefill, while `reset()` alone does not clear pending embeddings from a turn rejected/cancelled before prefill. Disposal prevents historical-image reuse on that path. Completed turns retain the loaded engine and reset conversation state.
+
+
 Standalone Android Gradle root. **Never include it from My Mettle root settings.** LAB-2C is not started. Physical S25 Ultra acceptance remains pending.
 
 ## Install and exercise

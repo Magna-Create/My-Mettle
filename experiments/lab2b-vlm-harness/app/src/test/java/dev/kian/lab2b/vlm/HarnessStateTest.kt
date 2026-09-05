@@ -4,6 +4,11 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class HarnessStateTest {
+    @Test fun interruptedOrRejectedPrefillCannotReusePendingImageState() {
+        assertTrue(HarnessStateMachine.mustDisposeAfterTurn("STOPPED"))
+        assertTrue(HarnessStateMachine.mustDisposeAfterTurn("FAILED"))
+        assertFalse(HarnessStateMachine.mustDisposeAfterTurn("COMPLETED"))
+    }
     @Test fun generationRequiresMatchingLoadedModelAndImage() {
         val s = HarnessSnapshot(phase = HarnessPhase.READY, loadedModelId = "gemma4-e2b", selectedImage = testImage())
         assertTrue(HarnessStateMachine.canGenerate(s))

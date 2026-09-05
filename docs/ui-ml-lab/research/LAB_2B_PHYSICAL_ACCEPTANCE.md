@@ -1,5 +1,8 @@
 # LAB-2B physical acceptance
 
+**Cancellation/rejection lifecycle:** Stop or a failed turn unloads the runtime after the current native operation returns. Tap Load before another turn; model files remain installed. MNN clears multimodal embeddings in prefill, while `reset()` alone does not clear pending embeddings from a turn rejected/cancelled before prefill. Disposal prevents historical-image reuse on that path. Completed turns retain the loaded engine and reset conversation state.
+
+
 ## Current replacement-runtime acceptance — pending
 
 Test the new MNN 3.6.1 CPU/GPU + bundled OCR APK using the harness README. Build/static validation is separate from actual phone acceptance. Do not mark LAB-2B COMPLETE from a build.

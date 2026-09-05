@@ -20,3 +20,12 @@
 - Changes reviewed: persistent GPU observation, no-op spinner guards, restart image cleanup, token budget, pure download-state tests, source-matched Termux native bundle and current README/plan/acceptance records. Source and binary safety pass; no product/N-BIO/model-weight files changed.
 - Build state: fresh release-candidate build/Termux prebuilt-path validation in progress; CI will repeat complete gates after this checkpoint.
 - Next: inspect final native bundle/APK, verify prebuilt build path, publish final APK/checksums and detailed morning handoff. Continue automatically; physical acceptance remains pending.
+
+## Checkpoint 3 — 2026-09-05 03:43 UTC
+
+- Previous published HEAD: `37025f4b96a1c23b1bf8f07779f99e73791833bc`.
+- Route remains MNN 3.6.1; no engine compilation or model-conversion failure occurred.
+- Fresh prebuilt-path validation: **BUILD SUCCESSFUL**, all 55 tasks executed (no CMake tasks); 18 tests, zero failures. This resolves the concrete risk that Termux packaging depended on leftover native build outputs. Phone-side Termux execution remains untested.
+- Source review found MNN `Omni::embedding()` clears pending image embeddings after prefill; `Llm::reset()` does not clear them if a turn aborts before prefill. The harness now disposes the engine after every stopped/failed turn and tells the user to Load again. Successful turns keep the engine with stateless reset. Added a lifecycle policy regression test; final build underway.
+- Anonymous HTTP range probes succeeded (206) for each pinned model's main weight file, with matching total byte sizes. This proves public access only, not inference or complete model hash verification.
+- Source-isolation/binary checks pass. Continue to final artifact build/audit, CI result and handoff; physical acceptance pending, LAB-2C not started.

@@ -1,5 +1,8 @@
 # LAB-2B implementation notes
 
+**Cancellation/rejection lifecycle:** Stop or a failed turn unloads the runtime after the current native operation returns. Tap Load before another turn; model files remain installed. MNN clears multimodal embeddings in prefill, while `reset()` alone does not clear pending embeddings from a turn rejected/cancelled before prefill. Disposal prevents historical-image reuse on that path. Completed turns retain the loaded engine and reset conversation state.
+
+
 ## Current CPU/GPU implementation — 2026-09-05
 
 The authorised CPU/GPU + OCR mission supersedes the historical implementation below. One MNN 3.6.1 runtime now serves exact pinned exports for all three target models; see `LAB_2B_RUNTIME_RESELECTION.md` and the harness `model-registry.json`. There is no GenieX dependency or packaged Qualcomm binary. The standalone root and product source isolation remain intact.
