@@ -1,16 +1,16 @@
 # LAB-2B implementation notes
 
-> **Status:** LAB-2B IN PROGRESS. Current gate: B0/B1 Qualcomm reference-app reproduction and physical native-initialisation proof.
+> **Status:** LAB-2B IN PROGRESS. B1 physical Qualcomm reference-app gate passed by user attestation. B2 standalone harness source is prepared. Current stop target is B3 static/native/page-size validation.
 >
-> LAB-2B is an isolated runtime validation exercise. Nothing in this document authorises My Mettle `:app`, LAB-1 provider, N-BIO, Room or equipment integration.
+> Nothing here authorises My Mettle `:app`, LAB-1 provider, N-BIO, Room or equipment integration.
 
 ## Starting source truth
 
-- Working branch at entry: `agent/ui-ml-lab`.
+- Working branch: `agent/ui-ml-lab`.
 - LAB-2B starting Lab HEAD: `13fcff8e608e18e3ac4faa232d17c98da25750df` (`Preserve LAB-2A governance detail at closure`).
-- Live N-BIO observed at entry: `5727ea95cf692c8ea0145bdb4cc0ac5a4dc705de` (`Clarify Context Module scientific status`).
-- N-BIO sync: **none**; LAB-2B has no shared N-BIO dependency requirement.
-- LAB-2A: human accepted by explicit user instruction starting this mission.
+- Live N-BIO at entry: `5727ea95cf692c8ea0145bdb4cc0ac5a4dc705de` (`Clarify Context Module scientific status`).
+- N-BIO sync: **none**.
+- LAB-2A: explicitly human accepted.
 
 ## Frozen primary route
 
@@ -18,116 +18,105 @@
 Qwen3-VL-2B-Instruct
 → unsloth/Qwen3-VL-2B-Instruct-GGUF
 → Q4_0 + matching mmproj
-→ Qualcomm GenieX Android AAR
-→ resolved runtime_id expected llama_cpp
+→ Qualcomm GenieX Android AAR 0.3.5
+→ ModelManager LOCALFS import
+→ resolved runtime_id must be llama_cpp
 → explicit compute_unit = npu
 → Samsung Galaxy S25 Ultra / Snapdragon 8 Elite
 ```
 
-Fallback diagnosis, only if required, holds every other variable fixed and changes `npu → gpu → cpu` one step at a time.
+GPU then CPU remain same-stack diagnostics only if the NPU path fails and a controlled fallback is required.
 
-## B0 reference baseline
+## B0/B1 result
 
-### Exact source
+Qualcomm reference app:
 
-- Repository: `qualcomm/ai-hub-apps`.
-- Commit: `db3f9772d4e423dee2df517335009c703845dba8`.
-- App directory: `geniex_chat_android`.
-- Application ID / namespace: `com.geniex.demo`.
+- repository `qualcomm/ai-hub-apps`;
+- commit `db3f9772d4e423dee2df517335009c703845dba8`;
+- app `geniex_chat_android`;
+- application ID `com.geniex.demo`;
+- AAR `com.qualcomm.qti:geniex-android:0.3.5`.
 
-### Exact build/runtime matrix established from source
+Reference matrix:
 
 | Component | Pin |
 | --- | --- |
-| GenieX Android AAR | `com.qualcomm.qti:geniex-android:0.3.5` |
 | AGP | `8.13.0` |
-| Kotlin Android plugin | `2.2.0` |
-| Kotlin serialization plugin | `2.2.0` |
+| Kotlin | `2.2.0` |
 | Gradle | `9.1.0` |
-| Java | 17; source build utility pins `17.0.16-ms` |
-| compileSdk | 34 |
-| targetSdk | 34 |
-| minSdk | 31 |
+| Java | 17; source utility pins `17.0.16-ms` |
+| compileSdk / targetSdk | `34 / 34` |
+| minSdk | `31` |
 | NDK | `27.3.13750724` |
 | JNI packaging | `jniLibs.useLegacyPackaging = true` |
-| target ABI | `arm64-v8a` |
+| ABI | `arm64-v8a` |
 
-The LAB-2A matrix did not name the Gradle distribution explicitly. Current inspection of the accepted reference revision establishes `GRADLE_VERSION="9.1.0"` in `geniex_chat_android/scripts/versions.env`. This is an evidence completion, not a route deviation.
+Kian ran the prescribed unchanged build/reference-device gate and reported **“Gate passed.”** The B1 result is therefore PASS by physical user attestation. Raw page-size/build/log values were not pasted and are not fabricated; page size is requested again at B3.
 
-### Reference build mechanics
+## Exact GenieX 0.3.5 source truth
 
-The accepted app contains no checked-in Gradle wrapper. Qualcomm's `build.sh` is deliberately Docker-only. Its Docker build calls `install_build.sh`, which sources `scripts/android_utils.sh`; that utility installs the exact Java/Gradle/Android SDK/NDK versions from `scripts/versions.env`. The build then executes:
+LAB-2B additionally located the public GenieX source snapshot at:
 
-```text
-gradle assembleDebug assembleAndroidTest
-```
+`da7f27d7f1c6b052153eaa9d59e8aa872c6265a6`
 
-Expected debug APK path from the reference README/source:
+Its `bindings/android/pom.xml` explicitly declares:
 
 ```text
-geniex_chat_android/build/outputs/apk/debug/app-debug.apk
+com.qualcomm.qti:geniex-android:0.3.5
 ```
 
-No source/toolchain version is to be modernised during B0.
+This matters because it proves the harness is not accidentally coded against a later Android API. At that exact 0.3.5 source state:
 
-### Agent execution-environment limitation
+- `HubSource.LOCALFS` exists;
+- `ModelPullInput` includes `local_path`;
+- `VlmCreateInput` includes `model_name`, `model_path`, `mmproj_path`, `config`, `runtime_id`, `compute_unit`;
+- `ModelConfig` has `nCtx`, `nThreads`, `nBatch`, `nUBatch`, `nGpuLayers`, `enable_thinking`;
+- `VlmWrapper` exposes `applyChatTemplate`, `injectMediaPathsToConfig`, `generateStreamFlow`, `reset`, `stopStream`, `destroy`;
+- `GenieXSdk.init` initialises native plugins/model manager and loads `npu_jni`.
 
-The repository-operation sandbox has no Android SDK and its shell cannot resolve outbound Git/network hosts. Therefore the unchanged reference APK cannot be truthfully compiled in that sandbox. The exact public reference source and pins were inspected through GitHub instead.
+This removes the main API-version uncertainty left after LAB-2A.
 
-This does **not** count as B0 PASS or FAIL. B0 dependency resolution/build remains a physical/developer-environment action. The project will not move to B2 until Kian reports the unchanged reference build and B1 runtime gate evidence.
+## B2 standalone project
 
-## B1 physical reference-app method
-
-The least-expensive proof does not require model download.
-
-Current reference source initialises GenieX from `MainActivity.onCreate()` via `GenieXSdk.getInstance().init(...)`. To force a subsequent ModelManager JNI call without fetching a model, use the reference UI's **Load** action before downloading a selected model. The app checks availability through `ModelManagerWrapper.getPaths(...)`; the expected ordinary outcome for an absent model is a “model not downloaded”/download-first message.
-
-B1 therefore requires:
-
-1. install unchanged `app-debug.apk`;
-2. launch;
-3. confirm no immediate linker/native crash;
-4. select a catalog item if needed;
-5. tap **Load** without starting Download;
-6. confirm the reference UI reports the model is absent rather than crashing;
-7. capture logcat around launch + Load;
-8. record Android build and page size.
-
-Do not download a multi-gigabyte model during B1.
-
-## Page-size evidence
-
-Current Android guidance uses:
-
-```text
-adb shell getconf PAGE_SIZE
-```
-
-A direct device shell such as Termux can run the inner command:
-
-```text
-getconf PAGE_SIZE
-```
-
-The physical value is not assumed. A result of `16384` identifies a 16 KB environment.
-
-B3 later also requires the exact built harness APK/AAR native libraries to be inspected with current Android tools, including ELF LOAD alignment and:
-
-```text
-zipalign -c -P 16 -v 4 <apk>
-```
-
-No B3 result is pre-filled.
-
-## Harness architecture — deferred until B1 PASS
-
-Approved future path:
+Path:
 
 ```text
 experiments/lab2b-vlm-harness/
 ```
 
-The harness will be its own Gradle root and will not be included by My Mettle's root settings. Planned Kotlin ownership remains one `HarnessRuntimeOwner` with serial state:
+It is its own Gradle root and is not included from My Mettle's root `settings.gradle.kts`.
+
+Package/application ID:
+
+```text
+dev.kian.lab2b.vlm
+```
+
+Label:
+
+```text
+LAB-2B VLM Harness
+```
+
+No Room, DataStore, DI framework, Retrofit/OkHttp, CameraX, OCR, N-BIO, My Mettle source dependency or product provider exists.
+
+The harness manifest intentionally requests **no INTERNET permission**. Model acquisition remains a developer action outside the app; import is LOCALFS only.
+
+### Gradle launcher decision
+
+The accepted Qualcomm reference app itself does not check in a generated Gradle wrapper. Its source tooling pins Gradle 9.1.0. To preserve that source truth without copying My Mettle's newer 9.3.1 wrapper, the experiment's `gradlew` / `gradlew.bat` are small **pin-enforcing launchers** that refuse anything except Gradle 9.1.0 already present on PATH.
+
+This is an explicit controlled reproduction choice, not a claim that Qualcomm ships a wrapper.
+
+## Runtime ownership
+
+One process-scoped Kotlin object owns the runtime:
+
+```text
+HarnessRuntimeOwner
+```
+
+States:
 
 ```text
 IDLE
@@ -141,64 +130,162 @@ UNLOADING
 FAILED
 ```
 
-No harness files are created before B1 passes.
+Rules:
 
-## Model import — deferred until B1 PASS
+- expensive work uses an application-owned coroutine scope on `Dispatchers.IO`;
+- exactly one `VlmWrapper` is owned;
+- concurrent generation is rejected;
+- Activity recreation changes the listener, not native ownership;
+- stop is explicit through `stopStream()`;
+- unload is explicit `stopStream()` → `destroy()`;
+- destroy/stop errors become visible `FAILED` state rather than silent replacement;
+- process death is recovered through `ModelManagerWrapper.getPaths(LOCAL_MODEL_NAME)` after SDK init.
 
-Planned route remains:
+## Model import workflow
+
+B2 implements only the mechanism; B4 exact files remain gated.
 
 ```text
-developer-staged exact GGUF + matching mmproj
-→ app-accessible staging if required
-→ ModelManagerWrapper.pullFlow(... HubSource.LOCALFS ...)
-→ ModelManagerWrapper.getPaths(...)
-→ validate model_path + mmproj_path + runtime_id
+Android ACTION_OPEN_DOCUMENT_TREE
+→ copy top-level *.gguf to app-private inflight staging
+→ calculate SHA-256 while copying
+→ require exactly one main GGUF + one mmproj GGUF
+→ atomically rename staging directory
+→ ModelManagerWrapper.pullFlow(
+     model_name = local/qwen3-vl-2b-instruct-q4_0,
+     precision = Q4_0,
+     hub = LOCALFS,
+     local_path = private staging directory
+   )
+→ getPaths()
+→ require model_path + mmproj_path + nonblank runtime_id
+→ require runtime_id == llama_cpp for the primary route
 ```
 
-No files will be written manually into GenieX internal cache directories.
+A completed file copy is not `READY`: manager import and resolved runtime paths are required before the harness reaches `IMPORTED`.
 
-## Threading / lifecycle — frozen from LAB-2A
+No code writes directly into GenieX internal cache directories.
 
-- expensive runtime work off main thread;
-- one owner and one active native inference lane;
-- concurrent generation rejected;
-- generation stop through `stopStream()`;
-- unload through `stopStream()` then `destroy()`;
-- no GC-based native cleanup assumption;
-- no automatic hide-and-recreate on destroy failure.
+## NPU load configuration
 
-## Prompt / media — frozen from LAB-2A
-
-One-image proof only:
+The initial load deliberately mirrors the accepted 0.3.5 reference semantics rather than modernising them:
 
 ```text
-VlmChatMessage(image path + text)
+compute_unit = ComputeUnitValue.NPU.value  // "npu"
+nGpuLayers = 999
+nCtx = 4096
+nThreads = 4
+nBatch = 1
+nUBatch = 1
+enable_thinking = false
+```
+
+`nGpuLayers = 999` is retained because the exact Qualcomm reference app sets it when NPU is selected on its GGUF path. It is a reproduction pin, not a performance recommendation.
+
+## Image path
+
+One image only:
+
+```text
+ACTION_OPEN_DOCUMENT
+→ copy source into app-private files
+→ read projector geometry from resolved mmproj
+→ centre crop/resize to projector-declared image_size
+→ write one private JPEG
+→ use absolute filesystem path in VlmContent("image", ...)
+```
+
+The harness refuses to load the VLM when usable projector geometry cannot be read from the mmproj. Unlike the reference demo, it does not use a hard-coded fallback image size, because LAB-2B is validating correctness rather than maximising demo tolerance.
+
+`GgufVisionConfig.kt` and the centre-crop strategy are adapted from Qualcomm AI Hub Apps at the accepted reference revision under BSD-3; attribution and licence text are retained inside the experiment.
+
+## Prompt / generation
+
+Default developer prompt:
+
+```text
+Describe the equipment in this image briefly.
+```
+
+One-turn call order:
+
+```text
+VlmChatMessage(image + text)
 → applyChatTemplate(...)
-→ inject current-turn media paths
-→ generateStreamFlow(...)
+→ injectMediaPathsToConfig(current turn only)
+→ generateStreamFlow(formattedText, config)
 ```
 
-Start `nCtx = 4096` unless the exact pinned API/model establishes otherwise. Projector geometry must come from the actual mmproj metadata, never a copied magic image size.
+Generation uses the same minimal 0.3.5-era bridge shape as the Qualcomm reference and limits LAB-2B to one current-turn image.
 
-## Backend evidence — frozen from LAB-2A
+## Backend evidence
 
-`compute_unit = npu` is a request, not proof. LAB-2B records separately:
+The harness records separately:
 
-- requested compute unit;
-- resolved `runtime_id` from `ModelPaths`;
-- actual native/backend evidence from the selected runtime/device logs;
-- completed multimodal response.
+- requested compute unit: `npu`;
+- manager-resolved `runtime_id`;
+- backend proof state.
 
-No speed/temperature inference is accepted as backend identity.
+Initial proof state is deliberately:
+
+```text
+UNPROVEN
+REQUESTED != PROVEN
+```
+
+The application does not infer NPU use from the requested enum, speed, heat or model support page. B5 must retain actual `GenieXSdk`/native runtime log evidence before NPU is marked proven.
+
+## B3 native/page-size audit
+
+`tools/inspect_native_16k.sh` is designed to run only after the nested app builds. It:
+
+1. locates the exact resolved Maven AAR `geniex-android:0.3.5`;
+2. records AAR/APK SHA-256;
+3. inventories AAR and APK `.so` files;
+4. requires the built harness APK to contain only `arm64-v8a`;
+5. applies Android's current `llvm-objdump -p <so> | grep LOAD` criterion and rejects LOAD alignment below `2**14`;
+6. reports RELRO presence diagnostically;
+7. runs `zipalign -v -c -P 16 4 <apk>`.
+
+Android's current guidance requires Build-Tools 35.0.0+ for that inspection even though the frozen app compile/target SDK remains 34. Installing inspection tooling does not modernise the app matrix.
+
+The actual S25 page-size command remains:
+
+```text
+getconf PAGE_SIZE
+```
+
+B3 is not pre-filled.
+
+## Pure unit tests
+
+The harness adds tests for:
+
+- legal state gating;
+- concurrent generation rejection;
+- no unload race during active generation;
+- one-main + one-mmproj bundle validation;
+- non-empty file/hash validation;
+- explicit distinction between requested and proven backend.
+
+No mock claims to prove GenieX inference or NPU execution.
+
+## Source safety
+
+`tools/verify_source_safety.sh` verifies the LAB-2B diff does not touch My Mettle build/runtime paths, the root settings do not include the harness, model/runtime binaries are not tracked, INTERNET is absent, and the experiment does not import product/My Mettle/N-BIO/Room/dependency shortcuts.
+
+Root and experiment `.gitignore` rules aggressively exclude model files, APK/AAB/native outputs, device logs, traces and dumps.
 
 ## Deviations from LAB-2A playbook
 
-None at this checkpoint.
+1. **Gradle pin completed:** the accepted reference source establishes Gradle 9.1.0; LAB-2A had not named it.
+2. **No generated wrapper:** because the accepted Qualcomm app has no wrapper, the harness uses a 9.1.0 pin-enforcing launcher rather than importing My Mettle's newer wrapper.
+3. **Projector metadata failure is hard:** the harness refuses magic image-size fallback during proof.
 
-The only newly established toolchain fact is Gradle `9.1.0`, recovered directly from the accepted Qualcomm source revision. The physical reference build itself remains pending rather than being replaced by a different matrix.
+No runtime/model/framework deviation has occurred.
 
 ## Current gate
 
-**LAB-2B B0/B1 — PHYSICAL REFERENCE APP GATE.**
+**B1 PASS. B2 SOURCE PREPARED. B3 STATIC/NATIVE/PAGE-SIZE VALIDATION PENDING.**
 
-B2 has **not** started. LAB-2C has **not** started.
+B4 exact model preparation has **not** started. LAB-2C has **not** started.

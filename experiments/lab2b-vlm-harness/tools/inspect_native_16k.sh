@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HARNESS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+AAR_VERSION="0.3.5"
+APK="$HARNESS_DIR/app/build/outputs/apk/debug/app-debug.apk"
+GRADLE_CACHE="${GRADLE_USER_HOME:-$HOME/.gradle}/caches/modules-2/files-2.1/com.qualcomm.qti/geniex-android/$AAR_VERSION"
+
+require_cmd() {
+    command -v "$1" >/dev/null 2>&1 || { echo "ERROR: required command '$1' not found" >&2; exit 2; }
+}
+
+require_cmd unzip
+require_cmd sha256sum
+
+mapfile -t AARS < <(find "$GRADLE_CACHE" -type f -name '*.aar' 2>/dev/null | sort)
+if [ "${#AARS[@]}" -ne 1 ]; then
+    echo "ERROR: expected exactly one cached GenieX $AAR_VERSION AAR under:" >&2
+    echo "  $GRADLE_CACHE" >&2
+    printf 'Found: %s\n' "${AARS[@]:-none}" >&2
+    exit 2
+fi
+AAR="${AARS[0]}"
+
+if [ ! -f "$APK" ]; then
+    echo "ERROR: harness APK not found: $APK" >&2
+    echo "Build the harness before running this audit." >&2
+    exit 2
+fi
+
+OBJDUMP="${LLVM_OBJDUMP_BIN:-}"
+if [ -z "$OBJDUMP" ]; then
+    OBJDUMP="$(command -v llvm-objdump || true)"
+fi
+if [ -z "$OBJDUMP" ] && [ -n "${ANDROID_HOME:-}" ]; then
+    OBJDUMP="$(find "$ANDROID_HOME/ndk" -type f -path '*/toolchains/llvm/prebuilt/*/bin/llvm-objdump' 2>/dev/null | sort -V | tail -n 1)"
+fi
+if [ -z "$OBJDUMP" ] || [ ! -x "$OBJDUMP" ]; then
+    echo "ERROR: llvm-objdump not found." >&2
+    echo "Android's current 16 KB procedure requires an NDK llvm-objdump. Set LLVM_OBJDUMP_BIN if needed." >&2
+    exit 2
+fi
+
+ZIPALIGN="${ZIPALIGN_BIN:-}"
+if [ -z "$ZIPALIGN" ] && [ -n "${ANDROID_HOME:-}" ]; then
+    ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 -type f -name zipalign 2>/dev/null | sort -V | tail -n 1)"
+fi
+if [ -z "$ZIPALIGN" ]; then
+    ZIPALIGN="$(command -v zipalign || true)"
+fi
+if [ -z "$ZIPALIGN" ] || [ ! -x "$ZIPALIGN" ]; then
+    echo "ERROR: zipalign not found. Install Android SDK Build-Tools 35.0.0+ or set ZIPALIGN_BIN." >&2
+    exit 2
+fi
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+mkdir -p "$TMP/aar" "$TMP/apk"
+unzip -q "$AAR" -d "$TMP/aar"
+unzip -q "$APK" -d "$TMP/apk"
+
+echo "=== LAB-2B NATIVE / 16 KB AUDIT ==="
+echo "AAR=$AAR"
+echo "AAR_SHA256=$(sha256sum "$AAR" | awk '{print $1}')"
+echo "APK=$APK"
+echo "APK_SHA256=$(sha256sum "$APK" | awk '{print $1}')"
+echo "LLVM_OBJDUMP=$OBJDUMP"
+echo "ZIPALIGN=$ZIPALIGN"
+
+echo
+echo "=== AAR native inventory ==="
+unzip -l "$AAR" | awk '/\.so$/ {print $4}' || true
+
+echo
+echo "=== APK native inventory ==="
+unzip -l "$APK" | awk '/^ *[0-9]+ .*lib\/.*\.so$/ {print $4}' || true
+
+mapfile -t APK_ABIS < <(find "$TMP/apk/lib" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort)
+echo "APK_ABIS=${APK_ABIS[*]:-none}"
+if [ "${#APK_ABIS[@]}" -ne 1 ] || [ "${APK_ABIS[0]:-}" != "arm64-v8a" ]; then
+    echo "FAIL: harness APK must package only arm64-v8a for LAB-2B." >&2
+    exit 1
+fi
+
+check_elf_tree() {
+    local label="$1"
+    local root="$2"
+    local found=0
+    local failed=0
+    while IFS= read -r -d '' so; do
+        found=1
+        echo
+        echo "[$label] $so"
+        local loads
+        loads="$($OBJDUMP -p "$so" | grep 'LOAD' || true)"
+        printf '%s\n' "$loads"
+        if [ -z "$loads" ]; then
+            echo "FAIL: no LOAD segments reported for $so" >&2
+            failed=1
+            continue
+        fi
+        while IFS= read -r token; do
+            [ -z "$token" ] && continue
+            local power="${token##*2**}"
+            if ! [[ "$power" =~ ^[0-9]+$ ]] || [ "$power" -lt 14 ]; then
+                echo "FAIL: LOAD alignment below 2**14 in $so: $token" >&2
+                failed=1
+            fi
+        done < <(printf '%s\n' "$loads" | grep -oE 'align 2\*\*[0-9]+' || true)
+
+        if "$OBJDUMP" -p "$so" | grep -q 'GNU_RELRO'; then
+            echo "RELRO=present"
+        else
+            echo "RELRO=not reported"
+        fi
+    done < <(find "$root" -type f -name '*.so' -print0)
+
+    if [ "$found" -eq 0 ]; then
+        echo "FAIL: no native libraries found in $label" >&2
+        return 1
+    fi
+    [ "$failed" -eq 0 ]
+}
+
+ELF_OK=1
+check_elf_tree "AAR" "$TMP/aar" || ELF_OK=0
+check_elf_tree "APK" "$TMP/apk/lib/arm64-v8a" || ELF_OK=0
+
+echo
+echo "=== Official APK ZIP alignment check ==="
+set +e
+"$ZIPALIGN" -v -c -P 16 4 "$APK"
+ZIP_RC=$?
+set -e
+
+if [ "$ELF_OK" -ne 1 ]; then
+    echo "LAB2B_NATIVE_16K=FAIL_ELF_ALIGNMENT" >&2
+    exit 1
+fi
+if [ "$ZIP_RC" -ne 0 ]; then
+    echo "LAB2B_NATIVE_16K=FAIL_ZIP_ALIGNMENT" >&2
+    exit 1
+fi
+
+echo "LAB2B_NATIVE_16K=PASS_STATIC"
+echo "NOTE: static PASS does not replace the physical device PAGE_SIZE and runtime tests."

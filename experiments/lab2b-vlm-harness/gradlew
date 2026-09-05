@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+
+EXPECTED_GRADLE="9.1.0"
+
+if ! command -v gradle >/dev/null 2>&1; then
+    echo "LAB-2B requires Gradle ${EXPECTED_GRADLE} on PATH." >&2
+    echo "The accepted Qualcomm reference app ships no Gradle wrapper; its toolchain pins Gradle ${EXPECTED_GRADLE}." >&2
+    exit 2
+fi
+
+ACTUAL_GRADLE="$(gradle --version | awk '$1 == "Gradle" { print $2; exit }')"
+if [ "$ACTUAL_GRADLE" != "$EXPECTED_GRADLE" ]; then
+    echo "LAB-2B toolchain mismatch: expected Gradle ${EXPECTED_GRADLE}, got ${ACTUAL_GRADLE:-unknown}." >&2
+    echo "Do not modernise the reference matrix during LAB-2B." >&2
+    exit 2
+fi
+
+exec gradle "$@"

@@ -1,0 +1,59 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'dev.kian.lab2b.vlm'
+    ndkVersion '27.3.13750724'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'dev.kian.lab2b.vlm'
+        minSdk 31
+        targetSdk 34
+        versionCode 1
+        versionName '0.1.0-b2'
+
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+
+        buildConfigField 'String', 'GENIEX_AAR_VERSION', '"0.3.5"'
+        buildConfigField 'String', 'GENIEX_SOURCE_COMMIT', '"da7f27d7f1c6b052153eaa9d59e8aa872c6265a6"'
+        buildConfigField 'String', 'REFERENCE_COMMIT', '"db3f9772d4e423dee2df517335009c703845dba8"'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    packaging {
+        jniLibs.useLegacyPackaging = true
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+}
+
+dependencies {
+    implementation 'com.qualcomm.qti:geniex-android:0.3.5'
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+
+    testImplementation 'junit:junit:4.13.2'
+}

@@ -8,3 +8,26 @@ captures/
 .DS_Store
 __pycache__/
 *.py[cod]
+
+# LAB-2B / local-model safety: never commit model/runtime artefacts or physical captures.
+*.gguf
+*.bin
+*.safetensors
+*.onnx
+*.pte
+*.dlc
+*.apk
+*.aab
+*.so
+*.logcat
+*.perfetto-trace
+*.trace
+*.dmp
+hs_err_pid*
+tombstone*
+experiments/lab2b-vlm-harness/model-staging/
+experiments/lab2b-vlm-harness/.model-staging/
+experiments/lab2b-vlm-harness/download-cache/
+experiments/lab2b-vlm-harness/model-cache/
+experiments/lab2b-vlm-harness/device-logs/
+experiments/lab2b-vlm-harness/profiles/

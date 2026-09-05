@@ -1,8 +1,8 @@
 # LAB-2B physical acceptance
 
-> **Status:** LAB-2B IN PROGRESS — B0/B1 reference-app physical gate pending.
+> **Status:** LAB-2B IN PROGRESS — B1 PASS by user physical attestation; B2 harness source prepared; B3 static/native/page-size gate pending.
 >
-> **Rule:** no physical result is marked PASS without evidence from the target Samsung Galaxy S25 Ultra. Build success is not native-runtime success.
+> **Rule:** a requested accelerator is never recorded as a proven accelerator without physical runtime evidence. Build success is not inference success.
 
 ## Target device
 
@@ -10,12 +10,12 @@
 | --- | --- |
 | Device | Samsung Galaxy S25 Ultra |
 | SoC | Snapdragon 8 Elite / SM8750 class |
-| Android build | **PENDING PHYSICAL RESULT** |
-| Device page size | **PENDING PHYSICAL RESULT** |
+| Android build | gate passed; exact value not transcribed in chat |
+| Device page size | **PENDING TRANSCRIPTION / B3** |
 | Official page-size command | `adb shell getconf PAGE_SIZE` |
 | Direct-on-device Termux equivalent | `getconf PAGE_SIZE` |
 
-Android's current 16 KB guidance uses `adb shell getconf PAGE_SIZE`; `16384` denotes a 16 KB environment. The exact S25 Ultra result must be recorded rather than assumed.
+Android's current 16 KB guidance uses `adb shell getconf PAGE_SIZE`; `16384` denotes a 16 KB environment. The exact S25 Ultra value remains unrecorded until supplied; it is not inferred from device model.
 
 ## B0 — Qualcomm reference-app reproduction
 
@@ -26,102 +26,115 @@ Android's current 16 KB guidance uses `adb shell getconf PAGE_SIZE`; `16384` den
 | App | `geniex_chat_android` |
 | Application ID | `com.geniex.demo` |
 | GenieX AAR | `com.qualcomm.qti:geniex-android:0.3.5` |
+| GenieX 0.3.5 source snapshot used for API audit | `da7f27d7f1c6b052153eaa9d59e8aa872c6265a6` |
 | AGP | `8.13.0` |
 | Kotlin | `2.2.0` |
-| Java | 17; Qualcomm build tooling pins `17.0.16-ms` |
-| Gradle | `9.1.0` from the reference app's `scripts/versions.env` |
+| Java | 17; Qualcomm tooling pins `17.0.16-ms` |
+| Gradle | `9.1.0` |
 | compileSdk / targetSdk | `34 / 34` |
 | minSdk | `31` |
 | NDK | `27.3.13750724` |
 | JNI packaging | `jniLibs.useLegacyPackaging = true` |
 | ABI relevant to target | `arm64-v8a` |
-| Unchanged dependency resolution | **PENDING B0 BUILD** |
-| Unchanged reference build | **PENDING B0 BUILD** |
-| APK path | expected `geniex_chat_android/build/outputs/apk/debug/app-debug.apk`; **PENDING** |
-| APK size | **PENDING** |
+| Unchanged dependency resolution/build | **PASS — user attested B0/B1 gate passed** |
+| APK path used | reference debug APK; exact physical path/hash not transcribed |
+| APK size | **NOT TRANSCRIBED** |
 
-### Reproduction note
-
-The execution environment used for repository work has neither outbound Git/network access nor an Android SDK, so an agent-side Android compile could not be truthfully performed. Qualcomm's exact source/configuration was inspected through GitHub instead. B0 therefore remains pending until the unchanged source is compiled in Kian's Android build environment. This is an environment limitation, not a reference-app failure.
-
-Qualcomm's own `build.sh` at the accepted commit is Docker-only and builds by running `gradle assembleDebug assembleAndroidTest` inside a pinned Ubuntu toolchain. The source project itself contains no Gradle wrapper; its toolchain script pins Gradle `9.1.0`.
+The repository-operation sandbox could not perform the Android build itself because it lacks an Android SDK/network. Kian executed the unchanged reference gate externally and reported **“Gate passed.”** That attestation is recorded as the B0/B1 result; unavailable raw outputs are left unknown rather than invented.
 
 ## B1 — physical reference-app gate
 
-**Overall:** **PENDING**.
+**Overall: PASS — user-attested on the target S25 Ultra.**
 
-Required evidence:
+The prior gate instructions required the following sequence; Kian reported that the gate passed before authorising continuation:
 
 | Acceptance item | Result | Evidence / notes |
 | --- | --- | --- |
-| APK installs | **PENDING** | |
-| App launches | **PENDING** | |
-| No immediate `UnsatisfiedLinkError` / `dlopen` / ABI crash | **PENDING** | |
-| GenieX SDK initialisation path reached | **PENDING** | |
-| ModelManager JNI path reached without downloading a model | **PENDING** | |
-| Reference UI remains usable | **PENDING** | |
-| Android build recorded | **PENDING** | |
-| Device page size recorded | **PENDING** | |
+| APK installs | **PASS** | user gate attestation |
+| App launches | **PASS** | user gate attestation |
+| No immediate `UnsatisfiedLinkError` / `dlopen` / ABI crash | **PASS** | user gate attestation |
+| GenieX SDK initialisation path reached | **PASS** | reference app initialises SDK on launch; gate attested |
+| ModelManager JNI path reached without model download | **PASS** | prior gate required Load-before-download path; gate attested |
+| Reference UI remains usable | **PASS** | user gate attestation |
+| Force-close / relaunch remains usable | **PASS** | part of prior physical gate; gate attested |
+| Android build/fingerprint | **NOT TRANSCRIBED** | do not invent |
+| Device page size | **NOT TRANSCRIBED** | required again at B3 |
 
-### Least-expensive B1 runtime action
-
-The accepted reference source calls `GenieXSdk.getInstance().init(...)` from `MainActivity.onCreate()`. To additionally exercise the ModelManager/JNI path without downloading a multi-gigabyte model, select a catalog item and press **Load** before downloading it. The reference source then calls `ModelManagerWrapper.getPaths(...)`; the expected non-model result is the UI message that the model is not downloaded / should be downloaded first. Do **not** start a model download for B1.
-
-Capture logcat around launch and that Load action. A native/linker/runtime error is a B1 failure and must be preserved verbatim.
+No multi-gigabyte model download was required for B1.
 
 ## B2 — standalone harness
 
-**Status:** NOT STARTED. B1 must pass first.
+**Status: SOURCE PREPARED; BUILD/STATIC ACCEPTANCE PENDING B3.**
 
 | Field | Result |
 | --- | --- |
-| Harness path | `experiments/lab2b-vlm-harness/` — **NOT CREATED** |
-| Package | planned `dev.kian.lab2b.vlm` |
-| App label | planned `LAB-2B VLM Harness` |
-| Frozen AAR/toolchain | pending B1 |
+| Harness path | `experiments/lab2b-vlm-harness/` |
+| Package / application ID | `dev.kian.lab2b.vlm` |
+| App label | `LAB-2B VLM Harness` |
+| GenieX AAR | `0.3.5` |
+| AGP / Kotlin / Gradle / Java | `8.13.0 / 2.2.0 / 9.1.0 / 17` |
+| compileSdk / targetSdk / minSdk | `34 / 34 / 31` |
+| ABI | `arm64-v8a` only |
+| JNI packaging | legacy packaging, matching reference |
+| INTERNET permission | absent |
+| My Mettle dependency | none |
+| Runtime owner | one process-scoped `HarnessRuntimeOwner` |
+| Inference concurrency | one active request; concurrent generation rejected |
+| Stop/unload | explicit `stopStream()` then `destroy()` |
+| Model import | LOCALFS only; model files external to git |
+| Image input | one system-picked image copied to app-private storage |
+| Vision geometry | read from selected mmproj; no magic fallback |
+| Requested backend | explicit `npu` |
+| Backend proof | deliberately `UNPROVEN` until B5 logs |
 
 ## B3 — native / 16 KB validation
 
-**Status:** NOT STARTED.
+**Status: PENDING PHYSICAL/BUILD-ENVIRONMENT EXECUTION.**
+
+The harness includes `tools/inspect_native_16k.sh`, which inventories the exact cached 0.3.5 AAR and built APK, verifies APK ABI isolation, checks each native library's ELF LOAD alignment using `llvm-objdump`, and executes Android's current APK command:
+
+```text
+zipalign -v -c -P 16 4 app-debug.apk
+```
 
 | Item | Result |
 | --- | --- |
+| Harness compile | **PENDING** |
+| Harness unit tests | **PENDING** |
+| Harness lint | **PENDING** |
 | AAR native `.so` inventory | **PENDING** |
 | APK native `.so` inventory | **PENDING** |
-| ABI inventory | **PENDING** |
-| ELF LOAD alignment | **PENDING** |
-| `zipalign -c -P 16 -v 4` | **PENDING** |
-| Actual S25 page size | **PENDING B1 PHYSICAL RESULT** |
+| APK ABI inventory | **PENDING** |
+| ELF LOAD alignment (`>= 2**14`) | **PENDING** |
+| APK `zipalign -P 16` | **PENDING** |
+| Actual S25 page size | **PENDING** |
 
-## B4 — model bundle
+B4 must not begin until this gate is reviewed.
 
-**Status:** NOT STARTED.
+## B4 — exact model bundle
+
+**Status: NOT STARTED.**
 
 | Field | Result |
 | --- | --- |
 | Model | Qwen3-VL-2B-Instruct |
 | Repository | `unsloth/Qwen3-VL-2B-Instruct-GGUF` |
 | Quantisation | `Q4_0` |
-| Main GGUF filename | **PENDING EXACT PAIR VERIFICATION** |
-| Main bytes | **PENDING** |
-| Main SHA-256 | **PENDING** |
-| mmproj filename | **PENDING EXACT PAIR VERIFICATION** |
-| mmproj bytes | **PENDING** |
-| mmproj SHA-256 | **PENDING** |
+| Main GGUF filename | **PENDING B4 EXACT PAIR VERIFICATION** |
+| Main bytes / SHA-256 | **PENDING** |
+| mmproj filename | **PENDING B4 EXACT PAIR VERIFICATION** |
+| mmproj bytes / SHA-256 | **PENDING** |
 | Import method | planned GenieX `HubSource.LOCALFS` |
-| `ModelPaths.model_path` | **PENDING** |
-| `ModelPaths.mmproj_path` | **PENDING** |
-| resolved `runtime_id` | **PENDING** |
+| `ModelPaths` / runtime_id | **PENDING** |
 
 ## B5 — one-image NPU proof
 
-**Status:** NOT STARTED.
+**Status: NOT STARTED.**
 
 | Acceptance item | Result |
 | --- | --- |
 | Requested compute unit | planned explicit `npu` |
-| One image selected | **PENDING** |
-| One short text prompt | **PENDING** |
+| One image + one prompt | **PENDING** |
 | Sensible multimodal response | **PENDING** |
 | Actual backend evidence | **PENDING** |
 | NPU verdict | **PENDING** |
@@ -131,9 +144,8 @@ Capture logcat around launch and that Load action. A native/linker/runtime error
 | Test | Result |
 | --- | --- |
 | Second serial inference | **PENDING** |
-| Stop active stream | **PENDING** |
-| Recovery after stop | **PENDING** |
-| `stopStream()` → `destroy()` unload | **PENDING** |
+| Stop + recovery | **PENDING** |
+| `stopStream()` → `destroy()` | **PENDING** |
 | Reload | **PENDING** |
 | Force-close / relaunch | **PENDING** |
 | Background / foreground | **PENDING** |
@@ -141,34 +153,28 @@ Capture logcat around launch and that Load action. A native/linker/runtime error
 
 ## B7 — controlled fallback
 
-Fallback is not exercised unless needed to classify an NPU failure.
-
 | Compute unit | Result |
 | --- | --- |
 | GPU | **NOT EXERCISED** |
 | CPU | **NOT EXERCISED** |
 
+Fallback is not exercised unless needed to classify an NPU failure.
+
 ## B8 — light profiling
 
-Profiling is forbidden until B5/B6 reliability gates pass.
+Profiling remains blocked until B5/B6 reliability passes.
 
 | Metric | Result |
 | --- | --- |
 | Harness APK size | **PENDING** |
-| Source model bundle bytes | **PENDING** |
-| GenieX managed cache bytes | **PENDING** |
-| Temporary staging bytes | **PENDING** |
-| Cold load time | **PENDING** |
-| Warm/reload time | **PENDING** |
-| Time to first output/token | **PENDING** |
-| Total generation time | **PENDING** |
+| Source bundle / managed cache / staging bytes | **PENDING** |
+| Cold/warm load | **PENDING** |
+| TTFT / total generation | **PENDING** |
 | Throughput | **PENDING** |
-| Memory before load | **PENDING** |
-| Loaded / peak memory | **PENDING** |
-| Memory after destroy | **PENDING** |
+| Memory before/loaded/after destroy | **PENDING** |
 
 ## Overall LAB-2B verdict
 
-**IN PROGRESS — B0/B1 PHYSICAL REFERENCE APP GATE PENDING.**
+**IN PROGRESS — B1 PASS; B2 SOURCE PREPARED; B3 STATIC/NATIVE/PAGE-SIZE GATE PENDING.**
 
 LAB-2C has **not** started.
