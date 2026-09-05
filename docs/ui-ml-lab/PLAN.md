@@ -138,6 +138,8 @@ The completed research covers those required implementation dimensions in the re
 
 ## LAB-2B — Standalone CPU/GPU Multimodal Harness
 
+0.3 extension: thinking/budget controls, E4B comparison, reviewed crop workflow and persistent measured result exports; see `research/LAB_2B_THINKING_CROPS.md`. User CPU tests establish partial visual capability and numerical/OCR failure modes, not equipment readiness. LAB-2C remains untouched.
+
 **Status:** LAB-2B IMPLEMENTATION READY — PHYSICAL ACCEPTANCE PENDING. Not COMPLETE. Dedicated Actions run `33942676654` passed build/tests/lint/isolation/native audit and published the debug APK.
 
 The September 5 CPU/GPU mission supersedes the earlier GenieX reproduction plan. The standard GenieX Android AAR failed the mandatory native 16 KB gate; NPU/HTP/QAIRT investigation is closed. Historical decisions and phone findings remain in `research/LAB_2B_B3_ROUTE_DECISION.md` and `research/LAB_2B_PHYSICAL_ACCEPTANCE.md`.

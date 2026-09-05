@@ -39,6 +39,13 @@ jobs:
         run: python3 experiments/lab2b-vlm-harness/tools/inspect_native_16k.py | tee experiments/lab2b-vlm-harness/app/build/outputs/native-audit.txt
       - name: Export matching Termux native bundle
         run: python3 experiments/lab2b-vlm-harness/tools/native_bundle.py export experiments/lab2b-vlm-harness/app/build/outputs/lab2b-native.zip > experiments/lab2b-vlm-harness/app/build/outputs/lab2b-native.sha256
+      - name: Verify Termux reuse and prebuilt build path
+        working-directory: experiments/lab2b-vlm-harness
+        run: |
+          python3 tools/native_bundle.py import app/build/outputs/lab2b-native.zip --sha256 "$(awk '{print $1}' app/build/outputs/lab2b-native.sha256)"
+          python3 tools/test_native_reuse.py
+          ./gradlew --no-daemon -Plab2bPrebuiltNative=true assembleDebug testDebugUnitTest lintDebug
+          python3 tools/inspect_native_16k.py | tee app/build/outputs/native-audit.txt
       - uses: actions/upload-artifact@v4
         with:
           name: lab2b-vlm-harness-debug

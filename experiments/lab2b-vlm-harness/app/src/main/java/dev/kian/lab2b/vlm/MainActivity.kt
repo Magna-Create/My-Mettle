@@ -44,14 +44,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var send: Button
     private lateinit var stop: Button
     private val idleButtons = mutableListOf<Button>()
+    private val sections = linkedMapOf<String, LinearLayout>()
     private var rendering = false
     private val imagePicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let(HarnessRuntimeOwner::selectImage) }
     private val promptPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let(HarnessRuntimeOwner::importPrompt) }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val scroll = ScrollView(this)
-        val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(8), dp(16), dp(24)) }
-        scroll.addView(body)
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(8), dp(16), dp(24)) }
+        var body = root
+        scroll.addView(root)
         setContentView(scroll)
         ViewCompat.setOnApplyWindowInsetsListener(scroll) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
@@ -74,9 +76,23 @@ class MainActivity : AppCompatActivity() {
                 body.addView(this)
             }
         }
+        fun section(title: String, expanded: Boolean) {
+            val panel = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(8), dp(4), dp(8), dp(12))
+                visibility = if (savedInstanceState?.getBoolean(title, expanded) ?: expanded) View.VISIBLE else View.GONE
+            }
+            val header = Button(this).apply {
+                text = "$title • tap to expand/collapse"
+                isAllCaps = false
+                setOnClickListener { panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
+            }
+            root.addView(header); root.addView(panel); sections[title] = panel; body = panel
+        }
         text("LAB-2B VLM Harness • 0.3", 22f)
         text("1. Configure and Load → 2. Select image / crop → 3. Send → 4. Export results")
         text("MNN 3.6.1 • Local image + text • Stateless turns\nCPU is the correctness baseline. GPU is experimental.")
+        section("1. Model & runtime", true)
         modelsText = text()
         model = spinner("MODEL", ModelRegistry.models.map { it.displayName }) { HarnessRuntimeOwner.selectModel(ModelRegistry.models[it].id) }
         backend = spinner("BACKEND", ComputeBackend.entries.map { it.name }) { HarnessRuntimeOwner.selectBackend(ComputeBackend.entries[it]) }
@@ -93,6 +109,7 @@ class MainActivity : AppCompatActivity() {
         remove = button("Remove selected model", action = HarnessRuntimeOwner::remove)
         runtimeText = text()
         button("GPU result incorrect → mark failed", action = HarnessRuntimeOwner::reportGpuFailure)
+        section("2. Image, region & prompts", true)
         pipeline = spinner("PIPELINE", listOf("VISION ONLY", "VISION + OCR", "OCR ONLY")) { HarnessRuntimeOwner.selectPipeline(PipelineMode.entries[it]) }
         preset = spinner("SYSTEM PROMPT", SystemPreset.entries.map { it.name.replace('_', ' ') }) { HarnessRuntimeOwner.selectPreset(SystemPreset.entries[it]) }
         customText = text()
@@ -116,12 +133,14 @@ class MainActivity : AppCompatActivity() {
         imageText = text()
         button("Open exact prepared image") { openImage(HarnessRuntimeOwner.currentSnapshot().selectedImage?.preparedPath) }
         button("Open normalised OCR image") { openImage(HarnessRuntimeOwner.currentSnapshot().selectedImage?.normalisedPath) }
+        section("3. OCR evidence", false)
         text("OCR", 18f)
         ocrOrder = spinner("OCR EVIDENCE ORDER", listOf("Original recognizer order", "Top to bottom (experimental)")) { HarnessRuntimeOwner.selectOcrOrder(it == 1) }
         ocrText = text()
         button("Run OCR", true, HarnessRuntimeOwner::runOcr)
         button("Copy OCR") { copy(HarnessRuntimeOwner.currentSnapshot().ocr?.let(OcrFormatter::format) ?: "No OCR") }
         button("Clear OCR", true, HarnessRuntimeOwner::clearOcr)
+        section("4. Run & save results", true)
         text("USER INSTRUCTION", 16f)
         button("Use kg extraction prompt", true, HarnessRuntimeOwner::useWeightPrompt)
         prompt = EditText(this).apply {
@@ -144,11 +163,13 @@ class MainActivity : AppCompatActivity() {
         button("Clear transcript", true, HarnessRuntimeOwner::clearTranscript)
         transcript = text()
         button("Copy exact assembled prompt") { copy(HarnessRuntimeOwner.currentSnapshot().lastAssembledPrompt) }
+        section("5. Diagnostics", false)
         text("DIAGNOSTICS", 18f)
         diagnostics = text()
         button("Copy diagnostics") { copy(diagnostics.text.toString() + "\n" + runtimeText.text + "\n" + imageText.text) }
         HarnessRuntimeOwner.initialize(applicationContext)
     }
+    override fun onSaveInstanceState(outState: Bundle) { sections.forEach { (key, value) -> outState.putBoolean(key, value.visibility == View.VISIBLE) }; super.onSaveInstanceState(outState) }
     override fun onStart() { super.onStart(); HarnessRuntimeOwner.setListener { runOnUiThread { render(it) } } }
     override fun onStop() { HarnessRuntimeOwner.setListener(null); super.onStop() }
     private fun render(s: HarnessSnapshot) {
@@ -201,7 +222,7 @@ class MainActivity : AppCompatActivity() {
             output.text = s.output.ifEmpty { if (s.rawOutput.contains("<|channel>thought")) "Thinking channel received; final answer not received yet." else "No response yet" }
             transcript.text = s.transcript.joinToString("\n\n") { "${it.model} / ${it.backend} / ${it.mode} / ${it.terminal}\nUSER: ${it.instruction}\nMODEL: ${it.response}" }
             diagnostics.text = "Runtime: ${BuildConfig.RUNTIME_VERSION}\nLast system mode: ${s.systemMode}\nContext: stateless; current image only; ${s.options.maxTokens} generated token limit (includes thinking)\nThinking requested: ${s.options.thinking} • stage: ${s.stageLabel}\n" +
-                "Cold load: ${s.timing.loadMs} ms\nTTFT (inference start, includes vision/prefill): ${s.timing.firstOutputMs} ms\nGeneration: ${s.timing.totalGenerationMs} ms\n" +
+                "${s.measurementSummary}\nFirst raw output: ${s.timing.firstRawOutputMs} ms\nCold load: ${s.timing.loadMs} ms\nFirst final output (includes vision/prefill/thinking): ${s.timing.firstOutputMs} ms\nGeneration: ${s.timing.totalGenerationMs} ms\n" +
                 "PSS KB before / loaded / after unload: ${s.memory.beforeLoadPssKb} / ${s.memory.loadedPssKb} / ${s.memory.afterDestroyPssKb}\n" +
                 "Native [prompt tokens, generated tokens, vision μs, prefill μs, decode μs, cancelled]: ${s.nativeMetrics}\n" +
                 "Persistent storage: ${s.modelStoragePath}\nInstalled bytes: ${s.installedBytes}\nDownload staging + runtime cache bytes: ${s.temporaryBytes}\n" +
@@ -218,7 +239,7 @@ class MainActivity : AppCompatActivity() {
         column.addView(editor, LinearLayout.LayoutParams(-1, dp(400)))
         androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Inspect crop on full image").setView(column)
             .setNegativeButton("Cancel", null).setPositiveButton("Apply crop") { _, _ ->
-                HarnessRuntimeOwner.applyCrop(editor.region(label.text.toString().take(80)))
+                HarnessRuntimeOwner.applyCrop(editor.region(label.text.toString().take(80)), initial != null)
             }.show()
     }
     private fun openImage(path: String?) {

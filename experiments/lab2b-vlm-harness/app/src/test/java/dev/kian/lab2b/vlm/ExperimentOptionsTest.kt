@@ -27,6 +27,7 @@ class ExperimentOptionsTest {
         assertEquals("", GemmaOutput.finalAnswer("<|channel>thought\nchecking"))
         assertEquals("answer", GemmaOutput.finalAnswer("<|channel>thought\nchecking<channel|>answer"))
         assertEquals("answer", GemmaOutput.finalAnswer("answer"))
+        assertEquals("", GemmaOutput.finalAnswer("<|channel>"))
     }
     @Test fun unavailableEnergyIsNotZeroAndUnitsAreCorrect() {
         assertNull(EnergyMath.microJouleDelta(-1, 10, 1, 2))
@@ -42,5 +43,15 @@ class ExperimentOptionsTest {
         assertTrue(e4b.files.any { it.name == "visual.mnn.weight" })
         assertTrue(e4b.files.none { it.name.startsWith("audio") })
         assertNotEquals(ModelRegistry.get("gemma4-e2b").fingerprint, e4b.fingerprint)
+    }
+    @Test fun orderedOcrKeepsValuesAndGeometryWithoutGuessingUnits() {
+        val low = OcrLine("79k6", OcrBox(20,80,60,90), emptyList(), null)
+        val high = OcrLine("4.5kg", OcrBox(20,10,60,20), emptyList(), null)
+        val evidence = OcrEvidence("79k6\n4.5kg", listOf(OcrBlock("", null, emptyList(), null, listOf(low, high))), 5, "hash", 100, 100)
+        val ordered = OcrFormatter.format(evidence, true).substringAfter("ordering:")
+        assertTrue(ordered.indexOf("4.5kg") < ordered.indexOf("79k6"))
+        assertTrue(ordered.contains("[20,80,60,90]"))
+        assertFalse(ordered.contains("79kg"))
+        assertEquals("79k6\n4.5kg", evidence.fullText)
     }
 }

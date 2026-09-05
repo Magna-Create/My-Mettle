@@ -27,6 +27,9 @@ data class CropRegion(val label: String, val left: Double, val top: Double, val 
 object GemmaOutput {
     // Keep the raw stream in the export; render only the final channel in the answer card.
     fun finalAnswer(raw: String): String {
+        // Partial control tokens can arrive across decode callbacks; they are not final-answer TTFT.
+        val trimmed = raw.trimStart()
+        if (trimmed.isNotEmpty() && "<|channel>thought".startsWith(trimmed)) return ""
         if (!raw.contains("<|channel>thought")) return raw
         val end = raw.indexOf("<channel|>", raw.indexOf("<|channel>thought"))
         return if (end < 0) "" else raw.substring(end + "<channel|>".length)
@@ -35,11 +38,29 @@ object GemmaOutput {
 }
 object ExperimentPrompts {
     val weights = """Extract the weight labels from this image.
-Return only these sections:
-MAIN STACK KG: unique readable kilogram values, smallest to largest.
-SEPARATE ADD-ON WEIGHTS: kilogram value and visible quantity of separate small add-on weights; otherwise 'not established'.
-UNCERTAIN: obscured, unreadable or uncertain-unit labels.
-Read printed kg values only. Ignore pounds; never convert. Never fill missing values by guessing a sequence. Decimal values are not automatically add-ons. Do not infer engagement or calculate combined/selected loads. OCR may be wrong: verify against the image. Report uncertainty instead of guessing. Do not add an equipment description."""
+
+Return only these three sections:
+
+MAIN STACK KG:
+Unique readable kilogram values, sorted smallest to largest.
+
+SEPARATE ADD-ON WEIGHTS:
+The kilogram value and visible quantity of any separate small
+add-on weights. If none can be identified, say "not established".
+
+UNCERTAIN:
+Labels that are obscured, unreadable, or have uncertain units.
+
+Rules:
+- Extract printed kilogram values only.
+- Ignore pounds. Do not convert pounds to kilograms.
+- Never fill missing values by guessing a numerical sequence.
+- A decimal value does not automatically mean an add-on weight.
+- Do not infer whether an add-on weight is engaged.
+- Do not calculate a combined or selected load.
+- OCR is supplementary and may be wrong. Verify against the image.
+- If a value cannot be read reliably, report uncertainty.
+- Do not add a general description of the equipment."""
     val locate = """Locate regions for reading equipment weight labels. Do NOT extract weights.
 Return ONLY JSON: {"regions":[{"label":"main stack","box":[0.0,0.0,1.0,1.0]}]}.
 Each box is [left,top,right,bottom], ratios from 0 to 1 in this full image. Propose one region covering ALL main-stack labels and separate regions for visible add-on weights. Keep enough context to identify the object and its units. Maximum 4 regions. If uncertain return {"regions":[]}. Never invent a region."""

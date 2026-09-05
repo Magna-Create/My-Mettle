@@ -1,7 +1,7 @@
 package dev.kian.lab2b.vlm
 
 enum class HarnessPhase { IDLE, LOADING, READY, PREPARING, GENERATING, STOPPING, UNLOADING, FAILED }
-data class TimingSnapshot(val loadMs: Long? = null, val firstOutputMs: Long? = null, val totalGenerationMs: Long? = null)
+data class TimingSnapshot(val loadMs: Long? = null, val firstRawOutputMs: Long? = null, val firstOutputMs: Long? = null, val totalGenerationMs: Long? = null)
 data class MemorySnapshot(val beforeLoadPssKb: Int? = null, val loadedPssKb: Int? = null, val afterDestroyPssKb: Int? = null)
 data class TranscriptTurn(val model: String, val backend: ComputeBackend, val mode: PipelineMode,
     val systemMode: SystemPromptMode, val instruction: String, val imageHash: String?, val response: String, val terminal: String)
@@ -10,12 +10,15 @@ data class HarnessSnapshot(
     val options: GenerationOptions = GenerationOptions(),
     val originalImage: SelectedImageInfo? = null,
     val crop: CropRegion? = null,
+    val cropPreparationMs: Long = 0,
+    val cropOrigin: String = "FULL_FRAME",
     val proposedCrops: List<CropRegion> = emptyList(),
     val localisationReport: String = "",
     val rawOutput: String = "",
     val testReports: List<String> = emptyList(),
     val lastReport: String = "",
     val stageLabel: String = "",
+    val measurementSummary: String = "No measured test yet",
     val gpuFailedModels: Set<String> = emptySet(),
     val phase: HarnessPhase = HarnessPhase.IDLE,
     val selectedModelId: String = "gemma4-e2b",

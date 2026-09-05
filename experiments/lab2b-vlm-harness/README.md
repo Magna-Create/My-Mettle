@@ -1,3 +1,5 @@
+> **0.3 extension:** see `docs/ui-ml-lab/research/LAB_2B_THINKING_CROPS.md` for thinking controls, E4B, reviewed crops, measured result export and current Termux commands. Earlier build hashes and instructions below describe 0.2. Physical acceptance of the extension is pending.
+
 # LAB-2B VLM Harness
 
 **Cancellation/rejection lifecycle:** Stop or a failed turn unloads the runtime after the current native operation returns. Tap Load before another turn; model files remain installed. MNN clears multimodal embeddings in prefill, while `reset()` alone does not clear pending embeddings from a turn rejected/cancelled before prefill. Disposal prevents historical-image reuse on that path. Completed turns retain the loaded engine and reset conversation state.

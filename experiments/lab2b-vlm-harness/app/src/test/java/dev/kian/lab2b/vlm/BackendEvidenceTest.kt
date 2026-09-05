@@ -11,8 +11,8 @@ class BackendEvidenceTest {
         assertTrue(result.gpuCorrectness.contains("UNTESTED"))
     }
     @Test fun registryIsExactAndPortableWithCpuDefault() {
-        assertEquals(listOf("Gemma 4 E2B IT", "Qwen3.5-2B", "Qwen3-VL-2B-Instruct"), ModelRegistry.models.map { it.displayName })
-        assertEquals(3, ModelRegistry.models.map { it.id }.toSet().size)
+        assertEquals(listOf("Gemma 4 E2B IT", "Qwen3.5-2B", "Qwen3-VL-2B-Instruct", "Gemma 4 E4B IT (experimental)"), ModelRegistry.models.map { it.displayName })
+        assertEquals(4, ModelRegistry.models.map { it.id }.toSet().size)
         ModelRegistry.models.forEach { model ->
             assertTrue(model.supportsImage)
             assertEquals(setOf(ComputeBackend.CPU, ComputeBackend.GPU), model.supportedBackends)

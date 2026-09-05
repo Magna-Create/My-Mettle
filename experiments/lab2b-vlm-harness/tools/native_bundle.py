@@ -13,11 +13,37 @@ def digest(data): return hashlib.sha256(data).hexdigest()
 def source_hashes(): return {name: digest((ROOT / name).read_bytes()) for name in SOURCES}
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['export', 'import'])
-    parser.add_argument('bundle', type=Path)
+    parser.add_argument('action', choices=['export', 'import', 'reuse'])
+    parser.add_argument('bundle', type=Path, nargs='?', default=ROOT / 'lab2b-native.zip')
     parser.add_argument('--apk', type=Path, default=ROOT / 'app/build/outputs/apk/debug/app-debug.apk')
     parser.add_argument('--sha256')
     args = parser.parse_args()
+    if args.action == 'reuse':
+        destination = ROOT / '.deps/prebuilt'
+        manifest_path = destination / 'manifest.json'
+        if not manifest_path.is_file():
+            raise SystemExit('No previously imported native bundle. Import a verified bundle first.')
+        manifest = json.loads(manifest_path.read_text())
+        expected = source_hashes()
+        actual = dict(manifest['sources'])
+        adapter = 'app/src/main/java/dev/kian/lab2b/vlm/LocalInferenceEngine.kt'
+        # Explicit compatibility migration: C++ and build inputs must remain identical.
+        # The old adapter's complete hash and unchanged JVM native declarations are pinned.
+        if actual != expected:
+            if actual.get(adapter) != 'e731aadbc709ce129e7ff2261c646ecceb3a079b589e20f3fd841e130e8bc480': raise SystemExit('Unknown adapter revision; obtain matching native bundle')
+            abi = (ROOT / adapter).read_text().split('interface OutputCallback')[1].split('class MnnEngine')[0]
+            if digest(abi.encode()) != 'e4e9efed49ff7df2e62a2c81c683fd063c228a1eda237e630600231fa41001f9': raise SystemExit('Native declarations changed; rebuild JNI')
+            actual[adapter] = expected[adapter]
+            if actual != expected: raise SystemExit('Native build inputs changed; rebuild JNI')
+        if set(manifest['files']) != NAMES: raise SystemExit('Incomplete native bundle')
+        for name, sha in manifest['files'].items():
+            if digest((destination / 'arm64-v8a' / name).read_bytes()) != sha: raise SystemExit('Native file changed: ' + name)
+        manifest['sources'] = expected
+        temporary = manifest_path.with_suffix('.partial')
+        temporary.write_text(json.dumps(manifest))
+        temporary.replace(manifest_path)
+        print('Existing verified native libraries reused; JNI declarations and all native build inputs unchanged.')
+        return
     if args.action == 'export':
         with zipfile.ZipFile(args.apk) as apk:
             files = {name: apk.read('lib/arm64-v8a/' + name) for name in sorted(NAMES)}

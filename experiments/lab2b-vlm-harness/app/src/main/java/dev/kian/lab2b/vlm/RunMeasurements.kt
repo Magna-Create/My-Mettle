@@ -21,18 +21,18 @@ class RunMeasurements(private val context: Context) {
     suspend fun start(scope: CoroutineScope) {
         beforeRails = readRails()
         started = SystemClock.elapsedRealtime()
-        synchronized(samples) { samples.add(sample()) }
+        synchronized(samples) { runCatching { sample() }.onSuccess { samples.add(it) } }
         poll = scope.launch(Dispatchers.IO) {
             while (isActive) {
                 delay(1000)
-                synchronized(samples) { samples.add(sample()) }
+                synchronized(samples) { runCatching { sample() }.onSuccess { samples.add(it) } }
             }
         }
     }
     suspend fun finish(): JSONObject {
         poll?.cancelAndJoin()
         val ended = SystemClock.elapsedRealtime()
-        synchronized(samples) { samples.add(sample()) }
+        synchronized(samples) { runCatching { sample() }.onSuccess { samples.add(it) } }
         val after = readRails()
         val railValues = JSONArray()
         after.forEach { end ->

@@ -1,3 +1,5 @@
+> **0.3 extension:** see `docs/ui-ml-lab/research/LAB_2B_THINKING_CROPS.md` for thinking controls, E4B, reviewed crops, measured result export and current Termux commands. Earlier build hashes and instructions below describe 0.2. Physical acceptance of the extension is pending.
+
 # LAB-2B implementation notes
 
 **Final implementation status:** LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING. Implementation `34fcadf8e25387f4afb534811124fbd6fd456081` passed dedicated Actions run [33942676654](https://github.com/Magna-Create/My-Mettle/actions/runs/33942676654), which published the APK in `lab2b-vlm-harness-debug`. See `LAB_2B_MORNING_HANDOFF.md` for all model pins, build results, install/Termux commands and remaining physical tests, and `LAB_2B_FINAL_NATIVE_AUDIT.txt` for final APK/native hashes. LAB-2B is not COMPLETE; LAB-2C is not started.

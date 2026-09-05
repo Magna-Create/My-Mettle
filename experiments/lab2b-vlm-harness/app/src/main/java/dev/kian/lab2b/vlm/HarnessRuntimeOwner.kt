@@ -151,7 +151,7 @@ object HarnessRuntimeOwner {
     fun selectImage(uri: Uri) = idleWork {
         val image = StorageIo.copyImage(requireContext(), uri)
         val old = snapshot.originalImage ?: snapshot.selectedImage
-        publish { it.copy(originalImage = image, crop = null, proposedCrops = emptyList(), localisationReport = "", selectedImage = image, ocr = cache.get(image.normalisedSha256),
+        publish { it.copy(originalImage = image, crop = null, cropPreparationMs = 0, cropOrigin = "FULL_FRAME", proposedCrops = emptyList(), localisationReport = "", selectedImage = image, ocr = cache.get(image.normalisedSha256),
             ocrStatus = if (cache.get(image.normalisedSha256) != null) "CACHED" else "NOT RUN", ocrCacheHit = cache.get(image.normalisedSha256) != null) }
         old?.let { File(it.sourcePrivatePath).parentFile?.deleteRecursively() }
     }
@@ -171,25 +171,26 @@ object HarnessRuntimeOwner {
             source.outputStream().use { check(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
             val image = ImagePreprocessor.prepare(source, folder, if (textControl) "HELLO-1234.png" else "red-square.png")
             val old = snapshot.originalImage ?: snapshot.selectedImage
-            publish { it.copy(originalImage = image, crop = null, proposedCrops = emptyList(), localisationReport = "", selectedImage = image, ocr = cache.get(image.normalisedSha256), ocrStatus = "NOT RUN") }
+            publish { it.copy(originalImage = image, crop = null, cropPreparationMs = 0, cropOrigin = "FULL_FRAME", proposedCrops = emptyList(), localisationReport = "", selectedImage = image, ocr = cache.get(image.normalisedSha256), ocrStatus = "NOT RUN") }
             old?.let { File(it.sourcePrivatePath).parentFile?.deleteRecursively() }
         } finally { bitmap.recycle() }
     }
     fun clearImage() {
         if (!HarnessStateMachine.idle(snapshot.phase)) return
         val old = snapshot.originalImage ?: snapshot.selectedImage
-        publish { it.copy(originalImage = null, crop = null, proposedCrops = emptyList(), localisationReport = "", selectedImage = null, ocr = null, ocrStatus = "NOT RUN") }
+        publish { it.copy(originalImage = null, crop = null, cropPreparationMs = 0, cropOrigin = "FULL_FRAME", proposedCrops = emptyList(), localisationReport = "", selectedImage = null, ocr = null, ocrStatus = "NOT RUN") }
         scope.launch { old?.let { File(it.sourcePrivatePath).parentFile?.deleteRecursively() } }
     }
-    fun applyCrop(region: CropRegion) = idleWork {
+    fun applyCrop(region: CropRegion, fromProposal: Boolean = false) = idleWork {
+        val start = System.nanoTime()
         val original = requireNotNull(snapshot.originalImage ?: snapshot.selectedImage) { "Select an image" }
         val image = CropImages.prepare(original, region)
-        publish { it.copy(selectedImage = image, crop = region, ocr = cache.get(image.normalisedSha256),
+        publish { it.copy(selectedImage = image, crop = region, cropPreparationMs = elapsed(start), cropOrigin = if (fromProposal) "MODEL_PROPOSED_HUMAN_REVIEWED" else "MANUAL", ocr = cache.get(image.normalisedSha256),
             ocrStatus = if (cache.get(image.normalisedSha256) == null) "NOT RUN" else "CACHED", ocrCacheHit = cache.get(image.normalisedSha256) != null) }
     }
     fun restoreFullImage() = idleWork {
         val image = requireNotNull(snapshot.originalImage) { "Select an image" }
-        publish { it.copy(selectedImage = image, crop = null, ocr = cache.get(image.normalisedSha256),
+        publish { it.copy(selectedImage = image, crop = null, cropPreparationMs = 0, cropOrigin = "FULL_FRAME", ocr = cache.get(image.normalisedSha256),
             ocrStatus = if (cache.get(image.normalisedSha256) == null) "NOT RUN" else "CACHED") }
     }
     fun selectPipeline(mode: PipelineMode) { if (mode != snapshot.pipeline && HarnessStateMachine.idle(snapshot.phase)) publish { it.copy(pipeline = mode) } }
@@ -244,7 +245,7 @@ object HarnessRuntimeOwner {
             slot.engine!!.arm()
             snapshot = snapshot.copy(phase = HarnessPhase.PREPARING, output = "", rawOutput = "", nativeMetrics = emptyList(), lastError = null,
                 stageLabel = if (localise) "LOCALISE" else "EXTRACT",
-                timing = snapshot.timing.copy(firstOutputMs = null, totalGenerationMs = null))
+                timing = snapshot.timing.copy(firstOutputMs = null, firstRawOutputMs = null, totalGenerationMs = null))
         }
         notifySnapshot()
         scope.launch {
@@ -262,7 +263,7 @@ object HarnessRuntimeOwner {
                 evidence = if (!localise && request.pipeline.ocr) recognise(requireNotNull(image)) else null
                 ocrMs = if (evidence == null) 0 else elapsed(ocrStart)
                 if (cancelled.get()) { terminal = "STOPPED"; return@launch }
-                val system = if (request.preset == SystemPreset.CUSTOM) requireNotNull(request.customPrompt) { "Select a custom prompt file" }.text else request.preset.prompt
+                val system = if (localise) "" else if (request.preset == SystemPreset.CUSTOM) requireNotNull(request.customPrompt) { "Select a custom prompt file" }.text else request.preset.prompt
                 turn = ThinkingPrompt.apply(PromptAssembler.assemble(if (localise) ExperimentPrompts.locate else request.promptText,
                     if (localise) "Return only the requested region JSON. Locate visible objects; do not invent regions." else system,
                     ModelRegistry.get(request.selectedModelId).systemMode, if (localise) PipelineMode.VISION_ONLY else request.pipeline,
@@ -274,7 +275,7 @@ object HarnessRuntimeOwner {
                 val inferenceStart = System.nanoTime()
                 val metrics = requireNotNull(slot.engine).generate(turn) { output ->
                     val answer = GemmaOutput.finalAnswer(output)
-                    publish { it.copy(rawOutput = output, output = answer, timing = it.timing.copy(firstOutputMs = it.timing.firstOutputMs ?: if (answer.isNotEmpty()) elapsed(inferenceStart) else null)) }
+                    publish { it.copy(rawOutput = output, output = answer, timing = it.timing.copy(firstRawOutputMs = it.timing.firstRawOutputMs ?: if (output.isNotEmpty()) elapsed(inferenceStart) else null, firstOutputMs = it.timing.firstOutputMs ?: if (answer.isNotEmpty()) elapsed(inferenceStart) else null)) }
                 }
                 terminal = if (cancelled.get() || metrics.lastOrNull() == 1L) "STOPPED" else "COMPLETED"
                 publish { it.copy(nativeMetrics = metrics.toList(), timing = it.timing.copy(totalGenerationMs = elapsed(inferenceStart))) }
@@ -293,9 +294,11 @@ object HarnessRuntimeOwner {
                 runCatching {
                     val folder = File(requireContext().filesDir, "lab2b/reports").apply { mkdirs() }
                     val file = File(folder, "${System.currentTimeMillis()}-${java.util.UUID.randomUUID()}.json")
-                    file.writeText(report)
+                    val part = File(folder, file.name + ".partial")
+                    part.writeText(report)
+                    check(part.renameTo(file))
                 }.onFailure { fail("Result export could not be persisted: ${it.message}") }
-                publish { it.copy(lastReport = report, testReports = (it.testReports + report).takeLast(50),
+                publish { it.copy(measurementSummary = "Stage: $stage • $terminal\nOCR wall: $ocrMs ms • operation: ${elapsed(operationStart)} ms\nSampled peak PSS: ${measured.optInt("sampled_peak_pss_kb")} KB\nEnergy: ${measured.optString("energy_status", "UNAVAILABLE")}\n${measured.optJSONArray("power_monitors") ?: "No monitors"}\nSave results for complete timing, raw gauge and thermal data.", lastReport = report, testReports = (it.testReports + report).takeLast(50),
                     localisationReport = if (localise) report else it.localisationReport) }
                 // MNN clears pending multimodal embeddings during prefill, not reset().
                 // A cancelled/rejected turn can stop before prefill; never reuse that owner.
@@ -305,8 +308,8 @@ object HarnessRuntimeOwner {
                 }
                 publish { it.copy(phase = if (slot.engine != null) HarnessPhase.READY else HarnessPhase.IDLE,
                     lastError = if (terminal == "STOPPED") "Stopped; runtime unloaded to clear pending image state. Load to run another turn." else if (terminal == "FAILED") (it.lastError ?: "Turn failed") + "\nRuntime unloaded. Load to retry." else it.lastError,
-                    transcript = (it.transcript + TranscriptTurn(request.selectedModelId, request.backend, request.pipeline,
-                        turn?.systemMode ?: SystemPromptMode.NONE, request.promptText, turn?.imageSha256, it.output, terminal)).takeLast(20)) }
+                    transcript = (it.transcript + TranscriptTurn(request.selectedModelId, request.backend, if (localise) PipelineMode.VISION_ONLY else request.pipeline,
+                        turn?.systemMode ?: SystemPromptMode.NONE, if (localise) ExperimentPrompts.locate else request.promptText, turn?.imageSha256, it.output, terminal)).takeLast(20)) }
             }
         }
     }
