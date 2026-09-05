@@ -1,8 +1,8 @@
 # LAB-2B physical acceptance
 
-> **Status:** LAB-2B IN PROGRESS — B1 PASS by user physical attestation; B2 harness source prepared; B3 **REVISE** after first native-alignment audit.
+> **Status:** LAB-2B IN PROGRESS — B1 PASS by user physical attestation; B2 harness source prepared; B3 **REVISE** after corrected native/page-size audit.
 >
-> **Rule:** a requested accelerator is never recorded as a proven accelerator without physical runtime evidence. Build success is not inference success. Compatibility mode is not native 16 KB compliance.
+> **Rule:** a requested accelerator is never recorded as a proven accelerator without physical runtime evidence. Build success is not inference success. A 4 KB current device runtime does not waive native 16 KB portability acceptance.
 
 ## Target device
 
@@ -14,12 +14,9 @@
 | Android SDK | `36` — physically reported at B3 |
 | Android build ID | `BP4A.251205.006` — physically reported at B3 |
 | Build fingerprint | `samsung/pa3qxeea/pa3q:16/BP4A.251205.006/S938BXXSBCZG3_OXMBCZG3:user/release-keys` |
-| Device page size | **PENDING** — Termux's own PATH did not contain `getconf` |
-| Official page-size command | `adb shell getconf PAGE_SIZE` |
-| Direct-device preferred command | `/system/bin/getconf PAGE_SIZE` when present |
-| Direct-device fallback | Python `os.sysconf("SC_PAGE_SIZE")`, or install Termux `getconf` |
+| Device page size | `4096` bytes / 4 KB — physically reported at B3 |
 
-Android's current 16 KB guidance uses `getconf PAGE_SIZE`; `16384` denotes a 16 KB runtime environment. The missing Termux command is not interpreted as a value.
+The page-size value was obtained physically on the target phone. It is not inferred from device model or Android version.
 
 ## B0 — Qualcomm reference-app reproduction
 
@@ -42,7 +39,7 @@ Android's current 16 KB guidance uses `getconf PAGE_SIZE`; `16384` denotes a 16 
 | ABI relevant to target | `arm64-v8a` |
 | Unchanged dependency resolution/build | **PASS — user attested B0/B1 gate passed** |
 
-The repository-operation sandbox could not perform the Android build itself because it lacks an Android SDK/network. Kian executed the unchanged reference gate externally and reported **“Gate passed.”** That attestation is recorded as the B0/B1 result; unavailable raw values are left unknown rather than invented.
+The repository-operation sandbox could not perform the Android build itself because it lacks an Android SDK/network. Kian executed the unchanged reference gate externally and reported **“Gate passed.”** That attestation remains the B0/B1 result.
 
 ## B1 — physical reference-app gate
 
@@ -91,37 +88,28 @@ The root Android CI run for `d999359ad8bb96e64e67950250f2e98e0f176719` completed
 
 **Status: REVISE. B4 remains blocked.**
 
-### First physical audit
+### Corrected physical audit
 
-The first audit executed against the built harness APK and exact cached `geniex-android:0.3.5` dependency.
+The corrected audit executed against the built harness APK and exact cached `geniex-android:0.3.5` dependency.
 
-Two separate findings resulted.
-
-#### 1. Validator bug — fixed
-
-The initial checker incorrectly reported valid `align 2**14` LOAD segments as failures. The Bash expression used to extract the exponent treated `*` as shell glob syntax instead of parsing the literal `2**14` token.
-
-That defect is corrected in:
+Artefact identities:
 
 ```text
-a794e7e22db8b1fda2f840eeb59b9de39ea79993
+AAR_SHA256=4a6ad5697bded1ce66ee3e691b2ce49fb2b7f5783db61b413b95b2222f1cb653
+APK_SHA256=f845a43bd596ef657fa57178198a7be2387ec7a07019f46e56973d7295bcbcbc
+APK_ABIS=arm64-v8a
 ```
 
-The tool now extracts the exponent with a regex and rejects only exponents `< 14`.
+The earlier audit parser bug was fixed in `a794e7e22db8b1fda2f840eeb59b9de39ea79993`; the corrected rerun no longer rejects valid `2**14` libraries.
 
-A follow-up output cleanup in:
+The authoritative rerun identifies exactly 13 failing files in the AAR and the same 13 in the APK. Every failing file is:
 
 ```text
-d650e807dc95c19c62855aa13e2435ff7d1d2546
+Machine: Qualcomm Hexagon
+minimum LOAD alignment: 2**12
 ```
 
-makes the default audit compact and reports ELF machine identity for genuine failures. Set `LAB2B_VERBOSE_NATIVE=1` only when full LOAD lines are needed.
-
-#### 2. Genuine upstream 4 KB-aligned native payloads
-
-After removing the checker false positives conceptually, the user-supplied APK output still contains real `align 2**12` libraries.
-
-The visible genuine set includes at least:
+Failing set:
 
 ```text
 libCalculator_skel.so
@@ -139,9 +127,7 @@ libggml-htp-v79.so
 libggml-htp-v81.so
 ```
 
-By contrast, the visible general GenieX / llama.cpp host libraries such as `libgeniex*`, `libgeniex_plugin_llama_cpp.so`, `libggml.so`, `libggml-cpu.so`, `libggml-opencl.so`, `libllama.so`, `libmtmd.so`, `libnpu_jni.so` and `libomp.so` reported `2**14`.
-
-This narrows the real compatibility problem to the HTP/QNN/DSP-related payload class rather than the whole GenieX Android stack.
+This narrows the failure to Qualcomm Hexagon/HTP payloads rather than the general GenieX / llama.cpp Android host stack.
 
 Critically, `libggml-htp-v81.so` belongs to the HTP lane relevant to the frozen primary route:
 
@@ -151,47 +137,58 @@ GenieX llama_cpp
 → Snapdragon HTP
 ```
 
-The finding therefore cannot be dismissed as an unused QAIRT-only library.
+The failure therefore cannot be dismissed as unused QAIRT-only baggage.
 
 ### APK ZIP alignment
 
-The first `zipalign -P 16` verification succeeded.
-
-The output showed native `.so` entries as compressed, which matches Qualcomm's frozen reference setting:
+The corrected audit reports:
 
 ```text
-jniLibs.useLegacyPackaging = true
+ZIP_ALIGNMENT=PASS
 ```
 
-This means APK ZIP packaging is not the active B3 failure. Android documents compressed JNI libraries as a packaging workaround; it does not convert a prebuilt ELF with `2**12` LOAD alignment into a native 16 KB-compatible ELF.
+and final static result:
+
+```text
+LAB2B_NATIVE_16K=FAIL_ELF_ALIGNMENT
+```
+
+The APK keeps Qualcomm's `jniLibs.useLegacyPackaging = true`, so native libraries are compressed. ZIP packaging therefore passes, but it does not rebuild the 4 KB-aligned Hexagon ELF payloads.
+
+### Device page-size interpretation
+
+The target S25 Ultra physically reports:
+
+```text
+PAGE_SIZE=4096
+```
+
+So its current kernel/runtime is a 4 KB environment. The B3 finding therefore does **not** contradict the earlier B1 reference-app launch/init success on this phone.
+
+However, the LAB-2B mission explicitly made 16 KB native compatibility a hard acceptance item. The correct current verdict is therefore:
+
+```text
+CURRENT TARGET DEVICE RUNTIME: 4 KB — PASS as observed device fact
+GENIEX 0.3.5 APK ZIP 16 KB ALIGNMENT: PASS
+GENIEX 0.3.5 NATIVE ELF 16 KB ALIGNMENT: FAIL
+B3: REVISE
+```
 
 ### Qualcomm failure archaeology
 
-Qualcomm GenieX issue `#886` independently reports the same class of 4 KB alignment in bundled QNN / GGML-HTP files, including several exact names observed in this B3 run. A Qualcomm maintainer acknowledged that the first SDK-side update had not fully fixed the problem and said another fix would be needed. The issue was later closed as stale rather than with a demonstrated 16 KB-clean artefact.
+Qualcomm GenieX issue `#886` independently reports the same class of 4 KB alignment in bundled QNN / GGML-HTP files, including several exact names observed here. A Qualcomm maintainer acknowledged that an initial SDK-side update had not fully fixed the problem and said another fix would be needed. The issue was later closed stale rather than with a demonstrated 16 KB-clean artefact.
 
-See:
-
-```text
-https://github.com/qualcomm/GenieX/issues/886
-```
-
-Detailed B3 evidence is retained in:
+Detailed evidence is retained in:
 
 ```text
 docs/ui-ml-lab/research/LAB_2B_B3_NATIVE_ALIGNMENT_FINDINGS.md
 ```
 
-### Current Android rule
-
-Android's current guidance requires each relevant 64-bit shared library's LOAD alignment to be at least `2**14`; `2**13`, `2**12`, or lower is not native 16 KB ELF alignment. APK ZIP alignment is checked separately.
-
-Android 16 also has a compatibility mode for some 4 KB-aligned apps on a 16 KB kernel. LAB-2B does **not** reinterpret compatibility mode as a clean production pass.
-
 ### Newer GenieX candidate
 
 Qualcomm's latest public release observed during B3 review is `v0.3.19` (2026-08-07). Its Android source uses NDK `29.0.14206865`, compileSdk 35 and still uses legacy JNI packaging.
 
-A newer NDK is promising for libraries actually rebuilt by GenieX, but its Android build still copies vendor/HTP prebuilts into the AAR. No release note or closed issue currently proves that the exact 4 KB HTP files are fixed. `0.3.19` is therefore a **static comparison candidate only**, not a selected harness dependency.
+`0.3.19` remains a **static comparison candidate only**. It is not selected as the harness dependency. `tools/compare_geniex_release_16k.sh` performs the controlled comparison without modifying the project. Its executable bit was corrected after the first physical invocation returned `Permission denied`.
 
 ### B3 table
 
@@ -200,12 +197,14 @@ A newer NDK is promising for libraries actually rebuilt by GenieX, but its Andro
 | Harness APK exists at expected build path | **PASS — physically audited** |
 | Harness unit tests | **NOT TRANSCRIBED IN THIS B3 RESPONSE** |
 | Harness lint | **NOT TRANSCRIBED IN THIS B3 RESPONSE** |
-| APK ABI | `arm64-v8a` audit path exercised |
-| Original ELF checker | **INVALID / BUGGY for `2**14`** |
+| APK ABI | **PASS — `arm64-v8a` only** |
+| AAR SHA-256 | `4a6ad5697bded1ce66ee3e691b2ce49fb2b7f5783db61b413b95b2222f1cb653` |
+| APK SHA-256 | `f845a43bd596ef657fa57178198a7be2387ec7a07019f46e56973d7295bcbcbc` |
 | Correct interpretation of `2**14` | **PASS** |
-| Genuine `< 2**14` ELF files | **FAIL — HTP/QNN/GGML-HTP subset contains `2**12`** |
+| Genuine `< 2**14` ELF files | **FAIL — 13 Qualcomm Hexagon files at `2**12`** |
 | APK `zipalign -P 16` | **PASS** |
-| Actual S25 runtime page size | **PENDING** |
+| Actual S25 runtime page size | **4096 bytes / 4 KB** |
+| Newer AAR comparison | **PENDING `v0.3.19` static audit** |
 | B3 verdict | **REVISE** |
 
 ## B4 — exact model bundle
@@ -272,6 +271,6 @@ Profiling remains blocked until B5/B6 reliability passes.
 
 ## Overall LAB-2B verdict
 
-**IN PROGRESS — B1 PASS; B2 SOURCE PREPARED; B3 REVISE. B4 BLOCKED.**
+**IN PROGRESS — B1 PASS; B2 SOURCE PREPARED; B3 REVISE. B4 BLOCKED PENDING CONTROLLED NEWER-AAR COMPARISON.**
 
 LAB-2C has **not** started.
