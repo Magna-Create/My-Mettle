@@ -1,6 +1,6 @@
 # UI/ML Lab
 
-> **Status:** authoritative landing page for the long-lived `agent/ui-ml-lab` development line. LAB-0 and LAB-1 are closed. LAB-2A research is complete and human-accepted. LAB-2B is **IN PROGRESS** at the B0/B1 Qualcomm reference-app physical gate.
+> **Status:** authoritative landing page for the long-lived `agent/ui-ml-lab` development line. LAB-0 and LAB-1 are closed. LAB-2A research is complete and human-accepted. LAB-2B is **IN PROGRESS** at B3 REVISE after physical native/page-size validation.
 >
 > **Initial upstream checkpoint:** `agent/n-bio-vnext-inference` at `ec1406fcaa371241974031a4c2740d433a9e8f55`.
 >
@@ -68,7 +68,7 @@ LAB-1 adds the shared `MyMettleApplication` class solely to provide a process-st
 
 Provider authorities added in future must derive from `${applicationId}` (or another collision-safe variant-specific value) unless a reviewed interoperability contract requires otherwise.
 
-The My Mettle manifest contains no `INTERNET` permission. LAB-2B remains isolated from the My Mettle `:app` runtime; any future standalone harness lives under its own Gradle root and does not alter this product manifest.
+The My Mettle manifest contains no `INTERNET` permission. LAB-2B remains isolated from the My Mettle `:app` runtime; the standalone harness under `experiments/lab2b-vlm-harness/` is its own Gradle root and does not alter this product manifest.
 
 ## Data and backup behaviour
 
@@ -88,19 +88,33 @@ Physical LAB-1 probing on the target Samsung Galaxy S25 Ultra found the current 
 
 LAB-2A recommended **Qualcomm GenieX Android AAR + Qwen3-VL-2B-Instruct GGUF Q4_0 through GenieX `llama_cpp`** as the primary standalone proof route. That research was human-accepted before LAB-2B started.
 
-LAB-2B is now executing the physical validation sequence without integrating anything into My Mettle. Its first hard gate is Qualcomm's unchanged `geniex_chat_android` app at commit `db3f9772d4e423dee2df517335009c703845dba8`, AAR `0.3.5`. B2 harness code is prohibited until that reference app builds and physically reaches GenieX/ModelManager on the target S25 Ultra. The physical/evidence record lives in [`research/LAB_2B_PHYSICAL_ACCEPTANCE.md`](./research/LAB_2B_PHYSICAL_ACCEPTANCE.md) and implementation decisions in [`research/LAB_2B_IMPLEMENTATION_NOTES.md`](./research/LAB_2B_IMPLEMENTATION_NOTES.md).
+LAB-2B reproduced and physically passed Qualcomm's unchanged `geniex_chat_android` reference gate on the target S25 Ultra, then created the isolated standalone harness at `experiments/lab2b-vlm-harness/` without connecting GenieX to My Mettle.
+
+B3 physical validation now establishes:
+
+- target device: Android 16 / API 36 / build `BP4A.251205.006`;
+- actual target-device page size: `4096` bytes / 4 KB;
+- frozen GenieX `0.3.5` AAR and harness APK: `arm64-v8a` only;
+- APK `zipalign -P 16`: PASS;
+- native ELF 16 KB acceptance: FAIL because exactly 13 `Machine: Qualcomm Hexagon` payloads use minimum LOAD alignment `2**12`;
+- the failing set includes `libggml-htp-v81.so`, so the finding is directly relevant to the accepted llama.cpp NPU/HTP route rather than unused QAIRT-only baggage.
+
+The current 4 KB phone runtime means this finding does not contradict the already-passed reference-app launch/init gate, but LAB-2B's explicit 16 KB portability criterion remains unsatisfied. B3 is therefore **REVISE**, and B4 model preparation remains blocked while a controlled static comparison of Qualcomm's newer `v0.3.19` AAR is performed. The harness dependency has **not** been changed from `0.3.5`.
+
+The physical/evidence record lives in [`research/LAB_2B_PHYSICAL_ACCEPTANCE.md`](./research/LAB_2B_PHYSICAL_ACCEPTANCE.md), implementation decisions in [`research/LAB_2B_IMPLEMENTATION_NOTES.md`](./research/LAB_2B_IMPLEMENTATION_NOTES.md), and the B3 failure analysis in [`research/LAB_2B_B3_NATIVE_ALIGNMENT_FINDINGS.md`](./research/LAB_2B_B3_NATIVE_ALIGNMENT_FINDINGS.md).
 
 See [`AI_RUNTIME_CONTRACT.md`](./AI_RUNTIME_CONTRACT.md) for the implemented LAB-1 semantics. LAB-2B does not connect GenieX to that contract; that future integration belongs to LAB-2C only after a physical LAB-2B PASS.
 
 ## Where to go next
 
-- [`PLAN.md`](./PLAN.md): programme phases and STOP gates; LAB-2B is in progress at the B0/B1 reference-app physical gate.
+- [`PLAN.md`](./PLAN.md): programme phases and STOP gates; LAB-2B is in progress at B3 REVISE.
 - [`research/LAB_2A_ANDROID_VLM_IMPLEMENTATION_RESEARCH.md`](./research/LAB_2A_ANDROID_VLM_IMPLEMENTATION_RESEARCH.md): accepted research conclusion and route comparison.
 - [`research/LAB_2A_SOURCE_LEDGER.md`](./research/LAB_2A_SOURCE_LEDGER.md): traceable evidence ledger.
 - [`research/LAB_2A_FAILURE_ARCHAEOLOGY.md`](./research/LAB_2A_FAILURE_ARCHAEOLOGY.md): failures, fixes and preventative rules.
 - [`research/LAB_2B_IMPLEMENTATION_PLAYBOOK.md`](./research/LAB_2B_IMPLEMENTATION_PLAYBOOK.md): authoritative LAB-2B implementation handoff.
-- [`research/LAB_2B_PHYSICAL_ACCEPTANCE.md`](./research/LAB_2B_PHYSICAL_ACCEPTANCE.md): physical target-device acceptance state; no physical PASS is pre-filled.
+- [`research/LAB_2B_PHYSICAL_ACCEPTANCE.md`](./research/LAB_2B_PHYSICAL_ACCEPTANCE.md): physical target-device acceptance state.
 - [`research/LAB_2B_IMPLEMENTATION_NOTES.md`](./research/LAB_2B_IMPLEMENTATION_NOTES.md): frozen matrix, implementation decisions and deviations.
+- [`research/LAB_2B_B3_NATIVE_ALIGNMENT_FINDINGS.md`](./research/LAB_2B_B3_NATIVE_ALIGNMENT_FINDINGS.md): corrected native/16 KB evidence and route significance.
 - [`INTEGRATION_LEDGER.md`](./INTEGRATION_LEDGER.md): intentional loose seams and future owners.
 - [`AI_RUNTIME_CONTRACT.md`](./AI_RUNTIME_CONTRACT.md): implemented provider/capability/lifecycle contract; unchanged by LAB-2B so far.
 - [`EQUIPMENT_VISION_CONTRACT.md`](./EQUIPMENT_VISION_CONTRACT.md): observation → interpretation → derivation → validation contract for later phases.
