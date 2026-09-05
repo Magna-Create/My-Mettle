@@ -1,33 +1,18 @@
 package dev.kian.lab2b.vlm
 
-enum class BackendProofState {
-    UNPROVEN,
-    LOG_CONFIRMED_NPU,
-    LOG_CONFIRMED_GPU,
-    LOG_CONFIRMED_CPU,
-    CONTRADICTED,
-}
-
 data class BackendEvidence(
-    val requestedComputeUnit: String = "npu",
-    val resolvedRuntimeId: String? = null,
-    val proofState: BackendProofState = BackendProofState.UNPROVEN,
-    val evidence: String? = null,
+    val requested: ComputeBackend = ComputeBackend.CPU,
+    val configuredText: String? = null,
+    val configuredVision: String? = null,
+    val effectiveText: String = "NOT LOADED",
+    val effectiveVision: String = "NOT LOADED",
+    val gpuCorrectness: String = "EXPERIMENTAL / PHYSICAL CORRECTNESS UNTESTED",
 ) {
-    val requestedBackendIsProven: Boolean
-        get() =
-            when (requestedComputeUnit.lowercase()) {
-                "npu" -> proofState == BackendProofState.LOG_CONFIRMED_NPU
-                "gpu" -> proofState == BackendProofState.LOG_CONFIRMED_GPU
-                "cpu" -> proofState == BackendProofState.LOG_CONFIRMED_CPU
-                else -> false
-            }
-
-    fun diagnosticSummary(): String = buildString {
-        append("requested=").append(requestedComputeUnit)
-        append("; runtime=").append(resolvedRuntimeId ?: "unresolved")
-        append("; proof=").append(proofState)
-        if (!evidence.isNullOrBlank()) append("; evidence=").append(evidence)
-        if (!requestedBackendIsProven) append("; REQUESTED != PROVEN")
+    companion object {
+        fun loaded(requested: ComputeBackend, text: String, vision: String) = BackendEvidence(
+            requested, text, vision,
+            if (text == "cpu") "CPU (explicit CPU runtime)" else "UNVERIFIED: OpenCL configured; per-op placement/fallback not reported",
+            if (vision == "cpu") "CPU (explicit CPU vision runtime)" else "UNVERIFIED: $vision configured",
+        )
     }
 }

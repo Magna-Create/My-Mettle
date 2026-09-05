@@ -1,6 +1,9 @@
 .gradle/
 .kotlin/
 .idea/
+.deps/
+.cxx/
+**/.cxx/
 local.properties
 **/build/
 
@@ -13,6 +16,10 @@ local.properties
 *.apk
 *.aab
 *.so
+*.litertlm
+*.mnn
+*.weight
+*.mtok
 *.logcat
 *.trace
 *.perfetto-trace

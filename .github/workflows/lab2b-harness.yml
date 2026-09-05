@@ -1,0 +1,46 @@
+name: LAB-2B standalone harness
+on:
+  push:
+    branches: [agent/ui-ml-lab]
+    paths:
+      - 'experiments/lab2b-vlm-harness/**'
+      - '.github/workflows/lab2b-harness.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  harness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.1.0'
+      - name: Install pinned Android tools
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.3.13750724' 'cmake;3.22.1'
+      - name: Fetch and verify runtime only (no models)
+        run: python3 experiments/lab2b-vlm-harness/tools/prepare_mnn.py
+      - name: Source and binary isolation
+        run: bash experiments/lab2b-vlm-harness/tools/verify_source_safety.sh
+      - name: Test, build and lint isolated harness
+        working-directory: experiments/lab2b-vlm-harness
+        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug lintDebug
+      - name: Verify APK ELF and ZIP 16 KB alignment
+        run: python3 experiments/lab2b-vlm-harness/tools/inspect_native_16k.py | tee experiments/lab2b-vlm-harness/app/build/outputs/native-audit.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lab2b-vlm-harness-debug
+          path: |
+            experiments/lab2b-vlm-harness/app/build/outputs/apk/debug/app-debug.apk
+            experiments/lab2b-vlm-harness/app/build/outputs/native-audit.txt
+            experiments/lab2b-vlm-harness/app/build/reports/tests/testDebugUnitTest/
+            experiments/lab2b-vlm-harness/app/build/reports/lint-results-debug.html
+          if-no-files-found: error

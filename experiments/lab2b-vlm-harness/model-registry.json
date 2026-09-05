@@ -1,0 +1,139 @@
+[
+  {
+    "id": "gemma4-e2b",
+    "displayName": "Gemma 4 E2B IT",
+    "source": "taobao-mnn/gemma-4-E2B-it-MNN",
+    "revision": "ce18884f154ce405545f1acda5c5c8fdd9c1280c",
+    "license": "Apache-2.0",
+    "files": [
+      {
+        "name": "config.json",
+        "bytes": 678,
+        "sha256": "3b1c8caafa2792a64b81d2ef47d3e6afc1c250b280389e77d0d25628108c87a7"
+      },
+      {
+        "name": "llm.mnn",
+        "bytes": 2276992,
+        "sha256": "7115ecd7a66332d8a14c9d6467d560baec33c9650174cbb2f0e7641a69999216"
+      },
+      {
+        "name": "llm.mnn.weight",
+        "bytes": 1436474178,
+        "sha256": "8d4b0fabb015da09a820fab22714f392b9e73f8f2fc7175dea7ef4f581d03881"
+      },
+      {
+        "name": "llm_config.json",
+        "bytes": 1415,
+        "sha256": "7096f286d274bee7f374b7d06533d5a611f6d678b119fa9542e74e65fd8a5379"
+      },
+      {
+        "name": "ple_embeddings_int4.bin",
+        "bytes": 1468006400,
+        "sha256": "c76e660ca418790bde8757099af0144488ece631dcd612245f1e1bf801f9e1e3"
+      },
+      {
+        "name": "tokenizer.mtok",
+        "bytes": 10068633,
+        "sha256": "e08a1293e250750949bb1f543edd626cc6cf9f039a2e461958d20f33407d26b9"
+      },
+      {
+        "name": "visual.mnn",
+        "bytes": 1060528,
+        "sha256": "759a3fa521cbb9e4bcf877769524faa41f0e1288a61d664cb9656f3e70f61fb0"
+      },
+      {
+        "name": "visual.mnn.weight",
+        "bytes": 225904812,
+        "sha256": "308e356f5a8527c28c1caba233b8d3521d4ba558b56cbcb8a53ed103d73ae1af"
+      }
+    ]
+  },
+  {
+    "id": "qwen35-2b",
+    "displayName": "Qwen3.5-2B",
+    "source": "taobao-mnn/Qwen3.5-2B-MNN",
+    "revision": "35781816d7b6a9dcb273a6765ac9563401951c3c",
+    "license": "Apache-2.0",
+    "files": [
+      {
+        "name": "config.json",
+        "bytes": 652,
+        "sha256": "92853033efe602f95efca3e1c05cd8b108f973c8beed417843a9671f8147ed8d"
+      },
+      {
+        "name": "llm.mnn",
+        "bytes": 2148136,
+        "sha256": "23df98f8b341b277365e0bbca025c1d192939e3d32d7f79776352c6f32e77960"
+      },
+      {
+        "name": "llm.mnn.weight",
+        "bytes": 1176647702,
+        "sha256": "c93f71a2dbecf9328782bd38861656d8faa82e95e7f99607350074768a482054"
+      },
+      {
+        "name": "llm_config.json",
+        "bytes": 8692,
+        "sha256": "a88234b36c2af0eff8e5c89667011badf71c15e30459eb0e21030a8f3f9ed240"
+      },
+      {
+        "name": "tokenizer.txt",
+        "bytes": 6465727,
+        "sha256": "7e75de1f279a10b65bd9dc1a5207205cb8993823861c4c42bbbd74e48e1c23a4"
+      },
+      {
+        "name": "visual.mnn",
+        "bytes": 488096,
+        "sha256": "88fc40a7b676e90eb2cb86d854db15cb90b9eb1f34087ab0f48c5e43572c8dac"
+      },
+      {
+        "name": "visual.mnn.weight",
+        "bytes": 195587264,
+        "sha256": "8f90e106f5b9ae9a939faed240305cfdd5c6740ae91d3fc418a990bee0cce36b"
+      }
+    ]
+  },
+  {
+    "id": "qwen3vl-2b",
+    "displayName": "Qwen3-VL-2B-Instruct",
+    "source": "taobao-mnn/Qwen3-VL-2B-Instruct-MNN",
+    "revision": "9e49ec71ded22500a997ed0f9961e1e92b85bbc9",
+    "license": "Apache-2.0",
+    "files": [
+      {
+        "name": "config.json",
+        "bytes": 605,
+        "sha256": "1ed5c6e65459fdc4b0c33319715b763005013ba8580dd3c687bd2651546ca2a4"
+      },
+      {
+        "name": "llm.mnn",
+        "bytes": 462464,
+        "sha256": "c2286f60cbd56a82f26bfeac92f6a96e9690889b1939346abfe9e1fae996a8f3"
+      },
+      {
+        "name": "llm.mnn.weight",
+        "bytes": 1231860194,
+        "sha256": "1554f9ce71743b56c2d7fba4cb0c2a31c7cddf4f21e1a2ff5a2e85b9a316a29f"
+      },
+      {
+        "name": "llm_config.json",
+        "bytes": 6445,
+        "sha256": "5408721c81cc9a7ea8aa485a0652e5e1a47dd5ea5bbd5af2e1f16bc4f6358699"
+      },
+      {
+        "name": "tokenizer.txt",
+        "bytes": 3193555,
+        "sha256": "7119de4966cc6a8ae87d7f083e65b315282d06c3122fdd41ce783fdd2d3c1ca2"
+      },
+      {
+        "name": "visual.mnn",
+        "bytes": 502512,
+        "sha256": "c489c1f65dc6aa5bcee42b3e291f7987df1111423c1fe570d0f3394e1207d2bb"
+      },
+      {
+        "name": "visual.mnn.weight",
+        "bytes": 238226780,
+        "sha256": "9feb04848cafad1117a510b43d6c2b58d6c31bef1040598156d266f9b42f581f"
+      }
+    ]
+  }
+]
