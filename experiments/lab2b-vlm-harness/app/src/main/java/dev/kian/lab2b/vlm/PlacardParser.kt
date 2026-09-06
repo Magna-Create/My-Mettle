@@ -21,7 +21,7 @@ data class PlacardExtraction(val candidates: List<PlacardCandidate>) {
 }
 /** Label-specific text extraction, not equipment catalogue lookup or visual recognition. */
 object PlacardParser {
-    const val VERSION="placard-rules-1"
+    const val VERSION="placard-rules-2"
     val brands=listOf("Life Fitness","Technogym","Precor","Matrix","Hammer Strength","Cybex","Panatta",
         "Atlantis","Nautilus","Hoist","Prime","TuffStuff","Watson","Pulse","Spirit","Star Trac",
         "Body-Solid","Eleiko","Keiser","Freemotion","Gym80","Torque Fitness","Arsenal Strength")
@@ -33,7 +33,7 @@ object PlacardParser {
         "assisted pull up","calf raise","seated calf","standing calf","glute drive","hip thrust","smith machine",
         "functional trainer","cable crossover","dual adjustable pulley","dip","row")
     private fun normal(text:String)=text.lowercase(Locale.ROOT).replace(Regex("[^a-z0-9]"),"")
-    private val starting=Regex("^(?:starting (?:resistance|weight|load)|start resistance|initial resistance|unloaded resistance)\\b\\s*[:=–-]?\\s*(.*)$",RegexOption.IGNORE_CASE)
+    private val starting=Regex("^(?:starting (?:resistance|weight|load)|start(?: resistance)?|initial resistance|unloaded resistance)\\b\\s*[:=–-]?\\s*(.*)$",RegexOption.IGNORE_CASE)
     private val ratio=Regex("^((?:pulley|cable|resistance|weight) ratio)\\b\\s*[:=–-]?\\s*(.*)$",RegexOption.IGNORE_CASE)
     private val machine=Regex("^(?:machine(?: name)?|equipment name|exercise name)\\s*[:=]\\s*(.*)$",RegexOption.IGNORE_CASE)
     private val model=Regex("^(?:model(?: (?:no\\.?|number|id))?|product code)\\b\\s*[:=#-]?\\s*(.*)$",RegexOption.IGNORE_CASE)
@@ -77,12 +77,8 @@ object PlacardParser {
                 if(machineNames.any { normal(it)==compact }) candidate(PlacardField.MACHINE_NAME,text,line,"EXACT_MACHINE_PHRASE")
                 starting.matchEntire(text)?.let { m ->
                     val (v,raw)=valueBelow(index,m.groupValues[1])
-                    val value=Regex("^([0-9OoIl|]+(?:[.,][0-9OoIl|]+)?)\\s*(kg|kgs|lb|lbs)\\.?$",RegexOption.IGNORE_CASE).matchEntire(v)
-                    if(value!=null) {
-                        val n=value.groupValues[1]; val fixed=n.map { when(it) { 'O','o'->'0'; 'I','l','|'->'1'; ','->'.'; else->it } }.joinToString("")
-                        val number=fixed.toDoubleOrNull(); val unit=if(value.groupValues[2].startsWith("k",true)) "kg" else "lb"
-                        if(n.any { it.isDigit() } && number!=null && number.isFinite() && number in 0.0..2000.0)
-                            candidate(PlacardField.STARTING_RESISTANCE,"$fixed $unit",line,if(n==fixed) "EXPLICIT_RESISTANCE_LABEL" else "NUMERIC_CORRECTION_CANDIDATE",number,unit,raw)
+                    StartingResistanceParser.parse(v)?.let { result ->
+                        candidate(PlacardField.STARTING_RESISTANCE,result.text,line,result.method,result.number,result.unit,raw)
                     }
                 }
                 ratio.matchEntire(text)?.let { m -> val (v,raw)=valueBelow(index,m.groupValues[2])

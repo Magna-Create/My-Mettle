@@ -109,6 +109,15 @@ class WeightScanActivity : AppCompatActivity() {
         }
         text("Start with ORIGINAL. Filters can damage faint digits. Changing the crop or filter clears its previous OCR and review.")
         button("Run OCR + extract kg",c.image!=null) { owner.runOcr() }
+        button("Compare four filters • same crop",c.image!=null) { owner.compareFilters() }
+        if(c.comparison.isNotEmpty()) {
+            val a=org.json.JSONArray(c.comparison)
+            text("Same-crop comparison • diagnostic only",17f)
+            for(n in 0 until a.length()) { val p=a.getJSONObject(n)
+                text("${p.getString("profile")}: ${p.getJSONArray("recognised_kg")}\n${p.getInt("candidate_count")} corrections to review; ${p.getJSONArray("warnings").length()} sequence warnings",12f)
+            }
+            text("Copy diagnostic JSON includes every pass. Selected values are unchanged; no automatic merging.",12f)
+        }
         c.input?.let { input -> button("Open exact OCR input") { open(input.normalisedPath) }
             text("OCR input SHA-256: ${input.normalisedSha256}\n${input.normalisedWidth} × ${input.normalisedHeight}; ${input.normalisedPath}",12f) }
         c.evidence?.let { e ->
@@ -119,6 +128,7 @@ class WeightScanActivity : AppCompatActivity() {
         }
         c.parsed?.let { parsed ->
             text("4 · Review kg labels",20f)
+            if(parsed.issues.isNotEmpty()) text("CHECK IMAGE: ${parsed.issues.size} sequence warning(s). The sorted list may be incomplete or wrong.",18f)
             text("Rows stay in image order. Checked values enter the sorted list. Corrections start unchecked: inspect the label, then check or edit. Uncheck any add-on or unrelated label.")
             parsed.readings.forEach { r ->
                 val row=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; root.addView(this) }

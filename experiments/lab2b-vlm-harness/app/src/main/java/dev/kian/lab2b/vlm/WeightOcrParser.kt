@@ -12,7 +12,7 @@ data class WeightParse(val readings: List<WeightReading>, val ignored: List<Stri
 }
 /** Strict whole-line parsing. No lb conversion, sequence completion, global text substitution or LLM. */
 object WeightOcrParser {
-    private val label = Regex("^([0-9OoIl|]+(?:[.,][0-9OoIl|]+)?)\\s*(kg|ka|k)\\s*['’.,]?$", RegexOption.IGNORE_CASE)
+    private val label = Regex("^([0-9OoIl|]+(?:[.,][0-9OoIl|]+)?)\\s*(kg|ka|ko|kog|k)\\s*['’.,]?$", RegexOption.IGNORE_CASE)
     fun parse(evidence: OcrEvidence, part: CapturePart): WeightParse {
         val readings = mutableListOf<WeightReading>(); val ignored = mutableListOf<String>()
         // Geometry order is preserved independently of the final numeric sorting.

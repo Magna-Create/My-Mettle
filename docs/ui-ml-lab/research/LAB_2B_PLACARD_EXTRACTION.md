@@ -65,3 +65,15 @@ Open Samsung My Files → Downloads → LAB-2B-OCR-debug.apk and update using th
 - Return to weights. No add-on → confirm main → export. Export main_stack_kg should contain JSON numbers, not strings. Confirm stale add-on data cleared on a new main photo.
 
 Background removal/machine masking and small specialised language models remain later experiments. Physical greenlighting of both OCR extraction tasks precedes that work.
+
+## 0.5.1 physical-feedback fixes
+
+The two Hammer Strength exports contain correctly recognised `Start 18 lb./8.2Kg.` and `Start 90 lbs./40.8kg.`. Version 0.5.0 rejected both in the parser. Version 0.5.1 accepts Start and dual lb/kg labels, prefers the kg value actually printed, preserves both in raw evidence, and leaves conflicting units or character repairs as review candidates. Ratios/ranges/usage instructions are not inferred. Rules version advances to placard-rules-2; old field confirmations are invalidated when reparsed.
+
+Stack export ending 8262745 stops at 120 because OCR read `127 ko` and `134 kog`, rejected by the strict parser. These are now retained as unchecked UNIT_CANDIDATE rows. Export ending 8195042 contains all 20 main values. Export ending 8140686 is already severely corrupted at raw OCR, including `O59 kg`, `6 k`, `3 kg` and missing lines; parser changes cannot restore absent evidence.
+
+Checked version diff: OcrProcessor, OcrImageEnhancer, ImagePreprocessor, CropImages and WeightOcrParser were unchanged from the final 0.4 build to 0.5.0. Older successful stack-1 capture and the failed capture share original SHA f7ee5a2868d373d51c959472256fc567486bc8eee3e813f791df872dfb65abe1 but use different crops: 478×795 versus 607×817 (both contrast). The later original-filter crop is 439×783. These are not controlled identical-input comparisons; root cause of raw OCR degradation remains open, not dismissed as user error or declared fixed.
+
+Added Compare four filters on the identical selected crop. It retains each exact input, raw OCR, recognised values, candidate count, warnings, timings and cache status in diagnostic JSON without overwriting reviewed values or automatically merging. Prominent sequence warning added before weight review. This allows a controlled comparison on the failing input; filter consensus remains deferred.
+
+No Life Fitness OCR JSON is in this attachment batch. Graphic/script-logo recognition is not fixed by these parser patches. A crop classifier is a plausible later approach because the user already locates the logo; no YOLO/runtime or logo dataset added here. No new OCR accuracy claims.
