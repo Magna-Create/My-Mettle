@@ -82,6 +82,33 @@ class WeightScanActivity : AppCompatActivity() {
         AlertDialog.Builder(this).setTitle("Correct kg: ${r.raw}").setMessage("Check the actual label. This edit will be recorded as human supplied.")
             .setView(field).setPositiveButton("Save edit") { _,_ -> WeightScanOwner.change(r.id,edit=field.text.toString()) }.setNegativeButton("Cancel",null).show()
     }
+    private fun chooseColumn() {
+        val c=WeightScanOwner.capture();val image=c.image ?: return
+        val proposals=c.evidence?.let(WeightColumns::proposals) ?: emptyList()
+        val initial=c.column ?: proposals.firstOrNull()?.selection ?: ColumnSelection(0.5,0.5,0.12,StackUnit.KG)
+        val editor=ColumnEditor(this,image.preparedPath,initial)
+        val panel=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL;setPadding(dp(12),0,dp(12),0) }
+        val note=TextView(this).apply { text="Move the upper and lower ends of the cyan strip over ONE number column. Adjust its width. Confirm the unit from the machine; decimals do not establish kg." }
+        panel.addView(note)
+        panel.addView(editor,LinearLayout.LayoutParams(-1,(resources.displayMetrics.heightPixels*0.38).toInt()))
+        val unit=Spinner(this).apply { adapter=ArrayAdapter(this@WeightScanActivity,android.R.layout.simple_spinner_dropdown_item,arrayOf("kg","lb"));setSelection(initial.unit.ordinal) }
+        val width=SeekBar(this).apply { max=48;progress=(initial.halfWidth*100).toInt()-2
+            setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(bar:SeekBar?,p:Int,fromUser:Boolean) { if(fromUser) editor.width((p+2)/100.0) }
+                override fun onStartTrackingTouch(bar:SeekBar?) {}
+                override fun onStopTrackingTouch(bar:SeekBar?) {}
+            }) }
+        panel.addView(TextView(this).apply { text="Strip width" });panel.addView(width)
+        proposals.forEachIndexed { i,p -> panel.addView(Button(this).apply {
+            isAllCaps=false;text="Column ${i+1}: ${p.values.take(3).joinToString { it.raw }} • ${p.unitEvidence}"
+            setOnClickListener { editor.select(p.selection);width.progress=(p.selection.halfWidth*100).toInt()-2;unit.setSelection(p.selection.unit.ordinal) }
+        }) }
+        panel.addView(TextView(this).apply { text="These numbers are in:" });panel.addView(unit)
+        AlertDialog.Builder(this).setTitle("Choose number column + unit")
+            .setView(ScrollView(this).apply { addView(panel) })
+            .setPositiveButton("Confirm column + unit") { _,_ -> WeightScanOwner.column(editor.selection.copy(unit=StackUnit.entries[unit.selectedItemPosition])) }
+            .setNegativeButton("Cancel",null).show()
+    }
     private fun render() {
         val y=scroll.scrollY; root.removeAllViews()
         val owner=WeightScanOwner; val c=owner.capture(); val main=owner.capture(CapturePart.MAIN_STACK); val addon=owner.capture(CapturePart.ADD_ON)
@@ -109,12 +136,18 @@ class WeightScanActivity : AppCompatActivity() {
         }
         text("Start with ORIGINAL. Filters can damage faint digits. Changing the crop or filter clears its previous OCR and review.")
         button("Run OCR + extract kg",c.image!=null) { owner.runOcr() }
+        button("Choose number column + kg / lb",c.image!=null) { chooseColumn() }
+        if(c.column!=null) {
+            text("Column unit: ${c.column.unit} • confirmed by you. ${if(c.column.unit==StackUnit.LB) "Printed lb values convert to kg for export." else "Printed kg values retained."}")
+            button("Clear column • use explicit kg labels") { owner.column(null) }
+        } else text("Missing or tiny unit labels? Run OCR, then choose the number column and confirm kg or lb. Unlabelled numbers remain in diagnostics.")
         button("Compare four filters • same crop",c.image!=null) { owner.compareFilters() }
         if(c.comparison.isNotEmpty()) {
             val a=org.json.JSONArray(c.comparison)
             text("Same-crop comparison • diagnostic only",17f)
             for(n in 0 until a.length()) { val p=a.getJSONObject(n)
                 text("${p.getString("profile")}: ${p.getJSONArray("recognised_kg")}\n${p.getInt("candidate_count")} corrections to review; ${p.getJSONArray("warnings").length()} sequence warnings",12f)
+                p.optJSONArray("row_comparison")?.let { rows -> if(rows.length()>0) text((0 until rows.length()).joinToString("\n") { rows.getString(it) },12f) }
             }
             text("Copy diagnostic JSON includes every pass. Selected values are unchanged; no automatic merging.",12f)
         }
@@ -140,7 +173,7 @@ class WeightScanActivity : AppCompatActivity() {
             }
             text("Selected kg, smallest first:\n${parsed.sortedKg.joinToString { it.toPlainString() }}",17f)
             text(if(parsed.issues.isEmpty()) "No order/gap warning detected. This does not prove completeness." else parsed.issues.joinToString("\n\n"))
-            text("Ignored ${parsed.ignored.size} other lines. No pounds converted. No missing weights invented.")
+            text("Ignored ${parsed.ignored.size} other lines. ${if(c.column?.unit==StackUnit.LB) "Selected lb column converted to kg with provenance." else "No pounds converted."} No missing weights invented.")
             if(rawExpanded) text(parsed.ignored.joinToString("\n"),12f)
             button(if(c.reviewed) "Values confirmed ✓" else "Confirm I checked these values",parsed.sortedKg.isNotEmpty()) { owner.review() }
         }

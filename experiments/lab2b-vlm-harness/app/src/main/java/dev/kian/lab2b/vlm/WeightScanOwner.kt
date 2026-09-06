@@ -14,7 +14,8 @@ object WeightScanOwner {
     data class Capture(val original: SelectedImageInfo? = null, val image: SelectedImageInfo? = null,
         val crop: CropRegion? = null, val profile: OcrEnhancement = OcrEnhancement.ORIGINAL,
         val input: SelectedImageInfo? = null, val evidence: OcrEvidence? = null, val parsed: WeightParse? = null,
-        val reviewed: Boolean = false, val totalMs: Long? = null, val cacheHit: Boolean = false, val comparison: String = "")
+        val reviewed: Boolean = false, val totalMs: Long? = null, val cacheHit: Boolean = false, val comparison: String = "",
+        val column: ColumnSelection? = null)
     private lateinit var context: Context
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val captures = mutableMapOf<CapturePart, Capture>()
@@ -64,30 +65,41 @@ object WeightScanOwner {
             val start=System.nanoTime()
             val input=withContext(Dispatchers.Default) { OcrImageEnhancer.prepare(image,old.profile) }
             val cached=cache[input.normalisedSha256]
-            val evidence=cached ?: withContext(Dispatchers.Default) { OcrProcessor.recognise(input) }
+            val evidence=cached ?: withContext(Dispatchers.Default) { OcrProcessor.recognise(input,true) }
             cache[input.normalisedSha256]=evidence
             while (cache.size>8) cache.remove(cache.keys.first())
-            val parsed=withContext(Dispatchers.Default) { WeightOcrParser.parse(evidence,part) }
+            val parsed=withContext(Dispatchers.Default) { parse(evidence,part,old.column) }
             captures[part]=old.copy(input=input,evidence=evidence,parsed=parsed,reviewed=false,totalMs=(System.nanoTime()-start)/1_000_000,cacheHit=cached!=null)
+        }
+    }
+    private fun parse(e:OcrEvidence,part:CapturePart,column:ColumnSelection?) =
+        if(column==null) WeightOcrParser.parse(e,part) else WeightColumns.parse(e,part,column)
+    fun column(value:ColumnSelection?) { val part=selected
+        operation("Applying column and unit; previous review cleared…") {
+            val old=capture(part)
+            captures[part]=old.copy(column=value,parsed=old.evidence?.let { parse(it,part,value) },reviewed=false,comparison="")
         }
     }
     fun compareFilters() { val part=selected; val old=capture(); val image=old.image ?: return
         operation("Comparing four filters on the identical crop…") {
             val reports=JSONArray()
+            var reference:OcrEvidence?=null
             for(profile in OcrEnhancement.entries) {
                 val start=System.nanoTime()
                 val input=withContext(Dispatchers.Default) { OcrImageEnhancer.prepare(image,profile) }
                 val cached=cache[input.normalisedSha256]
-                val evidence=cached ?: withContext(Dispatchers.Default) { OcrProcessor.recognise(input) }
+                val evidence=cached ?: withContext(Dispatchers.Default) { OcrProcessor.recognise(input,true) }
                 cache[input.normalisedSha256]=evidence
                 while(cache.size>8) cache.remove(cache.keys.first())
-                val parsed=WeightOcrParser.parse(evidence,part)
+                val parsed=parse(evidence,part,old.column)
+                if(reference==null) reference=evidence
                 reports.put(JSONObject().put("profile",profile.name).put("crop_sha256",image.normalisedSha256)
                     .put("input",imageJson(input)).put("ocr",TestReport.ocr(evidence)).put("cache_hit",cached!=null)
                     .put("total_ms",(System.nanoTime()-start)/1_000_000)
                     .put("recognised_kg",JSONArray(NumericJson.weights(parsed.sortedKg)))
                     .put("candidate_count",parsed.readings.count { !it.included }).put("warnings",JSONArray(parsed.issues))
-                    .put("ignored",JSONArray(parsed.ignored)))
+                    .put("ignored",JSONArray(parsed.ignored))
+                    .put("row_comparison",JSONArray(old.column?.let { WeightColumns.compare(requireNotNull(reference),evidence,it) } ?: emptyList<String>())))
             }
             // Diagnostic comparison only: do not overwrite the selected pass or merge different labels.
             captures[part]=old.copy(comparison=reports.toString())
@@ -128,6 +140,8 @@ object WeightScanOwner {
                 .put("crop",c.crop?.let { JSONArray(listOf(it.left,it.top,it.right,it.bottom)) } ?: JSONObject.NULL)
                 .put("ocr",TestReport.ocr(c.evidence)).put("total_ms",c.totalMs ?: JSONObject.NULL).put("ocr_cache_hit",c.cacheHit)
                 .put("filter_comparison",if(c.comparison.isEmpty()) JSONArray() else JSONArray(c.comparison))
+                .put("column_selection",c.column?.let { JSONObject().put("top_x",it.topX).put("bottom_x",it.bottomX).put("half_width",it.halfWidth).put("unit",it.unit.name).put("unit_origin","USER_CONFIRMED").put("coordinates","normalised current crop") } ?: JSONObject.NULL)
+                .put("unit_unresolved_numbers",JSONArray(c.evidence?.let { WeightColumns.numbers(it).filter { n -> n.unit==null }.map { n -> JSONObject().put("raw",n.raw).put("value",n.value).put("box",JSONArray(listOf(n.box.left,n.box.top,n.box.right,n.box.bottom))) } } ?: emptyList<JSONObject>()))
                 .put("ocr_order","top-to-bottom then left; numeric output sorted separately")
                 .put("warnings",JSONArray(c.parsed?.issues ?: emptyList<String>()))
                 .put("ignored_lines",JSONArray(c.parsed?.ignored ?: emptyList<String>()))
@@ -166,7 +180,8 @@ object WeightScanOwner {
                 require(image==null || File(image.normalisedPath).isFile) { "Saved image is missing" }
                 require(e==null || input?.normalisedSha256==e.sourceImageSha256) { "Saved OCR source mismatch" }
                 captures[part]=Capture(original,image,crop,OcrEnhancement.valueOf(c.getString("profile")),input,e,
-                    if(e==null) null else WeightParse(readings,strings(c.getJSONArray("ignored_lines")),WeightOcrParser.issues(readings,part)),c.getBoolean("reviewed"),if(c.isNull("total_ms")) null else c.getLong("total_ms"),c.optBoolean("ocr_cache_hit",false),c.optJSONArray("filter_comparison")?.toString() ?: "")
+                    if(e==null) null else WeightParse(readings,strings(c.getJSONArray("ignored_lines")),WeightOcrParser.issues(readings,part)),c.getBoolean("reviewed"),if(c.isNull("total_ms")) null else c.getLong("total_ms"),c.optBoolean("ocr_cache_hit",false),c.optJSONArray("filter_comparison")?.toString() ?: "",
+                    c.optJSONObject("column_selection")?.let { ColumnSelection(it.getDouble("top_x"),it.getDouble("bottom_x"),it.getDouble("half_width"),StackUnit.valueOf(it.getString("unit"))) })
             }
             addOnStatus=if(saved.has("add_on_status")) AddOnStatus.valueOf(saved.getString("add_on_status")) else if(capture(CapturePart.ADD_ON).image!=null) AddOnStatus.CAPTURED else AddOnStatus.NOT_CHECKED
             if(addOnStatus==AddOnStatus.NONE) captures[CapturePart.ADD_ON]=Capture()
