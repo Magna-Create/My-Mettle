@@ -148,3 +148,56 @@ Source checkpoint `2062d423fe967d77cef1a943df700a621d8aab8e` is green in Android
 
 NEXT:
 Implement the first local deterministic equipment-interpretation slice: resolve historical equipment plus observation load semantics and time-valid equipment facts, prove an exact bar/implement-mass + added-load case, fail closed on unknown complete-vs-added meaning or missing/ambiguous mechanics, and preserve the raw entered performance evidence. Do not start cross-profile transfer modelling yet.
+
+## Session 4 — 2026-09-06 17:18 BST
+
+HEAD IN:
+21e6f55a422736f425ec15daa88091c1ca703d18
+
+OBJECTIVE:
+Implement the first local deterministic equipment-interpretation slice: resolve historical equipment, observation load semantics and time-valid equipment facts; prove exact local mass arithmetic; fail closed on ambiguous or missing meaning; preserve raw performance evidence; stop before cross-profile transfer modelling.
+
+SOURCE FINDINGS:
+- The 7F contract permits deterministic arithmetic only when its local meaning is exact. The derived result must remain a local configured-load coordinate, not universal resistance.
+- Equipment fact history cannot be resolved with a newest-row shortcut. A historical observation needs the fact version valid at its event time.
+- Existing `PerformanceMetricValue` already preserves entered quantity alongside deterministic canonical quantity. The interpreter can therefore derive a local coordinate without rewriting either historical field.
+- `EntryBasis` is an independent historical aggregation semantic. Inclusive `PER_HAND` and `PER_SIDE` values can remain in their existing coordinate, while added-only arithmetic that would require inventing implement aggregation must fail closed.
+
+CHANGES:
+- Added `LocalEquipmentInterpreter` and a typed `HistoricalEquipmentInterpretationSnapshot`.
+- Added an explicit versioned local interpretation result carrying raw entered external load, canonical entered kg, resolved equipment binding, observation load-accounting semantics, applied fact versions, and the derived local external-load coordinate.
+- The first interpreter version handles only exact external-mass bookkeeping: inclusive load passes through its canonical local coordinate; added-only `TOTAL` load may add one unambiguous time-valid `IMPLEMENT_MASS` fact.
+- Unknown equipment, missing load-accounting semantics, missing external load, missing implement mass, multiple simultaneous implement-mass facts, or non-total added-only aggregation all return typed unavailable results rather than guessed values.
+- Mechanical-ratio facts are deliberately ignored by this v1 arithmetic; pulley, lever, Smith counterbalance, rail geometry, friction and starting-resistance algebra are not inferred or defaulted.
+- Extended `EquipmentContextRepository` with one transactional historical interpretation snapshot reader.
+- Historical equipment resolution was factored into a transaction-internal helper so snapshot reads do not nest repository transactions.
+- Time-valid equipment facts are selected with parsed `Instant` interval semantics: `effectiveAt <= asOf < supersededAt`, with an open upper bound for current facts.
+- Stored fact rows are decoded back to typed domain facts with value-kind/unit/provenance validation; inconsistent persisted semantics fail closed.
+- Added deterministic interpreter tests plus a repository test proving a 20 kg fact is selected before its successor, the 15 kg successor is selected exactly at its effective boundary, and the newest fact is not leaked backwards.
+
+TESTS:
+- Exact source checkpoint `e4647c9336097e1c163fa1ade080b7dad729bfba` completed successfully in Android CI run 34044523324.
+- Reference-asset, exercise-authoring, context-boundary, Context Module documentation, whitespace and Gradle-clean gates passed.
+- `:app:testDebugUnitTest :app:assembleDebug` passed, including the new local interpreter and historical as-of fact tests.
+- `:app:assembleDebugAndroidTest` passed.
+- Android lint passed.
+- Room16 exported-schema verification passed; debug APK and Room schema artifacts uploaded successfully.
+
+DECISIONS:
+- `localExternalLoadCoordinateKg` is explicitly local equipment/entry interpretation, not `L_true`, user strength, effective resistance or a cross-profile conversion coordinate.
+- Exact inclusive external mass does not require machine-physics inference. Exact added-only mass requires explicit implement mass and currently requires `EntryBasis.TOTAL`; ambiguous per-hand/per-side implement aggregation remains unknown.
+- Overlapping same-type facts are not arbitrarily reduced by the repository. Multiple time-valid implement-mass facts remain visible and cause deterministic interpretation to fail closed.
+- `PER_HAND` and `PER_SIDE` are preserved rather than totalised by the interpreter.
+- No pulley ratio, starting resistance, friction, lever arm, rail angle, counterbalance or OEM-family default has entered normal or shadow arithmetic in this slice.
+- Cross-profile transfer modelling remains untouched.
+
+OPEN QUESTIONS:
+- The contract permits genuinely documented device-local relationships when their exact scope and label semantics are known. Their algebra and admissibility must be separately specified before extending this interpreter; presence of a ratio fact alone is insufficient.
+- Correction/invalidation for canonical actual-use/load-semantics rows remains deferred to the 7F-E persistence/replay slice.
+- The next architectural layer is 7F-C: a minimal typed capability-transfer boundary. Before numeric transfer candidates are fitted, it must preserve capability family, causal as-of/cutoff, posterior representation fidelity, supported domain, upstream model identity and equipment/local-interpretation provenance.
+
+HEAD OUT:
+Source checkpoint `e4647c9336097e1c163fa1ade080b7dad729bfba` is green in Android CI run 34044523324; this journal commit follows on the same branch.
+
+NEXT:
+Begin 7F-C by auditing the existing 7B/7C capability posterior/predictive surfaces and defining the smallest typed source-capability boundary needed by transfer candidates. Do not fit M0 or author numeric cross-profile transfer yet.
