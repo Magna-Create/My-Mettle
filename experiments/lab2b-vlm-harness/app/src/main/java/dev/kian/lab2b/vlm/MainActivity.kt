@@ -89,7 +89,7 @@ class MainActivity : AppCompatActivity() {
             }
             root.addView(header); root.addView(panel); sections[title] = panel; body = panel
         }
-        text("LAB-2B VLM Harness • 0.4", 22f)
+        text("LAB-2B VLM Harness • ${BuildConfig.VERSION_NAME}", 22f)
         button("Open OCR weight-stack workflow", idle = true) { HarnessRuntimeOwner.unload(); startActivity(Intent(this, WeightScanActivity::class.java)); finish() }
         text("1. Configure and Load → 2. Select image / crop → 3. Send → 4. Export results")
         text("MNN 3.6.1 • Local image + text • Stateless turns\nCPU is the correctness baseline. GPU is experimental.")

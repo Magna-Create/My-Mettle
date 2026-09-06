@@ -283,3 +283,7 @@ Disabled means:
 ### LAB-2B OCR-first branch experiment (0.4)
 
 `agent/lab2b-ocr-stack` forks the accepted 0.3 harness at `de40aa37c4314713ae06b55ee0a0550906d02f72`. Guided separate stack/add-on capture, manual crop, experimental OCR input filters, deterministic kg extraction, reviewable character/unit corrections and JSON draft export. See [OCR stack workflow](research/LAB_2B_OCR_STACK_WORKFLOW.md). Implementation ready: Actions 34001505730 passed 35 tests, lint, APK build, 16 KB checks and Termux native reuse. Physical acceptance pending. Production import and sequence inference remain future scope; LAB-2C NOT STARTED.
+
+### LAB-2B placard extraction test (0.5)
+
+Two crops from one photo: full placard and logo. Deterministic field-specific extraction and review, no language-model step. Weight export gains explicit optional add-ons and numeric JSON fixes. See [placard experiment](research/LAB_2B_PLACARD_EXTRACTION.md). Build validation underway; physical acceptance pending. Automatic filter consensus, background removal/machine masking and specialised model evaluation are deferred. LAB-2C NOT STARTED.

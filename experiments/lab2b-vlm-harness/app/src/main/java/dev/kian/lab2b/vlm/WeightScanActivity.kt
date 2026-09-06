@@ -85,7 +85,8 @@ class WeightScanActivity : AppCompatActivity() {
     private fun render() {
         val y=scroll.scrollY; root.removeAllViews()
         val owner=WeightScanOwner; val c=owner.capture(); val main=owner.capture(CapturePart.MAIN_STACK); val addon=owner.capture(CapturePart.ADD_ON)
-        text("OCR weight stack • 0.4",24f)
+        text("OCR weight stack • ${BuildConfig.VERSION_NAME}",24f)
+        button("Switch to placard extraction") { startActivity(Intent(this,PlacardActivity::class.java));finish() }
         text("No model load needed. Image → bundled OCR → kg extraction → human review → JSON draft.")
         text(owner.status,16f)
         text("1 · Choose the capture",20f)
@@ -136,9 +137,10 @@ class WeightScanActivity : AppCompatActivity() {
         button("Clear this capture",c.image!=null) { AlertDialog.Builder(this).setMessage("Clear this capture and its review? The other capture is retained.")
             .setPositiveButton("Clear") { _,_ -> owner.clear() }.setNegativeButton("Cancel",null).show() }
         text("5 · Save combined result",20f)
-        text("Main stack: ${if(main.reviewed) "confirmed" else "needs review"}\nAdd-on: ${if(addon.image==null) "not captured (optional)" else if(addon.reviewed) "confirmed" else "needs review"}")
+        button("No separate add-on weights • clear previous add-on") { owner.noAddOn() }
+        text("Main stack: ${if(main.reviewed) "confirmed" else "needs review"}\nAdd-on: ${if(owner.addOnStatus==AddOnStatus.NONE) "none (explicitly confirmed)" else if(addon.image==null) "not checked (optional)" else if(addon.reviewed) "confirmed" else "needs review"}")
         text("This is a LAB-2B JSON draft with source evidence, corrections and warnings. My Mettle production import is not connected.")
-        button("Save reviewed JSON",main.reviewed && (addon.image==null || addon.reviewed)) { exporter.launch("lab2b-ocr-stack-${System.currentTimeMillis()}.json") }
+        button("Save reviewed JSON",owner.canExport()) { exporter.launch("lab2b-ocr-stack-${System.currentTimeMillis()}.json") }
         button("Copy diagnostic JSON") { copy(owner.json().toString(2)) }
         button("Open model comparison harness") { startActivity(Intent(this,MainActivity::class.java)); finish() }
         scroll.post { scroll.scrollTo(0,y) }

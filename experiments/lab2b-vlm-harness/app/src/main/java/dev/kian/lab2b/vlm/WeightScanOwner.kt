@@ -20,6 +20,9 @@ object WeightScanOwner {
     private val captures = mutableMapOf<CapturePart, Capture>()
     private val cache = linkedMapOf<String,OcrEvidence>()
     var selected = CapturePart.MAIN_STACK; private set
+    var addOnStatus = AddOnStatus.NOT_CHECKED; private set
+    fun canExport() = WeightExportRules.canExport(capture(CapturePart.MAIN_STACK).reviewed,addOnStatus,capture(CapturePart.ADD_ON).reviewed)
+    fun noAddOn() { operation("Saving no add-on choice…") { captures[CapturePart.ADD_ON]=Capture();addOnStatus=AddOnStatus.NONE;selected=CapturePart.MAIN_STACK } }
     var busy = false; private set
     var status = "Select or photograph the main stack."; private set
     private var listener: (() -> Unit)? = null
@@ -44,6 +47,7 @@ object WeightScanOwner {
         operation("Preparing source image…") {
             val image=withContext(Dispatchers.IO) { StorageIo.copyImage(context,uri,"lab2b/stack-captures/images") }
             captures[part]=Capture(original=image,image=image)
+            if(part==CapturePart.MAIN_STACK) { captures[CapturePart.ADD_ON]=Capture();addOnStatus=AddOnStatus.NOT_CHECKED } else addOnStatus=AddOnStatus.CAPTURED
         }
     }
     fun crop(region: CropRegion) { val part=selected; val old=capture(); val source=old.original ?: return
@@ -81,21 +85,21 @@ object WeightScanOwner {
         }
     }
     fun clear() { val part=selected
-        operation("Clearing this capture…") { captures[part]=Capture() }
+        operation("Clearing this capture…") { captures[part]=Capture(); if(part==CapturePart.ADD_ON) addOnStatus=AddOnStatus.NOT_CHECKED }
     }
     fun export(uri: Uri) { operation("Saving JSON draft…") {
         require(capture(CapturePart.MAIN_STACK).reviewed) { "Confirm the main-stack values first" }
-        require(capture(CapturePart.ADD_ON).image==null || capture(CapturePart.ADD_ON).reviewed) { "Confirm or clear the add-on capture" }
+        require(canExport()) { "Confirm or clear the add-on capture" }
         val json=json().toString(2)
         withContext(Dispatchers.IO) { context.contentResolver.openOutputStream(uri,"wt").use { requireNotNull(it).write(json.toByteArray(Charsets.UTF_8)) } }
     } }
-    fun json(): JSONObject = JSONObject().put("schema","lab2b.ocr-stack.v1")
+    fun json(): JSONObject = JSONObject().put("schema","lab2b.ocr-stack.v2")
         .put("app_version",BuildConfig.VERSION_NAME).put("created_utc",java.time.Instant.now().toString())
         .put("production_import_compatible",false).put("engine","DETERMINISTIC_KOTLIN; ML Kit OCR")
         .put("image_supplied_to_language_model",false).put("inferred_weights_kg",JSONArray())
-        .put("main_stack_kg",JSONArray(capture(CapturePart.MAIN_STACK).parsed?.sortedKg ?: emptyList<BigDecimal>()))
-        .put("separate_add_on_kg",JSONArray(capture(CapturePart.ADD_ON).parsed?.sortedKg ?: emptyList<BigDecimal>()))
-        .put("add_on_quantity",JSONObject.NULL).put("add_on_engaged",JSONObject.NULL)
+        .put("main_stack_kg",JSONArray(NumericJson.weights(capture(CapturePart.MAIN_STACK).parsed?.sortedKg ?: emptyList())))
+        .put("separate_add_on_kg",JSONArray(NumericJson.weights(capture(CapturePart.ADD_ON).parsed?.sortedKg ?: emptyList())))
+        .put("add_on_status",addOnStatus.name).put("add_on_quantity",JSONObject.NULL).put("add_on_engaged",JSONObject.NULL)
         .put("captures",JSONObject().also { target -> CapturePart.entries.forEach { part ->
             val c=capture(part); target.put(part.name,JSONObject().put("reviewed",c.reviewed).put("profile",c.profile.name)
                 .put("original",imageJson(c.original)).put("crop_image",imageJson(c.image)).put("ocr_input",imageJson(c.input))
@@ -127,7 +131,8 @@ object WeightScanOwner {
         CapturePart.entries.forEach { captures[it]=Capture() }
         try {
             if (!draft().baseFile.exists()) return
-            val all=JSONObject(draft().openRead().bufferedReader().use { it.readText() }).getJSONObject("captures")
+            val saved=JSONObject(draft().openRead().bufferedReader().use { it.readText() })
+            val all=saved.getJSONObject("captures")
             CapturePart.entries.forEach { part ->
                 val c=all.getJSONObject(part.name)
                 val original=readImage(c.optJSONObject("original")); val image=readImage(c.optJSONObject("crop_image"))
@@ -140,6 +145,8 @@ object WeightScanOwner {
                 captures[part]=Capture(original,image,crop,OcrEnhancement.valueOf(c.getString("profile")),input,e,
                     if(e==null) null else WeightParse(readings,strings(c.getJSONArray("ignored_lines")),WeightOcrParser.issues(readings,part)),c.getBoolean("reviewed"),if(c.isNull("total_ms")) null else c.getLong("total_ms"),c.optBoolean("ocr_cache_hit",false))
             }
+            addOnStatus=if(saved.has("add_on_status")) AddOnStatus.valueOf(saved.getString("add_on_status")) else if(capture(CapturePart.ADD_ON).image!=null) AddOnStatus.CAPTURED else AddOnStatus.NOT_CHECKED
+            if(addOnStatus==AddOnStatus.NONE) captures[CapturePart.ADD_ON]=Capture()
             status="Restored saved captures and review. No model is loaded by this workflow."
         } catch(e: Exception) { CapturePart.entries.forEach { captures[it]=Capture() }; status="Could not restore draft: ${e.message}. Saved files retained." }
     }

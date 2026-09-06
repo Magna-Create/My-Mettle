@@ -85,3 +85,11 @@
 - Ten native libraries, 20,327,800 bytes, static 16 KB ELF and ZIP alignment PASS. Native sources/dependencies unchanged; existing Termux bundle reused with hash verification.
 - Original lab branch remains `de40aa37c4314713ae06b55ee0a0550906d02f72`; live N-BIO `5727ea95cf692c8ea0145bdb4cc0ac5a4dc705de`. Production/N-BIO source diff empty. No model binaries tracked.
 - LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING. LAB-2C NOT STARTED. Final documentation commit only; no code changes after successful build.
+
+## Placard checkpoint 1 — 2026-09-06
+
+- Starting OCR branch HEAD f858f8d803efc31cd6a1e1673e2d95e8411ea857. Live N-BIO has independently advanced to 58aca1ee2da021aa4cb1141b1326869520a74114; do not sync or modify it.
+- Added one-photo/two-crop placard test, deterministic candidate extraction, nullable reviewed fields, source provenance and atomic persistent draft. Uses existing ML Kit and image preparation; no model/native changes.
+- Fixed weight add-on UX and Android numeric-array serialisation. Added reusable Termux helper for Gradle PATH restoration and native reuse.
+- Twenty new pure tests cover field-specific extraction, logo isolation, correction/conflict handling, adjacent-line geometry, review invalidation, optional add-ons and numeric JSON literals. They are not OCR accuracy tests.
+- Source isolation/binary/diff checks pass locally. Android build/lint/tests pending Actions. Continue to actual build validation.

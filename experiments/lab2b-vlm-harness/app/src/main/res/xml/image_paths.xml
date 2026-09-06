@@ -3,4 +3,6 @@
     <files-path name="prepared" path="lab2b/images/" />
     <files-path name="stack_captures" path="lab2b/stack-captures/" />
     <files-path name="stack_camera" path="lab2b/stack-camera/" />
+    <files-path name="placards" path="lab2b/placards/" />
+    <files-path name="placard_camera" path="lab2b/placard-camera/" />
 </paths>
