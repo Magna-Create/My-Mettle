@@ -340,3 +340,42 @@ HEAD OUT:
 
 NEXT:
 Implement the first frozen M0 structural/synthetic kernel: immutable M0 config identity, directed admissibility/source-anchor preparation, deterministic joint source coreset and beta quadrature, with `beta = 0` reproducing N0. Keep it synthetic-only and do not fit real history yet.
+
+## Session 8 — 2026-09-06 — M0 STRUCTURAL CHECKPOINT
+
+HEAD IN:
+8d74035f5cb73f1d095a44b6350a163fcdeed555
+
+OBJECTIVE:
+Implement the first frozen M0 structural/synthetic kernel from the preregistered specification, prove the exact immutable identity and nested no-transfer algebra, and stop before any real-history fitting.
+
+SOURCE FINDINGS:
+- The existing 7F-C capability boundary already preserves the accepted Candidate-v2 joint source posterior and upstream identities needed by M0; no generic transfer tensor or source-summary reduction is required.
+- The frozen M0 spec requires exact directed profile/version/side/equipment/load semantics, source-anchor no-extrapolation, deterministic joint source coreset K17, fixed GH7 beta quadrature, and `beta = 0` exact nesting inside N0.
+- Canonical ModelConfig text is part of immutable candidate identity. JVM `Double.toString()` renders the smallest GH7 weights in scientific notation, which is numerically equivalent but does not reproduce the preregistered decimal payload.
+
+CHANGES:
+- Added `DynamicTransferM0Kernel.kt` with the frozen mathematical/solver/config identities, typed directed relationship descriptor, source/destination equipment and load-accounting admissibility, exact source-anchor construction, deterministic joint K17 coreset, training source-centre identifiability guard, fixed GH7 beta nodes/weights, and N0/M0 likelihood/prediction algebra.
+- Added synthetic unit coverage for exact frozen identity, deterministic joint-node coreset retention, `beta = 0` N0 likelihood/prediction equivalence, source-centre variation guard, mixed/unknown semantics, unresolved equipment, reverse-edge rejection, source repetition extrapolation and bodyweight rejection.
+- Initial source checkpoint `de5a59e2ef31cf47d98f398793f6c6545e3581c6` exposed only the canonical GH7 weight-string issue in CI; production compiled and 377/378 unit tests passed while the dedicated storage proof remained green.
+- Fix checkpoint `517a3ee31539a77256d17c400fa9a2ff245f9285` serialises the GH7 weights using the exact frozen preregistered decimal literals while leaving the numeric quadrature values and model mathematics unchanged.
+
+TESTS:
+- Initial Android CI run 34062983794 on `de5a59e2...`: production/debug APK compilation succeeded; 377/378 unit tests passed; the single failure was the frozen ModelConfig identity guard caused by scientific-notation serialization; dedicated Room17 correction + Native backup/replay proof passed.
+- Exact fix checkpoint `517a3ee31539a77256d17c400fa9a2ff245f9285` completed successfully in Android CI run 34065423268.
+- `:app:testDebugUnitTest :app:assembleDebug` passed, including the frozen M0 config identity and `beta = 0` nesting tests.
+- `:app:assembleDebugAndroidTest`, Android lint and Room17 exported-schema verification passed.
+- Dedicated Room17 correction + Native backup/replay emulator proof passed again.
+- No real-history M0 fitting occurred.
+
+DECISIONS:
+- The exact preregistered decimal GH7 payload is canonical identity text; runtime floating-point formatting is not allowed to rewrite it even when numerically equivalent.
+- The M0 structural kernel remains a directed candidate extension around frozen N0, not an equipment converter or global capability scale.
+- Source posterior tuples remain joint through coreset selection; no cross-source independence, precision combination or transitivity is introduced.
+- M0 remains SHADOW/developer-only and real-history fitting stays locked until every required structural/synthetic test in the frozen spec is implemented and green.
+
+HEAD OUT:
+`517a3ee31539a77256d17c400fa9a2ff245f9285`
+
+NEXT:
+Complete the remaining preregistered M0 structural/synthetic proof surface before any real-history fit: destination-session atomic source freezing, future/same-session source exclusion, unpaired-destination zero M0 increment, destination M0 no-extrapolation while N0 remains available, explicit no-multi-source/no-transitivity enforcement, and correction-dependency invalidation/deterministic replay coverage.
