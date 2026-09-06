@@ -156,6 +156,62 @@ data class EquipmentFactVersion(
     }
 }
 
+data class PreferredEquipmentBinding(
+    val id: String,
+    val executionProfileId: String,
+    val equipmentId: EquipmentId,
+    val effectiveAt: String,
+    val supersededAt: String?,
+    val source: String,
+    val createdAt: String,
+) {
+    init {
+        require(id.isNotBlank())
+        require(executionProfileId.isNotBlank())
+        require(effectiveAt.isNotBlank())
+        require(source.isNotBlank())
+        require(createdAt.isNotBlank())
+    }
+}
+
+data class SessionExerciseEquipmentBinding(
+    val sessionExerciseId: String,
+    val equipmentId: EquipmentId,
+    val source: String,
+    val boundAt: String,
+) {
+    init {
+        require(sessionExerciseId.isNotBlank())
+        require(source.isNotBlank())
+        require(boundAt.isNotBlank())
+    }
+}
+
+data class ObservationEquipmentOverride(
+    val observationId: String,
+    val equipmentId: EquipmentId,
+    val source: String,
+    val boundAt: String,
+) {
+    init {
+        require(observationId.isNotBlank())
+        require(source.isNotBlank())
+        require(boundAt.isNotBlank())
+    }
+}
+
+enum class EquipmentBindingResolutionSource {
+    SESSION_EXERCISE,
+    OBSERVATION_OVERRIDE,
+}
+
+data class ResolvedEquipmentBinding(
+    val equipmentId: EquipmentId,
+    val resolutionSource: EquipmentBindingResolutionSource,
+    val source: String,
+    val boundAt: String,
+)
+
 data class ObservationLoadSemantics(
     val observationId: String,
     val externalLoadAccounting: ExternalLoadAccounting,

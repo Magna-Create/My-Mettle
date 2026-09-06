@@ -37,12 +37,18 @@ interface EquipmentDao {
     @Query("SELECT * FROM equipment_fact_version WHERE equipmentId = :equipmentId ORDER BY factType, version")
     suspend fun equipmentFactVersions(equipmentId: String): List<EquipmentFactVersionEntity>
 
+    @Query("UPDATE equipment_fact_version SET supersededAt = :supersededAt WHERE id = :id AND supersededAt IS NULL")
+    suspend fun supersedeEquipmentFactVersion(id: String, supersededAt: String): Int
+
     @Query(
         "SELECT * FROM preferred_equipment_binding " +
             "WHERE executionProfileId = :executionProfileId AND supersededAt IS NULL " +
-            "ORDER BY effectiveAt DESC LIMIT 1",
+            "ORDER BY effectiveAt",
     )
-    suspend fun currentPreferredEquipmentBinding(executionProfileId: String): PreferredEquipmentBindingEntity?
+    suspend fun currentPreferredEquipmentBindings(executionProfileId: String): List<PreferredEquipmentBindingEntity>
+
+    @Query("UPDATE preferred_equipment_binding SET supersededAt = :supersededAt WHERE id = :id AND supersededAt IS NULL")
+    suspend fun supersedePreferredEquipmentBinding(id: String, supersededAt: String): Int
 
     @Query("SELECT * FROM session_exercise_equipment_binding WHERE sessionExerciseId = :sessionExerciseId")
     suspend fun sessionExerciseEquipmentBinding(sessionExerciseId: String): SessionExerciseEquipmentBindingEntity?
@@ -52,4 +58,11 @@ interface EquipmentDao {
 
     @Query("SELECT * FROM set_observation_load_semantics WHERE observationId = :observationId")
     suspend fun setObservationLoadSemantics(observationId: String): SetObservationLoadSemanticsEntity?
+
+    @Query(
+        "SELECT sr.sessionExerciseId FROM set_observation AS observation " +
+            "INNER JOIN set_record AS sr ON sr.id = observation.setRecordId " +
+            "WHERE observation.id = :observationId LIMIT 1",
+    )
+    suspend fun sessionExerciseIdForObservation(observationId: String): String?
 }
