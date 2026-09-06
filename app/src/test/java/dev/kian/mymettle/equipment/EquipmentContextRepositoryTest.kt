@@ -69,6 +69,7 @@ class EquipmentContextRepositoryTest {
         assertEquals(EquipmentId("equipment:a"), overridden?.equipmentId)
         assertEquals(EquipmentBindingResolutionSource.OBSERVATION_OVERRIDE, overridden?.resolutionSource)
         assertEquals("equipment:b", dao.sessionBindings.getValue("session-exercise:1").equipmentId)
+        Unit
     }
 
     @Test
@@ -78,6 +79,7 @@ class EquipmentContextRepositoryTest {
         dao.observationToSessionExercise["observation:1"] = "session-exercise:1"
 
         assertNull(repository.resolveHistoricalEquipment("observation:1"))
+        Unit
     }
 
     @Test
@@ -100,6 +102,7 @@ class EquipmentContextRepositoryTest {
             error
         }
         assertIs<IllegalArgumentException>(failure)
+        Unit
     }
 
     @Test
@@ -141,6 +144,7 @@ class EquipmentContextRepositoryTest {
             error
         }
         assertIs<EquipmentContextException>(semanticsFailure)
+        Unit
     }
 
     private suspend fun createEquipment(id: String) {
