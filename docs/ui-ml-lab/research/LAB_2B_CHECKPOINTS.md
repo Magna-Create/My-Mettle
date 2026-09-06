@@ -101,3 +101,11 @@
 - Ten native libraries / 20,327,800 bytes unchanged; ELF and APK ZIP 16 KB checks PASS_STATIC. Native reuse verified for current and known legacy bundles; altered C++ rejected.
 - Source isolation, binary safety, diff whitespace pass. No model binaries or production/N-BIO changes. Final commit records evidence only; no code changes after passing build.
 - LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING. LAB-2C, automatic filter consensus, machine masking and specialised model research NOT STARTED in this build.
+
+## Physical feedback / 0.5.1 validation — 2026-09-06
+
+- Parent b5bab0737839f2b34816af08d2fae1f6d67d4d11; built fix 8f4752de0b3eb1c5f5f42561c230fdf38851bd60.
+- Confirmed parser failures for Start plus dual lb/kg labels, and ko/kog suffixes. Seven new regression tests replay exact supplied text and reject malformed/conflicting measurements appropriately.
+- Compared 0.4→0.5 OCR/image/parser sources: unchanged. Original stack source hashes match but crop hashes/dimensions differ; raw OCR degradation remains unresolved. Added same-crop four-filter diagnostic comparison without automatic merging or replacing selected values.
+- Actions 34042702683 SUCCESS: 62 tests, zero failures/errors/skips; lint, APK, native 16 KB/ZIP checks and Termux prebuilt/native reuse pass. APK 36,637,725 bytes, SHA-256 dd753e8b73b4f24603160ad9df17f45f3919dc42a1363a8ae414c591219e16a1. Artifact lab2b-vlm-harness-debug ID 9992221232.
+- No native/dependency/model/production changes. Life Fitness OCR export absent from this batch; no visual-logo model added. LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING; LAB-2C not started. This final commit records evidence only.
