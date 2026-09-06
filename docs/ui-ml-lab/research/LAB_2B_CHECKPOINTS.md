@@ -109,3 +109,10 @@
 - Compared 0.4→0.5 OCR/image/parser sources: unchanged. Original stack source hashes match but crop hashes/dimensions differ; raw OCR degradation remains unresolved. Added same-crop four-filter diagnostic comparison without automatic merging or replacing selected values.
 - Actions 34042702683 SUCCESS: 62 tests, zero failures/errors/skips; lint, APK, native 16 KB/ZIP checks and Termux prebuilt/native reuse pass. APK 36,637,725 bytes, SHA-256 dd753e8b73b4f24603160ad9df17f45f3919dc42a1363a8ae414c591219e16a1. Artifact lab2b-vlm-harness-debug ID 9992221232.
 - No native/dependency/model/production changes. Life Fitness OCR export absent from this batch; no visual-logo model added. LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING; LAB-2C not started. This final commit records evidence only.
+
+## Column-unit workflow / 0.6 validation — 2026-09-06 20:48 UTC
+
+- Starting remote HEAD 86899d62ce1b3eee7745b98dfc85c6df98e8bc0e. Commits b0ba6765732caa1004c01a955d76b2ab6a8bd00e, ecb1ab4c6401d2f1e9bfebb1e585c32f263d9e7f, final built source 618dd6bfa08f558453bd8f833b2e81e1e9a0f614.
+- Unitless number preservation, explicit sloping column selection/unit confirmation, small adjacent unit association, lb conversion provenance, row-based filter comparison. Damaged units/numeric repairs remain review candidates. No invented sequence completion.
+- All three harness builds succeeded. Final Actions 34058885353: 76 tests, zero failures/errors/skips; lint, APK, source/binary safety, 16 KB ELF/ZIP and Termux native reuse/prebuilt path pass. APK 36,686,877 bytes, SHA-256 0422956eb8e6f9b168a86edf8e9fe8957653f0ba9c77e3a64366c855386016a6. Artifact 9996883064.
+- No native/model/production/N-BIO changes. Deblurring and extra tiling are not implemented. Next: physical test both column arrangements, corrections, persistence and row comparisons. LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING. LAB-2C NOT STARTED. Final documentation commit changes no built code.

@@ -19,4 +19,20 @@ Implementation:
 
 Physical test: import each new photo, crop whole stack including top plate, Run OCR, Choose number column + kg / lb, confirm correct column, inspect row values, Compare four filters, Copy diagnostic JSON. Test left/right reversed, lb conversion, unit reassignment clearing review, and restart restoring selection. Add-ons remain optional.
 
-Validation: source/binary isolation and diff whitespace pass locally. Android unit tests, lint, APK and native audits run in dedicated GitHub Actions; build result recorded after completion. Physical acceptance pending.
+Validation: source/binary isolation and diff whitespace pass. Final source 618dd6bfa08f558453bd8f833b2e81e1e9a0f614 passes Actions [34058885353](https://github.com/Magna-Create/My-Mettle/actions/runs/34058885353): 76 tests, zero failures/errors/skips, lint, APK, ELF/ZIP 16 KB checks and Termux native reuse/prebuilt build. APK 36,686,877 bytes; SHA-256 0422956eb8e6f9b168a86edf8e9fe8957653f0ba9c77e3a64366c855386016a6. Artifact lab2b-vlm-harness-debug, ID 9996883064. Physical acceptance pending.
+
+Termux update (copy included explicitly):
+
+```sh
+(
+set -e
+cd "$HOME/My-Mettle"
+git fetch origin
+git switch agent/lab2b-ocr-stack
+git pull --ff-only origin agent/lab2b-ocr-stack
+bash experiments/lab2b-vlm-harness/tools/build_termux.sh
+cp "$HOME/My-Mettle/experiments/lab2b-vlm-harness/app/build/outputs/apk/debug/app-debug.apk" "$HOME/storage/downloads/LAB-2B-OCR-debug.apk"
+)
+```
+
+Install using Samsung My Files → Downloads → LAB-2B-OCR-debug.apk. Native inputs are unchanged; no new native bundle or model weights required.
