@@ -11,8 +11,8 @@ object StorageIo {
         arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
         if (cursor.moveToFirst()) cursor.getString(0) else null
     } ?: "selected-file"
-    fun copyImage(context: Context, uri: Uri): SelectedImageInfo {
-        val parent = File(context.filesDir, "lab2b/images").apply { mkdirs() }
+    fun copyImage(context: Context, uri: Uri, storageFolder: String = "lab2b/images"): SelectedImageInfo {
+        val parent = File(context.filesDir, storageFolder).apply { mkdirs() }
         val folder = File(parent, UUID.randomUUID().toString()).apply { mkdirs() }
         try {
             val source = File(folder, "source")

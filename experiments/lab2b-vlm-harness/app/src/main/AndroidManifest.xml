@@ -14,8 +14,9 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/image_paths" />
         </provider>
+        <activity android:name=".MainActivity" android:exported="false" />
         <activity
-            android:name=".MainActivity"
+            android:name=".WeightScanActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -1,7 +1,7 @@
 name: LAB-2B standalone harness
 on:
   push:
-    branches: [agent/ui-ml-lab]
+    branches: [agent/ui-ml-lab, agent/lab2b-ocr-stack]
     paths:
       - 'experiments/lab2b-vlm-harness/**'
       - '.github/workflows/lab2b-harness.yml'

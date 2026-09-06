@@ -89,7 +89,8 @@ class MainActivity : AppCompatActivity() {
             }
             root.addView(header); root.addView(panel); sections[title] = panel; body = panel
         }
-        text("LAB-2B VLM Harness • 0.3", 22f)
+        text("LAB-2B VLM Harness • 0.4", 22f)
+        button("Open OCR weight-stack workflow") { startActivity(Intent(this, WeightScanActivity::class.java)); finish() }
         text("1. Configure and Load → 2. Select image / crop → 3. Send → 4. Export results")
         text("MNN 3.6.1 • Local image + text • Stateless turns\nCPU is the correctness baseline. GPU is experimental.")
         section("1. Model & runtime", true)
@@ -138,7 +139,7 @@ class MainActivity : AppCompatActivity() {
         ocrOrder = spinner("OCR EVIDENCE ORDER", listOf("Original recognizer order", "Top to bottom (experimental)")) { HarnessRuntimeOwner.selectOcrOrder(it == 1) }
         ocrText = text()
         button("Run OCR", true, HarnessRuntimeOwner::runOcr)
-        button("Copy OCR") { copy(HarnessRuntimeOwner.currentSnapshot().ocr?.let(OcrFormatter::format) ?: "No OCR") }
+        button("Copy OCR") { val s = HarnessRuntimeOwner.currentSnapshot(); copy(s.ocr?.let { OcrFormatter.format(it, s.ocrReadingOrder) } ?: "No OCR") }
         button("Clear OCR", true, HarnessRuntimeOwner::clearOcr)
         section("4. Run & save results", true)
         text("USER INSTRUCTION", 16f)

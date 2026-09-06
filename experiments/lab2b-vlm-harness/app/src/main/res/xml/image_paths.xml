@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <files-path name="prepared" path="lab2b/images/" />
+    <files-path name="stack_captures" path="lab2b/stack-captures/" />
+    <files-path name="stack_camera" path="lab2b/stack-camera/" />
 </paths>

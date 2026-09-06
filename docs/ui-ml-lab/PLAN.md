@@ -280,3 +280,6 @@ Disabled means:
 - Equipment-aware load translation belongs to N-BIO-7F-facing semantics.
 - Uncertainty wording is a later presentation policy. Do not mechanically map posterior width to `Aim for` / `Try` / `You could try` before that policy is researched and validated.
 - Current Android/ML/platform facts must be rechecked at the phase where they drive implementation.
+### LAB-2B OCR-first branch experiment (0.4)
+
+`agent/lab2b-ocr-stack` forks the accepted 0.3 harness at `de40aa37c4314713ae06b55ee0a0550906d02f72`. Guided separate stack/add-on capture, manual crop, experimental OCR input filters, deterministic kg extraction, reviewable character/unit corrections and JSON draft export. See [OCR stack workflow](research/LAB_2B_OCR_STACK_WORKFLOW.md). Build validation in progress; physical acceptance pending. Production import and sequence inference remain future scope; LAB-2C NOT STARTED.

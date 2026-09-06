@@ -63,3 +63,11 @@
 - APK 36,424,525 bytes; SHA-256 `73489ec5024bd15f2eb2b010cb3fa04739ecac41c128271f34a6a86ed95f2c36`; artifact `lab2b-vlm-harness-debug`, ID 9978638064.
 - Intermediate run 33997780098 also passed. No runtime/native change followed validation; this final commit records evidence only.
 - My Mettle app and N-BIO source diff empty; no weights/native binaries tracked. LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING. LAB-2C NOT STARTED.
+
+## OCR branch checkpoint 1 — 2026-09-06
+
+- Parent/live fork: `de40aa37c4314713ae06b55ee0a0550906d02f72`; new branch `agent/lab2b-ocr-stack`.
+- Route: bundled ML Kit OCR → deterministic Kotlin kg parser → human review → JSON draft. No language-model vision in this workflow. Native MNN 3.6.1 stack retained for existing comparison harness only.
+- Implemented separate capture/crop, optional image filters, source-provenance export, atomic persistent draft and cleanup scoped to OCR captures. Fixed Copy OCR ordering in old screen.
+- Seven new parser tests cover kg/lb discrimination, character corrections, damaged units, order errors, rounded increments/gaps, add-on separation and human edits. Actual Android build/test/lint pending Actions.
+- Local isolation, binary safety and diff whitespace checks pass. No production, N-BIO, native/JNI or model-binary changes. Next: actual CI build and lifecycle/export review; do not stop at checkpoint.
