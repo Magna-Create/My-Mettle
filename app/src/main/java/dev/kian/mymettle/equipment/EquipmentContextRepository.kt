@@ -10,10 +10,15 @@ import dev.kian.mymettle.data.local.entity.SessionExerciseEquipmentBindingEntity
 import dev.kian.mymettle.data.local.entity.SetObservationEquipmentOverrideEntity
 import dev.kian.mymettle.data.local.entity.SetObservationLoadSemanticsEntity
 import dev.kian.mymettle.domain.equipment.EquipmentBindingResolutionSource
+import dev.kian.mymettle.domain.equipment.EquipmentFactProvenance
+import dev.kian.mymettle.domain.equipment.EquipmentFactType
+import dev.kian.mymettle.domain.equipment.EquipmentFactUnit
 import dev.kian.mymettle.domain.equipment.EquipmentFactValue
+import dev.kian.mymettle.domain.equipment.EquipmentFactValueKind
 import dev.kian.mymettle.domain.equipment.EquipmentFactVersion
 import dev.kian.mymettle.domain.equipment.EquipmentId
 import dev.kian.mymettle.domain.equipment.EquipmentInstance
+import dev.kian.mymettle.domain.equipment.ExternalLoadAccounting
 import dev.kian.mymettle.domain.equipment.ObservationEquipmentOverride
 import dev.kian.mymettle.domain.equipment.ObservationLoadSemantics
 import dev.kian.mymettle.domain.equipment.PreferredEquipmentBinding
@@ -171,8 +176,34 @@ class EquipmentContextRepository(
 
     suspend fun resolveHistoricalEquipment(observationId: String): ResolvedEquipmentBinding? = transactions.run {
         require(observationId.isNotBlank())
+        resolveHistoricalEquipmentWithinTransaction(observationId)
+    }
+
+    suspend fun resolveHistoricalInterpretationSnapshot(
+        observationId: String,
+        asOf: Instant,
+    ): HistoricalEquipmentInterpretationSnapshot = transactions.run {
+        require(observationId.isNotBlank())
+        val binding = resolveHistoricalEquipmentWithinTransaction(observationId)
+        val semantics = dao.setObservationLoadSemantics(observationId)?.toDomain()
+        val facts = binding?.let { resolved ->
+            dao.equipmentFactVersions(resolved.equipmentId.value)
+                .filter { it.activeAt(asOf) }
+                .map { it.toDomain() }
+        }.orEmpty()
+
+        HistoricalEquipmentInterpretationSnapshot(
+            observationId = observationId,
+            asOf = asOf,
+            equipmentBinding = binding,
+            loadSemantics = semantics,
+            timeValidFacts = facts,
+        )
+    }
+
+    private suspend fun resolveHistoricalEquipmentWithinTransaction(observationId: String): ResolvedEquipmentBinding? {
         dao.setObservationEquipmentOverride(observationId)?.let { override ->
-            return@run ResolvedEquipmentBinding(
+            return ResolvedEquipmentBinding(
                 equipmentId = EquipmentId(override.equipmentId),
                 resolutionSource = EquipmentBindingResolutionSource.OBSERVATION_OVERRIDE,
                 source = override.source,
@@ -180,8 +211,8 @@ class EquipmentContextRepository(
             )
         }
 
-        val sessionExerciseId = dao.sessionExerciseIdForObservation(observationId) ?: return@run null
-        dao.sessionExerciseEquipmentBinding(sessionExerciseId)?.let { sessionBinding ->
+        val sessionExerciseId = dao.sessionExerciseIdForObservation(observationId) ?: return null
+        return dao.sessionExerciseEquipmentBinding(sessionExerciseId)?.let { sessionBinding ->
             ResolvedEquipmentBinding(
                 equipmentId = EquipmentId(sessionBinding.equipmentId),
                 resolutionSource = EquipmentBindingResolutionSource.SESSION_EXERCISE,
@@ -228,6 +259,53 @@ private fun EquipmentFactVersion.toEntity(): EquipmentFactVersionEntity {
     )
 }
 
+private fun EquipmentFactVersionEntity.toDomain(): EquipmentFactVersion {
+    val type = EquipmentFactType.fromStorage(factType)
+    if (valueKind != type.valueKind.storageValue) {
+        throw EquipmentContextException(
+            "Stored ${type.storageValue} fact $id has value kind $valueKind instead of ${type.valueKind.storageValue}.",
+        )
+    }
+    val value = when (type.valueKind) {
+        EquipmentFactValueKind.TEXT -> {
+            if (textValue == null || numericValue != null || unit != null) {
+                throw EquipmentContextException("Stored text equipment fact $id has inconsistent value columns.")
+            }
+            EquipmentFactValue.Text(textValue)
+        }
+
+        EquipmentFactValueKind.SCALAR -> {
+            if (numericValue == null || unit == null || textValue != null) {
+                throw EquipmentContextException("Stored scalar equipment fact $id has inconsistent value columns.")
+            }
+            val parsedUnit = EquipmentFactUnit.entries.firstOrNull { it.storageValue == unit }
+                ?: throw EquipmentContextException("Stored equipment fact $id has unsupported unit $unit.")
+            EquipmentFactValue.Scalar(numericValue, parsedUnit)
+        }
+    }
+    return EquipmentFactVersion(
+        id = id,
+        equipmentId = EquipmentId(equipmentId),
+        factType = type,
+        version = version,
+        value = value,
+        scope = scope,
+        provenance = EquipmentFactProvenance.fromStorage(provenanceType),
+        provenanceReference = provenanceReference,
+        quality = quality,
+        createdAt = createdAt,
+        effectiveAt = effectiveAt,
+        supersededAt = supersededAt,
+    )
+}
+
+private fun EquipmentFactVersionEntity.activeAt(asOf: Instant): Boolean {
+    val effective = Instant.parse(effectiveAt)
+    if (effective.isAfter(asOf)) return false
+    val superseded = supersededAt?.let(Instant::parse)
+    return superseded == null || asOf.isBefore(superseded)
+}
+
 private fun PreferredEquipmentBinding.toEntity() = PreferredEquipmentBindingEntity(
     id = id,
     executionProfileId = executionProfileId,
@@ -265,6 +343,13 @@ private fun ObservationEquipmentOverride.toEntity() = SetObservationEquipmentOve
 private fun ObservationLoadSemantics.toEntity() = SetObservationLoadSemanticsEntity(
     observationId = observationId,
     externalLoadAccounting = externalLoadAccounting.storageValue,
+    source = source,
+    recordedAt = recordedAt,
+)
+
+private fun SetObservationLoadSemanticsEntity.toDomain() = ObservationLoadSemantics(
+    observationId = observationId,
+    externalLoadAccounting = ExternalLoadAccounting.fromStorage(externalLoadAccounting),
     source = source,
     recordedAt = recordedAt,
 )
