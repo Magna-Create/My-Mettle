@@ -201,3 +201,59 @@ Source checkpoint `e4647c9336097e1c163fa1ade080b7dad729bfba` is green in Android
 
 NEXT:
 Begin 7F-C by auditing the existing 7B/7C capability posterior/predictive surfaces and defining the smallest typed source-capability boundary needed by transfer candidates. Do not fit M0 or author numeric cross-profile transfer yet.
+
+## Session 5 — 2026-09-06 17:50 BST
+
+HEAD IN:
+9fc88e2ffb8426b6274a73f3589cc70b9ff83b1e
+
+OBJECTIVE:
+Audit the accepted 7B.X/7C capability posterior and predictive surfaces and implement the smallest typed 7F-C source-capability boundary needed by later transfer candidates, without fitting M0 or authoring numeric cross-profile transfer.
+
+SOURCE FINDINGS:
+- The accepted dynamic upstream for forward development is 7B.X Candidate-v2 with Adaptive Sparse, represented by `DynamicTrendFrontierFit`, not the older Candidate-v1 fit shape. It carries explicit mathematical-model identity, solver diagnostics/identity, causal evidence support and a joint weighted posterior-node representation.
+- The 7C `NonDynamicCapabilityFit` surface has the same critical separation: family-specific semantics, explicit mathematical and solver identities, causal support, family-specific query coordinates and joint weighted posterior nodes.
+- `PosteriorEstimate` summaries preserve useful marginal quantiles/variance and provenance but are not sufficient by themselves for 7F because accepted upstream inference retains material joint dependence in posterior nodes.
+- Dynamic capability family identity remains `dynamic_resistance` even where the underlying execution-profile metric family is `BODYWEIGHT_RESISTANCE`; the boundary therefore preserves both capability-family and profile metric-family semantics instead of conflating them.
+- 7C query domains are genuinely family-specific: loaded hold uses duration with resistance output, duration-only has no separate input coordinate, and repeated contraction uses cycle count with resistance output. A generic universal load vector would erase source semantics.
+- Canonical equipment context cannot be reconstructed from current preference at this boundary. It must be supplied explicitly as resolved, genuinely not-applicable, or unresolved.
+- Multi-source dependence is not established by 7B.X/7C. The boundary must therefore preserve within-source joint posterior dependence while explicitly refusing any assumption that different source capabilities are independent.
+
+CHANGES:
+- Added `CapabilityTransferBoundary.kt` as a source-only 7F-C transport contract.
+- Added stable transfer-family identity for dynamic resistance, loaded hold, duration only and repeated contraction while retaining the originating profile's metric family, resistance semantics/model version, `EntryBasis`, laterality mode and exact profile/version identity.
+- Added explicit equipment-context states: resolved single context with local interpretation version and contributing observation/fact ids, genuine not-applicable, and unresolved. Unresolved context remains visible rather than borrowing current preference.
+- Added a strict causal cutoff carrying both inference `asOf` and `evidenceThrough`, with future evidence rejected.
+- Added family-specific observed/query-domain types rather than a generic physical coordinate.
+- Added sealed posterior payloads that retain the accepted upstream `DynamicTrendFrontierPosteriorNode` or `NonDynamicPosteriorNode` weighted joint representation. No mean/variance reduction or generic tensor was introduced.
+- Added explicit upstream model-config, manifest/run provenance, mathematical-model identity, solver identity, posterior representation and evidence-policy identity.
+- Added dependence metadata that records joint within-source nodes and `NOT_ESTABLISHED_DO_NOT_ASSUME_INDEPENDENT` across sources.
+- Added source-led factories for accepted `DynamicTrendFrontierFit` and `NonDynamicCapabilityFit`; resolved equipment context must account for every selected source observation exactly.
+- Added unit tests proving exact node/provenance preservation, family-specific domain preservation, explicit unresolved equipment status, source observation coverage, family mismatch rejection and future-cutoff rejection.
+
+TESTS:
+- Exact source checkpoint `321ef02a28d2a78dd591c5c96a3b2ecf0e820186` completed successfully in Android CI run 34046030542.
+- Reference-asset, exercise-authoring, context-boundary, Context Module documentation, whitespace and Gradle-clean gates passed.
+- `:app:testDebugUnitTest :app:assembleDebug` passed, including the new 7F-C boundary tests.
+- `:app:assembleDebugAndroidTest` passed.
+- Android lint passed.
+- Room16 exported-schema verification passed; debug APK and Room schema artifacts uploaded successfully.
+
+DECISIONS:
+- 7F-C consumes the accepted 7B.X Candidate-v2 / 7C native joint posterior shapes rather than rebuilding capability from raw working sets or reducing upstream uncertainty to mean/variance.
+- The boundary is deliberately source-only. It does not contain destination relationship parameters, source-selection policy, semantic exchangeability claims, numeric transfer or no-transfer gating.
+- `CapabilityEquipmentContext.NotApplicable` is distinct from `Unresolved`; later semantic admissibility must still verify that not-applicable is legitimate for the specific source/destination relationship.
+- Resolved equipment context must cover the exact selected upstream observations, preventing a partial current-equipment label from masquerading as the context for a mixed historical capability posterior.
+- Cross-source independence is explicitly not established. Multiple source envelopes cannot be precision-combined as independent evidence merely because each one is individually valid.
+- No M0 mathematics, numeric cross-profile relation or real-history transfer fit was started.
+
+OPEN QUESTIONS:
+- The deferred 7F-E canonical correction/invalidation slice is still structurally unfinished: session actual-use bindings, observation overrides and observation load semantics currently reject conflicting replacement rather than preserving an auditable correction chain.
+- Dependency-scoped invalidation and explicit Room16 equipment backup/replay proof remain required before model fitting work advances.
+- M0 mathematics must still be frozen in `NBIO_7F_M0_MODEL_SPEC.md` before any real-history M0 fit, but mission implementation order places the unfinished correction/persistence/backup/replay proof before that preregistration step.
+
+HEAD OUT:
+Source checkpoint `321ef02a28d2a78dd591c5c96a3b2ecf0e820186` is green in Android CI run 34046030542; this journal commit follows on the same branch.
+
+NEXT:
+Return to the deferred canonical-safety step before M0: implement auditable correction/supersession semantics for historical actual-equipment/load-semantics records, dependency-scoped invalidation for affected derived equipment/translation consumers, and explicit Room16 backup/replay proof. Do not create or fit M0 yet.
