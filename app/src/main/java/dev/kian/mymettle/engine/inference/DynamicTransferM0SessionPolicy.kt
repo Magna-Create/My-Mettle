@@ -106,7 +106,12 @@ object DynamicTransferM0SessionPolicy {
 
     private fun requireDestinationN0Prior(destinationSession: DynamicTransferM0DestinationSessionDescriptor) {
         val fit = destinationSession.destination.n0.destinationFit
-        if (!fit.support.lastEvidenceAt.isBefore(destinationSession.firstObservationTime)) {
+        val lastEvidenceAt = fit.support.lastEvidenceAt
+            ?: freezeFailure(
+                DynamicTransferM0FreezeFailure.DESTINATION_N0_NOT_STRICTLY_PRIOR,
+                "Destination N0 has no evidence timestamp to establish a strictly prior frozen state.",
+            )
+        if (!lastEvidenceAt.isBefore(destinationSession.firstObservationTime)) {
             freezeFailure(
                 DynamicTransferM0FreezeFailure.DESTINATION_N0_NOT_STRICTLY_PRIOR,
                 "Destination N0 must be frozen strictly before the held-out session begins.",
