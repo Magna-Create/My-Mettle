@@ -12,12 +12,12 @@ data class ColumnSelection(val topX: Double, val bottomX: Double, val halfWidth:
         return abs((box.left+box.right)/2.0/width - (topX+(bottomX-topX)*y)) <= halfWidth
     }
 }
-data class ColumnNumber(val raw: String, val value: BigDecimal, val box: OcrBox, val unit: StackUnit?, val repaired: Boolean)
+data class ColumnNumber(val raw: String, val value: BigDecimal, val box: OcrBox, val unit: StackUnit?, val repaired: Boolean, val damagedUnit:Boolean=false)
 data class ColumnProposal(val selection: ColumnSelection, val values: List<ColumnNumber>, val unitEvidence: String)
 
 /** Geometry supplies grouping, never missing digits or unit certainty. */
 object WeightColumns {
-    private val numeric=Regex("^([0-9OoIl|]+(?:[.,][0-9OoIl|]+)?)\\s*(kgs?|lbs?)?['’.,]?$",RegexOption.IGNORE_CASE)
+    private val numeric=Regex("^([0-9OoIl|]+(?:[.,][0-9OoIl|]+)?)\\s*(kgs?|lbs?|ka|ko|kog|k)?['’.,]?$",RegexOption.IGNORE_CASE)
     fun numbers(e: OcrEvidence): List<ColumnNumber> {
         val lines=e.blocks.flatMap { it.lines }
         return lines.mapNotNull { l ->
@@ -35,7 +35,7 @@ object WeightColumns {
                     (b.left+b.right)/2 in box.left..box.right) ||
                     (sameRow(box,b) && b.left>=box.right && b.left-box.right<=box.bottom-box.top))
             }==true }.mapNotNull { unit(it.text) }.distinct()
-            ColumnNumber(l.text,value,box,inline ?: nearby.singleOrNull(),fixed!=raw)
+            ColumnNumber(l.text,value,box,inline ?: nearby.singleOrNull(),fixed!=raw,m.groupValues[2].isNotEmpty() && inline==null)
         }.sortedWith(compareBy({it.box.top},{it.box.left}))
     }
     private fun unit(s:String):StackUnit? = when(s.trim().lowercase()) { "kg","kgs" -> StackUnit.KG; "lb","lbs" -> StackUnit.LB; else -> null }
@@ -80,8 +80,9 @@ object WeightColumns {
                 add("User assigned ${selection.unit} to selected column; printed value ${n.value}")
                 if(selection.unit==StackUnit.LB) add("Converted lb to kg using 0.45359237; original value retained")
                 if(n.repaired) add("Numeric character correction; check against image")
+                if(n.damagedUnit) add("Damaged unit text; confirm against image")
                 if(conflict) add("CONFLICT: OCR unit ${n.unit} differs from selected ${selection.unit}")
-            },!n.repaired && !conflict)
+            },!n.repaired && !n.damagedUnit && !conflict)
         }
         return WeightParse(readings,e.blocks.flatMap { it.lines }.map { it.text }.filter { raw -> selected.none { it.raw==raw } },
             WeightOcrParser.issues(readings,part)+if(selected.any { it.unit!=null && it.unit!=selection.unit }) listOf("Unit conflict: affected rows are unchecked.") else emptyList())
@@ -95,7 +96,7 @@ object WeightColumns {
             a.forEach { n ->
                 val matches=b.filter { sameRow(n.box,it.box) }
                 add("row y=${n.box.top}..${n.box.bottom}: ${n.raw} → ${if(matches.isEmpty()) "MISSING" else matches.joinToString(" / ") { it.raw }}"+
-                    if(matches.size==1 && matches.single().value.compareTo(n.value)==0) " [agrees]" else " [review]")
+                    if(matches.size==1 && matches.single().value.compareTo(n.value)==0 && !n.repaired && !matches.single().repaired && !n.damagedUnit && !matches.single().damagedUnit) " [agrees]" else " [review]")
             }
             b.filter { n -> a.none { sameRow(it.box,n.box) } }.forEach { add("additional row y=${it.box.top}..${it.box.bottom}: ${it.raw} [review]") }
         }

@@ -67,4 +67,12 @@ class WeightColumnsTest {
         assertTrue(p.all { it.unitEvidence.contains("suggest") })
         assertTrue(WeightOcrParser.parse(e,CapturePart.MAIN_STACK).readings.isEmpty())
     }
+    @Test fun damagedUnitCandidatesSurviveColumnSelection() {
+        val p=WeightColumns.parse(evidence(line("127 ko",300,10),line("134 kog",300,80)),CapturePart.MAIN_STACK,right)
+        assertEquals(2,p.readings.size);assertTrue(p.sortedKg.isEmpty())
+        assertTrue(p.readings.all { it.changes.any { change -> change.contains("Damaged unit") } })
+    }
+    @Test fun inlinePluralKgIsAccepted() {
+        assertEquals("5",WeightOcrParser.parse(evidence(line("5 KGS",300,10)),CapturePart.MAIN_STACK).sortedKg.single().toPlainString())
+    }
 }

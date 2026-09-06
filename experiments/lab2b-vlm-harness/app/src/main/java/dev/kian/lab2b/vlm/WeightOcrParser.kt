@@ -12,7 +12,7 @@ data class WeightParse(val readings: List<WeightReading>, val ignored: List<Stri
 }
 /** Strict whole-line parsing. No lb conversion, sequence completion, global text substitution or LLM. */
 object WeightOcrParser {
-    private val label = Regex("^([0-9OoIl|]+(?:[.,][0-9OoIl|]+)?)\\s*(kg|ka|ko|kog|k)\\s*['’.,]?$", RegexOption.IGNORE_CASE)
+    private val label = Regex("^([0-9OoIl|]+(?:[.,][0-9OoIl|]+)?)\\s*(kgs?|ka|ko|kog|k)\\s*['’.,]?$", RegexOption.IGNORE_CASE)
     fun parse(evidence: OcrEvidence, part: CapturePart): WeightParse {
         val readings = mutableListOf<WeightReading>(); val ignored = mutableListOf<String>()
         val geometryNumbers=WeightColumns.numbers(evidence)
@@ -30,7 +30,7 @@ object WeightOcrParser {
             val fixed = numeric.map { when (it) { 'O','o' -> '0'; 'I','l','|' -> '1'; ',' -> '.'; else -> it } }.joinToString("")
             val value = fixed.toBigDecimalOrNull()
             if (value == null || value <= BigDecimal.ZERO || value > BigDecimal("2000")) { ignored += line.text; return@forEachIndexed }
-            val unitExact = match.groupValues[2].equals("kg", true)
+            val unitExact = match.groupValues[2].equals("kg", true) || match.groupValues[2].equals("kgs", true)
             val changes = buildList {
                 if(nearbyKg) add("kg label associated by nearby geometry")
                 if (fixed != numeric) add("Numeric candidate: $numeric → $fixed")
