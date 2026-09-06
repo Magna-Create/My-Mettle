@@ -93,3 +93,11 @@
 - Fixed weight add-on UX and Android numeric-array serialisation. Added reusable Termux helper for Gradle PATH restoration and native reuse.
 - Twenty new pure tests cover field-specific extraction, logo isolation, correction/conflict handling, adjacent-line geometry, review invalidation, optional add-ons and numeric JSON literals. They are not OCR accuracy tests.
 - Source isolation/binary/diff checks pass locally. Android build/lint/tests pending Actions. Continue to actual build validation.
+
+## Placard final validation — 2026-09-06
+
+- Built source a2fb835201f902d1584daaa5953706338ae97b6b, Actions 34038988169 SUCCESS. 55 tests, zero failures/errors/skips, lint, isolated APK assembly and Termux prebuilt-path rebuild pass.
+- APK 36,621,333 bytes, SHA-256 0e2108bd5925c08e62676fa8a3cebab443a2d5ab9e3bf0dc55788dcfb5e3c8f7. Artifact lab2b-vlm-harness-debug ID 9991132288.
+- Ten native libraries / 20,327,800 bytes unchanged; ELF and APK ZIP 16 KB checks PASS_STATIC. Native reuse verified for current and known legacy bundles; altered C++ rejected.
+- Source isolation, binary safety, diff whitespace pass. No model binaries or production/N-BIO changes. Final commit records evidence only; no code changes after passing build.
+- LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING. LAB-2C, automatic filter consensus, machine masking and specialised model research NOT STARTED in this build.

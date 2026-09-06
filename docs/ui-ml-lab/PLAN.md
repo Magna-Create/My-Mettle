@@ -286,4 +286,4 @@ Disabled means:
 
 ### LAB-2B placard extraction test (0.5)
 
-Two crops from one photo: full placard and logo. Deterministic field-specific extraction and review, no language-model step. Weight export gains explicit optional add-ons and numeric JSON fixes. See [placard experiment](research/LAB_2B_PLACARD_EXTRACTION.md). Build validation underway; physical acceptance pending. Automatic filter consensus, background removal/machine masking and specialised model evaluation are deferred. LAB-2C NOT STARTED.
+Two crops from one photo: full placard and logo. Deterministic field-specific extraction and review, no language-model step. Weight export gains explicit optional add-ons and numeric JSON fixes. See [placard experiment](research/LAB_2B_PLACARD_EXTRACTION.md). Implementation ready: Actions 34038988169 passed 55 tests, lint, APK build, 16 KB checks and Termux reuse. Physical acceptance pending. Automatic filter consensus, background removal/machine masking and specialised model evaluation are deferred. LAB-2C NOT STARTED.

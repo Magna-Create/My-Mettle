@@ -1,6 +1,10 @@
 # LAB-2B 0.5: two-crop placard extraction
 
-Branch `agent/lab2b-ocr-stack`. Parent `f858f8d803efc31cd6a1e1673e2d95e8411ea857`. Implementation validation in progress; physical acceptance pending. LAB-2C and machine masking NOT STARTED.
+Branch `agent/lab2b-ocr-stack`. Parent `f858f8d803efc31cd6a1e1673e2d95e8411ea857`. LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING.
+
+Validated implementation: `a2fb835201f902d1584daaa5953706338ae97b6b`. [Actions run 34038988169](https://github.com/Magna-Create/My-Mettle/actions/runs/34038988169) SUCCESS: 55 unit tests, zero failures/errors/skips, lint, APK assembly, source/binary isolation, all ten native ELF LOAD alignment checks, APK ZIP alignment and Termux prebuilt-path rebuild. Current/known-legacy native reuse passes and altered C++ reuse is rejected. APK 36,621,333 bytes; SHA-256 `0e2108bd5925c08e62676fa8a3cebab443a2d5ab9e3bf0dc55788dcfb5e3c8f7`. Artifact `lab2b-vlm-harness-debug`, ID `9991132288`. Native payload remains 20,327,800 bytes. See LAB_2B_05_NATIVE_AUDIT.txt.
+
+No physical placard OCR accuracy claim follows from these unit/build results. Camera/crop/export UI and process-relaunch acceptance remain S25 checks. No production runtime, N-BIO, Room/equipment code or model binaries changed. A Termux build signed locally may have a different APK SHA-256. LAB-2C and machine masking NOT STARTED.
 
 ## Interaction and scope
 

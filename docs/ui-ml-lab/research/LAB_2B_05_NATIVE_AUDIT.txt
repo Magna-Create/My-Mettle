@@ -1,0 +1,15 @@
+lib/arm64-v8a/libMNN.so: bytes=2452848 machine=183 LOAD=[16384, 16384, 16384] sha256=955196abae7ed79b092f9fb1715ccfcd6557d214533a13983a14f71b7d7f3e74
+lib/arm64-v8a/libMNNAudio.so: bytes=71384 machine=183 LOAD=[16384, 16384, 16384] sha256=9e55e8b83e6628c66a5aaf26db003f4f4d85b05f8b34b220a20a81297df78ff4
+lib/arm64-v8a/libMNNOpenCV.so: bytes=264408 machine=183 LOAD=[16384, 16384, 16384] sha256=c1e8a9bcb7c10911b9c32786400434b59cc70ee9c5c945d3d1583f87dfa75353
+lib/arm64-v8a/libMNN_CL.so: bytes=2308568 machine=183 LOAD=[16384, 16384, 16384] sha256=c157fa63d116a54420cdd1d0b50fb1d4548e2d4aa65760733beef02ff8fcb67c
+lib/arm64-v8a/libMNN_Express.so: bytes=754904 machine=183 LOAD=[16384, 16384, 16384] sha256=6deee0bd52ea35c5a2324ab9544656ad51bb6d136bddfd552dd07e1fac235bd6
+lib/arm64-v8a/libMNN_Vulkan.so: bytes=780280 machine=183 LOAD=[16384, 16384, 16384] sha256=b7d51f112517b1755094075af99672e4019bb10f015231980ae569dd73f00e4f
+lib/arm64-v8a/libc++_shared.so: bytes=1292904 machine=183 LOAD=[16384, 16384, 16384, 16384] sha256=4397241b4bd20a8e579bfb41d21107857e12985f6a01ca0c2a5f83380d1270b4
+lib/arm64-v8a/liblab2b_mnn.so: bytes=79976 machine=183 LOAD=[16384, 16384, 16384, 16384] sha256=3c1cc0f3f40ff42c66c78df091a176243ef7dea6a9fee829a9caf21cef654574
+lib/arm64-v8a/libllm.so: bytes=1257984 machine=183 LOAD=[16384, 16384, 16384] sha256=80c6de6cc5261781bc2ca6175ba6fc33a64dde44ea8198bfc48441f7c43c7030
+lib/arm64-v8a/libmlkit_google_ocr_pipeline.so: bytes=11064544 machine=183 LOAD=[16384, 16384, 16384] sha256=fa41d509a661e8aa8b3e3ac1a28541f8823f308414fcad733fe26d61feea2646
+APK_BYTES=36621333
+NATIVE_BYTES=20327800
+SO_COUNT=10
+APK_SHA256=0e2108bd5925c08e62676fa8a3cebab443a2d5ab9e3bf0dc55788dcfb5e3c8f7
+LAB2B_NATIVE_16K=PASS_STATIC (device runtime acceptance remains pending)
