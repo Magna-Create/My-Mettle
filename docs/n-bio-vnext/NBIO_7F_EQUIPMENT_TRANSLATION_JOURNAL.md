@@ -96,3 +96,55 @@ Source checkpoint `0794fe30e7ffd0648c79b06f965755abbe1fb4e6` is green in Android
 
 NEXT:
 Implement and test canonical equipment write/resolution behaviour: preference supersession, session actual-use binding, observation override precedence, fact-version lifecycle, and immutable historical separation without yet starting local physics or transfer modelling.
+
+## Session 3 — 2026-09-06 16:54 BST
+
+HEAD IN:
+8435112905aebfdcbf5869fd19662cb05b323f0c
+
+OBJECTIVE:
+Implement and test canonical equipment write/resolution behaviour: preference supersession, session actual-use binding, observation override precedence, fact-version lifecycle, and immutable historical separation without starting local physics or transfer modelling.
+
+SOURCE FINDINGS:
+- The 7F contract requires historical equipment resolution from occurrence-time evidence; current preferred/default equipment must never be used to reconstruct historical actual use.
+- Session-exercise binding is the normal actual-use owner. Observation-level override is exceptional and takes precedence only for an observation that differs within the occurrence.
+- Preference history and equipment-fact history can use append-plus-`supersededAt` lifecycle semantics without rewriting their historical payload values.
+- The contract does not define archived equipment as invalid for historical corrections or later fact publication. A draft restriction based on `archivedAt` would therefore have invented product behaviour and was removed during review.
+
+CHANGES:
+- Added typed domain models for preferred-equipment bindings, session actual-use bindings, observation overrides, resolved binding provenance, and resolution source.
+- Extended `EquipmentDao` with lifecycle supersession methods, current-preference retrieval that can detect invalid multiplicity, and an observation→set→session-exercise lookup for historical resolution.
+- Added `EquipmentContextRepository` as the canonical transactional write/read boundary for equipment context.
+- Preference changes are versioned separately from actual use; selecting a new preference supersedes only the preceding preference lifecycle marker.
+- Equipment fact successors require contiguous versions and non-decreasing effective time; old fact values remain untouched while only their lifecycle marker is superseded.
+- Session actual-use binding, observation override and observation load semantics are insert-only in this slice, with exact retries idempotent and conflicting rewrites rejected pending the explicit correction/audit slice.
+- Historical resolution is strict: observation override → recorded session-exercise actual binding → unknown. It never falls back to current preference.
+- Added repository unit tests for preference/actual separation, override precedence, unknown historical resolution, fact lifecycle, and insert-only historical evidence semantics.
+- Initial repository tests compiled but JUnit rejected the class because expression-bodied `runBlocking` tests inferred a non-`Unit` return type from terminal `assertIs`; fixed by making the test bodies explicitly return `Unit`.
+
+TESTS:
+- First source CI run 34042848520 on `6f55b3a8ba1e9a91433515974faa85e0d17644bf`: production Kotlin compilation and debug APK assembly succeeded, but `EquipmentContextRepositoryTest` failed class initialisation due the test-signature issue above. This was a test-shape failure, not a production compilation failure.
+- Fix commit `2062d423fe967d77cef1a943df700a621d8aab8e` was then tested in exact-head Android CI run 34043265691.
+- On `2062d423...`, reference assets, exercise-authoring schema, context boundary, Context Module docs, whitespace and Gradle clean all passed.
+- `:app:testDebugUnitTest :app:assembleDebug` passed, including the new equipment lifecycle/resolution tests.
+- `:app:assembleDebugAndroidTest` passed.
+- Android lint passed.
+- Room16 exported-schema verification passed and CI uploaded debug APK plus Room schema artifacts.
+
+DECISIONS:
+- Historical equipment resolution never consults preferred equipment. Missing recorded actual-use remains unknown.
+- Preferred/default selection and actual historical use remain separate write paths and separate state.
+- Observation override has explicit precedence over session-exercise actual-use binding, but it does not mutate that session binding.
+- Fact and preference successors preserve historical payloads and alter only lifecycle markers transactionally.
+- Actual-use/load-semantics rows are deliberately non-overwritable in this slice. This prevents silent history rewriting until the contract-required correction/invalidation/audit path is implemented in 7F-E.
+- No equipment kind, OEM identity, ratio, starting resistance, friction or calibration default is inferred by this repository.
+
+OPEN QUESTIONS:
+- Correction/invalidation semantics for session actual-use bindings, observation overrides and observation load semantics still require the dedicated persistence/correction slice; current writes fail closed on conflicting replacements.
+- Local deterministic interpretation now needs time-valid equipment fact selection. The next slice should define the smallest exact as-of fact reader needed for deterministic interpretation rather than treating the newest fact as historically valid.
+
+HEAD OUT:
+Source checkpoint `2062d423fe967d77cef1a943df700a621d8aab8e` is green in Android CI run 34043265691; this journal commit follows on the same branch.
+
+NEXT:
+Implement the first local deterministic equipment-interpretation slice: resolve historical equipment plus observation load semantics and time-valid equipment facts, prove an exact bar/implement-mass + added-load case, fail closed on unknown complete-vs-added meaning or missing/ambiguous mechanics, and preserve the raw entered performance evidence. Do not start cross-profile transfer modelling yet.
