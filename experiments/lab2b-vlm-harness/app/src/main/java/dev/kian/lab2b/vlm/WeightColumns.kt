@@ -27,7 +27,7 @@ object WeightColumns {
             if(raw.none { it.isDigit() }) return@mapNotNull null
             val fixed=raw.map { when(it) { 'O','o' -> '0'; 'I','l','|' -> '1'; ',' -> '.'; else -> it } }.joinToString("")
             val value=fixed.toBigDecimalOrNull() ?: return@mapNotNull null
-            if(value<=BigDecimal.ZERO || value>BigDecimal("5000")) return@mapNotNull null
+            if(value<=BigDecimal.ZERO) return@mapNotNull null
             val inline=unit(m.groupValues[2])
             // A separate small label immediately above this number, with horizontal overlap.
             val nearby=lines.filter { label -> label.box?.let { b ->
@@ -79,10 +79,11 @@ object WeightColumns {
             WeightReading(i,n.raw,kg,WeightOrigin.COLUMN_CONFIRMED,n.box,buildList {
                 add("User assigned ${selection.unit} to selected column; printed value ${n.value}")
                 if(selection.unit==StackUnit.LB) add("Converted lb to kg using 0.45359237; original value retained")
+                if(WeightOcrParser.needsAttention(kg)) add(WeightOcrParser.attentionMessage(kg))
                 if(n.repaired) add("Numeric character correction; check against image")
                 if(n.damagedUnit) add("Damaged unit text; confirm against image")
                 if(conflict) add("CONFLICT: OCR unit ${n.unit} differs from selected ${selection.unit}")
-            },!n.repaired && !n.damagedUnit && !conflict)
+            },!n.repaired && !n.damagedUnit && !conflict && !WeightOcrParser.needsAttention(kg))
         }
         return WeightParse(readings,e.blocks.flatMap { it.lines }.map { it.text }.filter { raw -> selected.none { it.raw==raw } },
             WeightOcrParser.issues(readings,part)+if(selected.any { it.unit!=null && it.unit!=selection.unit }) listOf("Unit conflict: affected rows are unchecked.") else emptyList())

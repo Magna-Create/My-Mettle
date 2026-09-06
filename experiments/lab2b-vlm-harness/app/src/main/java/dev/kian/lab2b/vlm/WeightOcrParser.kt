@@ -12,6 +12,9 @@ data class WeightParse(val readings: List<WeightReading>, val ignored: List<Stri
 }
 /** Strict whole-line parsing. No lb conversion, sequence completion, global text substitution or LLM. */
 object WeightOcrParser {
+    fun needsAttention(kg: BigDecimal): Boolean = kg >= BigDecimal("1000")
+    fun attentionMessage(kg: BigDecimal): String =
+        "CHECK WEIGHT: ${kg.toPlainString()} kg is unusually high (1,000 kg or more). Check for a missing decimal or joined labels; edit or explicitly select this row."
     private val label = Regex("^([0-9OoIl|]+(?:[.,][0-9OoIl|]+)?)\\s*(kgs?|ka|ko|kog|k)\\s*['’.,]?$", RegexOption.IGNORE_CASE)
     fun parse(evidence: OcrEvidence, part: CapturePart): WeightParse {
         val readings = mutableListOf<WeightReading>(); val ignored = mutableListOf<String>()
@@ -29,25 +32,28 @@ object WeightOcrParser {
             if (numeric.none { it.isDigit() }) { ignored += line.text; return@forEachIndexed }
             val fixed = numeric.map { when (it) { 'O','o' -> '0'; 'I','l','|' -> '1'; ',' -> '.'; else -> it } }.joinToString("")
             val value = fixed.toBigDecimalOrNull()
-            if (value == null || value <= BigDecimal.ZERO || value > BigDecimal("2000")) { ignored += line.text; return@forEachIndexed }
+            if (value == null || value <= BigDecimal.ZERO) { ignored += line.text; return@forEachIndexed }
             val unitExact = match.groupValues[2].equals("kg", true) || match.groupValues[2].equals("kgs", true)
             val changes = buildList {
+                if (needsAttention(value)) add(attentionMessage(value))
                 if(nearbyKg) add("kg label associated by nearby geometry")
                 if (fixed != numeric) add("Numeric candidate: $numeric → $fixed")
                 if (!unitExact) add("Unit candidate: ${match.groupValues[2]} → kg; confirm from label")
             }
             val origin = when { !unitExact -> WeightOrigin.UNIT_CANDIDATE; fixed != numeric -> WeightOrigin.CHARACTER_CORRECTION; else -> WeightOrigin.RECOGNISED_KG }
-            readings += WeightReading(index, line.text, value, origin, line.box, changes, origin == WeightOrigin.RECOGNISED_KG)
+            readings += WeightReading(index, line.text, value, origin, line.box, changes, origin == WeightOrigin.RECOGNISED_KG && !needsAttention(value))
         }
         return WeightParse(readings, ignored, issues(readings, part))
     }
     fun issues(readings: List<WeightReading>, part: CapturePart): List<String> {
-        if (part == CapturePart.ADD_ON) return emptyList()
+        val attention = readings.filter { needsAttention(it.kg) }.map { attentionMessage(it.kg) }
+        if (part == CapturePart.ADD_ON) return attention
         val candidates = readings.map { it.kg }
         val deltas = candidates.zipWithNext { a,b -> b-a }
         val positive = deltas.filter { it > BigDecimal.ZERO }.sorted()
         val typical = positive.getOrNull(positive.size / 2)
         return buildList {
+            addAll(attention)
             if (readings.any { it.box == null }) add("Some labels have no geometry; physical order cannot be fully checked.")
             deltas.forEachIndexed { i,d ->
                 if (d <= BigDecimal.ZERO) add("Order/duplicate issue before '${readings[i+1].raw}'. Numeric sorting does not resolve this.")
@@ -59,8 +65,9 @@ object WeightOcrParser {
     fun edit(reading: WeightReading, text: String): WeightReading {
         require(Regex("[0-9]+(?:[.,][0-9]+)?").matches(text.trim())) { "Enter a positive kg number" }
         val value = text.trim().replace(',', '.').toBigDecimal()
-        require(value > BigDecimal.ZERO && value <= BigDecimal("2000"))
-        return reading.copy(kg = value, origin = WeightOrigin.HUMAN_EDITED, included = true,
-            changes = reading.changes + "Human edit: ${reading.kg} → $value kg")
+        require(value > BigDecimal.ZERO)
+        return reading.copy(kg = value, origin = WeightOrigin.HUMAN_EDITED, included = !needsAttention(value),
+            changes = reading.changes + "Human edit: ${reading.kg} → $value kg" +
+                if (needsAttention(value)) listOf(attentionMessage(value)) else emptyList())
     }
 }

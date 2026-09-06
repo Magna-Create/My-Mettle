@@ -161,8 +161,8 @@ class WeightScanActivity : AppCompatActivity() {
         }
         c.parsed?.let { parsed ->
             text("4 · Review kg labels",20f)
-            if(parsed.issues.isNotEmpty()) text("CHECK IMAGE: ${parsed.issues.size} sequence warning(s). The sorted list may be incomplete or wrong.",18f)
-            text("Rows stay in image order. Checked values enter the sorted list. Corrections start unchecked: inspect the label, then check or edit. Uncheck any add-on or unrelated label.")
+            if(parsed.issues.isNotEmpty()) text("CHECK IMAGE: ${parsed.issues.size} review warning(s). The sorted list may be incomplete or wrong.",18f)
+            text("Rows stay in image order. Checked values enter the sorted list. Corrections and weights ≥1,000 kg start unchecked: inspect the label, then check or edit. Uncheck any add-on or unrelated label.")
             parsed.readings.forEach { r ->
                 val row=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; root.addView(this) }
                 val check=CheckBox(this).apply { text="${r.raw} → ${r.kg.toPlainString()} kg\n${r.origin.name.replace('_',' ')}"; isChecked=r.included; isEnabled=!owner.busy }

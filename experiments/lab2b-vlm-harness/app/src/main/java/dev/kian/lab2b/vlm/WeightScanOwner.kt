@@ -128,6 +128,7 @@ object WeightScanOwner {
         withContext(Dispatchers.IO) { context.contentResolver.openOutputStream(uri,"wt").use { requireNotNull(it).write(json.toByteArray(Charsets.UTF_8)) } }
     } }
     fun json(): JSONObject = JSONObject().put("schema","lab2b.ocr-stack.v2")
+        .put("weight_review_policy",1)
         .put("app_version",BuildConfig.VERSION_NAME).put("created_utc",java.time.Instant.now().toString())
         .put("production_import_compatible",false).put("engine","DETERMINISTIC_KOTLIN; ML Kit OCR")
         .put("image_supplied_to_language_model",false).put("inferred_weights_kg",JSONArray())
@@ -174,13 +175,15 @@ object WeightScanOwner {
                 val c=all.getJSONObject(part.name)
                 val original=readImage(c.optJSONObject("original")); val image=readImage(c.optJSONObject("crop_image"))
                 val input=readImage(c.optJSONObject("ocr_input")); val e=c.optJSONObject("ocr")?.let(::readOcr)
+                val legacyReview=saved.optInt("weight_review_policy",0)<1
                 val readings=c.getJSONArray("readings").let { a -> (0 until a.length()).map { n -> val r=a.getJSONObject(n)
-                    WeightReading(r.getInt("id"),r.getString("raw"),r.getString("kg").toBigDecimal(),WeightOrigin.valueOf(r.getString("origin")),readBox(r.optJSONArray("box")),strings(r.getJSONArray("changes")),r.getBoolean("included")) } }
+                    WeightReading(r.getInt("id"),r.getString("raw"),r.getString("kg").toBigDecimal(),WeightOrigin.valueOf(r.getString("origin")),readBox(r.optJSONArray("box")),strings(r.getJSONArray("changes")),r.getBoolean("included")) }.map { r ->
+                    if(legacyReview && WeightOcrParser.needsAttention(r.kg)) r.copy(included=false,changes=r.changes+WeightOcrParser.attentionMessage(r.kg)) else r } }
                 val crop=c.optJSONArray("crop")?.let { CropRegion(part.name,it.getDouble(0),it.getDouble(1),it.getDouble(2),it.getDouble(3)) }
                 require(image==null || File(image.normalisedPath).isFile) { "Saved image is missing" }
                 require(e==null || input?.normalisedSha256==e.sourceImageSha256) { "Saved OCR source mismatch" }
                 captures[part]=Capture(original,image,crop,OcrEnhancement.valueOf(c.getString("profile")),input,e,
-                    if(e==null) null else WeightParse(readings,strings(c.getJSONArray("ignored_lines")),WeightOcrParser.issues(readings,part)),c.getBoolean("reviewed"),if(c.isNull("total_ms")) null else c.getLong("total_ms"),c.optBoolean("ocr_cache_hit",false),c.optJSONArray("filter_comparison")?.toString() ?: "",
+                    if(e==null) null else WeightParse(readings,strings(c.getJSONArray("ignored_lines")),WeightOcrParser.issues(readings,part)),c.getBoolean("reviewed") && !(legacyReview && readings.any { WeightOcrParser.needsAttention(it.kg) }),if(c.isNull("total_ms")) null else c.getLong("total_ms"),c.optBoolean("ocr_cache_hit",false),c.optJSONArray("filter_comparison")?.toString() ?: "",
                     c.optJSONObject("column_selection")?.let { ColumnSelection(it.getDouble("top_x"),it.getDouble("bottom_x"),it.getDouble("half_width"),StackUnit.valueOf(it.getString("unit"))) })
             }
             addOnStatus=if(saved.has("add_on_status")) AddOnStatus.valueOf(saved.getString("add_on_status")) else if(capture(CapturePart.ADD_ON).image!=null) AddOnStatus.CAPTURED else AddOnStatus.NOT_CHECKED

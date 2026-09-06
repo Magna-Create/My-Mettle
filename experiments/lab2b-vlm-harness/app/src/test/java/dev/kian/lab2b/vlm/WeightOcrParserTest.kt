@@ -76,4 +76,27 @@ class WeightOcrParserTest {
         assertEquals(reference,reviewed.sortedKg.map { it.toPlainString() })
     }
 
+    @Test fun highWeightsStayVisibleUncheckedIncludingAddonAndJoinedLabels() {
+        for (part in CapturePart.entries) {
+            val r=WeightOcrParser.parse(evidence("999.9kg","1000kg","1155kg","59130kg"),part)
+            assertEquals(4,r.readings.size)
+            assertEquals(listOf("999.9"),r.sortedKg.map { it.toPlainString() })
+            assertEquals(3,r.issues.count { it.startsWith("CHECK WEIGHT") })
+            assertEquals("1155kg",r.readings[2].raw)
+            assertEquals("115.5",WeightOcrParser.edit(r.readings[2],"115.5").kg.toPlainString())
+            assertFalse(WeightOcrParser.edit(r.readings[0],"1000").included)
+        }
+    }
+    @Test fun columnThresholdUsesConvertedKgAndPreservesExplicitOverride() {
+        val selection=ColumnSelection(0.11,0.11,0.1,StackUnit.KG)
+        val r=WeightColumns.parse(evidence("999.9","1000","1155","59130"),CapturePart.MAIN_STACK,selection)
+        assertEquals(4,r.readings.size)
+        assertEquals(listOf("999.9"),r.sortedKg.map { it.toPlainString() })
+        assertTrue(r.readings[2].copy(included=true).included)
+        val lb=WeightColumns.parse(evidence("2000","2205"),CapturePart.ADD_ON,selection.copy(unit=StackUnit.LB))
+        assertTrue(lb.readings[0].included)
+        assertFalse(lb.readings[1].included)
+        assertTrue(lb.issues.any { it.startsWith("CHECK WEIGHT") })
+    }
+
 }
