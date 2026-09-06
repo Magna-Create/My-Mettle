@@ -3,6 +3,7 @@ package dev.kian.mymettle.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import dev.kian.mymettle.data.local.dao.ContextDao
+import dev.kian.mymettle.data.local.dao.EquipmentDao
 import dev.kian.mymettle.data.local.dao.HistoryDao
 import dev.kian.mymettle.data.local.dao.InferenceDao
 import dev.kian.mymettle.data.local.dao.LibraryDao
@@ -19,6 +20,8 @@ import dev.kian.mymettle.data.local.entity.ContextAnnotationEntity
 import dev.kian.mymettle.data.local.entity.CycleCompletedDayEntity
 import dev.kian.mymettle.data.local.entity.DerivedEvidenceSummaryEntity
 import dev.kian.mymettle.data.local.entity.DerivedEvidenceSummaryInputEntity
+import dev.kian.mymettle.data.local.entity.EquipmentFactVersionEntity
+import dev.kian.mymettle.data.local.entity.EquipmentInstanceEntity
 import dev.kian.mymettle.data.local.entity.EvidenceTraceChunkEntity
 import dev.kian.mymettle.data.local.entity.EvidenceTraceEntity
 import dev.kian.mymettle.data.local.entity.EvidenceTraceUiCacheEntity
@@ -56,6 +59,7 @@ import dev.kian.mymettle.data.local.entity.NoteInterpretationRunEntity
 import dev.kian.mymettle.data.local.entity.ObservationTraceLinkEntity
 import dev.kian.mymettle.data.local.entity.PerformanceSchemaEntity
 import dev.kian.mymettle.data.local.entity.PerformanceSchemaMetricEntity
+import dev.kian.mymettle.data.local.entity.PreferredEquipmentBindingEntity
 import dev.kian.mymettle.data.local.entity.ProgrammeModeConstraintEntity
 import dev.kian.mymettle.data.local.entity.ProgrammeTargetEntity
 import dev.kian.mymettle.data.local.entity.RecruitmentAllocationEntity
@@ -68,6 +72,7 @@ import dev.kian.mymettle.data.local.entity.RoutineVersionEntity
 import dev.kian.mymettle.data.local.entity.SessionConstraintEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
+import dev.kian.mymettle.data.local.entity.SessionExerciseEquipmentBindingEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseTargetEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseTraceLinkEntity
 import dev.kian.mymettle.data.local.entity.SessionMetricTargetEntity
@@ -79,6 +84,8 @@ import dev.kian.mymettle.data.local.entity.SetDemandEstimateEntity
 import dev.kian.mymettle.data.local.entity.SetDraftMetricValueEntity
 import dev.kian.mymettle.data.local.entity.SetMetricValueEntity
 import dev.kian.mymettle.data.local.entity.SetObservationEntity
+import dev.kian.mymettle.data.local.entity.SetObservationEquipmentOverrideEntity
+import dev.kian.mymettle.data.local.entity.SetObservationLoadSemanticsEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.data.local.entity.SetRecordTraceLinkEntity
 import dev.kian.mymettle.data.local.entity.SkillStateEntity
@@ -163,8 +170,14 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         NBio7EContextModuleStateEntity::class,
         NBio7EContextSignalEntity::class,
         NBio7EContextModuleStatusEntity::class,
+        EquipmentInstanceEntity::class,
+        EquipmentFactVersionEntity::class,
+        PreferredEquipmentBindingEntity::class,
+        SessionExerciseEquipmentBindingEntity::class,
+        SetObservationEquipmentOverrideEntity::class,
+        SetObservationLoadSemanticsEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
 )
 abstract class MyMettleDatabase : RoomDatabase() {
@@ -176,4 +189,5 @@ abstract class MyMettleDatabase : RoomDatabase() {
     abstract fun temporalEvidenceDao(): TemporalEvidenceDao
     abstract fun contextDao(): ContextDao
     abstract fun nBio7EDao(): NBio7EDao
+    abstract fun equipmentDao(): EquipmentDao
 }

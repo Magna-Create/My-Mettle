@@ -240,3 +240,120 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_n_bio_7e_context_module_status_moduleId` ON `n_bio_7e_context_module_status` (`moduleId`)")
     }
 }
+
+/**
+ * Additive 7F canonical equipment/history substrate.
+ *
+ * Room15 execution-profile equipment labels remain untouched and are not reinterpreted as canonical
+ * instance identity. Legacy rows receive no guessed equipment binding or external-load accounting.
+ */
+val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `equipment_instance` (
+                `id` TEXT NOT NULL,
+                `userProfileId` TEXT NOT NULL,
+                `localLabel` TEXT,
+                `source` TEXT NOT NULL,
+                `createdAt` TEXT NOT NULL,
+                `archivedAt` TEXT,
+                PRIMARY KEY(`id`),
+                FOREIGN KEY(`userProfileId`) REFERENCES `user_profile`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_equipment_instance_userProfileId` ON `equipment_instance` (`userProfileId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_equipment_instance_archivedAt` ON `equipment_instance` (`archivedAt`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `equipment_fact_version` (
+                `id` TEXT NOT NULL,
+                `equipmentId` TEXT NOT NULL,
+                `factType` TEXT NOT NULL,
+                `version` INTEGER NOT NULL,
+                `valueKind` TEXT NOT NULL,
+                `textValue` TEXT,
+                `numericValue` REAL,
+                `unit` TEXT,
+                `scope` TEXT,
+                `provenanceType` TEXT NOT NULL,
+                `provenanceReference` TEXT,
+                `quality` TEXT,
+                `createdAt` TEXT NOT NULL,
+                `effectiveAt` TEXT NOT NULL,
+                `supersededAt` TEXT,
+                PRIMARY KEY(`id`),
+                FOREIGN KEY(`equipmentId`) REFERENCES `equipment_instance`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_equipment_fact_version_equipmentId` ON `equipment_fact_version` (`equipmentId`)")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_equipment_fact_version_equipmentId_factType_version` ON `equipment_fact_version` (`equipmentId`, `factType`, `version`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_equipment_fact_version_equipmentId_factType_supersededAt` ON `equipment_fact_version` (`equipmentId`, `factType`, `supersededAt`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `preferred_equipment_binding` (
+                `id` TEXT NOT NULL,
+                `executionProfileId` TEXT NOT NULL,
+                `equipmentId` TEXT NOT NULL,
+                `effectiveAt` TEXT NOT NULL,
+                `supersededAt` TEXT,
+                `source` TEXT NOT NULL,
+                `createdAt` TEXT NOT NULL,
+                PRIMARY KEY(`id`),
+                FOREIGN KEY(`executionProfileId`) REFERENCES `exercise_execution_profile`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`equipmentId`) REFERENCES `equipment_instance`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_preferred_equipment_binding_executionProfileId` ON `preferred_equipment_binding` (`executionProfileId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_preferred_equipment_binding_equipmentId` ON `preferred_equipment_binding` (`equipmentId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_preferred_equipment_binding_executionProfileId_supersededAt` ON `preferred_equipment_binding` (`executionProfileId`, `supersededAt`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `session_exercise_equipment_binding` (
+                `sessionExerciseId` TEXT NOT NULL,
+                `equipmentId` TEXT NOT NULL,
+                `source` TEXT NOT NULL,
+                `boundAt` TEXT NOT NULL,
+                PRIMARY KEY(`sessionExerciseId`),
+                FOREIGN KEY(`sessionExerciseId`) REFERENCES `session_exercise`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`equipmentId`) REFERENCES `equipment_instance`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_session_exercise_equipment_binding_equipmentId` ON `session_exercise_equipment_binding` (`equipmentId`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `set_observation_equipment_override` (
+                `observationId` TEXT NOT NULL,
+                `equipmentId` TEXT NOT NULL,
+                `source` TEXT NOT NULL,
+                `boundAt` TEXT NOT NULL,
+                PRIMARY KEY(`observationId`),
+                FOREIGN KEY(`observationId`) REFERENCES `set_observation`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`equipmentId`) REFERENCES `equipment_instance`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_set_observation_equipment_override_equipmentId` ON `set_observation_equipment_override` (`equipmentId`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `set_observation_load_semantics` (
+                `observationId` TEXT NOT NULL,
+                `externalLoadAccounting` TEXT NOT NULL,
+                `source` TEXT NOT NULL,
+                `recordedAt` TEXT NOT NULL,
+                PRIMARY KEY(`observationId`),
+                FOREIGN KEY(`observationId`) REFERENCES `set_observation`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+    }
+}
