@@ -20,7 +20,7 @@ object WeightOcrParser {
         val lines = evidence.blocks.flatMap { it.lines }.sortedWith(compareBy({ it.box?.top ?: Int.MAX_VALUE }, { it.box?.left ?: Int.MAX_VALUE }))
         lines.forEachIndexed { index, line ->
             val nearbyKg=geometryNumbers.any { it.raw==line.text && it.box==line.box && it.unit==StackUnit.KG } &&
-                !line.text.contains(Regex("kg",RegexOption.IGNORE_CASE))
+                Regex("^[0-9OoIl|]+(?:[.,][0-9OoIl|]+)?$").matches(line.text.trim().replace(" ",""))
             val compact = (line.text + if(nearbyKg) " kg" else "").trim().replace(Regex("\\s+"), " ")
             // Allow spaces within a numeric label (e.g. '1 lkg') only after a strict whole-line match.
             val match = label.matchEntire(compact.replace(" ", ""))

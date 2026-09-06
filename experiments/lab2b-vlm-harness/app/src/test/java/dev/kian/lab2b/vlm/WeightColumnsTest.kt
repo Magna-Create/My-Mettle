@@ -75,4 +75,8 @@ class WeightColumnsTest {
     @Test fun inlinePluralKgIsAccepted() {
         assertEquals("5",WeightOcrParser.parse(evidence(line("5 KGS",300,10)),CapturePart.MAIN_STACK).sortedKg.single().toPlainString())
     }
+    @Test fun adjacentUnitDoesNotDiscardExistingDamagedSuffixCandidate() {
+        val p=WeightOcrParser.parse(evidence(line("KG",300,0),line("127 ko",300,22)),CapturePart.MAIN_STACK)
+        assertEquals("127",p.readings.single().kg.toPlainString());assertFalse(p.readings.single().included)
+    }
 }
