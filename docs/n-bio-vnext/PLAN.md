@@ -4,7 +4,7 @@
 >
 > The complete pre-adaptive plan is preserved verbatim as [`PLAN_LEGACY_PRE_ADAPTIVE.md`](./PLAN_LEGACY_PRE_ADAPTIVE.md). It remains useful historical planning, but assumptions superseded below are not forward requirements.
 >
-> Read this document with [`ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md`](./ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md). The adaptive-inference document is an authoritative additive supplement for mathematical-model, inference-solver and backend architecture. [`CONTEXT_MODULE_ARCHITECTURE.md`](./CONTEXT_MODULE_ARCHITECTURE.md) defines the N-BIO-7E extension requirements; [`NBIO_7E_STATE_CONTEXT_CONTRACT.md`](./NBIO_7E_STATE_CONTEXT_CONTRACT.md) governs the implemented v1 candidate. [`PRODUCT_ROADMAP_GATES.md`](./PRODUCT_ROADMAP_GATES.md) remains authoritative for collaboration/research/Figma and product-safety gates.
+> Read this document with [`ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md`](./ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md). The adaptive-inference document is an authoritative additive supplement for mathematical-model, inference-solver and backend architecture. [`CONTEXT_MODULE_ARCHITECTURE.md`](./CONTEXT_MODULE_ARCHITECTURE.md) defines the N-BIO-7E extension requirements; [`NBIO_7E_STATE_CONTEXT_CONTRACT.md`](./NBIO_7E_STATE_CONTEXT_CONTRACT.md) governs the implemented v1 candidate. [`NBIO_7F_EQUIPMENT_TRANSLATION_CONTRACT.md`](./NBIO_7F_EQUIPMENT_TRANSLATION_CONTRACT.md) governs the research-reconciled N-BIO-7F implementation boundary, and [`RESEARCH_EQUIPMENT_TRANSLATION_GUIDE.md`](./RESEARCH_EQUIPMENT_TRANSLATION_GUIDE.md) records the curated evidence/design synthesis. [`PRODUCT_ROADMAP_GATES.md`](./PRODUCT_ROADMAP_GATES.md) remains authoritative for collaboration/research/Figma and product-safety gates.
 
 ## 1. Purpose
 
@@ -62,11 +62,11 @@ Changes to equations, latent dimensions, priors, likelihoods, pooling, regime ha
 3. **Unknown remains unknown.** Do not fabricate RIR, RPE, failure proximity, body context, equipment translation or missing metrics.
 4. **Capability is not action policy.** What performance is plausibly available and what load/reps the user actually chooses/performs are distinct probabilistic questions.
 5. **Capability is not automatically biology.** Statistical drift is not automatically development, skill, fatigue or recovery.
-6. **Pool statistical behaviour, not physical capability.** Absolute resistance coordinates and profile/side capability remain local unless a separately validated translation model exists.
+6. **Pool statistical behaviour, not physical capability.** Absolute resistance coordinates and profile/side capability remain local unless a separately validated translation model exists. N-BIO-7F may learn uncertain directed relationships between local capability states; it must not create a universal `L_true` or global user-strength scalar.
 7. **Context is typed, modular and gated.** Current N-BIO-7B Candidate-v2 and N-BIO-7D consume `NONE`; sleep/HRV/illness/stress/notes cannot be used to rescue them. Future N-BIO-7E context consumption must flow through versioned `ContextFeature`/`ContextModule` contracts with module-owned replayable memory, explicit allowed inputs/targets and standard uncertainty-aware signals. No tag may directly mutate N-BIO core state merely because it exists.
 8. **Derived inference is rebuildable.** Deleting candidate state cannot cascade into raw evidence.
 9. **Product authority is explicit.** SHADOW/CANDIDATE runs do not alter normal prescriptions, workout UX or `BENCHMARK_V0` authority.
-10. **Room migrations require semantics, not convenience.** Room14 remains sufficient for completed 7B.X/7C/7D. N-BIO-7E advances the development schema to Room15 because module-owned state, generic signals/failures and neutral temporal candidates have no honest Room14 owner. The explicit additive migration does not reinterpret prior rows; PD-001/PD-002/PD-003 remain binding.
+10. **Room migrations require semantics, not convenience.** Room14 remains sufficient for completed 7B.X/7C/7D. N-BIO-7E advances the development schema to Room15 because module-owned state, generic signals/failures and neutral temporal candidates have no honest Room14 owner. N-BIO-7F advances beyond Room15 only if source audit proves canonical equipment identity/version/binding or derived translation state has no honest existing owner. Any 7F migration is additive and must not guess legacy equipment/load semantics. PD-001/PD-002/PD-003 remain binding.
 11. **Backup/replay are acceptance gates.** Full Native backup remains generic; model/solver/module state must reload and raw evidence must replay within documented tolerance.
 12. **Collaboration gates remain mandatory.** `PRODUCT_ROADMAP_GATES.md` is not superseded by backend capability.
 
@@ -142,6 +142,8 @@ Dynamic inference operates only within a coherent semantic regime.
 
 Known metadata boundaries—execution-profile version, equipment/setup, entry basis, resistance semantics, laterality or explicit migration correction—win over statistical smoothing and produce deterministic regime boundaries.
 
+Equipment identity and execution-profile identity remain separate. A change of physical equipment does not automatically require a new `ExecutionProfileVersion`; a new profile/version is required only when the equipment change materially changes existing capability-defining execution semantics. N-BIO-7F must preserve the actual historical equipment context without rewriting execution history merely because today's preferred equipment changed.
+
 Unknown discontinuities may generate a derived changepoint/regime suspicion. Statistical suspicion never rewrites canonical history automatically.
 
 The eventual authoritative Lite→Native migration may manually correct/split known historical semantic mistakes after explicit review. N-BIO-7B.X does not perform that migration cleanup.
@@ -165,6 +167,8 @@ Strictly local by default:
 - execution-profile semantic identity.
 
 Possible future weakly poolable hypotheses include dimensionless rep slope, observation variability, process volatility, action-policy behaviour, outlier prevalence and selected nuisance parameters. None is enabled as a behavioural truth merely because the contract supports it. Semantic-family pooling requires an explicit versioned mapping and held-out evidence.
+
+For N-BIO-7F, hierarchical borrowing may pool **relationship behaviour**, not absolute physical capability. Relatedness/exchangeability is itself a model assumption. Partial pooling does not automatically prevent negative transfer; semantic gating, explicit no-transfer comparison and relationship-level diagnostics remain required.
 
 ContextModule learning follows the same maturity discipline: direct personal context episodes should dominate generic priors as evidence accumulates, repeated rows from one episode must not masquerade as independent evidence, and unsupported modules remain broad/neutral rather than producing dramatic user-specific effects.
 
@@ -260,6 +264,8 @@ Track at minimum where the predictive representation supports them:
 - model availability/numerical failure;
 - profile-level results.
 
+For N-BIO-7F, every transfer candidate must be compared with a destination-only/no-transfer prediction containing all legitimate destination information except source-profile capability evidence. Report negative transfer as paired score differences, fraction of events made worse, severe tail losses and relationship/equipment-family strata; a favourable global mean cannot hide a repeatedly harmful relationship family. Scaled scores may be secondary cross-scale diagnostics but do not make heterogeneous outcomes one physical quantity.
+
 Historical data already inspected during development remains development evidence. Fresh future workouts provide the strongest confirmatory evidence.
 
 Future ContextModules must be judged similarly where their output is predictive: compare a context-free baseline with the context-aware candidate chronologically. A tag does not earn state influence because it is intuitive, common or confidently extracted.
@@ -336,6 +342,8 @@ Do not port backup/acceptance overhead and claim inference improved. Model compu
 
 Room remains **14** through the implemented N-BIO-7D SHADOW demand/dose pipeline unless a genuine semantic impossibility is demonstrated.
 
+N-BIO-7E advances the development schema to **Room15** for its accepted modular temporal/context substrate. N-BIO-7F starts from Room15. Advance the schema again only if the source audit proves the required canonical equipment history/binding or derived translation state has no honest existing owner.
+
 Reuse existing inference run/model config/manifest/capability/parameter-state storage where semantically sufficient.
 
 Solver/model/module parameter codecs require:
@@ -352,6 +360,8 @@ For deterministic solvers/modules, replay equivalence must be explicit. Approxim
 
 Future ContextModule memory and ContextSignals are derived state. They must be deletable/rebuildable from authorised canonical evidence plus declared upstream versions and must never become a hidden non-replayable memory store.
 
+N-BIO-7F equipment identity, accepted equipment facts and actual historical equipment bindings are canonical evidence. Learned transfer relationships are derived. Deleting/rebuilding 7F state must not delete or reinterpret canonical equipment history.
+
 ## 16. Factor/dependency architecture
 
 N-BIO retains the minimum explicit dependency/invalidation abstraction required for:
@@ -360,6 +370,8 @@ N-BIO retains the minimum explicit dependency/invalidation abstraction required 
 - semantic boundaries;
 - model-version reanalysis;
 - context reannotation/module-model reanalysis;
+- equipment-binding/interpretation corrections;
+- translation-model reanalysis;
 - incremental recomputation.
 
 A literal factor-graph/iSAM2 dependency is not required unless future posterior/factor structure demonstrates a material benefit.
@@ -418,7 +430,68 @@ N-BIO-9 remains the later product/integration phase for broader context UX, addi
 
 It must plug those sources into the 7E context-module protocol rather than inventing a parallel context-learning architecture. N-BIO-9 no longer owns creation of the core context-learning platform.
 
-## 18. Forward N-BIO roadmap
+## 18. N-BIO-7F equipment context and cross-profile translation
+
+The 7F research pass is complete enough to preregister implementation. The governing research synthesis is [`RESEARCH_EQUIPMENT_TRANSLATION_GUIDE.md`](./RESEARCH_EQUIPMENT_TRANSLATION_GUIDE.md); the implementation boundary is [`NBIO_7F_EQUIPMENT_TRANSLATION_CONTRACT.md`](./NBIO_7F_EQUIPMENT_TRANSLATION_CONTRACT.md).
+
+### 18.1 Equipment is canonical context, not a ContextModule-owned truth
+
+Equipment includes free weights and machines. Stable anonymous equipment is valid even when manufacturer/model are unknown.
+
+Canonical Core/domain history owns what equipment existed, what was known/configured about it, and what was actually used for historical evidence. ContextModules may consume confirmed equipment semantics or learn auxiliary context effects, but their replayable private memory does not own canonical equipment identity/history.
+
+Preferred/default equipment is user/product preference state and must not be baked into immutable execution-profile semantics. Actual historical use must remain resolvable independently of today's preference.
+
+### 18.2 Local physics remains local
+
+Keep separate:
+
+```text
+USER-ENTERED / CANONICAL VALUE
+EQUIPMENT INTERPRETATION
+PROFILE-LOCAL CAPABILITY
+CROSS-PROFILE RELATIONSHIP
+```
+
+Exact implement mass, documented local pulley mechanics or another semantically exact fact may support deterministic local arithmetic. They do not create a universal equipment load.
+
+Current `EntryBasis` remains the aggregation axis. 7F must add only the minimum orthogonal ability to distinguish complete/inclusive external load from added-only external load where that changes meaning. Unknown legacy conventions remain unknown.
+
+Selector-labelled kg remains a mass-labelled local device coordinate; `MACHINE_LEVEL` remains ordinal.
+
+### 18.3 Transfer consumes existing local capability
+
+The first production 7F transfer boundary consumes typed existing capability posterior/predictive information rather than rebuilding capability from raw working sets.
+
+The transfer message must preserve enough source meaning/uncertainty for the candidate: profile/version, equipment context, capability family, causal evidence cutoff/as-of time, supported domain, relevant posterior/dependence information and upstream model/config/solver provenance.
+
+Do not reduce this to a universal scalar or an unvalidated `mean + variance` envelope.
+
+### 18.4 Champion/challenger order
+
+```text
+N0  destination-only / no-transfer champion
+N1  equipment-blind same-profile diagnostic where applicable
+M0  first simple directed robust relationship challenger
+M1  shared same-profile capability + equipment observation mappings, OPEN
+M2  equipment-local capability facets + directed translation, OPEN
+```
+
+M0 exact mathematics must be preregistered before real-history fitting.
+
+Do not add the sparse central graph/hypermodel until simpler relationships demonstrate a need.
+
+Do not naively combine correlated source profiles as independent evidence. V1 should score source relationships independently or use one source under a deterministic preregistered policy until dependence-aware multi-source combination is explicitly modelled.
+
+M1 versus M2 must be decided with genuine repeated-equipment history, not architecture preference or synthetic fit alone. If current history cannot evaluate them, preserve `NOT_EVALUATED_REAL_HISTORY` and carry the empirical debt forward.
+
+### 18.5 Scope boundary
+
+N-BIO-7F does not implement camera/OCR equipment recognition, final equipment setup UX, N-BIO-8 prescription behaviour, programme edits, conditioning, cloud population learning or automatic profile rewriting from equipment selection.
+
+All 7F candidates remain SHADOW unless a later explicit promotion gate says otherwise.
+
+## 19. Forward N-BIO roadmap
 
 ```text
 N-BIO-6   complete foundation — generic scalar + temporal evidence/provenance
@@ -434,7 +507,7 @@ N-BIO-7D   structurally closed — physical installed-history SetDemand/Exposure
 PD-002     OPEN — 7D empirical SetDemand/EffectiveDose calibration remains quarantined from structural success
 N-BIO-7E   structurally closed — physical Room15 temporal/context acceptance passed; capability baseline remains real-history champion; all 7E candidates SHADOW under PD-003
 PD-003     OPEN — 7E temporal/context calibration, biological interpretation and prospective usefulness remain quarantined
-N-BIO-7F   later cross-profile/equipment translation under dedicated equipment contracts
+N-BIO-7F   research-reconciled and preregistered — equipment semantic substrate + directed cross-profile transfer implementation next; SHADOW only
 N-BIO-7G   later conditioning capability
 N-BIO-7H   later replay/validation closure where retained by the active roadmap
 N-BIO-8    later constrained programme-resolution/decision layer; collaboration gates mandatory
@@ -444,9 +517,11 @@ Native Cutover last
 
 N-BIO-7E establishes neutral persistent/transient statistical state and the generic context-association substrate without silently starting N-BIO-8 coaching policy. Recovery/Fatigue/Skill/Development naming remains evidence-dependent rather than mandatory merely because persistence scaffolding exists.
 
-Cross-profile translation, equipment intelligence, conditioning, broader Health Connect/HR integration and product-facing adaptive programme behaviour remain later phases under their own gates.
+N-BIO-7F is now the active next backend mission. Its research supports stable equipment history, local physical interpretation and uncertainty-aware relationship learning; it does not author universal equipment conversion or product-facing equipment UX.
 
-## 19. N-BIO-8 / V8 direction
+Conditioning, broader Health Connect/HR integration and product-facing adaptive programme behaviour remain later phases under their own gates.
+
+## 20. N-BIO-8 / V8 direction
 
 Do not freeze V8 as model-free reinforcement learning.
 
@@ -454,11 +529,11 @@ The leading architecture is **constrained Bayesian decision-making**, with stoch
 
 N-BIO-8 should preferentially consume N-BIO's combined context-conditioned state/prediction rather than contain a second ad-hoc per-tag learner or a growing hard-coded table such as `ILLNESS → reduce load`.
 
-No V8 prescription behaviour is implemented merely by establishing the 7E context platform.
+No V8 prescription behaviour is implemented merely by establishing the 7E context platform or the 7F equipment/translation substrate.
 
 `PRODUCT_ROADMAP_GATES.md` collaboration/research/Figma requirements remain mandatory before behaviour-driving programme-resolution work.
 
-## 20. Global completion rule
+## 21. Global completion rule
 
 An N-BIO phase/candidate is not complete because code compiles. Closure requires the relevant combination of:
 
@@ -478,4 +553,6 @@ An N-BIO phase/candidate is not complete because code compiles. Closure requires
 
 For N-BIO-7E specifically, structural closure also requires proving that context modules are truly modular/stateful/replayable, new features do not require feature-specific branching in N-BIO Core, module scope/missingness/temporal semantics are enforced, correlated signals are not naively double-counted, and context-aware candidates can be compared against context-free baselines.
 
-When empirical evidence is insufficient, the correct result is `INCONCLUSIVE`/deferred—not invented certainty.
+For N-BIO-7F specifically, structural closure also requires proving that historical equipment/load meaning is auditable without rewriting raw evidence, free weights are first-class equipment, unknown mechanics stay unknown, canonical equipment history is separate from derived transfer state, the destination-only baseline remains available, transfer chronology is leak-free, correlated sources are not silently double-counted, negative-transfer diagnostics are preserved, and M1/M2 remain open when real repeated-equipment history is insufficient.
+
+When empirical evidence is insufficient, the correct result is `INCONCLUSIVE` / `EMPIRICAL_ACCURACY_PENDING` / `NOT_EVALUATED_REAL_HISTORY` / deferred as appropriate—not invented certainty.
