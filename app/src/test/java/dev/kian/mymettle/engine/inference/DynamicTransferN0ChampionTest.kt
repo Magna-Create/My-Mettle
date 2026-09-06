@@ -52,7 +52,7 @@ class DynamicTransferN0ChampionTest {
         assertEquals(fit.destinationFit.executionProfileVersionId, next.executionProfileVersionId)
         assertEquals(fit.destinationFit.side, next.side)
         assertEquals(fit.destinationFit.referenceRepetitions, next.referenceRepetitions)
-        assertTrue(requireNotNull(next.frontierAtReference.summary).median > 0.0)
+        assertTrue(requireNotNull(next.frontierAtReference.summary).p50 > 0.0)
     }
 
     @Test
