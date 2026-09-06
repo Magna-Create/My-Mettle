@@ -44,3 +44,52 @@ Source remains 58aca1ee2da021aa4cb1141b1326869520a74114; this journal is committ
 
 NEXT:
 Implement the minimal canonical equipment + load-semantics Room16 substrate, including explicit additive 15→16 migration and migration/domain tests, without yet starting transfer modelling.
+
+## Session 2 — 2026-09-06 15:56 BST
+
+HEAD IN:
+a9a1c2e786e3a2128fe3515138e2e62b4c4bb52f
+
+OBJECTIVE:
+Implement the minimal canonical equipment + load-semantics Room16 substrate and explicit additive Room15→16 migration, stopping before transfer modelling.
+
+SOURCE FINDINGS:
+- The Room16 topology can remain additive: no existing canonical row needs reinterpretation or mutation.
+- `PLAN.md` explicitly states that `fallbackToDestructiveMigration(true)` remains acceptable during development and is removed only at Native cutover. Therefore 7F should add an explicit 15→16 migration but must not silently change the broader development reset policy.
+- An observation-level override is the smallest honest way to support equipment changes within a session-exercise occurrence without duplicating all set history. Session-exercise binding remains the normal actual-use owner; observation override is exceptional.
+- Complete/inclusive-vs-added-only external-load meaning is cleanly represented as observation-local canonical semantics separate from `EntryBasis`; null/absent row remains the legacy unknown state.
+
+CHANGES:
+- Added `domain/equipment/EquipmentModels.kt` with stable equipment identity, general equipment kinds, typed/versioned equipment facts, required provenance classes, and orthogonal `ExternalLoadAccounting` semantics.
+- Added Room16 canonical entities for stable equipment instances, atomic fact versions, preferred equipment history, actual session-exercise equipment binding, observation-level equipment override, and observation-local load semantics.
+- Added `EquipmentDao` with insert/read surfaces for the canonical substrate.
+- Advanced `MyMettleDatabase` to Room16 and registered `EquipmentDao` plus all new entities.
+- Added explicit additive `MIGRATION_15_16`; it creates only new tables/indexes and performs no legacy backfill.
+- Registered `MIGRATION_15_16` in the database builder while retaining the source-authorised development fallback policy.
+- Added `NBio7FRoomMigrationTest` asserting Room15 data survives, all new tables exist empty, no guessed canonical equipment/load rows are created, and FKs remain clean.
+- Added domain tests covering orthogonal load accounting, scalar fact/unit validation, and no inferred cable mechanics from equipment kind.
+- Updated Android CI to verify generated Room16 schema output while retaining the committed Room15 schema check.
+
+TESTS:
+- GitHub Actions Android CI run 34040716638 for source commit `0794fe30e7ffd0648c79b06f965755abbe1fb4e6` started successfully.
+- Setup, reference-asset verification, exercise-authoring schema verification, context boundary verification, Context Module docs verification, whitespace check, and Gradle clean all passed.
+- At session checkpoint the `:app:testDebugUnitTest :app:assembleDebug` step was still in progress; instrumentation compile, lint and Room16 schema verification had not yet completed. Do not treat this as a green exact-head CI result.
+- Local clone/build was unavailable because the execution environment cannot resolve github.com; GitHub branch CI is therefore the active compile/test oracle for this slice.
+
+DECISIONS:
+- Room16 canonical facts are atomic/versioned rather than one mutable machine record. This preserves distinct OEM specification, user configuration, deterministic derivation and measured instance calibration provenance without implying all fields share one epistemic source.
+- Equipment identity remains independent of `ExecutionProfileVersion`; existing `execution_profile_version.equipmentIdentity/equipmentType` fields are untouched legacy/profile semantics, not migrated into new canonical equipment rows.
+- Preferred equipment is versioned separately from actual historical use. A session-only/observation-only actual-use binding cannot become preference merely by persistence shape.
+- `ExternalLoadAccounting` intentionally has no `UNKNOWN` enum value; absence of canonical semantics is the unknown state, preventing migration from inventing knowledge.
+- Existing `DEVICE_ORDINAL` behaviour is untouched. No ratio, starting resistance, friction or unit conversion defaults were added.
+
+OPEN QUESTIONS:
+- CI result for source commit `0794fe30e7ffd0648c79b06f965755abbe1fb4e6` must be checked first next session and any compile/Room mismatch fixed before adding behaviour.
+- Repository/service-level write orchestration still needs to enforce preference supersession, actual-use resolution precedence, and fact-version lifecycle; the current Room DAO is a persistence substrate only.
+- Local deterministic equipment interpretation remains the subsequent 7F-B task after historical binding/preference behaviour is proven.
+
+HEAD OUT:
+Source checkpoint `0794fe30e7ffd0648c79b06f965755abbe1fb4e6`; this journal update is committed on top as the session handoff.
+
+NEXT:
+First resolve the CI result for `0794fe30e7ffd0648c79b06f965755abbe1fb4e6`. If green, implement and test canonical equipment write/resolution behaviour: preference supersession, session actual-use binding, observation override precedence, and immutable historical separation without yet starting local physics or transfer modelling.
