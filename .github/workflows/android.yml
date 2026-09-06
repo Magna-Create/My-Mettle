@@ -73,8 +73,8 @@ jobs:
         run: |
           test -f app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/15.json
           grep -q '"version": 15' app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/15.json
-          test -f app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/16.json
-          grep -q '"version": 16' app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/16.json
+          test -f app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/17.json
+          grep -q '"version": 17' app/schemas/dev.kian.mymettle.data.local.MyMettleDatabase/17.json
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

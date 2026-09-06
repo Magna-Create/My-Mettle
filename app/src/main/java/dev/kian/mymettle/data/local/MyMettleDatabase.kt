@@ -3,6 +3,7 @@ package dev.kian.mymettle.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import dev.kian.mymettle.data.local.dao.ContextDao
+import dev.kian.mymettle.data.local.dao.EquipmentCorrectionDao
 import dev.kian.mymettle.data.local.dao.EquipmentDao
 import dev.kian.mymettle.data.local.dao.HistoryDao
 import dev.kian.mymettle.data.local.dao.InferenceDao
@@ -72,6 +73,7 @@ import dev.kian.mymettle.data.local.entity.RoutineVersionEntity
 import dev.kian.mymettle.data.local.entity.SessionConstraintEntity
 import dev.kian.mymettle.data.local.entity.SessionEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEntity
+import dev.kian.mymettle.data.local.entity.SessionExerciseEquipmentBindingCorrectionEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseEquipmentBindingEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseTargetEntity
 import dev.kian.mymettle.data.local.entity.SessionExerciseTraceLinkEntity
@@ -84,7 +86,9 @@ import dev.kian.mymettle.data.local.entity.SetDemandEstimateEntity
 import dev.kian.mymettle.data.local.entity.SetDraftMetricValueEntity
 import dev.kian.mymettle.data.local.entity.SetMetricValueEntity
 import dev.kian.mymettle.data.local.entity.SetObservationEntity
+import dev.kian.mymettle.data.local.entity.SetObservationEquipmentOverrideCorrectionEntity
 import dev.kian.mymettle.data.local.entity.SetObservationEquipmentOverrideEntity
+import dev.kian.mymettle.data.local.entity.SetObservationLoadSemanticsCorrectionEntity
 import dev.kian.mymettle.data.local.entity.SetObservationLoadSemanticsEntity
 import dev.kian.mymettle.data.local.entity.SetRecordEntity
 import dev.kian.mymettle.data.local.entity.SetRecordTraceLinkEntity
@@ -176,8 +180,11 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         SessionExerciseEquipmentBindingEntity::class,
         SetObservationEquipmentOverrideEntity::class,
         SetObservationLoadSemanticsEntity::class,
+        SessionExerciseEquipmentBindingCorrectionEntity::class,
+        SetObservationEquipmentOverrideCorrectionEntity::class,
+        SetObservationLoadSemanticsCorrectionEntity::class,
     ],
-    version = 16,
+    version = 17,
     exportSchema = true,
 )
 abstract class MyMettleDatabase : RoomDatabase() {
@@ -190,4 +197,5 @@ abstract class MyMettleDatabase : RoomDatabase() {
     abstract fun contextDao(): ContextDao
     abstract fun nBio7EDao(): NBio7EDao
     abstract fun equipmentDao(): EquipmentDao
+    abstract fun equipmentCorrectionDao(): EquipmentCorrectionDao
 }

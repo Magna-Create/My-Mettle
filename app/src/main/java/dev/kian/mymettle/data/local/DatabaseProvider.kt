@@ -16,7 +16,14 @@ object DatabaseProvider {
             MyMettleDatabase::class.java,
             DATABASE_NAME,
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_14_15, MIGRATION_15_16)
+            .addMigrations(
+                MIGRATION_1_2,
+                MIGRATION_2_3,
+                MIGRATION_3_4,
+                MIGRATION_14_15,
+                MIGRATION_15_16,
+                MIGRATION_16_17,
+            )
             .fallbackToDestructiveMigration(true)
             .addCallback(ReferenceSeedCallback(context.applicationContext))
             .build()
