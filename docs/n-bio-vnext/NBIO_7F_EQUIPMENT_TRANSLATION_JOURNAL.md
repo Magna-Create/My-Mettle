@@ -257,3 +257,86 @@ Source checkpoint `321ef02a28d2a78dd591c5c96a3b2ecf0e820186` is green in Android
 
 NEXT:
 Return to the deferred canonical-safety step before M0: implement auditable correction/supersession semantics for historical actual-equipment/load-semantics records, dependency-scoped invalidation for affected derived equipment/translation consumers, and explicit Room16 backup/replay proof. Do not create or fit M0 yet.
+
+## Session 6 — 2026-09-06 — RECONSTRUCTED FROM COMMITTED SOURCE/CI
+
+HEAD IN:
+321ef02a28d2a78dd591c5c96a3b2ecf0e820186
+
+OBJECTIVE:
+Close the deferred 7F-E canonical correction/invalidation/migration/backup/replay gate, then freeze the exact M0 mathematics before any real-history M0 fitting.
+
+SOURCE FINDINGS:
+- Room16 base equipment assertions can remain immutable if corrections are represented as append-only epistemic overlays rather than destructive replacement.
+- Correction invalidation needs stable canonical dependency roots naming the corrected concept, not one correction row, so every successor correction invalidates the same derived dependency without deleting raw performance evidence.
+- Native full backup is schema-driven and can preserve Room17 canonical/correction tables when restore uses the exact current schema and foreign keys remain valid.
+- The accepted Candidate-v2 Adaptive Sparse joint posterior is sufficient to define M0 as a nested directed source covariate without introducing a universal equipment/load coordinate.
+
+CHANGES:
+- Advanced the equipment-correction substrate to Room17 with additive correction ledgers for session actual equipment, observation equipment override and observation load semantics.
+- Added append-only correction domain/entity/DAO surfaces and repository orchestration with contiguous versions, stale-previous-value rejection, non-decreasing correction time and explicit retraction to unknown where authorised.
+- Added stable `EquipmentCanonicalDependencyId` roots and `EquipmentInvalidationImpact` so affected derived equipment/translation consumers can be invalidated without touching unrelated raw evidence.
+- Historical resolution now applies the auditable correction chain over immutable base assertions while preserving observation-override → session-actual precedence and never consulting current preference.
+- Added Room16→17 migration proof and Native equipment backup/restore/replay instrumentation coverage. The migration proof was made serializer-independent by comparing migrated table shape with the current Room schema rather than requiring a checked-in intermediate Room16 serializer snapshot.
+- Added/updated CI to execute the targeted Room17 correction + Native backup proof on an Android emulator.
+- Created `docs/n-bio-vnext/NBIO_7F_M0_MODEL_SPEC.md` and froze the exact directed M0 candidate before any real-history fitting.
+
+TESTS:
+- Exact source checkpoint `bf1e904f78275847b11f685b371cc921dae2332a` completed successfully in Android CI run 34052849605, including normal Android build/test/lint/schema gates and the dedicated emulator Room17 correction + Native backup/replay proof.
+- Frozen-spec checkpoint `1e3d0f7822ae3f59c547740fb8e9b7978fdf2c1b` completed successfully in exact-head Android CI run 34054584318.
+- No real-history M0 fit was run before or during preregistration.
+
+DECISIONS:
+- 7F-E's structural storage/correction/replay gate is complete. Canonical equipment corrections are auditable overlays; raw performance and Room16 base assertions are not rewritten.
+- M0 is a directed extension of the destination Candidate-v2 frontier, not an equipment converter. `beta = 0` is defined to reproduce N0 exactly.
+- Source uncertainty is propagated from the accepted joint source posterior through a deterministic joint-node coreset; the coreset budget is numerical approximation, not an evidence-count threshold.
+- Unpaired destination sessions remain N0-only rather than being discarded. Same-session source evidence is excluded by the frozen causal cutoff.
+- Explicit versioned directed relationship admissibility is mandatory; display-name/muscle/equipment-family similarity cannot self-authorise transfer.
+- The frozen M0 config identity is `modelcfg_sha256_f4fa3fb165873df5407da1daefcb9bce3656caa9586ecefe3b35a0ca42c79961`. Material behavioural changes require a new candidate/config identity; negative outcomes survive.
+
+HEAD OUT:
+`1e3d0f7822ae3f59c547740fb8e9b7978fdf2c1b`
+
+NEXT:
+Implement the explicit N0 destination-only champion surface using the already selected Candidate-v2 + Adaptive Sparse stack. Do not write M0 inference until N0 is independently typed and tested.
+
+## Session 7 — 2026-09-06 21:49 BST
+
+HEAD IN:
+1e3d0f7822ae3f59c547740fb8e9b7978fdf2c1b
+
+OBJECTIVE:
+Implement and prove the explicit N0 destination-only champion surface required by the frozen 7F model spec, without starting M0 numeric transfer.
+
+SOURCE FINDINGS:
+- N0 does not justify a second mathematical candidate or duplicate frontier fitter. It should bind the 7F baseline role to the already selected Candidate-v2 mathematics and Adaptive Sparse solver.
+- The accepted `DynamicTrendFrontierFit` already preserves the complete joint destination posterior, mathematical identity, solver identity, evidence support and provenance needed by later M0 comparison.
+- Making the N0 fit API accept only a destination projection is a stronger structural guarantee than accepting source inputs and promising to ignore them.
+
+CHANGES:
+- Added `NBio7FN0V1` with immutable destination-only role identity and the exact selected Candidate-v2/Adaptive Sparse configuration from the frozen M0 spec.
+- Added `DynamicTransferN0Fit`, which wraps the complete accepted destination `DynamicTrendFrontierFit` and rejects mismatched mathematical or solver identity rather than copying/reducing posterior fields.
+- Added `DynamicTransferN0Champion`, which fits the frozen Candidate-v1 base and selected Candidate-v2 Adaptive Sparse destination stack using destination evidence only, then exposes the normal accepted next-independent-session N0 projection.
+- Added N0 unit tests proving exact role/model/solver/config identity, destination observation/session retention, next-session projection and rejection of a Conditional-Laplace fit masquerading as N0.
+- Initial CI exposed one test-only compile error because `PosteriorSummary` names its median field `p50`, not `median`; corrected without changing production N0 behaviour.
+
+TESTS:
+- Initial source checkpoint `c0fbc33cc70f4f6da19e9767ac9112398ada25ea`, Android CI run 34058456662: production Kotlin/debug APK compilation reached the new unit-test compile, which failed only on the incorrect test field name `median`; the dedicated emulator storage/backup proof still completed successfully.
+- Fix checkpoint `3c0dc4fc3f230b380560945b564aca39094686f4`, exact-head Android CI run 34058790643: all gates passed.
+- `:app:testDebugUnitTest :app:assembleDebug` passed, including the new N0 tests.
+- `:app:assembleDebugAndroidTest` passed.
+- Android lint and Room17 exported-schema verification passed.
+- Dedicated Room17 correction + Native backup/replay emulator proof passed again.
+
+DECISIONS:
+- N0 is an explicit evaluation role around the accepted Candidate-v2 + Adaptive Sparse stack, not a new model family/config and not `InferenceModelComponent.TRANSLATION`.
+- N0 structurally cannot consume source capability because its fit boundary has no source parameter.
+- N0 preserves the complete destination joint posterior for M0 rather than reducing it to summary moments.
+- N0 retains the accepted upstream next-session extrapolation behaviour. M0's frozen no-extrapolation/source-domain rules remain separate and must not leak backwards into N0.
+- Normal product authority remains `BENCHMARK_V0`; N0 is SHADOW/developer-only.
+
+HEAD OUT:
+`3c0dc4fc3f230b380560945b564aca39094686f4`
+
+NEXT:
+Implement the first frozen M0 structural/synthetic kernel: immutable M0 config identity, directed admissibility/source-anchor preparation, deterministic joint source coreset and beta quadrature, with `beta = 0` reproducing N0. Keep it synthetic-only and do not fit real history yet.
