@@ -77,3 +77,11 @@
 - Checkpoint 1 remote commit `2821757577d7bb64479767e3bbd2b5e2bcda40b7`; Actions 34001253511 SUCCESS. Build, unit tests, lint, source/binary safety, all ten 16 KB native ELF checks, ZIP alignment and Termux prebuilt-path rebuild pass.
 - Added three supplied-sample regression tests, explicit OCR cache-hit timing, atomic filtered PNG writes and lower filter memory overhead. Return from model comparison unloads the engine and disallows navigation while inference is active.
 - No runtime/native dependency changes. New screen uses deterministic parsing; gap suggestions do not insert values. Final validation run follows this checkpoint; physical capture/filter/review correctness remains pending.
+
+## OCR branch final validation — 2026-09-06
+
+- Built source `0673d74dc0b379c940c6aa586a5fd69139161817`; run 34001505730 SUCCESS. 35 tests, zero failures/errors/skips, lint, APK, source/binary safety and Termux prebuilt rebuild pass.
+- APK 36,522,937 bytes; SHA-256 `f72b0cd0f67a495615daec36e4da79fe671770d6893753319cccca2832cc721b`; artifact lab2b-vlm-harness-debug ID 9979664837.
+- Ten native libraries, 20,327,800 bytes, static 16 KB ELF and ZIP alignment PASS. Native sources/dependencies unchanged; existing Termux bundle reused with hash verification.
+- Original lab branch remains `de40aa37c4314713ae06b55ee0a0550906d02f72`; live N-BIO `5727ea95cf692c8ea0145bdb4cc0ac5a4dc705de`. Production/N-BIO source diff empty. No model binaries tracked.
+- LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING. LAB-2C NOT STARTED. Final documentation commit only; no code changes after successful build.

@@ -1,7 +1,13 @@
 # LAB-2B 0.4 OCR stack experiment
 
 Branch: `agent/lab2b-ocr-stack`, forked from `agent/ui-ml-lab` at `de40aa37c4314713ae06b55ee0a0550906d02f72`.
-Status: implementation validation in progress; physical acceptance pending. LAB-2C not started.
+Status: LAB-2B IMPLEMENTATION READY / PHYSICAL ACCEPTANCE PENDING. LAB-2C NOT STARTED.
+
+Validated source: `0673d74dc0b379c940c6aa586a5fd69139161817`. [Actions run 34001505730](https://github.com/Magna-Create/My-Mettle/actions/runs/34001505730) SUCCESS: 35 unit tests, zero failures/errors/skips; APK assembly, lint, source/binary isolation, all ten native ELF LOAD alignments and APK ZIP alignment pass. Termux prebuilt-path rebuild and current/known-legacy native reuse pass; changed C++ reuse is rejected.
+
+APK: 36,522,937 bytes. SHA-256: `f72b0cd0f67a495615daec36e4da79fe671770d6893753319cccca2832cc721b`. Artifact `lab2b-vlm-harness-debug`, ID `9979664837`. Native payload unchanged at 20,327,800 bytes across ten libraries. A locally signed Termux APK can have a different hash. No model binaries committed. Production app, N-BIO, Room/equipment code and LAB-2C are unchanged. Live N-BIO: `5727ea95cf692c8ea0145bdb4cc0ac5a4dc705de`.
+
+The tests validate extraction from supplied OCR text, not camera/OCR accuracy or model inference. Physical camera capture, crop interaction, filter comparisons and force-close/relaunch acceptance remain pending on the S25.
 
 ## Scope and evidence
 
