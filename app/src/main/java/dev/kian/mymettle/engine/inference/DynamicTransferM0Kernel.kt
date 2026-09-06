@@ -50,6 +50,9 @@ object NBio7FM0V1 {
     private const val EQUATION = "y=c+g*z-b*x+beta*q_source-u+epsilon"
     private const val SOURCE_ANCHOR =
         "S=logFrontierLatest-slope*ln(destinationReferenceReps/sourceReferenceReps)"
+    private const val BETA_QUADRATURE_WEIGHTS =
+        "0.0005482688559722182,0.030757123967586515,0.24012317860501273,0.45714285714285713," +
+            "0.24012317860501273,0.030757123967586515,0.0005482688559722182"
 
     val mathematicalModelIdentity = InferenceMathematicalModelIdentity(
         family = MODEL_FAMILY,
@@ -120,7 +123,7 @@ object NBio7FM0V1 {
             "betaPrior" to "normal(mean=0,sd=0.35)",
             "betaQuadratureRule" to "gauss_hermite_7_standard_normal_fixed_v1",
             "betaQuadratureNodes" to betaQuadrature.joinToString(",") { betaNodeString(it.beta) },
-            "betaQuadratureWeights" to betaQuadrature.joinToString(",") { it.priorWeight.toString() },
+            "betaQuadratureWeights" to BETA_QUADRATURE_WEIGHTS,
             "sourcePosteriorCoreset" to SOURCE_CORESET_IDENTITY,
             "sourcePosteriorCoresetSort" to
                 "sourceAnchor,logFrontierAtLatestSession,slope,frontierTrend,slackScale,noiseScale,stableOriginalIndex",
