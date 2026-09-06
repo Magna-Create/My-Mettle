@@ -71,10 +71,14 @@ CHANGES:
 - Updated Android CI to verify generated Room16 schema output while retaining the committed Room15 schema check.
 
 TESTS:
-- GitHub Actions Android CI run 34040716638 for source commit `0794fe30e7ffd0648c79b06f965755abbe1fb4e6` started successfully.
-- Setup, reference-asset verification, exercise-authoring schema verification, context boundary verification, Context Module docs verification, whitespace check, and Gradle clean all passed.
-- At session checkpoint the `:app:testDebugUnitTest :app:assembleDebug` step was still in progress; instrumentation compile, lint and Room16 schema verification had not yet completed. Do not treat this as a green exact-head CI result.
-- Local clone/build was unavailable because the execution environment cannot resolve github.com; GitHub branch CI is therefore the active compile/test oracle for this slice.
+- GitHub Actions Android CI run 34040716638 for source commit `0794fe30e7ffd0648c79b06f965755abbe1fb4e6` completed successfully.
+- Reference-asset verification, exercise-authoring schema verification, context boundary verification, Context Module docs verification, whitespace check and Gradle clean all passed.
+- `:app:testDebugUnitTest :app:assembleDebug` passed, including the new equipment domain tests.
+- `:app:assembleDebugAndroidTest` passed, so the new Room15→16 migration test compiles into the instrumentation suite.
+- Android lint passed.
+- Generated Room16 schema verification passed; CI confirmed `16.json` was produced with database version 16.
+- CI uploaded both the debug APK and Room schema artifacts successfully.
+- Local clone/build was unavailable because the execution environment cannot resolve github.com; GitHub branch CI was therefore the compile/test oracle for this slice.
 
 DECISIONS:
 - Room16 canonical facts are atomic/versioned rather than one mutable machine record. This preserves distinct OEM specification, user configuration, deterministic derivation and measured instance calibration provenance without implying all fields share one epistemic source.
@@ -84,12 +88,11 @@ DECISIONS:
 - Existing `DEVICE_ORDINAL` behaviour is untouched. No ratio, starting resistance, friction or unit conversion defaults were added.
 
 OPEN QUESTIONS:
-- CI result for source commit `0794fe30e7ffd0648c79b06f965755abbe1fb4e6` must be checked first next session and any compile/Room mismatch fixed before adding behaviour.
 - Repository/service-level write orchestration still needs to enforce preference supersession, actual-use resolution precedence, and fact-version lifecycle; the current Room DAO is a persistence substrate only.
 - Local deterministic equipment interpretation remains the subsequent 7F-B task after historical binding/preference behaviour is proven.
 
 HEAD OUT:
-Source checkpoint `0794fe30e7ffd0648c79b06f965755abbe1fb4e6`; this journal update is committed on top as the session handoff.
+Source checkpoint `0794fe30e7ffd0648c79b06f965755abbe1fb4e6` is green in Android CI run 34040716638; journal-only commits follow on the same branch.
 
 NEXT:
-First resolve the CI result for `0794fe30e7ffd0648c79b06f965755abbe1fb4e6`. If green, implement and test canonical equipment write/resolution behaviour: preference supersession, session actual-use binding, observation override precedence, and immutable historical separation without yet starting local physics or transfer modelling.
+Implement and test canonical equipment write/resolution behaviour: preference supersession, session actual-use binding, observation override precedence, fact-version lifecycle, and immutable historical separation without yet starting local physics or transfer modelling.
