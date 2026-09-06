@@ -379,3 +379,54 @@ HEAD OUT:
 
 NEXT:
 Complete the remaining preregistered M0 structural/synthetic proof surface before any real-history fit: destination-session atomic source freezing, future/same-session source exclusion, unpaired-destination zero M0 increment, destination M0 no-extrapolation while N0 remains available, explicit no-multi-source/no-transitivity enforcement, and correction-dependency invalidation/deterministic replay coverage.
+
+## Session 9 — 2026-09-07 00:43 BST
+
+HEAD IN:
+3638613e3ff0144de1818b266f74555b10e1161d
+
+OBJECTIVE:
+Complete the remaining non-numerical preregistered M0 chronology, refusal-topology and correction-dependency proof surface before any real-history fit.
+
+SOURCE FINDINGS:
+- The existing 7F-C source boundary already carries both `causalCutoff.evidenceThrough` and selected source session ids, so strict pre-destination source freezing can be enforced without inventing a new provenance channel.
+- The frozen M0 specification treats each destination independent session as one atomic prequential event: destination N0 and any paired source snapshot must both be frozen before the session's first observation, and the source cannot contain the held-out destination session identity.
+- An unpaired destination session is not discarded; it remains represented by N0 and contributes exactly zero M0 likelihood-ratio increment.
+- Multiple direct sources are separate candidates and no transitive path is a candidate. This can be enforced structurally without changing M0 mathematics.
+- Existing canonical correction impact ids are sufficient to express dependency-scoped derived-M0 invalidation while leaving raw performance immutable.
+
+CHANGES:
+- Added `DynamicTransferM0SessionPolicy` and typed held-out destination/source-pairing states around the frozen M0 kernel.
+- Paired freezing now requires destination N0 evidence and source evidence to be strictly prior to the destination session's first observation; the held-out session id must be absent from both frozen destination N0 and source support.
+- Missing destination-N0 evidence time fails closed rather than inventing chronology.
+- Added first-class unpaired freezing with exact zero M0 likelihood-ratio increment.
+- Added `DynamicTransferM0CandidateTopology.requireSingleDirectEdge`, so one candidate boundary cannot consume multi-source lists or transitive two-edge paths.
+- Added `DynamicTransferM0ReplayDependencyScope` over stable canonical dependency roots for correction-scoped derived invalidation.
+- Added synthetic tests for future-source refusal, same-session refusal, valid prior-source pairing, zero unpaired increment, no multi-source/no-transitivity, explicit `DEVICE_ORDINAL` and assistance rejection, destination M0 repetition no-extrapolation while N0 remains evaluable, and correction-scoped invalidation with unchanged raw evidence.
+
+TESTS:
+- Initial source checkpoint `62c0adcef2275d5736b596ce24236731b957c935`, Android CI run 34066981872, failed production compilation because `DynamicTrendFrontierFit.support.lastEvidenceAt` is nullable. Both normal and emulator jobs stopped on that same compile error before their proof suites could execute; there was no independent storage/backup regression.
+- Fix checkpoint `e4fc2ef3ed403f31e4c326a6864c42eb8d71523a` handles a missing destination evidence timestamp as an explicit fail-closed chronology case.
+- Exact-head Android CI run 34067220584 on `e4fc2ef3...` completed successfully.
+- `:app:testDebugUnitTest :app:assembleDebug` passed, including all new M0 session-policy/refusal tests.
+- `:app:assembleDebugAndroidTest`, Android lint and Room17 exported-schema verification passed.
+- Dedicated Room17 correction + Native backup/replay emulator proof passed again.
+- No real-history M0 fitting occurred.
+
+DECISIONS:
+- No M0 mathematics, quadrature, coreset, candidate identity or frozen ModelConfig text changed in this slice.
+- A destination N0 without a usable last-evidence timestamp is not chronologically admissible for held-out M0 scoring.
+- Unpaired destination sessions are preserved as N0-only observations with exact M0 increment zero.
+- One M0 candidate consumes one explicit directed edge only. Multi-source precision combination and transitive paths remain structurally unavailable.
+- Canonical corrections can invalidate only derived M0 state whose retained dependency roots intersect the correction impact; raw evidence is not mutated.
+- Preregistered structural proofs for future/same-session exclusion, unpaired zero increment, explicit ordinal/assistance refusal, M0 destination rep-domain refusal, no transitivity, no multi-source combination and minimal correction-scoped invalidation are now covered.
+
+OPEN QUESTIONS:
+- Frozen section-11 full M0 posterior construction, held-out scoring/prediction mixture and exact deterministic full posterior/prediction replay remain the main unfinished synthetic gate. This is section-16 proof 17 and must be green before real-history fitting is unlocked.
+- An accidental throwaway remote branch `__invalid_do_not_create__` was created during connector probing at `3638613e...`. It has no source changes and does not affect the working branch, but the available connector exposes no branch-delete action.
+
+HEAD OUT:
+Source checkpoint `e4fc2ef3ed403f31e4c326a6864c42eb8d71523a` is fully green in Android CI run 34067220584; this journal commit follows on the same branch.
+
+NEXT:
+Implement the frozen section-11 M0 posterior construction and future-prediction mixture as a synthetic-only deterministic replay surface, retain complete replay provenance/dependency roots, and prove identical posterior/prediction on replay before any real-history fitting.
