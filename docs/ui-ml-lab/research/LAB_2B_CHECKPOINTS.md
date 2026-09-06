@@ -71,3 +71,9 @@
 - Implemented separate capture/crop, optional image filters, source-provenance export, atomic persistent draft and cleanup scoped to OCR captures. Fixed Copy OCR ordering in old screen.
 - Seven new parser tests cover kg/lb discrimination, character corrections, damaged units, order errors, rounded increments/gaps, add-on separation and human edits. Actual Android build/test/lint pending Actions.
 - Local isolation, binary safety and diff whitespace checks pass. No production, N-BIO, native/JNI or model-binary changes. Next: actual CI build and lifecycle/export review; do not stop at checkpoint.
+
+## OCR branch checkpoint 2 — 2026-09-06 00:32 UTC
+
+- Checkpoint 1 remote commit `2821757577d7bb64479767e3bbd2b5e2bcda40b7`; Actions 34001253511 SUCCESS. Build, unit tests, lint, source/binary safety, all ten 16 KB native ELF checks, ZIP alignment and Termux prebuilt-path rebuild pass.
+- Added three supplied-sample regression tests, explicit OCR cache-hit timing, atomic filtered PNG writes and lower filter memory overhead. Return from model comparison unloads the engine and disallows navigation while inference is active.
+- No runtime/native dependency changes. New screen uses deterministic parsing; gap suggestions do not insert values. Final validation run follows this checkpoint; physical capture/filter/review correctness remains pending.

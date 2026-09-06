@@ -2,6 +2,7 @@ package dev.kian.lab2b.vlm
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.AtomicFile
 import java.io.File
 
 /** Experimental OCR inputs. Always derived from the unchanged normalised crop. */
@@ -12,12 +13,13 @@ object OcrImageEnhancer {
         try {
             val w = bitmap.width; val h = bitmap.height
             val pixels = IntArray(w * h); bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
+            bitmap.recycle()
             for (i in pixels.indices) {
                 val p = pixels[i]
                 val gray = (77 * ((p shr 16) and 255) + 150 * ((p shr 8) and 255) + 29 * (p and 255)) shr 8
                 pixels[i] = gray
             }
-            val output = IntArray(pixels.size)
+            val output = if (profile == OcrEnhancement.GREYSCALE_SHARPEN) IntArray(pixels.size) else pixels
             for (y in 0 until h) for (x in 0 until w) {
                 val i = y*w+x; val v = pixels[i]
                 val g = when (profile) {
@@ -31,10 +33,14 @@ object OcrImageEnhancer {
             }
             val result = Bitmap.createBitmap(output,w,h,Bitmap.Config.ARGB_8888)
             val file = File(File(source.normalisedPath).parentFile, "ocr-${profile.name}.png")
-            try { file.outputStream().use { check(result.compress(Bitmap.CompressFormat.PNG,100,it)) } }
+            try {
+                val atomic = AtomicFile(file); val out = atomic.startWrite()
+                try { check(result.compress(Bitmap.CompressFormat.PNG,100,out)); atomic.finishWrite(out) }
+                catch(e: Exception) { atomic.failWrite(out); throw e }
+            }
             finally { result.recycle() }
             return source.copy(normalisedPath=file.absolutePath, normalisedSha256=Hashing.sha256(file),
                 normalisation=source.normalisation + "; OCR experimental " + profile.name)
-        } finally { bitmap.recycle() }
+        } finally { if (!bitmap.isRecycled) bitmap.recycle() }
     }
 }

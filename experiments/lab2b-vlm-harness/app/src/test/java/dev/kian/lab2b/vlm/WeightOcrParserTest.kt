@@ -44,4 +44,36 @@ class WeightOcrParserTest {
         assertEquals("134ka",edited.raw); assertTrue(edited.included); assertEquals(WeightOrigin.HUMAN_EDITED,edited.origin)
         assertThrows(IllegalArgumentException::class.java) { WeightOcrParser.edit(reading,"-1") }
     }
+    private val reference=listOf("4.5","11","18","25","32","39","45","52","59","66","73","79","86","93","100","107","113","120","127","134")
+    private fun fixture(labels: List<Pair<String,Int>>): OcrEvidence = OcrEvidence("recognizer order",labels.map { (text,y) ->
+        OcrBlock(text,null,emptyList(),"und-Latn",listOf(OcrLine(text,OcrBox(100,y,180,y+10),emptyList(),"und-Latn"))) },1,"fixture-sha",600,1200)
+    @Test fun suppliedCroppedStackTwoRestoresGeometryAndKeepsRepairsUnconfirmed() {
+        val labels=listOf("52 kg" to 584,"59 kg" to 641,"66kg" to 694,"73 kg" to 743,"45kg" to 527,
+            "79 kg" to 796,"86kg" to 837,"93 kg" to 881,"39 kg" to 465,"100kg" to 920,
+            "107kg" to 963,"127kg" to 1067,"134ka" to 1101,"25kg" to 333,"32 kg" to 401,
+            "113kg" to 1001,"120kg" to 1033,"18kg" to 255,"1 lkg" to 177,"4.5kg" to 96,
+            "DDWDDI" to 95,"175ibs" to 796,"1901bs" to 839,"295ibs" to 1108,"10ibs" to 90)
+        val parsed=WeightOcrParser.parse(fixture(labels),CapturePart.MAIN_STACK)
+        assertTrue(parsed.issues.isEmpty())
+        assertEquals(reference,parsed.readings.map { it.kg.toPlainString() })
+        assertEquals(listOf("1 lkg","134ka"),parsed.readings.filter { !it.included }.map { it.raw })
+        assertEquals(reference,parsed.copy(readings=parsed.readings.map { it.copy(included=true) }).sortedKg.map { it.toPlainString() })
+        assertEquals(18,parsed.sortedKg.size)
+    }
+    @Test fun suppliedCroppedStackOneDoesNotSilentlyAcceptMissingG() {
+        val labels=reference.drop(1).mapIndexed { i,v -> (if(v=="100") "100 k" else "$v kg") to (114+i*35) } + listOf("4.5 kg" to 47,"10 Ib" to 51,"G7MO428" to 840)
+        val parsed=WeightOcrParser.parse(fixture(labels),CapturePart.MAIN_STACK)
+        assertEquals(20,parsed.readings.size); assertEquals(19,parsed.sortedKg.size)
+        assertEquals("100 k",parsed.readings.single { !it.included }.raw)
+        assertEquals(reference,parsed.copy(readings=parsed.readings.map { it.copy(included=true) }).sortedKg.map { it.toPlainString() })
+    }
+    @Test fun fullFrameAddonLabelsRemainVisibleForHumanExclusion() {
+        val labels=listOf("2.3kg" to 80,"2.3kg" to 90) + reference.mapIndexed { i,v -> "$v kg" to (377+i*35) }
+        val parsed=WeightOcrParser.parse(fixture(labels),CapturePart.MAIN_STACK)
+        assertEquals(22,parsed.readings.size)
+        assertTrue(parsed.issues.any { it.contains("duplicate") })
+        val reviewed=parsed.copy(readings=parsed.readings.map { it.copy(included=it.kg.toPlainString()!="2.3") })
+        assertEquals(reference,reviewed.sortedKg.map { it.toPlainString() })
+    }
+
 }

@@ -35,6 +35,15 @@ jobs:
       - name: Test, build and lint isolated harness
         working-directory: experiments/lab2b-vlm-harness
         run: ./gradlew --no-daemon testDebugUnitTest assembleDebug lintDebug
+      - name: Report unit test totals
+        run: |
+          python3 - <<'PYTEST'
+          import glob, xml.etree.ElementTree as ET
+          suites = [ET.parse(p).getroot() for p in glob.glob('experiments/lab2b-vlm-harness/app/build/test-results/testDebugUnitTest/TEST-*.xml')]
+          totals = {key: sum(int(s.get(key, 0)) for s in suites) for key in ('tests', 'failures', 'errors', 'skipped')}
+          print('LAB2B_UNIT_TESTS=' + str(totals))
+          assert suites and totals['tests'] > 0 and totals['failures'] == totals['errors'] == 0
+          PYTEST
       - name: Verify APK ELF and ZIP 16 KB alignment
         run: python3 experiments/lab2b-vlm-harness/tools/inspect_native_16k.py | tee experiments/lab2b-vlm-harness/app/build/outputs/native-audit.txt
       - name: Export matching Termux native bundle

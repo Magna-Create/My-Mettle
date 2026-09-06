@@ -111,7 +111,7 @@ class WeightScanActivity : AppCompatActivity() {
         c.input?.let { input -> button("Open exact OCR input") { open(input.normalisedPath) }
             text("OCR input SHA-256: ${input.normalisedSha256}\n${input.normalisedWidth} × ${input.normalisedHeight}; ${input.normalisedPath}",12f) }
         c.evidence?.let { e ->
-            text("OCR: ${e.processingMs} ms · preparation + extraction: ${c.totalMs} ms\n${e.blocks.size} blocks / ${e.blocks.sumOf { it.lines.size }} lines")
+            text("OCR: ${e.processingMs} ms ${if(c.cacheHit) "(cached; original timing)" else "(fresh)"} · total workflow: ${c.totalMs} ms\n${e.blocks.size} blocks / ${e.blocks.sumOf { it.lines.size }} lines")
             button("Copy OCR • top to bottom") { copy(OcrFormatter.format(e,true)) }
             button(if(rawExpanded) "Hide raw OCR" else "Show raw OCR / ignored text") { rawExpanded=!rawExpanded; render() }
             if(rawExpanded) text(OcrFormatter.format(e,true),12f)

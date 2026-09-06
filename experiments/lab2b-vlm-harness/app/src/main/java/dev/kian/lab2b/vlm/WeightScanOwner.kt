@@ -14,7 +14,7 @@ object WeightScanOwner {
     data class Capture(val original: SelectedImageInfo? = null, val image: SelectedImageInfo? = null,
         val crop: CropRegion? = null, val profile: OcrEnhancement = OcrEnhancement.ORIGINAL,
         val input: SelectedImageInfo? = null, val evidence: OcrEvidence? = null, val parsed: WeightParse? = null,
-        val reviewed: Boolean = false, val totalMs: Long? = null)
+        val reviewed: Boolean = false, val totalMs: Long? = null, val cacheHit: Boolean = false)
     private lateinit var context: Context
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val captures = mutableMapOf<CapturePart, Capture>()
@@ -53,17 +53,18 @@ object WeightScanOwner {
         }
     }
     fun profile(value: OcrEnhancement) { if (busy || capture().profile==value) return
-        val part=selected; operation("Changing OCR input…") { captures[part]=capture(part).copy(profile=value,input=null,evidence=null,parsed=null,reviewed=false,totalMs=null) }
+        val part=selected; operation("Changing OCR input…") { captures[part]=capture(part).copy(profile=value,input=null,evidence=null,parsed=null,reviewed=false,totalMs=null,cacheHit=false) }
     }
     fun runOcr() { val part=selected; val old=capture(); val image=old.image ?: return
         operation("Running OCR and deterministic kg extraction…") {
             val start=System.nanoTime()
             val input=withContext(Dispatchers.Default) { OcrImageEnhancer.prepare(image,old.profile) }
-            val evidence=cache[input.normalisedSha256] ?: withContext(Dispatchers.Default) { OcrProcessor.recognise(input) }
+            val cached=cache[input.normalisedSha256]
+            val evidence=cached ?: withContext(Dispatchers.Default) { OcrProcessor.recognise(input) }
             cache[input.normalisedSha256]=evidence
             while (cache.size>8) cache.remove(cache.keys.first())
             val parsed=withContext(Dispatchers.Default) { WeightOcrParser.parse(evidence,part) }
-            captures[part]=old.copy(input=input,evidence=evidence,parsed=parsed,reviewed=false,totalMs=(System.nanoTime()-start)/1_000_000)
+            captures[part]=old.copy(input=input,evidence=evidence,parsed=parsed,reviewed=false,totalMs=(System.nanoTime()-start)/1_000_000,cacheHit=cached!=null)
         }
     }
     fun change(id: Int, included: Boolean? = null, edit: String? = null) { val part=selected
@@ -99,7 +100,7 @@ object WeightScanOwner {
             val c=capture(part); target.put(part.name,JSONObject().put("reviewed",c.reviewed).put("profile",c.profile.name)
                 .put("original",imageJson(c.original)).put("crop_image",imageJson(c.image)).put("ocr_input",imageJson(c.input))
                 .put("crop",c.crop?.let { JSONArray(listOf(it.left,it.top,it.right,it.bottom)) } ?: JSONObject.NULL)
-                .put("ocr",TestReport.ocr(c.evidence)).put("total_ms",c.totalMs ?: JSONObject.NULL)
+                .put("ocr",TestReport.ocr(c.evidence)).put("total_ms",c.totalMs ?: JSONObject.NULL).put("ocr_cache_hit",c.cacheHit)
                 .put("ocr_order","top-to-bottom then left; numeric output sorted separately")
                 .put("warnings",JSONArray(c.parsed?.issues ?: emptyList<String>()))
                 .put("ignored_lines",JSONArray(c.parsed?.ignored ?: emptyList<String>()))
@@ -137,7 +138,7 @@ object WeightScanOwner {
                 require(image==null || File(image.normalisedPath).isFile) { "Saved image is missing" }
                 require(e==null || input?.normalisedSha256==e.sourceImageSha256) { "Saved OCR source mismatch" }
                 captures[part]=Capture(original,image,crop,OcrEnhancement.valueOf(c.getString("profile")),input,e,
-                    if(e==null) null else WeightParse(readings,strings(c.getJSONArray("ignored_lines")),WeightOcrParser.issues(readings,part)),c.getBoolean("reviewed"),if(c.isNull("total_ms")) null else c.getLong("total_ms"))
+                    if(e==null) null else WeightParse(readings,strings(c.getJSONArray("ignored_lines")),WeightOcrParser.issues(readings,part)),c.getBoolean("reviewed"),if(c.isNull("total_ms")) null else c.getLong("total_ms"),c.optBoolean("ocr_cache_hit",false))
             }
             status="Restored saved captures and review. No model is loaded by this workflow."
         } catch(e: Exception) { CapturePart.entries.forEach { captures[it]=Capture() }; status="Could not restore draft: ${e.message}. Saved files retained." }
