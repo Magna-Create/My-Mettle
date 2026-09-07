@@ -529,3 +529,58 @@ Source checkpoint `fea36651e90ab39b69121d1b82a09f4435c6ccac` is fully green in A
 
 NEXT:
 Implement derived M0 candidate fit/prediction persistence and deterministic delete-derived replay across Room/Native backup boundaries, retaining exact model/policy/relationship/cutoff/dependency provenance and failing closed on unknown codec/model/schema identities. Do not start real-history evaluation yet.
+
+## Session 12 — 2026-09-07 — M0 ROOM18 PERSISTENCE / BACKUP REPLAY CHECKPOINT
+
+HEAD IN:
+9e09a1d6398772013ebe75dfeb60e62410df63bf
+
+OBJECTIVE:
+Close the derived M0 fit/prediction persistence gate across Room and Native backup boundaries, including deterministic delete-derived replay and fail-closed unknown codec/model/schema handling, without beginning real-history evaluation.
+
+SOURCE FINDINGS:
+- Existing `exercise_translation_*` persistence predates the frozen 7F M0 contract and cannot carry exact M0 relationship, source-selection policy, causal cutoff, codec, dependency-root and frozen model/solver identities without reinterpretation. Reusing it would blur legacy derived state with the preregistered candidate.
+- Canonical equipment/history remains owned by Room16/17. M0 posterior and prediction snapshots are derived, deletable cache state and therefore need no foreign-key ownership of canonical equipment/profile rows.
+- The accepted Candidate-v2 parameter codec established the correct persistence precedent: explicit codec/schema identity, deterministic canonical representation and recompute-required failure on unknown identities rather than best-effort decode.
+- Native full backup is schema-driven and exact-current-schema only, so registering Room18 derived tables is sufficient for export/restore coverage; the proof must still exercise deletion, restore and deterministic replay.
+- Initial Room18 CI failures were stale test/workflow expectations only: production/unit/instrumentation compilation and lint were already sound, while the old backup proof expected schema 17 and the schema gate still looked for generated `17.json`.
+
+CHANGES:
+- Advanced the database to Room18 with additive `MIGRATION_17_18`, adding only `n_bio_7f_m0_derived_state` and `n_bio_7f_m0_derived_dependency`.
+- Added a content-addressed M0 fit/prediction snapshot envelope retaining state kind, exact source/destination profile versions, side, relationship id/version/policy/fingerprint, frozen M0 config/mathematical/solver identities, source-selection policy identity/version/mode/freeze time, evidence-through/prediction cutoff, codec/schema identity, SHA-256 payload integrity and sorted canonical dependency roots.
+- Added deterministic canonical-text payloads for complete M0 fit and prediction replay provenance. `createdAt` remains audit metadata and does not change scientific state identity.
+- Added `DynamicTransferM0DerivedRepository` with validated/idempotent persist, fail-closed load, discard, delete-all and dependency-scoped invalidation. It owns only derived state and cannot rewrite canonical/raw evidence.
+- Unknown codec id/version, payload schema, model config, mathematical identity, solver identity, payload hash or content-addressed envelope/dependency identity fails closed and requires recomputation.
+- Added Room17→18 migration instrumentation comparing the migrated derived-table shape with current Room18, proving existing rows survive and no derived state is invented.
+- Added Native backup instrumentation using a real synthetic M0 posterior and next-session prediction: persist both, export, delete all derived state, restore, and verify exact replay equality while a canonical `user_profile` sentinel remains unchanged.
+- Added explicit post-restore tampering cases for unknown codec, payload schema and model identity, all of which must fail load.
+- Updated the existing canonical equipment backup proof to current schema 18 and retained its correction/raw-evidence assertions.
+- Updated CI to verify generated Room18 schema and execute Room17 correction, Room18 migration, canonical equipment backup and M0 derived backup/replay emulator proofs.
+
+TESTS:
+- Pre-proof checkpoint `9e09a1d6398772013ebe75dfeb60e62410df63bf`, Android CI run 34116334593: production unit/debug build, instrumentation compilation and lint passed; failures were only stale Room17 schema expectations in the workflow and existing backup assertion.
+- Exact source checkpoint `42bd669ebbeb336325be93e3274d95e606aaa76e` completed successfully in Android CI run 34117500924.
+- `:app:testDebugUnitTest :app:assembleDebug` passed.
+- `:app:assembleDebugAndroidTest` passed.
+- Android lint and generated Room18 schema verification passed; debug APK and Room schema artifacts uploaded successfully.
+- Dedicated emulator storage job passed all four proof classes: Room17 correction migration, Room17→18 derived migration, canonical equipment backup round-trip, and real M0 derived backup/delete/restore/replay with fail-closed tampering.
+- No real-history M0 fitting or scoring occurred.
+
+DECISIONS:
+- Room18 is derived-only. Canonical Room16/17 equipment/history rows and raw performance remain untouched.
+- M0 persisted state is a cache envelope around sufficient deterministic replay provenance, not new canonical evidence and not a replacement for source/destination histories.
+- Scientific identity is content-addressed over exact frozen candidate/policy/relationship/cutoff/dependency metadata plus payload hash; audit creation time is intentionally excluded.
+- Native backup may carry derived M0 cache rows because exact replay and strict identity validation are proven. Deleting all derived rows remains safe and deterministic recomputation remains the authority.
+- Unknown or tampered persisted identities are never upgraded heuristically in place; they fail closed to delete/recompute.
+- The frozen M0 mathematics, priors, coreset, quadrature, source-selection semantics and `BENCHMARK_V0` product authority were not changed.
+
+OPEN QUESTIONS:
+- Prequential N0-vs-M0 scoring and negative-transfer diagnostics are now the next mission gate. They must preserve destination-session atomic chronology: freeze/predict → observe → score → update.
+- Real-history development evaluation remains downstream of that scoring surface; this checkpoint does not unlock ad-hoc retrospective fitting.
+- Repository branch cleanup remains deferred to mission end as requested.
+
+HEAD OUT:
+Source checkpoint `42bd669ebbeb336325be93e3274d95e606aaa76e` is fully green in Android CI run 34117500924; this journal commit follows on the same branch.
+
+NEXT:
+Implement the prequential N0-vs-M0 evaluation/scoring surface and explicit negative-transfer diagnostics under strict destination-session atomic chronology, with no future leakage and no post-outcome source/model selection. Keep real-history evaluation locked until that surface is synthetic-tested and green.
