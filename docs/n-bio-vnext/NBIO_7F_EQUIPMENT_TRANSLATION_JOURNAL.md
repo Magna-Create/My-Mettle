@@ -584,3 +584,96 @@ Source checkpoint `42bd669ebbeb336325be93e3274d95e606aaa76e` is fully green in A
 
 NEXT:
 Implement the prequential N0-vs-M0 evaluation/scoring surface and explicit negative-transfer diagnostics under strict destination-session atomic chronology, with no future leakage and no post-outcome source/model selection. Keep real-history evaluation locked until that surface is synthetic-tested and green.
+
+## Session 13 — 2026-09-07 — PREQUENTIAL N0/M0 SCORING CHECKPOINT
+
+HEAD IN:
+bba608dc7a647b38f5fb3abe884cb852141860af
+
+OBJECTIVE:
+Implement the strict destination-session atomic prequential N0-vs-M0 scoring surface and explicit observation/session negative-transfer diagnostics without starting real-history evaluation.
+
+SOURCE FINDINGS:
+- The existing N-BIO scoring convention already uses log-resistance CRPS/WIS/bias, 90% predictive intervals, PIT, log predictive density and MAE; 7F can reuse those meanings rather than inventing a parallel metric scale.
+- N0 and M0 must be frozen before the held-out destination session begins. Held-out observation identity may not appear in destination N0, M0 replay training or source support.
+- M0 destination repetition no-extrapolation must not remove N0 availability.
+- Exact predictive log density can use the full frozen posterior mixture while bounded deterministic component projection is sufficient for CDF/quantile/CRPS diagnostics as an evaluation-only approximation.
+
+CHANGES:
+- Added `DynamicTransferM0PrequentialScoring.kt` with immutable pre-outcome freeze, whole-session held-out scoring and typed M0 unavailability.
+- Added p05/p50/p95, PIT, exact log predictive density/negative log score, CRPS, WIS, 90% coverage, sharpness, signed residual and MAE scores.
+- Added paired `M0 - N0` deltas for lower-is-better metrics and session-level mean negative-transfer diagnostics without a composite promotion verdict.
+- M0 out-of-domain observations remain N0-scoreable and carry explicit refusal instead of silently disappearing.
+- Added synthetic tests proving outcome changes cannot alter frozen predictive quantiles, strict chronology/leakage rejection and M0-domain refusal with retained N0 availability.
+- No real-history reader/fitting, source-selection change, M0 mathematics, persistence or normal product behaviour was added.
+
+TESTS:
+- Exact source checkpoint `54e2f670f577468eb9fe51af64cf493bdca53df1` completed successfully in Android CI run 34123761253.
+- `:app:testDebugUnitTest :app:assembleDebug` passed, including the new prequential scoring tests.
+- `:app:assembleDebugAndroidTest`, Android lint and generated Room18 schema verification passed.
+- Dedicated Room18/canonical Native backup/replay emulator proof passed again.
+- No real-history M0 fitting occurred.
+
+DECISIONS:
+- Complete N0/M0 prediction state is frozen before the destination outcome. Outcome values enter only the scoring call.
+- Full-mixture log score is exact relative to the frozen posterior; the K129 projection is evaluation-only and not part of M0 candidate identity.
+- No composite promotion score or arbitrary score threshold was added. Positive lower-is-better `M0 - N0` deltas are explicit harm diagnostics.
+- M0 repetition-domain refusal does not alter N0’s broader accepted extrapolation behaviour.
+
+OPEN QUESTIONS:
+- Section-17 cross-session summaries still need mean/cumulative/median deltas, fractions worsened, severe-tail loss, PIT/reliability, catastrophic-overconfidence and availability reporting at exact-edge scope.
+- Real-history development evaluation remains locked until that aggregation surface is synthetic-tested and green.
+
+HEAD OUT:
+Source checkpoint `54e2f670f577468eb9fe51af64cf493bdca53df1` is fully green in Android CI run 34123761253; this journal update follows later.
+
+NEXT:
+Implement exact-edge cross-session prequential aggregation/calibration and transfer-availability diagnostics before any real-history development evaluation.
+
+## Session 14 — 2026-09-07 — EXACT-EDGE PREQUENTIAL AGGREGATION CHECKPOINT
+
+HEAD IN:
+54e2f670f577468eb9fe51af64cf493bdca53df1
+
+OBJECTIVE:
+Implement the exact-edge cross-session aggregation/calibration layer required by contract section 17, preserving explicit availability/refusal information and repeated-session negative-transfer visibility, without adding promotion thresholds or real-history fitting.
+
+SOURCE FINDINGS:
+- Contract section 17 requires mean/cumulative and median ΔS, fraction worsened, severe-tail losses, catastrophic overconfidence and per-relationship strata in addition to calibration and availability.
+- A global observation-weighted mean is insufficient because it can hide a relationship that repeatedly harms independent destination sessions.
+- Severe-tail reporting can remain descriptive by exposing the empirical upper-tail p95 and maximum paired delta instead of inventing a “severe” acceptance cutoff.
+- Catastrophic overconfidence can be anchored to the already-frozen 90% interval and exact log score: transfer loses N0 coverage, is no wider, and worsens exact log score. This diagnostic is descriptive, not a promotion rule.
+
+CHANGES:
+- Added `DynamicTransferM0PrequentialAggregation.kt` with exact-edge, exact-policy aggregation only.
+- Added observation-level and independent-session-mean paired summaries for NLS, CRPS, WIS, MAE and sharpness change, including cumulative/mean/median/p95/max/fraction-positive diagnostics.
+- Added fixed descriptive three-bin PIT reliability summaries for N0 and M0 with explicit counts.
+- Added availability diagnostics for N0/M0/comparable predictions, fully/partially/non-comparable sessions, M0 rep-domain refusals and numerical failures.
+- Added descriptive catastrophic-overconfidence observation/session counts and fractions.
+- Aggregation fails closed on mixed edge/policy/mode, duplicate session, duplicate held-out observation or mismatched session ownership.
+- Added synthetic tests for deterministic input-order aggregation, expected paired-tail/calibration/availability values, fail-closed mixed identity, and N0-only aggregation when transfer is unavailable.
+- No real-history evaluation, candidate fit, product path, model mathematics or selection threshold was added.
+
+TESTS:
+- Exact source checkpoint `81a5a189d17aeaddd3e670f1b3bce1d1d53ed8b4` completed successfully in Android CI run 34128727366.
+- `:app:testDebugUnitTest :app:assembleDebug` passed, including the new cross-session aggregation tests.
+- `:app:assembleDebugAndroidTest`, Android lint and generated Room18 schema verification passed.
+- Dedicated Room18/canonical Native backup/replay emulator proof passed again.
+- No real-history M0 fitting occurred.
+
+DECISIONS:
+- Cross-session aggregation is keyed to one exact directed edge plus one source-selection policy identity/mode; heterogeneous edges are not averaged together here.
+- Positive deltas retain the frozen `M0 - N0` sign convention. For proper/lower-is-better scores positive means harm; interval-width delta is reported only as sharpness change.
+- Observation-level and session-mean-level views are both retained so global means cannot erase repeated independent-session harm.
+- PIT reliability is descriptive at every sample size; no arbitrary minimum-count “calibrated” switch was added.
+- Catastrophic-overconfidence is a descriptive guard, not a candidate promotion/rejection threshold.
+
+OPEN QUESTIONS:
+- With the prequential scoring + aggregation layer now structurally complete, the next gate is the installed-history development evaluator: exact chronological reconstruction of destination/session freezes, eligibility/exclusion accounting, performance profiling, and developer-only results. Historical evidence previously inspected remains development evidence only.
+- Same-profile N1/M1/M2 remains evaluable only where genuine repeated equipment history exists; `NOT_EVALUATED_REAL_HISTORY` remains valid.
+
+HEAD OUT:
+Source checkpoint `81a5a189d17aeaddd3e670f1b3bce1d1d53ed8b4` is fully green in Android CI run 34128727366; this journal commit follows on the same branch.
+
+NEXT:
+Implement the developer-only real-history 7F development evaluation orchestration over the now-frozen N0/M0 scoring and exact-edge aggregation surfaces, with strict event-time reconstruction and explicit eligibility/exclusion/availability/runtime reporting. Do not change M0 candidate/config based on inspected history.
