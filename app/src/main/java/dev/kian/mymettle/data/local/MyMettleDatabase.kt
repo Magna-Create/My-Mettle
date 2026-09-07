@@ -9,6 +9,7 @@ import dev.kian.mymettle.data.local.dao.HistoryDao
 import dev.kian.mymettle.data.local.dao.InferenceDao
 import dev.kian.mymettle.data.local.dao.LibraryDao
 import dev.kian.mymettle.data.local.dao.NBio7EDao
+import dev.kian.mymettle.data.local.dao.NBio7FM0DerivedDao
 import dev.kian.mymettle.data.local.dao.ReferenceDao
 import dev.kian.mymettle.data.local.dao.TemporalEvidenceDao
 import dev.kian.mymettle.data.local.dao.WorkoutDao
@@ -56,6 +57,8 @@ import dev.kian.mymettle.data.local.entity.NBio7EContextModuleStatusEntity
 import dev.kian.mymettle.data.local.entity.NBio7EContextSignalEntity
 import dev.kian.mymettle.data.local.entity.NBio7ERunEntity
 import dev.kian.mymettle.data.local.entity.NBio7ETemporalStateEntity
+import dev.kian.mymettle.data.local.entity.NBio7FM0DerivedDependencyEntity
+import dev.kian.mymettle.data.local.entity.NBio7FM0DerivedStateEntity
 import dev.kian.mymettle.data.local.entity.NoteInterpretationRunEntity
 import dev.kian.mymettle.data.local.entity.ObservationTraceLinkEntity
 import dev.kian.mymettle.data.local.entity.PerformanceSchemaEntity
@@ -183,8 +186,10 @@ import dev.kian.mymettle.data.local.entity.UserProfileEntity
         SessionExerciseEquipmentBindingCorrectionEntity::class,
         SetObservationEquipmentOverrideCorrectionEntity::class,
         SetObservationLoadSemanticsCorrectionEntity::class,
+        NBio7FM0DerivedStateEntity::class,
+        NBio7FM0DerivedDependencyEntity::class,
     ],
-    version = 17,
+    version = 18,
     exportSchema = true,
 )
 abstract class MyMettleDatabase : RoomDatabase() {
@@ -198,4 +203,5 @@ abstract class MyMettleDatabase : RoomDatabase() {
     abstract fun nBio7EDao(): NBio7EDao
     abstract fun equipmentDao(): EquipmentDao
     abstract fun equipmentCorrectionDao(): EquipmentCorrectionDao
+    abstract fun nBio7FM0DerivedDao(): NBio7FM0DerivedDao
 }
