@@ -45,7 +45,7 @@ class NBio7FEquipmentBackupRoundTripTest {
     fun tearDown() = database.close()
 
     @Test
-    fun room17BackupRoundTripsCanonicalEquipmentCorrectionsAndRawEvidence() = runBlocking {
+    fun room18BackupRoundTripsCanonicalEquipmentCorrectionsAndRawEvidence() = runBlocking {
         createEquipment("equipment:a")
         createEquipment("equipment:b")
         createEquipment("equipment:c")
@@ -145,7 +145,7 @@ class NBio7FEquipmentBackupRoundTripTest {
 
         val restored = backupRepository.restoreJson(backup)
 
-        assertEquals(17, restored.schemaVersion)
+        assertEquals(18, restored.schemaVersion)
         assertEquals(1, rowCount("session_exercise_equipment_binding_correction"))
         assertEquals(1, rowCount("set_observation_equipment_override_correction"))
         assertEquals(1, rowCount("set_observation_load_semantics_correction"))
