@@ -430,3 +430,51 @@ Source checkpoint `e4fc2ef3ed403f31e4c326a6864c42eb8d71523a` is fully green in A
 
 NEXT:
 Implement the frozen section-11 M0 posterior construction and future-prediction mixture as a synthetic-only deterministic replay surface, retain complete replay provenance/dependency roots, and prove identical posterior/prediction on replay before any real-history fitting.
+
+## Session 10 — 2026-09-07 — M0 POSTERIOR REPLAY CHECKPOINT
+
+HEAD IN:
+f1b8b6c1c3ec11515ceb513698742423d51f3959
+
+OBJECTIVE:
+Implement the frozen section-11 M0 posterior construction and section-12 future-prediction mixture as a pure synthetic replay surface, retain sufficient immutable inputs/dependencies for exact replay, and complete preregistered proof 17 without fitting real history.
+
+SOURCE FINDINGS:
+- The frozen model explicitly defines M0 as likelihood-ratio reweighting of the complete destination N0 joint posterior crossed with the fixed GH7 beta prior; no second destination fitter is required or permitted.
+- Unpaired destination sessions must remain structurally represented in the complete N0 history but contribute no M0 likelihood-ratio information.
+- Historical source anchors must share the final destination reference-repetition coordinate before the fixed training-history source centre is computed.
+- Future prediction crosses the fitted destination-node/beta-node posterior with exactly one current admissible source coreset. The prediction source cannot recenter the fitted relationship.
+- Existing 7F-C source envelopes plus explicit relationship/equipment/load context and canonical correction dependency roots already contain the information needed for lossless in-memory deterministic replay; persistence of this derived state remains a later mission step.
+
+CHANGES:
+- Added `DynamicTransferM0PosteriorReplay.kt` with typed historical paired/unpaired destination-session replay inputs, exact selected-observation coverage checks and frozen Candidate-v2 session-coordinate validation.
+- Implemented section-11 `Delta_jm` likelihood-ratio accumulation using equal total weight per paired destination session and log-sum-exp normalisation of `W_jm`.
+- Re-prepared every historical source snapshot through the existing directed-edge kernel at the final destination `r_D`, then froze one training-only source centre across paired sessions.
+- Added a full M0 posterior node carrying the original destination joint node, fixed beta node, likelihood-ratio increment and normalised M0 weight without reducing either posterior to marginal summaries.
+- Added section-12 future predictive mixture components with exact `W_jm * w_source,k` weights, next-session frontier, destination slack/noise scales and current source original-node identity.
+- Retained full fit/prediction replay inputs, relationship identity, source coresets and unioned canonical correction dependency scopes; added pure replay entry points that recompute posterior and prediction from those retained inputs.
+- Added synthetic tests proving exact posterior replay, exact prediction replay, beta-zero N0 nesting, explicit unpaired-zero information, complete destination-history requirement, dependency retention and rejection of a future prediction source snapshot.
+- No persistence, source-selection policy, real-history fit or normal-product behaviour was added.
+
+TESTS:
+- Exact source checkpoint `e9a3338292442d2fb2ac7bd97c0cf56dd33ede53` completed successfully in Android CI run 34069748802.
+- `:app:testDebugUnitTest :app:assembleDebug` passed, including the new section-11/12 deterministic replay tests.
+- `:app:assembleDebugAndroidTest` passed.
+- Android lint and Room17 exported-schema verification passed.
+- Dedicated Room17 correction + Native backup/replay emulator proof passed again.
+- The new tests replayed the same full M0 posterior/prediction exactly from retained canonical inputs and frozen identities; section-16 proof 17 is therefore green synthetically.
+- No real-history M0 fitting occurred.
+
+DECISIONS:
+- M0 posterior construction remains a pure nested extension of frozen N0; no mathematical, quadrature, coreset, prior or ModelConfig identity changed.
+- Unpaired sessions are required in replay coverage but are deliberately absent from `Delta_jm` accumulation, preserving their exact zero likelihood-ratio contribution.
+- The training source centre is computed only from admissible historical pairs and is never recomputed from the prediction source snapshot.
+- Predictive components retain the destination slack/noise parameters rather than replacing the frozen observation model with point frontier predictions.
+- Full deterministic replay is now proven in-memory. Derived candidate persistence/replay across Room/backup boundaries remains a separate later mission step and is not implied by this proof.
+- The frozen specification's structural/synthetic prerequisite tests are now complete, but mission order still keeps real-history M0 evaluation deferred until source-selection policy, broader synthetic validation, persistence and prequential evaluation surfaces are built.
+
+HEAD OUT:
+Source checkpoint `e9a3338292442d2fb2ac7bd97c0cf56dd33ede53` is fully green in Android CI run 34069748802; this journal commit follows on the same branch.
+
+NEXT:
+Implement the explicit versioned M0 admissibility/source-selection policy for multiple potential direct sources, preserving one source per candidate, deterministic pre-outcome selection and no cross-source independence/transitivity. Then extend synthetic validation around that policy before any real-history evaluation.
