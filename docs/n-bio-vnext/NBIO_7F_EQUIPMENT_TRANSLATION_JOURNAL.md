@@ -478,3 +478,54 @@ Source checkpoint `e9a3338292442d2fb2ac7bd97c0cf56dd33ede53` is fully green in A
 
 NEXT:
 Implement the explicit versioned M0 admissibility/source-selection policy for multiple potential direct sources, preserving one source per candidate, deterministic pre-outcome selection and no cross-source independence/transitivity. Then extend synthetic validation around that policy before any real-history evaluation.
+
+## Session 11 — 2026-09-07 — M0 SOURCE-SELECTION CHECKPOINT
+
+HEAD IN:
+6ddfc8a0db5a9e4563d1ef8a895bec5d14f779eb
+
+OBJECTIVE:
+Implement the explicit versioned M0 admissibility/source-selection policy for several potential direct sources, extend deterministic synthetic validation around that policy, and keep real-history evaluation locked.
+
+SOURCE FINDINGS:
+- The 7F contract authorises only two safe multi-source v1 forms before a dependence-aware combination model exists: score source relationships independently, or select one admissible source with a deterministic policy frozen before the destination outcome.
+- Relatedness/exchangeability is itself a model assumption. Neither source observation counts, posterior strength, muscle similarity nor equipment-family similarity is established as a safe automatic source-ranking rule.
+- M0 itself remains one exact directed source→destination edge. Source selection therefore belongs outside the frozen M0 mathematical/config identity and needs its own versioned identity and chronology provenance.
+- A source-selection decision can be structurally pre-outcome because it consumes only the destination-session descriptor, frozen source envelopes, exact relationship descriptors and a policy frozen strictly before the destination session begins; no destination outcome enters the API.
+
+CHANGES:
+- Added `DynamicTransferM0SourceSelectionPolicy.kt` with versioned `SCORE_INDEPENDENTLY` and `EXPLICIT_PRIORITY_SINGLE_SOURCE` modes.
+- Added exact directed-edge keys whose fingerprints cover relationship direction, profile/version identities, side, equipment interpretation/fact identities and load-accounting semantics.
+- Added deterministic source-policy identity over semantic version, policy id/version, mode and the exact ordered priority descriptors. `frozenAt` is retained separately as chronology provenance rather than changing the policy configuration identity.
+- Added pre-outcome candidate assessment that reuses the existing session chronology and M0 admissibility kernels; typed freeze/admissibility refusals survive instead of being collapsed into generic unavailable state.
+- Independent mode returns every admissible direct edge as a separate candidate in deterministic order and never combines source evidence.
+- Explicit-priority mode selects the first listed edge that is admissible at the frozen cutoff, may fall through an inadmissible listed edge, excludes unlisted edges, and returns no-transfer/N0-only availability when none qualify.
+- Duplicate exact candidate edges and policies frozen at/after the destination outcome fail closed.
+- Added synthetic tests for input-order determinism, policy-identity changes when explicit priority changes, first-admissible priority behaviour, future-source fall-through, unlisted-source exclusion, strict policy chronology, duplicate-edge rejection and N0 availability when transfer is unsupported.
+- No M0 mathematics, priors, coreset/quadrature, persistence, real-history fitting or normal product behaviour changed.
+
+TESTS:
+- Exact source checkpoint `fea36651e90ab39b69121d1b82a09f4435c6ccac` completed successfully in Android CI run 34110263367.
+- `:app:testDebugUnitTest :app:assembleDebug` passed, including all new source-selection/admissibility synthetic tests.
+- `:app:assembleDebugAndroidTest` passed.
+- Android lint and Room17 exported-schema verification passed.
+- Dedicated Room17 correction + Native backup/replay emulator proof passed again.
+- No real-history M0 fitting or scoring occurred.
+
+DECISIONS:
+- Independent scoring is the default safe multi-source form. The optional single-source form is declarative explicit priority, not a learned quality ranking.
+- Source-selection policy identity is separate from the frozen M0 candidate identity because it decides which one-edge candidate is evaluated rather than changing that candidate's mathematics.
+- Explicit priority pins exact relationship descriptors; a newer/different relationship version does not silently inherit an older policy slot.
+- A policy can fall through an inadmissible higher-priority source using only pre-outcome information. It cannot tune priority from the held-out result.
+- Several admissible independent sources are never precision-combined and no transitive source path is constructed.
+
+OPEN QUESTIONS:
+- Derived M0 fit/prediction persistence and delete-derived replay across Room/Native backup boundaries remain the next mission gate. Unknown codec/model/schema identities must fail closed.
+- Prequential N0-vs-M0 scoring and negative-transfer diagnostics remain downstream of persistence/replay.
+- Repository branch cleanup is deferred to mission end as requested; inert stray refs do not affect the working branch.
+
+HEAD OUT:
+Source checkpoint `fea36651e90ab39b69121d1b82a09f4435c6ccac` is fully green in Android CI run 34110263367; this journal commit follows on the same branch.
+
+NEXT:
+Implement derived M0 candidate fit/prediction persistence and deterministic delete-derived replay across Room/Native backup boundaries, retaining exact model/policy/relationship/cutoff/dependency provenance and failing closed on unknown codec/model/schema identities. Do not start real-history evaluation yet.
