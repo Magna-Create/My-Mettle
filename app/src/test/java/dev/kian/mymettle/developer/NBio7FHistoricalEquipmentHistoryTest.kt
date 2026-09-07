@@ -35,7 +35,7 @@ class NBio7FHistoricalEquipmentHistoryTest {
         val resolved = NBio7FCausalEquipmentHistory.resolveObservation(
             history = history,
             observationId = OBSERVATION,
-            observationAt = time(6),
+            observationAt = time(5),
             knowledgeAt = time(5),
         )
 
@@ -65,7 +65,7 @@ class NBio7FHistoricalEquipmentHistoryTest {
         val resolved = NBio7FCausalEquipmentHistory.resolveObservation(
             history = history,
             observationId = OBSERVATION,
-            observationAt = time(6),
+            observationAt = time(5),
             knowledgeAt = time(5),
         )
 
