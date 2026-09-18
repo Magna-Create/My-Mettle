@@ -256,6 +256,7 @@ class NBio7FInstalledHistoryEvaluator(
             frozenAt = freezeAt,
             observations = heldOutObservations,
         )
+        val n0RuntimeMillis = elapsedMillis(n0Started)
         val relevantRelationships = relationships
             .filter {
                 it.destinationExecutionProfileId == descriptor.semantics.executionProfileId &&
@@ -363,7 +364,7 @@ class NBio7FInstalledHistoryEvaluator(
             futureEquipmentCorrectionsExcluded = destinationContext.futureCorrectionsExcluded,
             futureEquipmentFactsExcluded = destinationContext.futureFactsExcluded,
             relationshipAudits = relationshipAudits.sortedBy { it.edgeIdentity ?: "" },
-            n0RuntimeMillis = elapsedMillis(n0Started),
+            n0RuntimeMillis = n0RuntimeMillis,
             runtimeMillis = elapsedMillis(started),
         )
     }
