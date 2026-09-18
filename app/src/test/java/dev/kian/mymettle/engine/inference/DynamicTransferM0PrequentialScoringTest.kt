@@ -162,6 +162,32 @@ class DynamicTransferM0PrequentialScoringTest {
         assertNull(outside.negativeTransferDiagnostics)
     }
 
+    @Test
+    fun \`standalone n0 score is identical to paired n0 score\`() {
+        val fixture = fixture()
+        val fit = DynamicTransferM0PosteriorReplay.fit(fixture.replayInput)
+        val observations = heldOutObservations(multiplier = 1.0)
+
+        val paired = DynamicTransferM0PrequentialScorer.scoreSession(
+            freeze(fixture, fit),
+            observations,
+        )
+        val standalone = DynamicTransferM0PrequentialScorer.scoreN0Session(
+            destinationSession = destinationSession(fixture),
+            frozenAt = FREEZE_AT,
+            observations = observations,
+        )
+
+        assertEquals(NBio7FPrequentialScoringV1.PROTOCOL_ID, standalone.protocolId)
+        assertEquals(NBio7FPrequentialScoringV1.DISTRIBUTION_PROJECTION_ID, standalone.distributionProjectionId)
+        assertEquals(paired.n0Aggregate, standalone.n0Aggregate)
+        assertEquals(paired.comparisons.size, standalone.comparisons.size)
+        paired.comparisons.zip(standalone.comparisons).forEach { (pairedComparison, standaloneComparison) ->
+            assertEquals(pairedComparison.observation, standaloneComparison.observation)
+            assertEquals(pairedComparison.n0, standaloneComparison.n0)
+        }
+    }
+
     private fun freeze(
         fixture: Fixture,
         fit: DynamicTransferM0PosteriorFit,
