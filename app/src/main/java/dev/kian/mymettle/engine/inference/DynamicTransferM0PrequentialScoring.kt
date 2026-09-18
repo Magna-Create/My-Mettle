@@ -1,5 +1,6 @@
 package dev.kian.mymettle.engine.inference
 
+import dev.kian.mymettle.domain.inference.DynamicTrendFrontierFit
 import dev.kian.mymettle.domain.inference.DynamicTrendFrontierPosteriorNode
 import dev.kian.mymettle.domain.inference.PrequentialWeightedIntervalScore
 import java.time.Instant
@@ -177,6 +178,28 @@ data class DynamicTransferM0NegativeTransferDiagnostics(
     val harmfulByMedianAbsoluteError: Boolean get() = meanDeltaM0MinusN0.harmfulByMedianAbsoluteError
 }
 
+data class DynamicTransferN0ObservationScoreComparison(
+    val observation: DynamicTransferM0HeldOutObservation,
+    val n0: DynamicTransferPredictiveScoreResult,
+)
+
+data class DynamicTransferN0PrequentialSessionScore(
+    val protocolId: String,
+    val distributionProjectionId: String,
+    val targetSessionId: String,
+    val firstObservationTime: Instant,
+    val frozenAt: Instant,
+    val comparisons: List<DynamicTransferN0ObservationScoreComparison>,
+    val n0Aggregate: DynamicTransferContinuousAggregate?,
+) {
+    init {
+        require(protocolId == NBio7FPrequentialScoringV1.PROTOCOL_ID)
+        require(distributionProjectionId == NBio7FPrequentialScoringV1.DISTRIBUTION_PROJECTION_ID)
+        require(targetSessionId.isNotBlank() && comparisons.isNotEmpty())
+        require(frozenAt.isBefore(firstObservationTime))
+    }
+}
+
 data class DynamicTransferM0PrequentialSessionScore(
     val protocolId: String,
     val distributionProjectionId: String,
@@ -216,6 +239,63 @@ class DynamicTransferM0PrequentialFreeze internal constructor(
 
 /** Pure scorer. It never updates destination/source state and never consumes more than one direct edge. */
 object DynamicTransferM0PrequentialScorer {
+    /**
+     * Scores the frozen destination-only champion even when no M0 relationship is admissible.
+     * This is the identical N0 predictive calculation used inside paired N0/M0 scoring.
+     */
+    fun scoreN0Session(
+        destinationSession: DynamicTransferM0DestinationSessionDescriptor,
+        frozenAt: Instant,
+        observations: List<DynamicTransferM0HeldOutObservation>,
+    ): DynamicTransferN0PrequentialSessionScore {
+        require(frozenAt.isBefore(destinationSession.firstObservationTime)) {
+            "N0 evaluation state must be frozen strictly before the destination session begins."
+        }
+        val destinationFit = destinationSession.destination.n0.destinationFit
+        val evidenceThrough = requireNotNull(destinationFit.support.lastEvidenceAt) {
+            "Destination N0 requires an evidence-through timestamp for prequential scoring."
+        }
+        require(!evidenceThrough.isAfter(frozenAt)) {
+            "The complete N0 evaluation freeze cannot precede destination evidence."
+        }
+        require(destinationSession.sessionId !in destinationFit.selectedSessionIds) {
+            "The held-out destination session cannot already exist in its frozen N0 state."
+        }
+        require(observations.isNotEmpty())
+        require(observations.map { it.observationId }.distinct().size == observations.size)
+        require(observations.all { it.sessionId == destinationSession.sessionId }) {
+            "N0 prequential scoring consumes exactly one whole held-out destination session."
+        }
+        require(observations.all { !it.completedAt.isBefore(destinationSession.firstObservationTime) })
+        val selectedIds = destinationFit.selectedObservationIds.toSet()
+        observations.forEach { observation ->
+            require(observation.observationId !in selectedIds) {
+                "Held-out observation leaked into frozen destination N0 evidence."
+            }
+        }
+        val ordered = observations.sortedWith(
+            compareBy<DynamicTransferM0HeldOutObservation> { it.completedAt }.thenBy { it.observationId },
+        )
+        val comparisons = ordered.map { observation ->
+            DynamicTransferN0ObservationScoreComparison(
+                observation = observation,
+                n0 = scoreN0Observation(destinationFit, observation),
+            )
+        }
+        val scores = comparisons.mapNotNull {
+            (it.n0 as? DynamicTransferPredictiveScoreResult.Available)?.score
+        }
+        return DynamicTransferN0PrequentialSessionScore(
+            protocolId = NBio7FPrequentialScoringV1.PROTOCOL_ID,
+            distributionProjectionId = NBio7FPrequentialScoringV1.DISTRIBUTION_PROJECTION_ID,
+            targetSessionId = destinationSession.sessionId,
+            firstObservationTime = destinationSession.firstObservationTime,
+            frozenAt = frozenAt,
+            comparisons = comparisons,
+            n0Aggregate = aggregate(scores),
+        )
+    }
+
     fun freeze(
         destinationSession: DynamicTransferM0DestinationSessionDescriptor,
         m0Fit: DynamicTransferM0PosteriorFit,
@@ -327,42 +407,47 @@ object DynamicTransferM0PrequentialScorer {
         )
     }
 
+    private fun scoreN0Observation(
+        destinationFit: DynamicTrendFrontierFit,
+        observation: DynamicTransferM0HeldOutObservation,
+    ): DynamicTransferPredictiveScoreResult = numericalResult {
+        val components = destinationFit.posteriorNodes.mapIndexed { index, node ->
+            PredictiveComponent(
+                weight = node.posteriorWeight,
+                logFrontier = DynamicTransferM0Kernel.n0LogFrontier(
+                    destinationNode = node,
+                    destinationReferenceRepetitions = destinationFit.referenceRepetitions,
+                    queryRepetitions = observation.repetitions,
+                    destinationSessionOffset = 1.0,
+                ),
+                slackScale = node.slackScale,
+                noiseScale = node.noiseScale,
+                stableKey = "n0:" + index,
+            )
+        }
+        val y = ln(observation.resistanceKg)
+        val exactLogDensity = logSumExp(
+            destinationFit.posteriorNodes.map { node ->
+                if (node.posteriorWeight <= 0.0) Double.NEGATIVE_INFINITY else {
+                    ln(node.posteriorWeight) + DynamicTransferM0Kernel.n0ObservationLogDensity(
+                        destinationNode = node,
+                        yLogResistance = y,
+                        destinationReferenceRepetitions = destinationFit.referenceRepetitions,
+                        repetitions = observation.repetitions,
+                        destinationSessionOffset = 1.0,
+                    )
+                }
+            },
+        )
+        PredictiveMixtureScorer.score(components, observation.resistanceKg, exactLogDensity)
+    }
+
     private fun scoreObservation(
         frozen: DynamicTransferM0PrequentialFreeze,
         observation: DynamicTransferM0HeldOutObservation,
     ): DynamicTransferM0ObservationScoreComparison {
         val destinationFit = frozen.destinationSession.destination.n0.destinationFit
-        val n0 = numericalResult {
-            val components = destinationFit.posteriorNodes.mapIndexed { index, node ->
-                PredictiveComponent(
-                    weight = node.posteriorWeight,
-                    logFrontier = DynamicTransferM0Kernel.n0LogFrontier(
-                        destinationNode = node,
-                        destinationReferenceRepetitions = destinationFit.referenceRepetitions,
-                        queryRepetitions = observation.repetitions,
-                        destinationSessionOffset = 1.0,
-                    ),
-                    slackScale = node.slackScale,
-                    noiseScale = node.noiseScale,
-                    stableKey = "n0:$index",
-                )
-            }
-            val y = ln(observation.resistanceKg)
-            val exactLogDensity = logSumExp(
-                destinationFit.posteriorNodes.map { node ->
-                    if (node.posteriorWeight <= 0.0) Double.NEGATIVE_INFINITY else {
-                        ln(node.posteriorWeight) + DynamicTransferM0Kernel.n0ObservationLogDensity(
-                            destinationNode = node,
-                            yLogResistance = y,
-                            destinationReferenceRepetitions = destinationFit.referenceRepetitions,
-                            repetitions = observation.repetitions,
-                            destinationSessionOffset = 1.0,
-                        )
-                    }
-                },
-            )
-            PredictiveMixtureScorer.score(components, observation.resistanceKg, exactLogDensity)
-        }
+        val n0 = scoreN0Observation(destinationFit, observation)
 
         val m0 = if (
             observation.repetitions < destinationFit.observedRepMin ||
