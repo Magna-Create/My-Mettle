@@ -11,6 +11,7 @@ import dev.kian.mymettle.domain.inference.DynamicResistanceEvidence
 import dev.kian.mymettle.domain.performance.Laterality
 import dev.kian.mymettle.engine.inference.DirectedDynamicTransferRelationshipDescriptor
 import dev.kian.mymettle.engine.inference.DynamicHistoricalAvailabilityV3
+import dev.kian.mymettle.engine.inference.DynamicTransferContinuousAggregate
 import dev.kian.mymettle.engine.inference.DynamicTransferM0DestinationContext
 import dev.kian.mymettle.engine.inference.DynamicTransferM0DestinationSessionDescriptor
 import dev.kian.mymettle.engine.inference.DynamicTransferM0DirectedEdgeKey
@@ -23,6 +24,8 @@ import dev.kian.mymettle.engine.inference.DynamicTransferM0PosteriorReplayInput
 import dev.kian.mymettle.engine.inference.DynamicTransferM0PrequentialAggregator
 import dev.kian.mymettle.engine.inference.DynamicTransferM0PrequentialScorer
 import dev.kian.mymettle.engine.inference.DynamicTransferM0PrequentialSessionScore
+import dev.kian.mymettle.engine.inference.DynamicTransferPredictiveScoreResult
+import dev.kian.mymettle.engine.inference.DynamicTransferPredictiveUnavailableReason
 import dev.kian.mymettle.engine.inference.DynamicTransferM0ReplayDependencyScope
 import dev.kian.mymettle.engine.inference.DynamicTransferM0SourceCandidateAssessment
 import dev.kian.mymettle.engine.inference.DynamicTransferM0SourceCandidateInput
@@ -239,6 +242,20 @@ class NBio7FInstalledHistoryEvaluator(
             firstObservationTime = seed.firstObservationTime,
             destination = destination,
         )
+        val heldOutObservations = heldOutProjection.evidence.map {
+            dev.kian.mymettle.engine.inference.DynamicTransferM0HeldOutObservation(
+                observationId = it.observationId,
+                sessionId = it.sessionId,
+                completedAt = it.completedAt,
+                repetitions = it.repetitions.toDouble(),
+                resistanceKg = it.resistance.value,
+            )
+        }
+        val n0Score = DynamicTransferM0PrequentialScorer.scoreN0Session(
+            destinationSession = destinationSession,
+            frozenAt = freezeAt,
+            observations = heldOutObservations,
+        )
         val relevantRelationships = relationships
             .filter {
                 it.destinationExecutionProfileId == descriptor.semantics.executionProfileId &&
@@ -303,7 +320,7 @@ class NBio7FInstalledHistoryEvaluator(
                         destinationDependencyScope = destinationContext.replayDependencyScope(),
                         destinationSession = destinationSession,
                         destinationTrainingEvidence = destinationProjection.evidence,
-                        heldOutEvidence = heldOutProjection.evidence,
+                        heldOutObservations = heldOutObservations,
                         candidate = candidate,
                         decision = decision,
                         dynamicHistory = dynamicHistory,
@@ -333,6 +350,14 @@ class NBio7FInstalledHistoryEvaluator(
             n0Detail = null,
             n0SelectedObservationCount = n0.destinationFit.selectedObservationIds.size,
             n0SelectedIndependentSessionCount = n0.destinationFit.selectedSessionIds.size,
+            n0ScoredObservationCount = n0Score.comparisons.count {
+                it.n0 is DynamicTransferPredictiveScoreResult.Available
+            },
+            n0NumericalFailureCount = n0Score.comparisons.count {
+                (it.n0 as? DynamicTransferPredictiveScoreResult.Unavailable)?.reason ==
+                    DynamicTransferPredictiveUnavailableReason.NUMERICAL_FAILURE
+            },
+            n0Aggregate = n0Score.n0Aggregate,
             destinationEquipmentStatus = destinationContext.equipment.statusString(),
             destinationLoadAccountingStatus = destinationContext.loadAccounting.statusString(),
             futureEquipmentCorrectionsExcluded = destinationContext.futureCorrectionsExcluded,
@@ -349,7 +374,7 @@ class NBio7FInstalledHistoryEvaluator(
         destinationDependencyScope: DynamicTransferM0ReplayDependencyScope,
         destinationSession: DynamicTransferM0DestinationSessionDescriptor,
         destinationTrainingEvidence: List<DynamicResistanceEvidence>,
-        heldOutEvidence: List<DynamicResistanceEvidence>,
+        heldOutObservations: List<dev.kian.mymettle.engine.inference.DynamicTransferM0HeldOutObservation>,
         candidate: DynamicTransferM0SourceCandidateAssessment.Admissible,
         decision: DynamicTransferM0SourceSelectionDecision,
         dynamicHistory: NBio7BRawHistory,
@@ -410,15 +435,7 @@ class NBio7FInstalledHistoryEvaluator(
             )
             val score = DynamicTransferM0PrequentialScorer.scoreSession(
                 frozen = frozen,
-                observations = heldOutEvidence.map {
-                    dev.kian.mymettle.engine.inference.DynamicTransferM0HeldOutObservation(
-                        observationId = it.observationId,
-                        sessionId = it.sessionId,
-                        completedAt = it.completedAt,
-                        repetitions = it.repetitions.toDouble(),
-                        resistanceKg = it.resistance.value,
-                    )
-                },
+                observations = heldOutObservations,
             )
             edgeScores.getOrPut(candidate.edgeKey, ::mutableListOf) += score
             NBio7FM0RelationshipEventAudit(
@@ -774,6 +791,9 @@ class NBio7FInstalledHistoryEvaluator(
         n0Detail = detail,
         n0SelectedObservationCount = 0,
         n0SelectedIndependentSessionCount = 0,
+        n0ScoredObservationCount = 0,
+        n0NumericalFailureCount = 0,
+        n0Aggregate = null,
         destinationEquipmentStatus = "NOT_EVALUATED",
         destinationLoadAccountingStatus = "NOT_EVALUATED",
         futureEquipmentCorrectionsExcluded = 0,
@@ -866,6 +886,9 @@ data class NBio7FInstalledDestinationEventAudit(
     val n0Detail: String?,
     val n0SelectedObservationCount: Int,
     val n0SelectedIndependentSessionCount: Int,
+    val n0ScoredObservationCount: Int,
+    val n0NumericalFailureCount: Int,
+    val n0Aggregate: DynamicTransferContinuousAggregate?,
     val destinationEquipmentStatus: String,
     val destinationLoadAccountingStatus: String,
     val futureEquipmentCorrectionsExcluded: Int,
@@ -911,6 +934,12 @@ data class NBio7FInstalledHistoryEvaluationReport(
             event.relationshipAudits.count { it.status == NBio7FM0EventStatus.SCORED }
         }
 
+    val n0ScoredObservationCount: Int
+        get() = destinationEvents.sumOf { it.n0ScoredObservationCount }
+
+    val n0NumericalFailureCount: Int
+        get() = destinationEvents.sumOf { it.n0NumericalFailureCount }
+
     val causallyExcludedFutureCorrectionCount: Int
         get() = destinationEvents.sumOf { it.futureEquipmentCorrectionsExcluded }
 
@@ -930,7 +959,9 @@ data class NBio7FInstalledHistoryEvaluationReport(
             JSONObject()
                 .put("mathematicalModelIdentity", n0MathematicalModelIdentity)
                 .put("solverIdentity", n0SolverIdentity)
-                .put("availableEventCount", n0AvailableEventCount),
+                .put("availableEventCount", n0AvailableEventCount)
+                .put("scoredObservationCount", n0ScoredObservationCount)
+                .put("numericalFailureCount", n0NumericalFailureCount),
         )
         .put(
             "m0",
@@ -990,6 +1021,9 @@ private fun NBio7FInstalledDestinationEventAudit.toJson(): JSONObject = JSONObje
     .put("n0Detail", n0Detail ?: JSONObject.NULL)
     .put("n0SelectedObservationCount", n0SelectedObservationCount)
     .put("n0SelectedIndependentSessionCount", n0SelectedIndependentSessionCount)
+    .put("n0ScoredObservationCount", n0ScoredObservationCount)
+    .put("n0NumericalFailureCount", n0NumericalFailureCount)
+    .put("n0Aggregate", n0Aggregate?.toJson7f() ?: JSONObject.NULL)
     .put("destinationEquipmentStatus", destinationEquipmentStatus)
     .put("destinationLoadAccountingStatus", destinationLoadAccountingStatus)
     .put("futureEquipmentCorrectionsExcluded", futureEquipmentCorrectionsExcluded)
@@ -1011,6 +1045,16 @@ private fun NBio7FM0RelationshipEventAudit.toJson(): JSONObject = JSONObject()
     .put("fitRuntimeMillis", fitRuntimeMillis)
     .put("scoringRuntimeMillis", scoringRuntimeMillis)
     .put("runtimeMillis", runtimeMillis)
+
+private fun DynamicTransferContinuousAggregate.toJson7f(): JSONObject = JSONObject()
+    .put("count", count)
+    .put("meanNegativeLogScore", meanNegativeLogScore)
+    .put("meanCrpsLogResistance", meanCrpsLogResistance)
+    .put("meanWeightedIntervalScoreLogResistance", meanWeightedIntervalScoreLogResistance)
+    .put("coverage90", coverage90)
+    .put("meanIntervalLogWidth", meanIntervalLogWidth)
+    .put("meanMedianAbsoluteErrorKg", meanMedianAbsoluteErrorKg)
+    .put("meanSignedLogResidual", meanSignedLogResidual)
 
 private fun NBio7FInstalledEdgeAggregate.toJson(): JSONObject = JSONObject()
     .put("edgeIdentity", edgeIdentity)
