@@ -274,6 +274,7 @@ class NBio7FInstalledHistoryEvaluator(
             )
         } else {
             val candidateInputs = mutableListOf<DynamicTransferM0SourceCandidateInput>()
+            val sourceAudits = mutableMapOf<DynamicTransferM0DirectedEdgeKey, NBio7FSourceSnapshotAudit>()
             relevantRelationships.forEach { relationship ->
                 when (
                     val source = buildSourceSnapshot(
@@ -285,14 +286,20 @@ class NBio7FInstalledHistoryEvaluator(
                         excludedSessionId = seed.sessionId,
                     )
                 ) {
-                    is SourceSnapshotResult.Available -> candidateInputs += DynamicTransferM0SourceCandidateInput(
-                        source = source.source,
-                        sourceLoadAccounting = source.loadAccounting,
-                        relationship = relationship,
-                        replayDependencyScope = source.dependencyScope,
-                    )
+                    is SourceSnapshotResult.Available -> {
+                        val edgeKey = DynamicTransferM0DirectedEdgeKey.from(relationship)
+                        sourceAudits[edgeKey] = source.audit
+                        candidateInputs += DynamicTransferM0SourceCandidateInput(
+                            source = source.source,
+                            sourceLoadAccounting = source.loadAccounting,
+                            relationship = relationship,
+                            replayDependencyScope = source.dependencyScope,
+                        )
+                    }
                     is SourceSnapshotResult.Unavailable -> relationshipAudits += NBio7FM0RelationshipEventAudit(
                         edgeIdentity = DynamicTransferM0DirectedEdgeKey.from(relationship).canonicalIdentity,
+                        relationship = relationship.toAuditDescriptor(),
+                        sourceSnapshot = source.audit,
                         status = NBio7FM0EventStatus.SOURCE_SNAPSHOT_UNAVAILABLE,
                         detail = source.reason,
                         sourceFitRuntimeMillis = source.runtimeMillis,
@@ -310,6 +317,8 @@ class NBio7FInstalledHistoryEvaluator(
                     .forEach { rejected ->
                         relationshipAudits += NBio7FM0RelationshipEventAudit(
                             edgeIdentity = rejected.edgeKey.canonicalIdentity,
+                            relationship = rejected.input.relationship.toAuditDescriptor(),
+                            sourceSnapshot = sourceAudits[rejected.edgeKey],
                             status = NBio7FM0EventStatus.SOURCE_REJECTED,
                             detail = rejected.refusal.toString(),
                         )
@@ -323,6 +332,7 @@ class NBio7FInstalledHistoryEvaluator(
                         destinationTrainingEvidence = destinationProjection.evidence,
                         heldOutObservations = heldOutObservations,
                         candidate = candidate,
+                        sourceSnapshot = requireNotNull(sourceAudits[candidate.edgeKey]),
                         decision = decision,
                         dynamicHistory = dynamicHistory,
                         equipmentHistory = equipmentHistory,
@@ -347,6 +357,14 @@ class NBio7FInstalledHistoryEvaluator(
             destinationTrainingEligibleCount = destinationProjection.evidence.size,
             destinationTrainingIndependentSessions = destinationProjection.independentSessionCount,
             destinationTrainingExclusions = destinationProjection.exclusions.reasonCounts(),
+            destinationTrainingRepMinimum = destinationProjection.repDomain?.first,
+            destinationTrainingRepMaximum = destinationProjection.repDomain?.last,
+            heldOutRepMinimum = heldOutProjection.repDomain?.first,
+            heldOutRepMaximum = heldOutProjection.repDomain?.last,
+            heldOutOutsideDestinationTrainingRepDomainCount = heldOutProjection.evidence.count {
+                val domain = destinationProjection.repDomain
+                domain != null && it.repetitions !in domain
+            },
             n0Status = NBio7FN0EventStatus.AVAILABLE,
             n0Detail = null,
             n0SelectedObservationCount = n0.destinationFit.selectedObservationIds.size,
@@ -377,6 +395,7 @@ class NBio7FInstalledHistoryEvaluator(
         destinationTrainingEvidence: List<DynamicResistanceEvidence>,
         heldOutObservations: List<dev.kian.mymettle.engine.inference.DynamicTransferM0HeldOutObservation>,
         candidate: DynamicTransferM0SourceCandidateAssessment.Admissible,
+        sourceSnapshot: NBio7FSourceSnapshotAudit,
         decision: DynamicTransferM0SourceSelectionDecision,
         dynamicHistory: NBio7BRawHistory,
         equipmentHistory: NBio7FHistoricalEquipmentHistory,
@@ -394,6 +413,8 @@ class NBio7FInstalledHistoryEvaluator(
         } catch (failure: Exception) {
             return NBio7FM0RelationshipEventAudit(
                 edgeIdentity = candidate.edgeKey.canonicalIdentity,
+                relationship = candidate.input.relationship.toAuditDescriptor(),
+                sourceSnapshot = sourceSnapshot,
                 status = NBio7FM0EventStatus.TRAINING_RECONSTRUCTION_UNAVAILABLE,
                 detail = failure.message ?: failure::class.simpleName ?: "M0 training reconstruction failed.",
                 runtimeMillis = elapsedMillis(started),
@@ -412,6 +433,8 @@ class NBio7FInstalledHistoryEvaluator(
         } catch (failure: Exception) {
             return NBio7FM0RelationshipEventAudit(
                 edgeIdentity = candidate.edgeKey.canonicalIdentity,
+                relationship = candidate.input.relationship.toAuditDescriptor(),
+                sourceSnapshot = sourceSnapshot,
                 status = NBio7FM0EventStatus.FIT_UNAVAILABLE,
                 detail = failure.message ?: failure::class.simpleName ?: "M0 fit unavailable.",
                 pairedTrainingSessionCount = trainingSessions.count {
@@ -441,6 +464,8 @@ class NBio7FInstalledHistoryEvaluator(
             edgeScores.getOrPut(candidate.edgeKey, ::mutableListOf) += score
             NBio7FM0RelationshipEventAudit(
                 edgeIdentity = candidate.edgeKey.canonicalIdentity,
+                relationship = candidate.input.relationship.toAuditDescriptor(),
+                sourceSnapshot = sourceSnapshot,
                 status = NBio7FM0EventStatus.SCORED,
                 detail = null,
                 sourceSelectedObservationCount = candidate.input.source.selectedObservationIds.size,
@@ -455,6 +480,8 @@ class NBio7FInstalledHistoryEvaluator(
         } catch (failure: Exception) {
             NBio7FM0RelationshipEventAudit(
                 edgeIdentity = candidate.edgeKey.canonicalIdentity,
+                relationship = candidate.input.relationship.toAuditDescriptor(),
+                sourceSnapshot = sourceSnapshot,
                 status = NBio7FM0EventStatus.SCORING_FAILURE,
                 detail = failure.message ?: failure::class.simpleName ?: "M0 scoring failed.",
                 sourceSelectedObservationCount = candidate.input.source.selectedObservationIds.size,
@@ -553,10 +580,19 @@ class NBio7FInstalledHistoryEvaluator(
     ): SourceSnapshotResult {
         val started = System.nanoTime()
         val descriptor = dynamicHistory.profiles[relationship.sourceExecutionProfileVersionId.value]
-            ?: return SourceSnapshotResult.Unavailable("missing_source_profile_semantics", elapsedMillis(started))
+            ?: return sourceUnavailable(
+                startedNanos = started,
+                status = "MISSING_PROFILE_SEMANTICS",
+                detail = "missing_source_profile_semantics",
+            )
         if (descriptor.semantics.executionProfileId != relationship.sourceExecutionProfileId) {
-            return SourceSnapshotResult.Unavailable("source_profile_id_version_mismatch", elapsedMillis(started))
+            return sourceUnavailable(
+                startedNanos = started,
+                status = "PROFILE_ID_VERSION_MISMATCH",
+                detail = "source_profile_id_version_mismatch",
+            )
         }
+
         val raw = currentPriorEvidence(dynamicHistory, cutoff, before, excludedSessionId).filter {
             it.executionProfileVersionId == relationship.sourceExecutionProfileVersionId &&
                 it.laterality == relationship.side
@@ -568,8 +604,18 @@ class NBio7FInstalledHistoryEvaluator(
             policy = NBioCorrectedCandidateV2Bundle.evidencePolicy,
         )
         if (projection.evidence.isEmpty()) {
-            return SourceSnapshotResult.Unavailable("no_eligible_source_evidence", elapsedMillis(started))
+            return sourceUnavailable(
+                startedNanos = started,
+                status = "NO_ELIGIBLE_SOURCE_EVIDENCE",
+                detail = "no_eligible_source_evidence",
+                rawEvidenceCount = raw.size,
+                eligibleEvidenceCount = 0,
+                independentSessionCount = 0,
+                exclusions = projection.exclusions.reasonCounts(),
+                observedRepDomain = projection.repDomain,
+            )
         }
+
         val n0 = try {
             DynamicTransferN0Champion.fit(
                 destinationProjection = projection,
@@ -577,17 +623,40 @@ class NBio7FInstalledHistoryEvaluator(
                 configCreatedAt = DynamicTrendCapabilityShadowRepository.CANDIDATE_CONFIG_CREATED_AT,
             )
         } catch (failure: Exception) {
-            return SourceSnapshotResult.Unavailable(
-                "source_fit_failure:" + (failure::class.simpleName ?: "Exception"),
-                elapsedMillis(started),
+            return sourceUnavailable(
+                startedNanos = started,
+                status = "FIT_FAILURE",
+                detail = "source_fit_failure:" + (failure::class.simpleName ?: "Exception"),
+                rawEvidenceCount = raw.size,
+                eligibleEvidenceCount = projection.evidence.size,
+                independentSessionCount = projection.independentSessionCount,
+                exclusions = projection.exclusions.reasonCounts(),
+                observedRepDomain = projection.repDomain,
             )
         }
-        val context = causalCapabilityContext(
-            selectedObservationIds = n0.destinationFit.selectedObservationIds,
-            projectedEvidence = projection.evidence,
-            knowledgeAt = cutoff,
-            equipmentHistory = equipmentHistory,
-        )
+
+        val context = try {
+            causalCapabilityContext(
+                selectedObservationIds = n0.destinationFit.selectedObservationIds,
+                projectedEvidence = projection.evidence,
+                knowledgeAt = cutoff,
+                equipmentHistory = equipmentHistory,
+            )
+        } catch (failure: Exception) {
+            return sourceUnavailable(
+                startedNanos = started,
+                status = "CONTEXT_RECONSTRUCTION_FAILURE",
+                detail = "source_context_failure:" + (failure::class.simpleName ?: "Exception"),
+                rawEvidenceCount = raw.size,
+                eligibleEvidenceCount = projection.evidence.size,
+                independentSessionCount = projection.independentSessionCount,
+                exclusions = projection.exclusions.reasonCounts(),
+                observedRepDomain = projection.repDomain,
+                selectedObservationCount = n0.destinationFit.selectedObservationIds.size,
+                selectedIndependentSessionCount = n0.destinationFit.selectedSessionIds.size,
+            )
+        }
+
         val source = try {
             CapabilityTransferSourceFactory.fromDynamicTrendFit(
                 profile = descriptor.semantics,
@@ -595,16 +664,87 @@ class NBio7FInstalledHistoryEvaluator(
                 equipmentContext = context.toCapabilityEquipmentContext(),
             )
         } catch (failure: Exception) {
-            return SourceSnapshotResult.Unavailable(
-                "source_transfer_boundary_failure:" + (failure::class.simpleName ?: "Exception"),
-                elapsedMillis(started),
+            return sourceUnavailable(
+                startedNanos = started,
+                status = "TRANSFER_BOUNDARY_FAILURE",
+                detail = "source_transfer_boundary_failure:" + (failure::class.simpleName ?: "Exception"),
+                rawEvidenceCount = raw.size,
+                eligibleEvidenceCount = projection.evidence.size,
+                independentSessionCount = projection.independentSessionCount,
+                exclusions = projection.exclusions.reasonCounts(),
+                observedRepDomain = projection.repDomain,
+                selectedObservationCount = n0.destinationFit.selectedObservationIds.size,
+                selectedIndependentSessionCount = n0.destinationFit.selectedSessionIds.size,
+                equipmentStatus = context.equipment.statusString(),
+                loadAccountingStatus = context.loadAccounting.statusString(),
+                futureCorrectionsExcluded = context.futureCorrectionsExcluded,
+                futureFactsExcluded = context.futureFactsExcluded,
             )
         }
+
+        val runtimeMillis = elapsedMillis(started)
         return SourceSnapshotResult.Available(
             source = source,
             loadAccounting = context.toM0LoadAccounting(),
             dependencyScope = context.replayDependencyScope(),
-            runtimeMillis = elapsedMillis(started),
+            runtimeMillis = runtimeMillis,
+            audit = NBio7FSourceSnapshotAudit(
+                status = "AVAILABLE",
+                detail = null,
+                rawEvidenceCount = raw.size,
+                eligibleEvidenceCount = projection.evidence.size,
+                independentSessionCount = projection.independentSessionCount,
+                exclusions = projection.exclusions.reasonCounts(),
+                observedRepMinimum = projection.repDomain?.first,
+                observedRepMaximum = projection.repDomain?.last,
+                selectedObservationCount = n0.destinationFit.selectedObservationIds.size,
+                selectedIndependentSessionCount = n0.destinationFit.selectedSessionIds.size,
+                equipmentStatus = context.equipment.statusString(),
+                loadAccountingStatus = context.loadAccounting.statusString(),
+                futureEquipmentCorrectionsExcluded = context.futureCorrectionsExcluded,
+                futureEquipmentFactsExcluded = context.futureFactsExcluded,
+                runtimeMillis = runtimeMillis,
+            ),
+        )
+    }
+
+    private fun sourceUnavailable(
+        startedNanos: Long,
+        status: String,
+        detail: String,
+        rawEvidenceCount: Int = 0,
+        eligibleEvidenceCount: Int = 0,
+        independentSessionCount: Int = 0,
+        exclusions: Map<String, Int> = emptyMap(),
+        observedRepDomain: IntRange? = null,
+        selectedObservationCount: Int = 0,
+        selectedIndependentSessionCount: Int = 0,
+        equipmentStatus: String = "NOT_EVALUATED",
+        loadAccountingStatus: String = "NOT_EVALUATED",
+        futureCorrectionsExcluded: Int = 0,
+        futureFactsExcluded: Int = 0,
+    ): SourceSnapshotResult.Unavailable {
+        val runtimeMillis = elapsedMillis(startedNanos)
+        return SourceSnapshotResult.Unavailable(
+            reason = detail,
+            runtimeMillis = runtimeMillis,
+            audit = NBio7FSourceSnapshotAudit(
+                status = status,
+                detail = detail,
+                rawEvidenceCount = rawEvidenceCount,
+                eligibleEvidenceCount = eligibleEvidenceCount,
+                independentSessionCount = independentSessionCount,
+                exclusions = exclusions,
+                observedRepMinimum = observedRepDomain?.first,
+                observedRepMaximum = observedRepDomain?.last,
+                selectedObservationCount = selectedObservationCount,
+                selectedIndependentSessionCount = selectedIndependentSessionCount,
+                equipmentStatus = equipmentStatus,
+                loadAccountingStatus = loadAccountingStatus,
+                futureEquipmentCorrectionsExcluded = futureCorrectionsExcluded,
+                futureEquipmentFactsExcluded = futureFactsExcluded,
+                runtimeMillis = runtimeMillis,
+            ),
         )
     }
 
@@ -745,11 +885,13 @@ class NBio7FInstalledHistoryEvaluator(
             val loadAccounting: DynamicTransferM0LoadAccountingContext,
             val dependencyScope: DynamicTransferM0ReplayDependencyScope,
             val runtimeMillis: Long,
+            val audit: NBio7FSourceSnapshotAudit,
         ) : SourceSnapshotResult
 
         data class Unavailable(
             val reason: String,
             val runtimeMillis: Long,
+            val audit: NBio7FSourceSnapshotAudit,
         ) : SourceSnapshotResult
     }
 
@@ -771,6 +913,11 @@ class NBio7FInstalledHistoryEvaluator(
         destinationTrainingEligibleCount: Int = 0,
         destinationTrainingIndependentSessions: Int = 0,
         destinationTrainingExclusions: Map<String, Int> = emptyMap(),
+        destinationTrainingRepMinimum: Int? = null,
+        destinationTrainingRepMaximum: Int? = null,
+        heldOutRepMinimum: Int? = null,
+        heldOutRepMaximum: Int? = null,
+        heldOutOutsideDestinationTrainingRepDomainCount: Int = 0,
         n0RuntimeMillis: Long = 0L,
         runtimeMillis: Long,
     ) = NBio7FInstalledDestinationEventAudit(
@@ -788,6 +935,11 @@ class NBio7FInstalledHistoryEvaluator(
         destinationTrainingEligibleCount = destinationTrainingEligibleCount,
         destinationTrainingIndependentSessions = destinationTrainingIndependentSessions,
         destinationTrainingExclusions = destinationTrainingExclusions,
+        destinationTrainingRepMinimum = destinationTrainingRepMinimum,
+        destinationTrainingRepMaximum = destinationTrainingRepMaximum,
+        heldOutRepMinimum = heldOutRepMinimum,
+        heldOutRepMaximum = heldOutRepMaximum,
+        heldOutOutsideDestinationTrainingRepDomainCount = heldOutOutsideDestinationTrainingRepDomainCount,
         n0Status = status,
         n0Detail = detail,
         n0SelectedObservationCount = 0,
@@ -803,6 +955,24 @@ class NBio7FInstalledHistoryEvaluator(
         n0RuntimeMillis = n0RuntimeMillis,
         runtimeMillis = runtimeMillis,
     )
+
+    private fun DirectedDynamicTransferRelationshipDescriptor.toAuditDescriptor() =
+        NBio7FRelationshipDescriptorAudit(
+            relationshipId = relationshipId,
+            version = version,
+            policyIdentity = policyIdentity,
+            sourceExecutionProfileVersionId = sourceExecutionProfileVersionId.value,
+            destinationExecutionProfileVersionId = destinationExecutionProfileVersionId.value,
+            side = side.storageValue,
+            sourceEquipmentId = sourceEquipmentId.value,
+            sourceEquipmentInterpretationVersion = sourceEquipmentInterpretationVersion,
+            sourceEquipmentFactVersionIds = sourceEquipmentFactVersionIds.sorted(),
+            destinationEquipmentId = destinationEquipmentId.value,
+            destinationEquipmentInterpretationVersion = destinationEquipmentInterpretationVersion,
+            destinationEquipmentFactVersionIds = destinationEquipmentFactVersionIds.sorted(),
+            sourceLoadAccounting = sourceLoadAccounting.storageValue,
+            destinationLoadAccounting = destinationLoadAccounting.storageValue,
+        )
 
     private fun NBio7FHistoricalCapabilityEquipmentContext.statusString(): String = when (this) {
         is NBio7FHistoricalCapabilityEquipmentContext.Stable -> "STABLE:" + equipmentId.value
@@ -853,8 +1023,45 @@ enum class NBio7FM0EventStatus {
     SCORING_FAILURE,
 }
 
+data class NBio7FRelationshipDescriptorAudit(
+    val relationshipId: String,
+    val version: Int,
+    val policyIdentity: String,
+    val sourceExecutionProfileVersionId: String,
+    val destinationExecutionProfileVersionId: String,
+    val side: String,
+    val sourceEquipmentId: String,
+    val sourceEquipmentInterpretationVersion: String,
+    val sourceEquipmentFactVersionIds: List<String>,
+    val destinationEquipmentId: String,
+    val destinationEquipmentInterpretationVersion: String,
+    val destinationEquipmentFactVersionIds: List<String>,
+    val sourceLoadAccounting: String,
+    val destinationLoadAccounting: String,
+)
+
+data class NBio7FSourceSnapshotAudit(
+    val status: String,
+    val detail: String?,
+    val rawEvidenceCount: Int,
+    val eligibleEvidenceCount: Int,
+    val independentSessionCount: Int,
+    val exclusions: Map<String, Int>,
+    val observedRepMinimum: Int?,
+    val observedRepMaximum: Int?,
+    val selectedObservationCount: Int,
+    val selectedIndependentSessionCount: Int,
+    val equipmentStatus: String,
+    val loadAccountingStatus: String,
+    val futureEquipmentCorrectionsExcluded: Int,
+    val futureEquipmentFactsExcluded: Int,
+    val runtimeMillis: Long,
+)
+
 data class NBio7FM0RelationshipEventAudit(
     val edgeIdentity: String?,
+    val relationship: NBio7FRelationshipDescriptorAudit? = null,
+    val sourceSnapshot: NBio7FSourceSnapshotAudit? = null,
     val status: NBio7FM0EventStatus,
     val detail: String?,
     val sourceSelectedObservationCount: Int = 0,
@@ -883,6 +1090,11 @@ data class NBio7FInstalledDestinationEventAudit(
     val destinationTrainingEligibleCount: Int,
     val destinationTrainingIndependentSessions: Int,
     val destinationTrainingExclusions: Map<String, Int>,
+    val destinationTrainingRepMinimum: Int?,
+    val destinationTrainingRepMaximum: Int?,
+    val heldOutRepMinimum: Int?,
+    val heldOutRepMaximum: Int?,
+    val heldOutOutsideDestinationTrainingRepDomainCount: Int,
     val n0Status: NBio7FN0EventStatus,
     val n0Detail: String?,
     val n0SelectedObservationCount: Int,
@@ -1018,6 +1230,11 @@ private fun NBio7FInstalledDestinationEventAudit.toJson(): JSONObject = JSONObje
     .put("destinationTrainingEligibleCount", destinationTrainingEligibleCount)
     .put("destinationTrainingIndependentSessions", destinationTrainingIndependentSessions)
     .put("destinationTrainingExclusions", JSONObject(destinationTrainingExclusions))
+    .put("destinationTrainingRepMinimum", destinationTrainingRepMinimum ?: JSONObject.NULL)
+    .put("destinationTrainingRepMaximum", destinationTrainingRepMaximum ?: JSONObject.NULL)
+    .put("heldOutRepMinimum", heldOutRepMinimum ?: JSONObject.NULL)
+    .put("heldOutRepMaximum", heldOutRepMaximum ?: JSONObject.NULL)
+    .put("heldOutOutsideDestinationTrainingRepDomainCount", heldOutOutsideDestinationTrainingRepDomainCount)
     .put("n0Status", n0Status.name)
     .put("n0Detail", n0Detail ?: JSONObject.NULL)
     .put("n0SelectedObservationCount", n0SelectedObservationCount)
@@ -1035,6 +1252,8 @@ private fun NBio7FInstalledDestinationEventAudit.toJson(): JSONObject = JSONObje
 
 private fun NBio7FM0RelationshipEventAudit.toJson(): JSONObject = JSONObject()
     .put("edgeIdentity", edgeIdentity ?: JSONObject.NULL)
+    .put("relationship", relationship?.toJson7f() ?: JSONObject.NULL)
+    .put("sourceSnapshot", sourceSnapshot?.toJson7f() ?: JSONObject.NULL)
     .put("status", status.name)
     .put("detail", detail ?: JSONObject.NULL)
     .put("sourceSelectedObservationCount", sourceSelectedObservationCount)
@@ -1045,6 +1264,39 @@ private fun NBio7FM0RelationshipEventAudit.toJson(): JSONObject = JSONObject()
     .put("sourceFitRuntimeMillis", sourceFitRuntimeMillis)
     .put("fitRuntimeMillis", fitRuntimeMillis)
     .put("scoringRuntimeMillis", scoringRuntimeMillis)
+    .put("runtimeMillis", runtimeMillis)
+
+private fun NBio7FRelationshipDescriptorAudit.toJson7f(): JSONObject = JSONObject()
+    .put("relationshipId", relationshipId)
+    .put("version", version)
+    .put("policyIdentity", policyIdentity)
+    .put("sourceExecutionProfileVersionId", sourceExecutionProfileVersionId)
+    .put("destinationExecutionProfileVersionId", destinationExecutionProfileVersionId)
+    .put("side", side)
+    .put("sourceEquipmentId", sourceEquipmentId)
+    .put("sourceEquipmentInterpretationVersion", sourceEquipmentInterpretationVersion)
+    .put("sourceEquipmentFactVersionIds", JSONArray(sourceEquipmentFactVersionIds))
+    .put("destinationEquipmentId", destinationEquipmentId)
+    .put("destinationEquipmentInterpretationVersion", destinationEquipmentInterpretationVersion)
+    .put("destinationEquipmentFactVersionIds", JSONArray(destinationEquipmentFactVersionIds))
+    .put("sourceLoadAccounting", sourceLoadAccounting)
+    .put("destinationLoadAccounting", destinationLoadAccounting)
+
+private fun NBio7FSourceSnapshotAudit.toJson7f(): JSONObject = JSONObject()
+    .put("status", status)
+    .put("detail", detail ?: JSONObject.NULL)
+    .put("rawEvidenceCount", rawEvidenceCount)
+    .put("eligibleEvidenceCount", eligibleEvidenceCount)
+    .put("independentSessionCount", independentSessionCount)
+    .put("exclusions", JSONObject(exclusions))
+    .put("observedRepMinimum", observedRepMinimum ?: JSONObject.NULL)
+    .put("observedRepMaximum", observedRepMaximum ?: JSONObject.NULL)
+    .put("selectedObservationCount", selectedObservationCount)
+    .put("selectedIndependentSessionCount", selectedIndependentSessionCount)
+    .put("equipmentStatus", equipmentStatus)
+    .put("loadAccountingStatus", loadAccountingStatus)
+    .put("futureEquipmentCorrectionsExcluded", futureEquipmentCorrectionsExcluded)
+    .put("futureEquipmentFactsExcluded", futureEquipmentFactsExcluded)
     .put("runtimeMillis", runtimeMillis)
 
 private fun DynamicTransferContinuousAggregate.toJson7f(): JSONObject = JSONObject()
