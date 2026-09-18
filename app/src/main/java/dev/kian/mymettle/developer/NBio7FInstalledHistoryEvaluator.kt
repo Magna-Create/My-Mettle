@@ -56,6 +56,8 @@ class NBio7FInstalledHistoryEvaluator(
     private val database: MyMettleDatabase,
     private val relationships: List<DirectedDynamicTransferRelationshipDescriptor> = emptyList(),
 ) {
+    private val n0Champion = DynamicTransferN0Champion()
+
     fun run(
         onProgress: (NBio7BAcceptanceProgress) -> Unit = {},
     ): NBio7FInstalledHistoryEvaluationReport {
@@ -204,7 +206,7 @@ class NBio7FInstalledHistoryEvaluator(
 
         val n0Started = System.nanoTime()
         val n0 = try {
-            DynamicTransferN0Champion.fit(
+            n0Champion.fit(
                 destinationProjection = destinationProjection,
                 inferenceHorizon = destinationProjection.evidence.maxOf { it.completedAt },
                 configCreatedAt = DynamicTrendCapabilityShadowRepository.CANDIDATE_CONFIG_CREATED_AT,
@@ -617,7 +619,7 @@ class NBio7FInstalledHistoryEvaluator(
         }
 
         val n0 = try {
-            DynamicTransferN0Champion.fit(
+            n0Champion.fit(
                 destinationProjection = projection,
                 inferenceHorizon = projection.evidence.maxOf { it.completedAt },
                 configCreatedAt = DynamicTrendCapabilityShadowRepository.CANDIDATE_CONFIG_CREATED_AT,
