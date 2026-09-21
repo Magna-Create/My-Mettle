@@ -1189,11 +1189,50 @@ data class NBio7FInstalledHistoryEvaluationReport(
     val n0NumericalFailureCount: Int
         get() = destinationEvents.sumOf { it.n0NumericalFailureCount }
 
-    val causallyExcludedFutureCorrectionCount: Int
+    val n0StatusCounts: Map<String, Int>
+        get() = destinationEvents.groupingBy { it.n0Status.name }.eachCount().toSortedMap()
+
+    val n0AvailabilityRate: Double
+        get() = if (destinationEvents.isEmpty()) 0.0 else n0AvailableEventCount.toDouble() / destinationEvents.size
+
+    val m0AvailableDestinationEventCount: Int
+        get() = destinationEvents.count { event ->
+            event.relationshipAudits.any { it.status == NBio7FM0EventStatus.SCORED }
+        }
+
+    val m0DestinationAvailabilityRate: Double
+        get() = if (destinationEvents.isEmpty()) 0.0 else {
+            m0AvailableDestinationEventCount.toDouble() / destinationEvents.size
+        }
+
+    val m0StatusCounts: Map<String, Int>
+        get() = destinationEvents
+            .flatMap { it.relationshipAudits }
+            .groupingBy { it.status.name }
+            .eachCount()
+            .toSortedMap()
+
+    val destinationFutureCorrectionExclusionCount: Int
         get() = destinationEvents.sumOf { it.futureEquipmentCorrectionsExcluded }
 
-    val causallyExcludedFutureFactCount: Int
+    val destinationFutureFactExclusionCount: Int
         get() = destinationEvents.sumOf { it.futureEquipmentFactsExcluded }
+
+    val sourceFutureCorrectionExclusionCount: Int
+        get() = destinationEvents.sumOf { event ->
+            event.relationshipAudits.sumOf { it.sourceSnapshot?.futureEquipmentCorrectionsExcluded ?: 0 }
+        }
+
+    val sourceFutureFactExclusionCount: Int
+        get() = destinationEvents.sumOf { event ->
+            event.relationshipAudits.sumOf { it.sourceSnapshot?.futureEquipmentFactsExcluded ?: 0 }
+        }
+
+    val causallyExcludedFutureCorrectionCount: Int
+        get() = destinationFutureCorrectionExclusionCount + sourceFutureCorrectionExclusionCount
+
+    val causallyExcludedFutureFactCount: Int
+        get() = destinationFutureFactExclusionCount + sourceFutureFactExclusionCount
 
     val rawEvidenceUnchanged: Boolean
         get() = rawFingerprintBefore == rawFingerprintAfter
@@ -1236,7 +1275,10 @@ data class NBio7FInstalledHistoryEvaluationReport(
             JSONObject()
                 .put("mathematicalModelIdentity", n0MathematicalModelIdentity)
                 .put("solverIdentity", n0SolverIdentity)
+                .put("destinationEventCount", destinationEvents.size)
                 .put("availableEventCount", n0AvailableEventCount)
+                .put("availabilityRate", n0AvailabilityRate)
+                .put("statusCounts", JSONObject(n0StatusCounts))
                 .put("scoredObservationCount", n0ScoredObservationCount)
                 .put("numericalFailureCount", n0NumericalFailureCount),
         )
@@ -1247,7 +1289,10 @@ data class NBio7FInstalledHistoryEvaluationReport(
                 .put("mathematicalModelIdentity", m0MathematicalModelIdentity)
                 .put("solverIdentity", m0SolverIdentity)
                 .put("relationshipDescriptorCount", relationshipDescriptorCount)
-                .put("scoredEventEdgeCount", m0ScoredEventEdgeCount),
+                .put("availableDestinationEventCount", m0AvailableDestinationEventCount)
+                .put("destinationAvailabilityRate", m0DestinationAvailabilityRate)
+                .put("scoredEventEdgeCount", m0ScoredEventEdgeCount)
+                .put("statusCounts", JSONObject(m0StatusCounts)),
         )
         .put(
             "evaluation",
@@ -1257,6 +1302,10 @@ data class NBio7FInstalledHistoryEvaluationReport(
                 .put("destinationEventCount", destinationEvents.size)
                 .put("futureCorrectionsExcluded", causallyExcludedFutureCorrectionCount)
                 .put("futureFactsExcluded", causallyExcludedFutureFactCount)
+                .put("destinationFutureCorrectionsExcluded", destinationFutureCorrectionExclusionCount)
+                .put("destinationFutureFactsExcluded", destinationFutureFactExclusionCount)
+                .put("sourceFutureCorrectionsExcluded", sourceFutureCorrectionExclusionCount)
+                .put("sourceFutureFactsExcluded", sourceFutureFactExclusionCount)
                 .put("capabilityFamilyCoverage", JSONObject(capabilityFamilyCoverage)),
         )
         .put(
