@@ -62,7 +62,7 @@ class NBio7FInstalledHistoryEvaluator(
 ) {
     private val n0Champion = DynamicTransferN0Champion()
 
-    fun run(
+    suspend fun run(
         onProgress: (NBio7BAcceptanceProgress) -> Unit = {},
     ): NBio7FInstalledHistoryEvaluationReport {
         val started = System.nanoTime()
