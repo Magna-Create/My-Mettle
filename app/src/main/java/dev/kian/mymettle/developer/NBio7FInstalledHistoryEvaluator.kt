@@ -70,6 +70,7 @@ class NBio7FInstalledHistoryEvaluator(
             database = database,
             historicalAvailabilityResolver = DynamicHistoricalAvailabilityV3::resolve,
         ).read()
+        val nonDynamicHistory = NBio7CRawHistoryReader(database).read()
         val sessions = NBio7DHistoricalInputReader(database).read().sessions
         val equipmentHistory = NBio7FHistoricalEquipmentHistoryReader(database).read()
         peakHeap = maxOf(peakHeap, usedHeapBytes())
@@ -125,7 +126,7 @@ class NBio7FInstalledHistoryEvaluator(
             relationshipDescriptorCount = relationships.size,
             destinationEvents = events,
             edgeAggregates = aggregates,
-            capabilityFamilyCoverage = dynamicHistory.revisions
+            capabilityFamilyCoverage = (dynamicHistory.revisions + nonDynamicHistory.revisions)
                 .groupingBy { it.evidence.metricFamily.storageValue }
                 .eachCount()
                 .toSortedMap(),
