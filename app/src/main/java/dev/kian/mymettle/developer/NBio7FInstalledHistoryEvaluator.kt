@@ -65,6 +65,16 @@ class NBio7FInstalledHistoryEvaluator(
         val started = System.nanoTime()
         val heapBefore = usedHeapBytes()
         var peakHeap = heapBefore
+        val inferenceDao = database.inferenceDao()
+        val userProfileIds = inferenceDao.userProfileIds()
+        require(userProfileIds.size == 1) {
+            "N-BIO-7F installed-history evaluation requires exactly one Native user profile; found " +
+                userProfileIds.size + "."
+        }
+        val userProfileId = userProfileIds.single()
+        val rawFingerprintBefore = NBio7BRawEvidenceFingerprinter.capture(database)
+        val prescriptionBefore = NBio7BPrescriptionStateFingerprinter.capture(database)
+        val benchmarkRunIdBefore = inferenceDao.latestInferenceRun(userProfileId)?.id
 
         onProgress(NBio7BAcceptanceProgress(0, 3, "N-BIO-7F · reading causal installed history"))
         val dynamicHistory = NBio7BRawHistoryReader(
@@ -105,6 +115,9 @@ class NBio7FInstalledHistoryEvaluator(
                 )
             }
 
+        val rawFingerprintAfter = NBio7BRawEvidenceFingerprinter.capture(database)
+        val prescriptionAfter = NBio7BPrescriptionStateFingerprinter.capture(database)
+        val benchmarkRunIdAfter = inferenceDao.latestInferenceRun(userProfileId)?.id
         val heapAfter = usedHeapBytes()
         peakHeap = maxOf(peakHeap, heapAfter)
         onProgress(NBio7BAcceptanceProgress(3, 3, "N-BIO-7F installed-history evaluation complete"))
@@ -134,6 +147,12 @@ class NBio7FInstalledHistoryEvaluator(
             n1RealHistoryStatus = "NOT_EVALUATED_REAL_HISTORY",
             m1RealHistoryStatus = "NOT_EVALUATED_REAL_HISTORY",
             m2RealHistoryStatus = "NOT_EVALUATED_REAL_HISTORY",
+            rawFingerprintBefore = rawFingerprintBefore,
+            rawFingerprintAfter = rawFingerprintAfter,
+            prescriptionBefore = prescriptionBefore,
+            prescriptionAfter = prescriptionAfter,
+            benchmarkRunIdBefore = benchmarkRunIdBefore,
+            benchmarkRunIdAfter = benchmarkRunIdAfter,
             runtimeMillis = elapsedMillis(started),
             heapUsedBeforeBytes = heapBefore,
             heapUsedAfterBytes = heapAfter,
@@ -1142,6 +1161,12 @@ data class NBio7FInstalledHistoryEvaluationReport(
     val n1RealHistoryStatus: String,
     val m1RealHistoryStatus: String,
     val m2RealHistoryStatus: String,
+    val rawFingerprintBefore: NBio7BRawEvidenceFingerprint,
+    val rawFingerprintAfter: NBio7BRawEvidenceFingerprint,
+    val prescriptionBefore: NBio7BPrescriptionStateFingerprint,
+    val prescriptionAfter: NBio7BPrescriptionStateFingerprint,
+    val benchmarkRunIdBefore: String?,
+    val benchmarkRunIdAfter: String?,
     val runtimeMillis: Long,
     val heapUsedBeforeBytes: Long,
     val heapUsedAfterBytes: Long,
@@ -1167,6 +1192,18 @@ data class NBio7FInstalledHistoryEvaluationReport(
     val causallyExcludedFutureFactCount: Int
         get() = destinationEvents.sumOf { it.futureEquipmentFactsExcluded }
 
+    val rawEvidenceUnchanged: Boolean
+        get() = rawFingerprintBefore == rawFingerprintAfter
+
+    val prescriptionStateUnchanged: Boolean
+        get() = prescriptionBefore == prescriptionAfter
+
+    val benchmarkAuthorityUnchanged: Boolean
+        get() = benchmarkRunIdBefore == benchmarkRunIdAfter
+
+    val integrityPassed: Boolean
+        get() = rawEvidenceUnchanged && prescriptionStateUnchanged && benchmarkAuthorityUnchanged
+
     fun toJson(): String = JSONObject()
         .put("format", "my-mettle-n-bio-7f-installed-history-development-evaluation")
         .put("formatVersion", 1)
@@ -1175,6 +1212,22 @@ data class NBio7FInstalledHistoryEvaluationReport(
         .put("historicalAvailabilityPolicy", historicalAvailabilityPolicy)
         .put("authority", "SHADOW_DEVELOPER_ONLY")
         .put("productAuthority", "BENCHMARK_V0_UNCHANGED")
+        .put(
+            "integrity",
+            JSONObject()
+                .put("rawEvidenceBeforeSha256", rawFingerprintBefore.sha256)
+                .put("rawEvidenceAfterSha256", rawFingerprintAfter.sha256)
+                .put("rawEvidenceUnchanged", rawEvidenceUnchanged)
+                .put("rawEvidenceTableRowCounts", JSONObject(rawFingerprintAfter.tableRowCounts))
+                .put("prescriptionBeforeSha256", prescriptionBefore.sha256)
+                .put("prescriptionAfterSha256", prescriptionAfter.sha256)
+                .put("prescriptionStateUnchanged", prescriptionStateUnchanged)
+                .put("prescriptionTableRowCounts", JSONObject(prescriptionAfter.tableRowCounts))
+                .put("benchmarkRunIdBefore", benchmarkRunIdBefore ?: JSONObject.NULL)
+                .put("benchmarkRunIdAfter", benchmarkRunIdAfter ?: JSONObject.NULL)
+                .put("benchmarkAuthorityUnchanged", benchmarkAuthorityUnchanged)
+                .put("passed", integrityPassed),
+        )
         .put(
             "n0",
             JSONObject()
