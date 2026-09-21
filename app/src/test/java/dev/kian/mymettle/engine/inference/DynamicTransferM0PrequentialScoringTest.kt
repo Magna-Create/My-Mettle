@@ -163,7 +163,7 @@ class DynamicTransferM0PrequentialScoringTest {
     }
 
     @Test
-    fun \`standalone n0 score is identical to paired n0 score\`() {
+    fun `standalone n0 score is identical to paired n0 score`() {
         val fixture = fixture()
         val fit = DynamicTransferM0PosteriorReplay.fit(fixture.replayInput)
         val observations = heldOutObservations(multiplier = 1.0)
