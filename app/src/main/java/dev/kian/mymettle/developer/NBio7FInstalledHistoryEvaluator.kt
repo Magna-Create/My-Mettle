@@ -34,6 +34,7 @@ import dev.kian.mymettle.engine.inference.DynamicTransferM0SourceSelectionPolici
 import dev.kian.mymettle.engine.inference.DynamicTransferM0SourceSelector
 import dev.kian.mymettle.engine.inference.DynamicTransferM0TrainingSession
 import dev.kian.mymettle.engine.inference.DynamicTransferN0Champion
+import dev.kian.mymettle.engine.inference.HistoricalCompletedSetEvidenceRevision
 import dev.kian.mymettle.engine.inference.HistoricalObservationRevisionSelector
 import dev.kian.mymettle.engine.inference.NBio7FM0V1
 import dev.kian.mymettle.engine.inference.NBio7FN0V1
@@ -75,7 +76,7 @@ class NBio7FInstalledHistoryEvaluator(
         val equipmentHistory = NBio7FHistoricalEquipmentHistoryReader(database).read()
         peakHeap = maxOf(peakHeap, usedHeapBytes())
 
-        val seeds = destinationSeeds(dynamicHistory, sessions)
+        val seeds = planDestinationSeeds(dynamicHistory.revisions, sessions)
         val edgeScores = linkedMapOf<DynamicTransferM0DirectedEdgeKey, MutableList<DynamicTransferM0PrequentialSessionScore>>()
         val events = mutableListOf<NBio7FInstalledDestinationEventAudit>()
 
@@ -800,37 +801,6 @@ class NBio7FInstalledHistoryEvaluator(
         cutoff = outcomeKnowledgeAt,
     )
 
-    private fun destinationSeeds(
-        dynamicHistory: NBio7BRawHistory,
-        sessions: Map<String, NBio7DHistoricalSession>,
-    ): List<DestinationSeed> = dynamicHistory.revisions
-        .groupBy { requireNotNull(it.evidence.sessionId) }
-        .entries
-        .flatMap { entry ->
-            val session = sessions[entry.key] ?: return@flatMap emptyList()
-            val outcomeHeads = HistoricalObservationRevisionSelector.currentAsOf(
-                revisions = entry.value,
-                cutoff = session.completedAt,
-            )
-            outcomeHeads.groupBy { it.executionProfileVersionId.value to it.laterality }
-                .map { grouped ->
-                    DestinationSeed(
-                        sessionId = entry.key,
-                        executionProfileVersionId = grouped.key.first,
-                        side = grouped.key.second,
-                        firstObservationTime = grouped.value.minOf { it.completedAt },
-                        outcomeKnowledgeAt = session.completedAt,
-                    )
-                }
-        }
-        .distinct()
-        .sortedWith(
-            compareBy<DestinationSeed> { it.firstObservationTime }
-                .thenBy { it.sessionId }
-                .thenBy { it.executionProfileVersionId }
-                .thenBy { it.side.storageValue },
-        )
-
     private fun NBio7FHistoricalCapabilityContext.toCapabilityEquipmentContext(): CapabilityEquipmentContext =
         when (val value = equipment) {
             is NBio7FHistoricalCapabilityEquipmentContext.Stable -> CapabilityEquipmentContext.ResolvedSingleContext(
@@ -902,7 +872,7 @@ class NBio7FInstalledHistoryEvaluator(
         ) : SourceSnapshotResult
     }
 
-    private data class DestinationSeed(
+    internal data class DestinationSeed(
         val sessionId: String,
         val executionProfileVersionId: String,
         val side: Laterality,
@@ -1006,9 +976,40 @@ class NBio7FInstalledHistoryEvaluator(
 
     private fun elapsedMillis(startedNanos: Long): Long = (System.nanoTime() - startedNanos) / 1_000_000L
 
-    private companion object {
-        const val SOURCE_SELECTION_POLICY_ID = "n-bio-7f-installed-history-independent-explicit-edges"
-        const val SOURCE_SELECTION_POLICY_VERSION = 1
+    companion object {
+        internal fun planDestinationSeeds(
+            revisions: List<HistoricalCompletedSetEvidenceRevision>,
+            sessions: Map<String, NBio7DHistoricalSession>,
+        ): List<DestinationSeed> = revisions
+            .groupBy { requireNotNull(it.evidence.sessionId) }
+            .entries
+            .flatMap { entry ->
+                val session = sessions[entry.key] ?: return@flatMap emptyList()
+                val outcomeHeads = HistoricalObservationRevisionSelector.currentAsOf(
+                    revisions = entry.value,
+                    cutoff = session.completedAt,
+                )
+                outcomeHeads.groupBy { it.executionProfileVersionId.value to it.laterality }
+                    .map { grouped ->
+                        DestinationSeed(
+                            sessionId = entry.key,
+                            executionProfileVersionId = grouped.key.first,
+                            side = grouped.key.second,
+                            firstObservationTime = grouped.value.minOf { it.completedAt },
+                            outcomeKnowledgeAt = session.completedAt,
+                        )
+                    }
+            }
+            .distinct()
+            .sortedWith(
+                compareBy<DestinationSeed> { it.firstObservationTime }
+                    .thenBy { it.sessionId }
+                    .thenBy { it.executionProfileVersionId }
+                    .thenBy { it.side.storageValue },
+            )
+
+        private const val SOURCE_SELECTION_POLICY_ID = "n-bio-7f-installed-history-independent-explicit-edges"
+        private const val SOURCE_SELECTION_POLICY_VERSION = 1
     }
 }
 
