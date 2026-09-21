@@ -808,13 +808,17 @@ class NBio7FInstalledHistoryEvaluator(
         .entries
         .flatMap { entry ->
             val session = sessions[entry.key] ?: return@flatMap emptyList()
-            entry.value.groupBy { it.evidence.executionProfileVersionId.value to it.evidence.laterality }
+            val outcomeHeads = HistoricalObservationRevisionSelector.currentAsOf(
+                revisions = entry.value,
+                cutoff = session.completedAt,
+            )
+            outcomeHeads.groupBy { it.executionProfileVersionId.value to it.laterality }
                 .map { grouped ->
                     DestinationSeed(
                         sessionId = entry.key,
                         executionProfileVersionId = grouped.key.first,
                         side = grouped.key.second,
-                        firstObservationTime = grouped.value.minOf { it.evidence.completedAt },
+                        firstObservationTime = grouped.value.minOf { it.completedAt },
                         outcomeKnowledgeAt = session.completedAt,
                     )
                 }
