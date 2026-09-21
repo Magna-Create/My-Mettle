@@ -29,6 +29,8 @@ import dev.kian.mymettle.developer.NBio7DCompleteAcceptanceReport
 import dev.kian.mymettle.developer.NBio7DCompleteAcceptanceRunner
 import dev.kian.mymettle.developer.NBio7EStateContextAcceptanceReport
 import dev.kian.mymettle.developer.NBio7EStateContextAcceptanceRunner
+import dev.kian.mymettle.developer.NBio7FInstalledHistoryEvaluationReport
+import dev.kian.mymettle.developer.NBio7FInstalledHistoryEvaluator
 import dev.kian.mymettle.developer.NBioAdaptiveInferenceAcceptanceReport
 import dev.kian.mymettle.developer.NBioAdaptiveInferenceAcceptanceRunner
 import dev.kian.mymettle.workout.TrainingMode
@@ -63,6 +65,9 @@ data class BiologyDeveloperUiState(
     val nBio7ERunning: Boolean = false,
     val nBio7EProgress: NBio7BAcceptanceProgress? = null,
     val nBio7EReport: NBio7EStateContextAcceptanceReport? = null,
+    val nBio7FRunning: Boolean = false,
+    val nBio7FProgress: NBio7BAcceptanceProgress? = null,
+    val nBio7FReport: NBio7FInstalledHistoryEvaluationReport? = null,
     val resetComplete: Boolean = false,
     val message: String? = null,
     val error: String? = null,
@@ -79,6 +84,7 @@ class BiologyDeveloperViewModel(
     private val nBio7CCapabilityRunner: NBio7CCapabilityAcceptanceRunner,
     private val nBio7DRunner: NBio7DCompleteAcceptanceRunner,
     private val nBio7ERunner: NBio7EStateContextAcceptanceRunner,
+    private val nBio7FEvaluator: NBio7FInstalledHistoryEvaluator,
 ) : ViewModel() {
     var uiState by mutableStateOf(BiologyDeveloperUiState())
         private set
@@ -141,7 +147,8 @@ class BiologyDeveloperViewModel(
 
     private fun anyLongAcceptanceRunning(): Boolean =
         uiState.nBio7BAcceptanceRunning || uiState.adaptiveInferenceRunning || uiState.nBio7CCapabilityRunning ||
-            uiState.nBio7DRunning || uiState.nBio7ERunning || uiState.nBio6VerificationRunning || uiState.nBio6LiteVerificationRunning
+            uiState.nBio7DRunning || uiState.nBio7ERunning || uiState.nBio7FRunning ||
+            uiState.nBio6VerificationRunning || uiState.nBio6LiteVerificationRunning
 
     fun runNBio6DeviceVerification() {
         if (anyLongAcceptanceRunning()) return
@@ -380,6 +387,52 @@ class BiologyDeveloperViewModel(
         uiState = uiState.copy(message = "N-BIO-7E State & Context acceptance report exported.")
     }
 
+    fun runNBio7FInstalledHistoryEvaluation() {
+        if (anyLongAcceptanceRunning()) return
+        viewModelScope.launch {
+            uiState = uiState.copy(
+                nBio7FRunning = true,
+                nBio7FProgress = NBio7BAcceptanceProgress(
+                    0,
+                    0,
+                    "Preparing N-BIO-7F installed-history development evaluation",
+                ),
+                nBio7FReport = null,
+                error = null,
+            )
+            runCatching {
+                withContext(Dispatchers.Default) {
+                    nBio7FEvaluator.run { progress ->
+                        viewModelScope.launch {
+                            uiState = uiState.copy(nBio7FProgress = progress)
+                        }
+                    }
+                }
+            }.onSuccess { report ->
+                uiState = uiState.copy(
+                    nBio7FRunning = false,
+                    nBio7FProgress = null,
+                    nBio7FReport = report,
+                    message = "N-BIO-7F installed-history evaluation complete · N0 " +
+                        report.n0AvailableEventCount + "/" + report.destinationEvents.size +
+                        " events · M0 " + report.m0AvailableDestinationEventCount +
+                        " events · integrity " + if (report.integrityPassed) "PASS" else "FAIL",
+                )
+                refresh()
+            }.onFailure { error ->
+                uiState = uiState.copy(nBio7FRunning = false, nBio7FProgress = null)
+                showError(error)
+            }
+        }
+    }
+
+    fun nBio7FInstalledHistoryJson(): String = uiState.nBio7FReport?.toJson()
+        ?: error("Run N-BIO 7F installed-history evaluation before exporting.")
+
+    fun markNBio7FInstalledHistoryExported() {
+        uiState = uiState.copy(message = "N-BIO-7F installed-history development report exported.")
+    }
+
     fun resetDatabase() {
         if (uiState.task.phase == BiologyTaskPhase.RUNNING || anyLongAcceptanceRunning()) return
         viewModelScope.launch {
@@ -426,6 +479,10 @@ class BiologyDeveloperViewModelFactory(context: Context) : ViewModelProvider.Fac
             nBio7CCapabilityRunner = NBio7CCapabilityAcceptanceRunner(appContext, database),
             nBio7DRunner = NBio7DCompleteAcceptanceRunner(appContext, database),
             nBio7ERunner = NBio7EStateContextAcceptanceRunner(appContext, database),
+            nBio7FEvaluator = NBio7FInstalledHistoryEvaluator(
+                database = database,
+                relationships = emptyList(),
+            ),
         ) as T
     }
 }
