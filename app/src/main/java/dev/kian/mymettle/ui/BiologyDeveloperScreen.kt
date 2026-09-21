@@ -273,6 +273,13 @@ fun BiologyDeveloperScreen(onBack: () -> Unit) {
                 }
 
                 item {
+                    NBio7FInstalledHistoryDeveloperCard(
+                        viewModel = viewModel,
+                        state = state,
+                    )
+                }
+
+                item {
                     NBio7EAcceptanceDeveloperCard(
                         viewModel = viewModel,
                         state = state,
