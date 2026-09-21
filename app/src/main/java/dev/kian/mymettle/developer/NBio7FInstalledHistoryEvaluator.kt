@@ -23,6 +23,9 @@ import dev.kian.mymettle.engine.inference.DynamicTransferM0PosteriorReplay
 import dev.kian.mymettle.engine.inference.DynamicTransferM0PosteriorReplayInput
 import dev.kian.mymettle.engine.inference.DynamicTransferM0PrequentialAggregator
 import dev.kian.mymettle.engine.inference.DynamicTransferM0PrequentialScorer
+import dev.kian.mymettle.engine.inference.DynamicTransferMetricDeltaDiagnostics
+import dev.kian.mymettle.engine.inference.DynamicTransferPairedDeltaSummary
+import dev.kian.mymettle.engine.inference.DynamicTransferPitReliabilitySummary
 import dev.kian.mymettle.engine.inference.DynamicTransferM0PrequentialSessionScore
 import dev.kian.mymettle.engine.inference.DynamicTransferPredictiveScoreResult
 import dev.kian.mymettle.engine.inference.DynamicTransferPredictiveUnavailableReason
@@ -1370,9 +1373,45 @@ private fun DynamicTransferContinuousAggregate.toJson7f(): JSONObject = JSONObje
     .put("meanMedianAbsoluteErrorKg", meanMedianAbsoluteErrorKg)
     .put("meanSignedLogResidual", meanSignedLogResidual)
 
+private fun DynamicTransferPitReliabilitySummary.toJson7f(): JSONObject = JSONObject()
+    .put("count", count)
+    .put("lowThirdCount", lowThirdCount)
+    .put("middleThirdCount", middleThirdCount)
+    .put("highThirdCount", highThirdCount)
+    .put("lowThirdRate", lowThirdRate)
+    .put("middleThirdRate", middleThirdRate)
+    .put("highThirdRate", highThirdRate)
+    .put("meanPit", meanPit)
+    .put("meanAbsoluteThreeBinDeviation", meanAbsoluteThreeBinDeviation)
+
+private fun DynamicTransferPairedDeltaSummary.toJson7f(): JSONObject = JSONObject()
+    .put("count", count)
+    .put("cumulativeDelta", cumulativeDelta)
+    .put("meanDelta", meanDelta)
+    .put("medianDelta", medianDelta)
+    .put("upperTailP95Delta", upperTailP95Delta)
+    .put("maximumDelta", maximumDelta)
+    .put("positiveCount", positiveCount)
+    .put("positiveFraction", positiveFraction)
+
+private fun DynamicTransferMetricDeltaDiagnostics.toJson7f(): JSONObject = JSONObject()
+    .put("observationLevel", observationLevel.toJson7f())
+    .put("sessionMeanLevel", sessionMeanLevel.toJson7f())
+
 private fun NBio7FInstalledEdgeAggregate.toJson(): JSONObject = JSONObject()
     .put("edgeIdentity", edgeIdentity)
+    .put("aggregateProtocolId", aggregate.aggregateProtocolId)
+    .put("scoringProtocolId", aggregate.scoringProtocolId)
+    .put("distributionProjectionId", aggregate.distributionProjectionId)
+    .put("sourceSelectionPolicyIdentity", aggregate.sourceSelectionPolicyIdentity)
+    .put("sourceSelectionMode", aggregate.sourceSelectionMode.name)
     .put("targetSessionIds", JSONArray(aggregate.targetSessionIds))
+    .put("firstHeldOutSessionTime", aggregate.firstHeldOutSessionTime.toString())
+    .put("lastHeldOutSessionTime", aggregate.lastHeldOutSessionTime.toString())
+    .put("n0Aggregate", aggregate.n0Aggregate?.toJson7f() ?: JSONObject.NULL)
+    .put("m0Aggregate", aggregate.m0Aggregate?.toJson7f() ?: JSONObject.NULL)
+    .put("n0PitReliability", aggregate.n0PitReliability?.toJson7f() ?: JSONObject.NULL)
+    .put("m0PitReliability", aggregate.m0PitReliability?.toJson7f() ?: JSONObject.NULL)
     .put(
         "availability",
         JSONObject()
@@ -1384,6 +1423,9 @@ private fun NBio7FInstalledEdgeAggregate.toJson(): JSONObject = JSONObject()
             .put("n0AvailabilityRate", aggregate.availability.n0AvailabilityRate)
             .put("m0AvailabilityRate", aggregate.availability.m0AvailabilityRate)
             .put("comparableObservationRate", aggregate.availability.comparableObservationRate)
+            .put("fullyComparableSessionCount", aggregate.availability.fullyComparableSessionCount)
+            .put("partiallyComparableSessionCount", aggregate.availability.partiallyComparableSessionCount)
+            .put("noComparableSessionCount", aggregate.availability.noComparableSessionCount)
             .put("n0NumericalFailureCount", aggregate.availability.n0NumericalFailureCount)
             .put("m0NumericalFailureCount", aggregate.availability.m0NumericalFailureCount)
             .put(
@@ -1397,15 +1439,30 @@ private fun NBio7FInstalledEdgeAggregate.toJson(): JSONObject = JSONObject()
             JSONObject()
                 .put("comparableObservationCount", negative.comparableObservationCount)
                 .put("comparableSessionCount", negative.comparableSessionCount)
-                .put("negativeLogScoreMeanObservationDelta", negative.negativeLogScore.observationLevel.meanDelta)
-                .put("negativeLogScoreCumulativeDelta", negative.negativeLogScore.observationLevel.cumulativeDelta)
-                .put("negativeLogScoreMedianDelta", negative.negativeLogScore.observationLevel.medianDelta)
-                .put("negativeLogScoreP95Delta", negative.negativeLogScore.observationLevel.upperTailP95Delta)
-                .put("negativeLogScorePositiveFraction", negative.negativeLogScore.observationLevel.positiveFraction)
-                .put("catastrophicOverconfidenceObservationCount", negative.catastrophicOverconfidenceObservationCount)
+                .put("negativeLogScore", negative.negativeLogScore.toJson7f())
+                .put("crpsLogResistance", negative.crpsLogResistance.toJson7f())
+                .put(
+                    "weightedIntervalScoreLogResistance",
+                    negative.weightedIntervalScoreLogResistance.toJson7f(),
+                )
+                .put("medianAbsoluteErrorKg", negative.medianAbsoluteErrorKg.toJson7f())
+                .put("intervalLogWidthSharpnessChange", negative.intervalLogWidth.toJson7f())
+                .put(
+                    "catastrophicOverconfidenceObservationCount",
+                    negative.catastrophicOverconfidenceObservationCount,
+                )
                 .put(
                     "catastrophicOverconfidenceObservationFraction",
                     negative.catastrophicOverconfidenceObservationFraction,
                 )
+                .put(
+                    "catastrophicOverconfidenceSessionCount",
+                    negative.catastrophicOverconfidenceSessionCount,
+                )
+                .put(
+                    "catastrophicOverconfidenceSessionFraction",
+                    negative.catastrophicOverconfidenceSessionFraction,
+                )
         } ?: JSONObject.NULL,
     )
+
