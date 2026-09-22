@@ -735,3 +735,52 @@ Source checkpoint `9a898ec70af02fca7ac758b77e418edda2bcdb10` is fully green in A
 
 NEXT:
 Run the developer-only N-BIO-7F installed-history evaluation on the physical Native database and export its JSON. Inspect eligibility, causal exclusions, N0 prequential scores, runtime/memory and integrity proofs before authoring any explicit M0 relationship registry or changing any candidate/model threshold.
+
+## Session 16 — 2026-09-22 — FIRST PHYSICAL REPLAY DIAGNOSTIC + FROZEN-POLICY WIRING CORRECTION
+
+HEAD IN:
+37d44423be13d843f37bfbbd37dbed83cca6c58c
+
+OBJECTIVE:
+Analyse the first physical-device N-BIO-7F installed-history export, preserve the observed result, and correct evaluator-only wiring defects without changing the frozen N0/M0 candidate identity.
+
+PHYSICAL DEVELOPMENT EVIDENCE:
+- The first S25 Ultra installed-history run completed over Room18 with integrity PASS and BENCHMARK_V0 unchanged.
+- It discovered 112 destination events but reported N0 availability 0/112: 76 FIT_FAILURE, 25 NO_PRIOR_DESTINATION_EVIDENCE and 11 NO_ELIGIBLE_HELD_OUT_EVIDENCE.
+- All 11 held-out-evidence exclusions were missing-body-mass cases in bodyweight-dependent streams.
+- The 76 FIT_FAILURE events included profiles with substantial prior support, including events with up to 21 eligible prior observations across 8 independent sessions. The failures therefore were not explained by sparse history.
+- M0 correctly remained unavailable because the developer harness supplied zero explicit directed relationship descriptors.
+- The first-run runtime/heap figures are not representative of successful N0 fitting because every event reaching the fit boundary failed before normal N0 computation.
+
+ROOT CAUSE:
+- `NBio7FInstalledHistoryEvaluator` projected destination/source evidence with `NBioCorrectedCandidateV2Bundle.evidencePolicy`, which is corrected-Lite V3.
+- Frozen 7F N0 (`NBio7FN0V1`) is the exact accepted Candidate-v2 Adaptive Sparse identity whose mathematical fingerprint is bound to the V2 evidence policy.
+- `DynamicTransferN0Champion.fit()` correctly fails closed when projection policy identity differs from its frozen base config. The V3 projection therefore caused every otherwise-evaluable N0 fit to throw `IllegalArgumentException` before fitting.
+- This was an evaluator integration defect. It is not evidence that the N0 mathematical candidate failed installed history.
+
+CHANGES:
+- Added an explicit `NBio7FN0V1.evidencePolicy` binding to `DynamicResistanceV2Contract.evidencePolicy` and an invariant that this identity exactly matches the frozen Candidate-v2 base config.
+- Rewired all installed-history destination and source projections to use `NBio7FN0V1.evidencePolicy`.
+- Retained `DynamicHistoricalAvailabilityV3` for causal historical-availability reconstruction; evidence admissibility and historical knowability remain separate concerns.
+- Improved fit-failure diagnostics to include typed `DynamicCapabilityFitException` reason/message where available rather than class name alone.
+- Added a regression test proving frozen N0 is exactly V2 and explicitly differs from corrected V3.
+- No N0 equation, priors, solver, mathematical identity, M0 config, relationship semantics, threshold or product authority changed.
+- No AI Lab, OCR, VLM, camera or local-model harness code was merged or reused.
+
+TESTS:
+- Exact corrected source checkpoint `12a323d87b01165d406e92e8f1b26d0c60146632` completed successfully in Android CI run 35790221034.
+- `:app:testDebugUnitTest :app:assembleDebug` passed, including the frozen evidence-policy regression guard.
+- `:app:assembleDebugAndroidTest`, Android lint and generated Room18 schema verification passed.
+- Dedicated Room18/canonical Native backup/replay emulator proof passed.
+
+DECISIONS:
+- Preserve the first physical 0/112 report as development evidence of an evaluator wiring defect; do not reinterpret it as model-performance evidence.
+- Do not move frozen N0/M0 to corrected V3 after seeing installed history. The preregistered V2 candidate identity remains authoritative for this 7F candidate.
+- V3 historical availability remains valid for deciding when imported/corrected facts became knowable; it must not silently change the frozen model evidence-policy identity.
+- Do not author M0 relationships until the corrected N0-only physical replay succeeds and its eligibility/score diagnostics are inspected.
+
+HEAD OUT:
+Source checkpoint `12a323d87b01165d406e92e8f1b26d0c60146632` is fully green in Android CI run 35790221034; this journal commit follows on the same branch.
+
+NEXT:
+Rebuild/install the corrected branch, rerun the physical N-BIO-7F installed-history development evaluation, export a fresh JSON, and inspect actual N0 prequential availability/scores. Expect first-seen streams and body-mass-dependent exclusions to remain unavailable; any remaining FIT_FAILURE must now report its concrete reason.
