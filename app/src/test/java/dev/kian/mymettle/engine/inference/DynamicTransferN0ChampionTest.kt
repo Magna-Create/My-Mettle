@@ -8,6 +8,7 @@ import dev.kian.mymettle.domain.inference.DynamicResistanceEvidence
 import dev.kian.mymettle.domain.inference.DynamicResistanceEvidenceProjection
 import dev.kian.mymettle.domain.inference.DynamicResistanceProfileSemantics
 import dev.kian.mymettle.domain.inference.DynamicResistanceV2Contract
+import dev.kian.mymettle.domain.inference.DynamicResistanceV3Contract
 import dev.kian.mymettle.domain.inference.DynamicTrendFrontierV2
 import dev.kian.mymettle.domain.inference.InferenceModelComponent
 import dev.kian.mymettle.domain.inference.ProfileLocalResistanceCoordinate
@@ -24,10 +25,24 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class DynamicTransferN0ChampionTest {
+    @Test
+    fun `n0 frozen evidence policy is exact v2 and not corrected v3`() {
+        val frozenIdentity = NBio7FN0V1.selectedSolverConfig
+            .denseCoreConfig
+            .mathematicalConfig
+            .baseConfig
+            .evidencePolicyIdentity
+
+        assertEquals(DynamicResistanceV2Contract.evidencePolicy.identity, NBio7FN0V1.evidencePolicy.identity)
+        assertEquals(frozenIdentity, NBio7FN0V1.evidencePolicy.identity)
+        assertNotEquals(DynamicResistanceV3Contract.evidencePolicy.identity, NBio7FN0V1.evidencePolicy.identity)
+    }
+
     @Test
     fun `n0 binds destination-only fit to selected candidate-v2 adaptive sparse identity`() {
         val evidence = generated(sessions = 4, trend = 0.025)
