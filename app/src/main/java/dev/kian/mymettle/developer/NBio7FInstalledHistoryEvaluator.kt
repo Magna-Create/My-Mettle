@@ -6,6 +6,7 @@ import dev.kian.mymettle.domain.inference.CapabilityEquipmentContext
 import dev.kian.mymettle.domain.inference.CapabilitySourceProfileSemantics
 import dev.kian.mymettle.domain.inference.CapabilityTransferSource
 import dev.kian.mymettle.domain.inference.CapabilityTransferSourceFactory
+import dev.kian.mymettle.domain.inference.DynamicCapabilityFitException
 import dev.kian.mymettle.domain.inference.CompletedSetEvidence
 import dev.kian.mymettle.domain.inference.DynamicResistanceEvidence
 import dev.kian.mymettle.domain.performance.Laterality
@@ -189,7 +190,7 @@ class NBio7FInstalledHistoryEvaluator(
             profile = descriptor.semantics,
             side = seed.side,
             evidence = targetRaw,
-            policy = NBioCorrectedCandidateV2Bundle.evidencePolicy,
+            policy = NBio7FN0V1.evidencePolicy,
         )
         if (heldOutProjection.evidence.isEmpty()) {
             return seed.unavailableEvent(
@@ -213,7 +214,7 @@ class NBio7FInstalledHistoryEvaluator(
             profile = descriptor.semantics,
             side = seed.side,
             evidence = priorRaw,
-            policy = NBioCorrectedCandidateV2Bundle.evidencePolicy,
+            policy = NBio7FN0V1.evidencePolicy,
         )
         if (destinationProjection.evidence.isEmpty()) {
             return seed.unavailableEvent(
@@ -238,7 +239,7 @@ class NBio7FInstalledHistoryEvaluator(
         } catch (failure: Exception) {
             return seed.unavailableEvent(
                 status = NBio7FN0EventStatus.FIT_FAILURE,
-                detail = "N0 fit failed: " + (failure::class.simpleName ?: "Exception"),
+                detail = fitFailureDetail("N0 fit failed", failure),
                 heldOutRawCount = targetRaw.size,
                 heldOutEligibleCount = heldOutProjection.evidence.size,
                 heldOutExclusions = heldOutProjection.exclusions.reasonCounts(),
@@ -627,7 +628,7 @@ class NBio7FInstalledHistoryEvaluator(
             profile = descriptor.semantics,
             side = relationship.side,
             evidence = raw,
-            policy = NBioCorrectedCandidateV2Bundle.evidencePolicy,
+            policy = NBio7FN0V1.evidencePolicy,
         )
         if (projection.evidence.isEmpty()) {
             return sourceUnavailable(
@@ -652,7 +653,7 @@ class NBio7FInstalledHistoryEvaluator(
             return sourceUnavailable(
                 startedNanos = started,
                 status = "FIT_FAILURE",
-                detail = "source_fit_failure:" + (failure::class.simpleName ?: "Exception"),
+                detail = fitFailureDetail("source_fit_failure", failure),
                 rawEvidenceCount = raw.size,
                 eligibleEvidenceCount = projection.evidence.size,
                 independentSessionCount = projection.independentSessionCount,
@@ -990,6 +991,16 @@ class NBio7FInstalledHistoryEvaluator(
 
     private fun List<dev.kian.mymettle.domain.inference.DynamicResistanceEvidenceExclusion>.reasonCounts(): Map<String, Int> =
         groupingBy { it.reason.storageValue }.eachCount().toSortedMap()
+
+    private fun fitFailureDetail(prefix: String, failure: Exception): String {
+        val typedReason = (failure as? DynamicCapabilityFitException)?.reason?.storageValue
+        val parts = listOfNotNull(
+            failure::class.simpleName,
+            typedReason,
+            failure.message?.takeIf { it.isNotBlank() },
+        )
+        return prefix + ": " + parts.joinToString(" · ")
+    }
 
     private fun usedHeapBytes(): Long {
         val runtime = Runtime.getRuntime()
