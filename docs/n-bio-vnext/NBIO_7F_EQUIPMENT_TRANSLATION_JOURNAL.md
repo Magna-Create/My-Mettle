@@ -677,3 +677,61 @@ Source checkpoint `81a5a189d17aeaddd3e670f1b3bce1d1d53ed8b4` is fully green in A
 
 NEXT:
 Implement the developer-only real-history 7F development evaluation orchestration over the now-frozen N0/M0 scoring and exact-edge aggregation surfaces, with strict event-time reconstruction and explicit eligibility/exclusion/availability/runtime reporting. Do not change M0 candidate/config based on inspected history.
+
+## Session 15 — 2026-09-22 — INSTALLED-HISTORY DEVELOPMENT EVALUATOR CHECKPOINT
+
+HEAD IN:
+943548b1c2e6ed6db847d47aec3730f2f8a8c889
+
+OBJECTIVE:
+Implement the developer-only installed-history N-BIO-7F evaluator over the frozen N0/M0 scoring and exact-edge aggregation surfaces, with strict event-time reconstruction, eligibility/exclusion/availability/runtime reporting, causal equipment history, explicit non-mutation proofs, and no change to M0 mathematics or normal product behaviour.
+
+SOURCE FINDINGS:
+- Historical equipment meaning cannot be reconstructed from current equipment state. Session bindings, observation overrides, load semantics, corrections and fact versions must each be resolved only from information knowable at the event freeze.
+- Destination-event discovery itself is chronological state: a correction recorded after a session completes must not retroactively create a destination profile/side event for that earlier session.
+- The current Room18 schema contains canonical equipment/history and derived M0 cache tables but no canonical registry of `DirectedDynamicTransferRelationshipDescriptor` values.
+- Existing legacy `ExerciseTranslation*` state predates the frozen 7F directed-edge contract and is not a valid substitute for explicit 7F relationships.
+- N0 remains scientifically evaluable without M0. The installed-history evaluator therefore needs a standalone N0 scoring path that is provably identical to the N0 half of paired N0/M0 scoring.
+- Capability-family coverage reporting must include both 7B dynamic history and 7C loaded-hold/duration/repeated-contraction history even though frozen M0 evaluation remains limited to its preregistered dynamic-resistance family.
+
+CHANGES:
+- Added causal 7F historical equipment reconstruction over equipment bindings, observation overrides, load semantics, corrections and fact versions, including explicit counts of later corrections/facts excluded from earlier freezes.
+- Added `NBio7FInstalledHistoryEvaluator` with destination-session event freezes, V3 corrected-Lite historical availability, causal revision-head selection, destination/source eligibility and exclusion accounting, repetition-domain reporting, equipment/load-accounting reconstruction, runtime/heap reporting and exact-edge aggregation.
+- Destination event seeds now use revision heads current at the owning session outcome horizon, preventing future corrections from creating phantom earlier events.
+- Added standalone N0 whole-session prequential scoring that reuses the exact frozen N0 predictive calculation used by paired N0/M0 scoring.
+- Added regression proof that standalone N0 scores and aggregates are identical to the N0 half of paired scoring.
+- Added regression proof that a future revision changing execution-profile version cannot seed a historical destination event before that revision became knowable.
+- Added explicit source snapshot audits, relationship-descriptor audits, destination/source causal-exclusion counts, M0/N0 availability/status counts, full N0/M0 aggregate metrics, PIT reliability and complete negative-transfer diagnostics to the JSON export.
+- Added raw-evidence, session-prescription and `BENCHMARK_V0` before/after fingerprints so the developer evaluation proves it did not mutate normal product state.
+- Added a developer-only Biology Developer action/card for running and exporting the installed-history report.
+- The developer action intentionally constructs `NBio7FInstalledHistoryEvaluator(..., relationships = emptyList())`. No edge is inferred from exercise names, muscles, equipment family or legacy translation state.
+- N1/M1/M2 remain explicitly `NOT_EVALUATED_REAL_HISTORY`.
+- No M0 priors, likelihood, coreset, quadrature, source-selection policy, promotion threshold or normal workout authority changed.
+
+TESTS:
+- Core evaluator/scorer checkpoint `4030c9da416b45dcdf9b6d66deeb146314eceed8` completed successfully in Android CI run 35663658000.
+- Causal event-seeding proof checkpoint `1e7d6a525ff31767f5f43b5751beefa24f0697ea` completed successfully in Android CI run 35664193314.
+- Exact final source checkpoint `9a898ec70af02fca7ac758b77e418edda2bcdb10` completed successfully in Android CI run 35664659370.
+- Final exact-head `:app:testDebugUnitTest :app:assembleDebug` passed.
+- Final exact-head `:app:assembleDebugAndroidTest`, Android lint and generated Room18 schema verification passed.
+- Final exact-head dedicated Room18/canonical Native backup/replay emulator proof passed.
+- No installed-device real-history report has yet been generated from the user's physical database in this session.
+
+DECISIONS:
+- Absence of an explicit directed 7F relationship is a first-class result, not a prompt to manufacture one. N0 evaluation proceeds and M0 reports unavailable.
+- Legacy `ExerciseTranslation*` persistence is not promoted into the 7F relationship contract.
+- Historical destination/source capability fits keep the established causal evidence horizon semantics; later event-freeze time does not manufacture additional evidence.
+- Real-history evaluation remains SHADOW/developer-only. The evaluator proves raw evidence, prescription state and benchmark authority remain unchanged.
+- Full transfer diagnostics are exported even when they are descriptive only; no composite promotion/rejection verdict was introduced.
+- The Biology Developer card is diagnostic plumbing only. No AI Lab, OCR, VLM, camera or local-model harness code was merged or reused.
+
+OPEN QUESTIONS:
+- The next empirical input must be the exported installed-history report from the physical Native database. Model/threshold changes are not justified before that report exists.
+- M0 real-history evaluation requires genuine explicitly authored/versioned directed relationship descriptors. The repository currently has no canonical relationship registry, so the present developer action is intentionally N0-only.
+- After the physical report, determine whether installed history supplies enough repeated same-profile/equipment observations to evaluate any deferred N1/M1/M2 candidate without weakening the frozen evidence rules.
+
+HEAD OUT:
+Source checkpoint `9a898ec70af02fca7ac758b77e418edda2bcdb10` is fully green in Android CI run 35664659370; this journal commit follows on the same branch.
+
+NEXT:
+Run the developer-only N-BIO-7F installed-history evaluation on the physical Native database and export its JSON. Inspect eligibility, causal exclusions, N0 prequential scores, runtime/memory and integrity proofs before authoring any explicit M0 relationship registry or changing any candidate/model threshold.
