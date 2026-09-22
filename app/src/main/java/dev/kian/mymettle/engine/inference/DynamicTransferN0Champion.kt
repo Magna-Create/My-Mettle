@@ -1,7 +1,9 @@
 package dev.kian.mymettle.engine.inference
 
 import dev.kian.mymettle.domain.inference.DynamicCapabilityFitRequest
+import dev.kian.mymettle.domain.inference.DynamicResistanceEvidencePolicy
 import dev.kian.mymettle.domain.inference.DynamicResistanceEvidenceProjection
+import dev.kian.mymettle.domain.inference.DynamicResistanceV2Contract
 import dev.kian.mymettle.domain.inference.DynamicStochasticFrontierFit
 import dev.kian.mymettle.domain.inference.DynamicTrendFrontierFit
 import dev.kian.mymettle.domain.inference.DynamicTrendFrontierV2
@@ -37,6 +39,17 @@ object NBio7FN0V1 {
         maximumRetainedBaseNodes = 2_048,
         approximationVersion = "candidate-v2-base-posterior-mass-pruned-trend-grid-v1",
     )
+
+    val evidencePolicy: DynamicResistanceEvidencePolicy = DynamicResistanceV2Contract.evidencePolicy
+
+    init {
+        require(
+            evidencePolicy.identity ==
+                selectedSolverConfig.denseCoreConfig.mathematicalConfig.baseConfig.evidencePolicyIdentity,
+        ) {
+            "Frozen N0 evidence policy must match the frozen Candidate-v2 mathematical identity."
+        }
+    }
 
     val mathematicalModelIdentity: InferenceMathematicalModelIdentity
         get() = selectedSolverConfig.denseCoreConfig.mathematicalModelIdentity
@@ -93,7 +106,7 @@ class DynamicTransferN0Champion {
         inferenceHorizon: Instant,
         configCreatedAt: Instant,
     ): DynamicTransferN0Fit {
-        require(destinationProjection.policy.identity == selectedSolver.baseConfig.evidencePolicyIdentity) {
+        require(destinationProjection.policy.identity == NBio7FN0V1.evidencePolicy.identity) {
             "N0 destination evidence policy must match the frozen Candidate-v2 policy."
         }
 
