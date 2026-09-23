@@ -1482,6 +1482,15 @@ private fun NBio7FN0ScoredObservationAudit.toJson7f(): JSONObject = JSONObject()
             .put("signedLogResidual", score.signedLogResidual),
     )
 
+private fun NBio7FN0CrossProfileAggregate.toJson7f(): JSONObject = JSONObject()
+    .put("count", count)
+    .put("meanNegativeLogScore", meanNegativeLogScore)
+    .put("meanCrpsLogResistance", meanCrpsLogResistance)
+    .put("meanWeightedIntervalScoreLogResistance", meanWeightedIntervalScoreLogResistance)
+    .put("coverage90", coverage90)
+    .put("meanIntervalLogWidth", meanIntervalLogWidth)
+    .put("meanSignedLogResidual", meanSignedLogResidual)
+
 private fun NBio7FN0DiagnosticGroup.toJson7f(): JSONObject = JSONObject()
     .put("eventCount", eventCount)
     .put("observationCount", observationCount)
