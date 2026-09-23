@@ -784,3 +784,65 @@ Source checkpoint `12a323d87b01165d406e92e8f1b26d0c60146632` is fully green in A
 
 NEXT:
 Rebuild/install the corrected branch, rerun the physical N-BIO-7F installed-history development evaluation, export a fresh JSON, and inspect actual N0 prequential availability/scores. Expect first-seen streams and body-mass-dependent exclusions to remain unavailable; any remaining FIT_FAILURE must now report its concrete reason.
+
+## Session 17 — 2026-09-23 — CORRECTED PHYSICAL REPLAY & DIAGNOSTIC HARDENING
+
+HEAD IN:
+58ac18f8ec8732b7b767b373173be1262f352cd1
+
+OBJECTIVE:
+Evaluate the corrected physical installed-history replay after the N0 evidence-policy fix, preserve its development findings without retuning the frozen candidate, strengthen N0-only calibration/support diagnostics, and determine whether current history can honestly support real-history M0 or same-profile equipment experiments.
+
+PHYSICAL DEVELOPMENT EVIDENCE:
+- Reviewed private format-v1 export `my-mettle-n-bio-7f-installed-history-1790166858.json`, generated 2026-09-23T12:33:58.797724Z.
+- Private export size: 260673 bytes; SHA-256 `20536f897157bd627a052cb8d7f3753dc559a033e0dbf4fa4be7bda48b88bdd8`.
+- Room18; SHADOW developer authority; `BENCHMARK_V0` unchanged; raw-evidence, prescription and benchmark-run before/after integrity checks all passed.
+- N0: 76/112 destination events available (67.86%), 173 held-out observations scored, zero numerical failures.
+- N0 unavailability: 25 `NO_PRIOR_DESTINATION_EVIDENCE`; 11 `NO_ELIGIBLE_HELD_OUT_EVIDENCE`.
+- Held-out evidence exclusions across the replay included 21 `missing_body_mass` observations and one `warm_up_excluded` observation. Destination-training projection exclusions were otherwise empty in this report.
+- Descriptive observation-weighted N0 values reconstructed from the exported event aggregates: mean negative log score 0.448666; mean log-CRPS 0.153190; mean log-WIS 0.119175; reported 90% interval coverage 0.710983; mean log interval width 0.484445; mean signed log residual +0.064121.
+- Cross-profile kg MAE was deliberately not promoted as a global physical statistic: kg values belong to local execution/equipment coordinates even where their canonical unit matches.
+- Support-depth development pattern (selected independent destination sessions before the held-out event): 1 session = 48 observations / 60.4% coverage / NLS 1.7090; 2 = 44 / 52.3% / 0.8430; 3 = 35 / 88.6% / -0.3910; 4-5 = 39 / 84.6% / -0.5449; 6+ = 7 / 100% / -0.9381.
+- The support-depth pattern is descriptive development evidence only. It does not authorise changing N0 after inspecting these outcomes and does not create a hard observation-count switch.
+- Current format-v1 event summaries reported 36 held-out observations outside their destination training repetition domain. Exact observation-level in-domain/out-of-domain calibration and PIT were not retained by format v1, motivating the diagnostic hardening below.
+- Every one of the 76 N0-available destination capability contexts was historically unresolved for both actual-equipment assertion and load-accounting semantics at its freeze.
+- M0 relationship descriptor count was zero; the 76 N0-available events therefore reported `NO_EXPLICIT_RELATIONSHIP`. M0 real-history transfer was not scored.
+- N1/M1/M2 remained `NOT_EVALUATED_REAL_HISTORY`.
+- Physical evaluator runtime was 181685 ms (~3m 1.7s); peak observed heap was 54463248 bytes (~51.9 MiB).
+
+SOURCE AUDIT:
+- `EquipmentContextRepository` and Room18 already provide explicit canonical equipment/fact/preference/session-actual/observation-override/load-semantics boundaries.
+- `RoomWorkoutRepository.saveObservationInternal` persists performance observation + metric rows but does not author a session actual-equipment binding or observation load-semantics assertion.
+- Therefore the canonical substrate exists but normal workout logging does not yet create the prospective evidence 7F transfer would need.
+- Auto-deriving that missing truth from execution-profile labels/current preference would violate the 7F chronology/ownership contract.
+- Normal-user equipment selection/correction is explicitly a later collaboration/product-UX gate; it was not silently added during this backend slice.
+
+CHANGES:
+- Added developer-only exact N0 scored-observation audit retention to installed-history format v2, including repetitions, local resistance coordinate, in/out destination-training repetition-domain classification, p05/p50/p95, PIT, exact log score, CRPS, WIS, coverage, log sharpness and signed log residual.
+- Added N0-only installed-history aggregation independent of M0 relationship availability.
+- Added overall PIT three-bin reliability plus exact repetition-domain strata and selected-independent-session history-depth strata.
+- Added canonical equipment substrate coverage counts and destination-context M0-readiness count to the report/UI.
+- Added unit coverage proving observation weighting, repetition-domain grouping, history-depth grouping and PIT-bin accounting.
+- Global cross-profile diagnostics intentionally omit kg MAE; event-local profile diagnostics retain it.
+- Updated the Biology Developer card to surface N0 coverage/PIT and canonical equipment-history readiness without changing normal workout behaviour.
+- Added PD-004 to `POSTPONED_DEVELOPMENT.md` for empirical 7F transfer validation/prospective equipment-bound evidence.
+- No N0/M0 mathematics, priors, evidence policy, source-selection policy, model/config identity, promotion rule or normal product authority changed.
+
+VALIDATION:
+- Exact integrated diagnostic source checkpoint `5a98bf6188fe04c0ca6c0ea5bf55eed61a49cb4d` completed successfully in Android CI run 35863074752.
+- `:app:testDebugUnitTest :app:assembleDebug` passed, including the new N0 diagnostic-strata test.
+- Instrumentation APK compilation, Android lint and generated Room18 schema verification passed.
+- Dedicated Room18/canonical Native backup/replay storage proof passed.
+
+DECISIONS:
+- Do not retune the frozen N0 comparator from this inspected development stream.
+- Do not author relationship edges merely to make M0 produce numbers. The current historical stream lacks the canonical equipment/load context required for a valid directed edge evaluation anyway.
+- N0's shallow-history/extrapolation weakness is retained as baseline evidence that future M0 comparisons must stratify rather than hide in one global mean.
+- Current M0/N1/M1/M2 real-history status remains `NOT_EVALUATED_REAL_HISTORY`; this is an evidence limitation, not a reason to fabricate historical semantics.
+- 7F is now a structural-closure candidate with empirical equipment-transfer validation quarantined under PD-004. Physical closure still waits for one final format-v2 device replay so PIT/support strata and canonical-equipment coverage are captured directly rather than reconstructed from format-v1 event summaries.
+
+HEAD OUT:
+Source checkpoint `5a98bf6188fe04c0ca6c0ea5bf55eed61a49cb4d` is fully green in Android CI run 35863074752. PD-004/documentation commits follow on the same branch.
+
+NEXT:
+Build the latest branch and run/export N-BIO-7F installed-history format v2 once more on the physical Native database. Use that final private report to verify exact PIT, observation-level repetition-domain strata, history-depth strata, canonical equipment row coverage, integrity/runtime and unchanged M0 non-evaluability; then write 7F physical structural-closure documentation without tuning the frozen candidates.
