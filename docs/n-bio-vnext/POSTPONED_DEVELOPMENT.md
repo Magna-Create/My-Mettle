@@ -374,6 +374,88 @@ PD-003 closes only for the empirical claims supported by fresh semantically vali
 
 ---
 
+
+# PD-004 — N-BIO-7F empirical equipment-transfer validation
+
+## Status
+
+**OPEN — 7F MAY CLOSE STRUCTURALLY; REAL-HISTORY TRANSFER ACCURACY IS NOT ESTABLISHED**
+
+This entry covers N-BIO-7F directed cross-profile/equipment transfer candidates and the deferred same-profile/multi-equipment architecture experiment.
+
+## Why this is postponed
+
+The first valid corrected physical installed-history replay contained enough destination history to evaluate the frozen N0 baseline on 76 of 112 destination events (173 held-out observations, zero numerical scoring failures), but it did not contain causally usable canonical equipment/load context for those historical capability states. Every N0-available destination context remained unresolved because the actual-equipment assertion and load-accounting semantics were not knowable at its historical freeze.
+
+The developer harness also has no explicit versioned directed 7F relationship registry. This is intentional: relationship edges may not be inferred from exercise labels, muscle targets, broad equipment family, or the legacy `ExerciseTranslation*` state.
+
+Retrospectively inserting today's equipment assumptions into older observations merely to make M0 evaluable would violate 7F chronology and convert missing evidence into fabricated truth. The current history therefore cannot honestly answer whether M0, N1, M1 or M2 improves real future prediction.
+
+## What is structurally established
+
+- canonical Room18 equipment identity/fact/preference/actual-use/load-semantics ownership plus append-only correction history;
+- causal historical reconstruction that excludes later assertions, corrections and facts;
+- deterministic local interpretation that fails closed on unknown mechanics/semantics;
+- a typed capability-transfer boundary preserving upstream joint posterior uncertainty and provenance;
+- frozen N0 Candidate-v2 Adaptive Sparse baseline identity and evidence policy;
+- preregistered directed M0 mathematics/config identity, semantic admissibility and exact no-transfer nesting;
+- deterministic source coreset/beta quadrature, posterior replay, source-selection policy and no-extrapolation rules;
+- derived M0 persistence, dependency invalidation, delete-derived/replay and Native backup/restore safety;
+- whole-session chronological N0/M0 scoring plus exact-edge negative-transfer aggregation;
+- installed-history causal evaluator, non-mutation fingerprints and developer-only JSON export;
+- exact N0 observation-level calibration/support diagnostics without changing the frozen candidate;
+- unchanged raw evidence, prescriptions and `BENCHMARK_V0` product authority.
+
+## Current empirical state
+
+The corrected physical replay is development evidence, not independent acceptance. Privacy-bounded aggregate findings were:
+
+- N0 available on 76/112 destination events and 173 held-out observations;
+- 25 events had no prior destination evidence and 11 had no eligible held-out evidence;
+- zero N0 numerical scoring failures;
+- descriptive observation-weighted N0 90% interval coverage was about 71.1% in the current stream;
+- N0 behaviour improved materially with deeper independent-session support; this was not tuned away;
+- all 76 N0-available historical destination contexts remained equipment/load unresolved at their freeze;
+- explicit M0 relationship count was zero, so M0 real-history scoring was unavailable;
+- N1/M1/M2 remained `NOT_EVALUATED_REAL_HISTORY`;
+- product authority and canonical/raw fingerprints remained unchanged.
+
+The N0 calibration findings do not authorise retrospective tuning of the frozen comparator after outcome inspection. They are retained as development evidence and should be used as strata when future frozen transfer candidates are evaluated.
+
+## Downstream quarantine
+
+Until PD-004 closes:
+
+1. M0/N1/M1/M2 remain SHADOW/development candidates with no normal workout authority.
+2. `BENCHMARK_V0` remains normal-product authority.
+3. No cross-profile/equipment relationship may be inferred merely because profiles look mechanically or anatomically similar.
+4. Missing historical equipment/load semantics must remain missing; current preferences or later equipment facts may not be leaked backwards.
+5. N-BIO-8 must not consume 7F transfer outputs as validated prescription truth.
+6. A favourable synthetic result or future global mean may not hide relationship-specific negative transfer.
+7. Any new candidate/model/threshold created after inspecting this development stream requires a new immutable identity and fresh evidence.
+
+## Prospective evidence requirement
+
+Useful future evidence requires genuinely recorded, temporally valid:
+
+- stable equipment-instance identity;
+- actual session/exercise equipment binding, including explicit session-only overrides where applicable;
+- complete/inclusive versus added-only load semantics where relevant;
+- versioned equipment facts/calibration only when genuinely known;
+- repeated independent sessions under stable execution-profile semantics;
+- explicit versioned directed relationship descriptors frozen before evaluating outcomes;
+- held-out destination outcomes scored chronologically against N0 and the candidate.
+
+The current normal workout persistence path does not itself author these canonical equipment/load assertions. Adding the normal-user equipment-selection/correction workflow is a product/UX decision covered by `PRODUCT_ROADMAP_GATES.md`; it must not be silently invented during 7F backend closure.
+
+## Revisit trigger
+
+Re-open PD-004 when enough prospective canonical equipment-bound history exists to support one or more predeclared directed relationships or the same-profile A/B equipment experiment. Freeze the candidate/config/relationship set before inspecting confirmatory outcomes.
+
+## Closure condition
+
+PD-004 may close partially by relationship family. Valid evidence-backed outcomes include `NO_USEFUL_TRANSFER`, retention of M0 for a bounded relationship family, replacement by a new immutable candidate, or continued unsupported/null behaviour. There is no requirement that transfer must succeed.
+
 # Future entries
 
 Use this file for later deliberately postponed work where forward development is safe only under explicit quarantine. Every entry should state:
