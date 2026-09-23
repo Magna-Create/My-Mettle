@@ -98,6 +98,24 @@ fun NBio7FInstalledHistoryDeveloperCard(
                     "${report.n0AvailableEventCount}/${report.destinationEvents.size} available",
                 )
                 line7f("N0 scored observations", report.n0ScoredObservationCount.toString())
+                report.n0Diagnostics.overall?.let { overall ->
+                    line7f("N0 90% coverage", "%.1f%%".format(overall.aggregate.coverage90 * 100.0))
+                    line7f(
+                        "N0 PIT thirds",
+                        "${overall.pitReliability.lowThirdCount}/" +
+                            "${overall.pitReliability.middleThirdCount}/" +
+                            "${overall.pitReliability.highThirdCount}",
+                    )
+                }
+                line7f(
+                    "M0-ready destination context",
+                    "${report.n0DestinationContextResolvedForM0Count}/${report.n0AvailableEventCount} N0 events",
+                )
+                line7f(
+                    "Canonical equipment history",
+                    "${report.canonicalEquipmentCoverage.sessionActualEquipmentBindingCount} actual bindings · " +
+                        "${report.canonicalEquipmentCoverage.observationLoadSemanticsCount} load semantics",
+                )
                 line7f("Explicit M0 relationships", report.relationshipDescriptorCount.toString())
                 line7f(
                     "M0 destination events",
