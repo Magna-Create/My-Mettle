@@ -1229,6 +1229,13 @@ data class NBio7FInstalledHistoryEvaluationReport(
     val n0AvailabilityRate: Double
         get() = if (destinationEvents.isEmpty()) 0.0 else n0AvailableEventCount.toDouble() / destinationEvents.size
 
+    val n0DestinationContextResolvedForM0Count: Int
+        get() = destinationEvents.count { event ->
+            event.n0Status == NBio7FN0EventStatus.AVAILABLE &&
+                event.destinationEquipmentStatus.startsWith("STABLE:") &&
+                event.destinationLoadAccountingStatus.startsWith("STABLE:")
+        }
+
     val m0AvailableDestinationEventCount: Int
         get() = destinationEvents.count { event ->
             event.relationshipAudits.any { it.status == NBio7FM0EventStatus.SCORED }
@@ -1342,6 +1349,7 @@ data class NBio7FInstalledHistoryEvaluationReport(
                 .put("sourceFutureCorrectionsExcluded", sourceFutureCorrectionExclusionCount)
                 .put("sourceFutureFactsExcluded", sourceFutureFactExclusionCount)
                 .put("canonicalEquipmentCoverage", canonicalEquipmentCoverage.toJson7f())
+                .put("n0DestinationContextResolvedForM0Count", n0DestinationContextResolvedForM0Count)
                 .put("capabilityFamilyCoverage", JSONObject(capabilityFamilyCoverage)),
         )
         .put(
