@@ -88,6 +88,7 @@ class NBio7FInstalledHistoryEvaluator(
         val nonDynamicHistory = NBio7CRawHistoryReader(database).read()
         val sessions = NBio7DHistoricalInputReader(database).read().sessions
         val equipmentHistory = NBio7FHistoricalEquipmentHistoryReader(database).read()
+        val canonicalEquipmentCoverage = equipmentHistory.coverageAudit()
         peakHeap = maxOf(peakHeap, usedHeapBytes())
 
         val seeds = planDestinationSeeds(dynamicHistory.revisions, sessions)
@@ -110,6 +111,7 @@ class NBio7FInstalledHistoryEvaluator(
         }
 
         onProgress(NBio7BAcceptanceProgress(2, 3, "N-BIO-7F · aggregating exact directed edges"))
+        val n0Diagnostics = NBio7FN0InstalledHistoryAggregator.fromEvents(events)
         val aggregates = edgeScores.entries
             .sortedBy { it.key.canonicalIdentity }
             .map { (edge, scores) ->
@@ -144,6 +146,8 @@ class NBio7FInstalledHistoryEvaluator(
             relationshipDescriptorCount = relationships.size,
             destinationEvents = events,
             edgeAggregates = aggregates,
+            n0Diagnostics = n0Diagnostics,
+            canonicalEquipmentCoverage = canonicalEquipmentCoverage,
             capabilityFamilyCoverage = (dynamicHistory.revisions + nonDynamicHistory.revisions)
                 .groupingBy { it.evidence.metricFamily.storageValue }
                 .eachCount()
@@ -404,6 +408,21 @@ class NBio7FInstalledHistoryEvaluator(
                     DynamicTransferPredictiveUnavailableReason.NUMERICAL_FAILURE
             },
             n0Aggregate = n0Score.n0Aggregate,
+            n0ScoredObservations = n0Score.comparisons.mapNotNull { comparison ->
+                val score = (comparison.n0 as? DynamicTransferPredictiveScoreResult.Available)?.score
+                    ?: return@mapNotNull null
+                val domain = destinationProjection.repDomain
+                NBio7FN0ScoredObservationAudit(
+                    observationId = comparison.observation.observationId,
+                    repetitions = comparison.observation.repetitions,
+                    resistanceKg = comparison.observation.resistanceKg,
+                    insideDestinationTrainingRepDomain = domain?.let {
+                        comparison.observation.repetitions >= it.first.toDouble() &&
+                            comparison.observation.repetitions <= it.last.toDouble()
+                    },
+                    score = score,
+                )
+            },
             destinationEquipmentStatus = destinationContext.equipment.statusString(),
             destinationLoadAccountingStatus = destinationContext.loadAccounting.statusString(),
             futureEquipmentCorrectionsExcluded = destinationContext.futureCorrectionsExcluded,
@@ -947,6 +966,7 @@ class NBio7FInstalledHistoryEvaluator(
         n0ScoredObservationCount = 0,
         n0NumericalFailureCount = 0,
         n0Aggregate = null,
+        n0ScoredObservations = emptyList(),
         destinationEquipmentStatus = "NOT_EVALUATED",
         destinationLoadAccountingStatus = "NOT_EVALUATED",
         futureEquipmentCorrectionsExcluded = 0,
@@ -1143,6 +1163,7 @@ data class NBio7FInstalledDestinationEventAudit(
     val n0ScoredObservationCount: Int,
     val n0NumericalFailureCount: Int,
     val n0Aggregate: DynamicTransferContinuousAggregate?,
+    val n0ScoredObservations: List<NBio7FN0ScoredObservationAudit>,
     val destinationEquipmentStatus: String,
     val destinationLoadAccountingStatus: String,
     val futureEquipmentCorrectionsExcluded: Int,
@@ -1171,6 +1192,8 @@ data class NBio7FInstalledHistoryEvaluationReport(
     val relationshipDescriptorCount: Int,
     val destinationEvents: List<NBio7FInstalledDestinationEventAudit>,
     val edgeAggregates: List<NBio7FInstalledEdgeAggregate>,
+    val n0Diagnostics: NBio7FN0InstalledHistoryDiagnostics,
+    val canonicalEquipmentCoverage: NBio7FCanonicalEquipmentCoverageAudit,
     val capabilityFamilyCoverage: Map<String, Int>,
     val n1RealHistoryStatus: String,
     val m1RealHistoryStatus: String,
@@ -1259,7 +1282,7 @@ data class NBio7FInstalledHistoryEvaluationReport(
 
     fun toJson(): String = JSONObject()
         .put("format", "my-mettle-n-bio-7f-installed-history-development-evaluation")
-        .put("formatVersion", 1)
+        .put("formatVersion", 2)
         .put("generatedAt", generatedAt.toString())
         .put("roomSchemaVersion", roomSchemaVersion)
         .put("historicalAvailabilityPolicy", historicalAvailabilityPolicy)
@@ -1291,7 +1314,8 @@ data class NBio7FInstalledHistoryEvaluationReport(
                 .put("availabilityRate", n0AvailabilityRate)
                 .put("statusCounts", JSONObject(n0StatusCounts))
                 .put("scoredObservationCount", n0ScoredObservationCount)
-                .put("numericalFailureCount", n0NumericalFailureCount),
+                .put("numericalFailureCount", n0NumericalFailureCount)
+                .put("diagnostics", n0Diagnostics.toJson7f()),
         )
         .put(
             "m0",
@@ -1317,6 +1341,7 @@ data class NBio7FInstalledHistoryEvaluationReport(
                 .put("destinationFutureFactsExcluded", destinationFutureFactExclusionCount)
                 .put("sourceFutureCorrectionsExcluded", sourceFutureCorrectionExclusionCount)
                 .put("sourceFutureFactsExcluded", sourceFutureFactExclusionCount)
+                .put("canonicalEquipmentCoverage", canonicalEquipmentCoverage.toJson7f())
                 .put("capabilityFamilyCoverage", JSONObject(capabilityFamilyCoverage)),
         )
         .put(
@@ -1366,6 +1391,7 @@ private fun NBio7FInstalledDestinationEventAudit.toJson(): JSONObject = JSONObje
     .put("n0ScoredObservationCount", n0ScoredObservationCount)
     .put("n0NumericalFailureCount", n0NumericalFailureCount)
     .put("n0Aggregate", n0Aggregate?.toJson7f() ?: JSONObject.NULL)
+    .put("n0ScoredObservations", JSONArray(n0ScoredObservations.map { it.toJson7f() }))
     .put("destinationEquipmentStatus", destinationEquipmentStatus)
     .put("destinationLoadAccountingStatus", destinationLoadAccountingStatus)
     .put("futureEquipmentCorrectionsExcluded", futureEquipmentCorrectionsExcluded)
@@ -1422,6 +1448,69 @@ private fun NBio7FSourceSnapshotAudit.toJson7f(): JSONObject = JSONObject()
     .put("futureEquipmentCorrectionsExcluded", futureEquipmentCorrectionsExcluded)
     .put("futureEquipmentFactsExcluded", futureEquipmentFactsExcluded)
     .put("runtimeMillis", runtimeMillis)
+
+private fun NBio7FN0ScoredObservationAudit.toJson7f(): JSONObject = JSONObject()
+    .put("observationId", observationId)
+    .put("repetitions", repetitions)
+    .put("resistanceKg", resistanceKg)
+    .put(
+        "insideDestinationTrainingRepDomain",
+        insideDestinationTrainingRepDomain ?: JSONObject.NULL,
+    )
+    .put(
+        "score",
+        JSONObject()
+            .put("p05ResistanceKg", score.p05ResistanceKg)
+            .put("p50ResistanceKg", score.p50ResistanceKg)
+            .put("p95ResistanceKg", score.p95ResistanceKg)
+            .put("pit", score.pit)
+            .put("logPredictiveDensity", score.logPredictiveDensity)
+            .put("negativeLogScore", score.negativeLogScore)
+            .put("crpsLogResistance", score.crpsLogResistance)
+            .put("weightedIntervalScoreLogResistance", score.weightedIntervalScoreLogResistance)
+            .put("coverage90", score.coverage90)
+            .put("intervalLogWidth", score.intervalLogWidth)
+            .put("medianAbsoluteErrorKg", score.medianAbsoluteErrorKg)
+            .put("signedLogResidual", score.signedLogResidual),
+    )
+
+private fun NBio7FN0DiagnosticGroup.toJson7f(): JSONObject = JSONObject()
+    .put("eventCount", eventCount)
+    .put("observationCount", observationCount)
+    .put("aggregate", aggregate.toJson7f())
+    .put("pitReliability", pitReliability.toJson7f())
+
+private fun NBio7FN0InstalledHistoryDiagnostics.toJson7f(): JSONObject = JSONObject()
+    .put("overall", overall?.toJson7f() ?: JSONObject.NULL)
+    .put(
+        "repetitionDomain",
+        JSONObject()
+            .put(
+                "insideTrainingDomain",
+                repetitionDomain.insideTrainingDomain?.toJson7f() ?: JSONObject.NULL,
+            )
+            .put(
+                "outsideTrainingDomain",
+                repetitionDomain.outsideTrainingDomain?.toJson7f() ?: JSONObject.NULL,
+            )
+            .put(
+                "unknownTrainingDomainObservationCount",
+                repetitionDomain.unknownTrainingDomainObservationCount,
+            ),
+    )
+    .put(
+        "historyDepthBySelectedIndependentSessions",
+        JSONObject().apply {
+            historyDepth.forEach { (bucket, group) -> put(bucket, group.toJson7f()) }
+        },
+    )
+
+private fun NBio7FCanonicalEquipmentCoverageAudit.toJson7f(): JSONObject = JSONObject()
+    .put("equipmentInstanceCount", equipmentInstanceCount)
+    .put("equipmentFactVersionCount", equipmentFactVersionCount)
+    .put("sessionActualEquipmentBindingCount", sessionActualEquipmentBindingCount)
+    .put("observationEquipmentOverrideCount", observationEquipmentOverrideCount)
+    .put("observationLoadSemanticsCount", observationLoadSemanticsCount)
 
 private fun DynamicTransferContinuousAggregate.toJson7f(): JSONObject = JSONObject()
     .put("count", count)
