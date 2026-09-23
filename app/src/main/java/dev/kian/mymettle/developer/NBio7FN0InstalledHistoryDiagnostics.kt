@@ -1,6 +1,5 @@
 package dev.kian.mymettle.developer
 
-import dev.kian.mymettle.engine.inference.DynamicTransferContinuousAggregate
 import dev.kian.mymettle.engine.inference.DynamicTransferContinuousPredictiveScore
 import dev.kian.mymettle.engine.inference.DynamicTransferPitReliabilitySummary
 import dev.kian.mymettle.engine.inference.NBio7FPrequentialAggregationV1
@@ -26,10 +25,35 @@ data class NBio7FN0ScoredObservationAudit(
     }
 }
 
+data class NBio7FN0CrossProfileAggregate(
+    val count: Int,
+    val meanNegativeLogScore: Double,
+    val meanCrpsLogResistance: Double,
+    val meanWeightedIntervalScoreLogResistance: Double,
+    val coverage90: Double,
+    val meanIntervalLogWidth: Double,
+    val meanSignedLogResidual: Double,
+) {
+    init {
+        require(count > 0)
+        require(
+            listOf(
+                meanNegativeLogScore,
+                meanCrpsLogResistance,
+                meanWeightedIntervalScoreLogResistance,
+                coverage90,
+                meanIntervalLogWidth,
+                meanSignedLogResidual,
+            ).all { it.isFinite() },
+        )
+        require(coverage90 in 0.0..1.0)
+    }
+}
+
 data class NBio7FN0DiagnosticGroup(
     val eventCount: Int,
     val observationCount: Int,
-    val aggregate: DynamicTransferContinuousAggregate,
+    val aggregate: NBio7FN0CrossProfileAggregate,
     val pitReliability: DynamicTransferPitReliabilitySummary,
 ) {
     init {
@@ -130,7 +154,7 @@ internal object NBio7FN0InstalledHistoryAggregator {
         return NBio7FN0DiagnosticGroup(
             eventCount = entries.map { it.eventIdentity }.distinct().size,
             observationCount = scores.size,
-            aggregate = DynamicTransferContinuousAggregate(
+            aggregate = NBio7FN0CrossProfileAggregate(
                 count = scores.size,
                 meanNegativeLogScore = scores.map { it.negativeLogScore }.average(),
                 meanCrpsLogResistance = scores.map { it.crpsLogResistance }.average(),
@@ -138,7 +162,6 @@ internal object NBio7FN0InstalledHistoryAggregator {
                     scores.map { it.weightedIntervalScoreLogResistance }.average(),
                 coverage90 = scores.count { it.coverage90 }.toDouble() / scores.size,
                 meanIntervalLogWidth = scores.map { it.intervalLogWidth }.average(),
-                meanMedianAbsoluteErrorKg = scores.map { it.medianAbsoluteErrorKg }.average(),
                 meanSignedLogResidual = scores.map { it.signedLogResidual }.average(),
             ),
             pitReliability = pitReliability(scores),
