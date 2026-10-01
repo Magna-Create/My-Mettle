@@ -846,3 +846,45 @@ Source checkpoint `5a98bf6188fe04c0ca6c0ea5bf55eed61a49cb4d` is fully green in A
 
 NEXT:
 Build the latest branch and run/export N-BIO-7F installed-history format v2 once more on the physical Native database. Use that final private report to verify exact PIT, observation-level repetition-domain strata, history-depth strata, canonical equipment row coverage, integrity/runtime and unchanged M0 non-evaluability; then write 7F physical structural-closure documentation without tuning the frozen candidates.
+
+
+## Session 18 — 2026-10-01 — FORMAT-V2 PHYSICAL REPLAY & STRUCTURAL CLOSURE
+
+HEAD IN:
+c4a8d524eebf9ff3b124844998eaf50f37e57bda
+
+OBJECTIVE:
+Analyse the final format-v2 physical installed-history replay, verify the exact observation-level N0 diagnostics and canonical equipment-history readiness introduced after Session 17, and close N-BIO-7F structurally without retuning frozen candidates or fabricating transfer evidence.
+
+PHYSICAL CLOSURE EVIDENCE:
+- Reviewed private format-v2 export `my-mettle-n-bio-7f-installed-history-1790860887.json`, generated 2026-10-01T13:21:19.435313Z.
+- Private export size: 424552 bytes; SHA-256 `d06255406fe23a28a725bb3dafc6757282d75b71952ea05d44b166c7d15223c4`.
+- The user built/installed the prescribed branch at HEAD `c4a8d524eebf9ff3b124844998eaf50f37e57bda`; the report itself does not embed source SHA. Runtime code is identical to green checkpoint `5a98bf6188fe04c0ca6c0ea5bf55eed61a49cb4d`; the two intervening commits are documentation-only.
+- Room18; SHADOW developer authority; `BENCHMARK_V0` unchanged; raw-evidence, prescription and benchmark integrity all PASS.
+- N0 remained 76/112 available, 173 observations scored, zero numerical failures; 25 no-prior-history and 11 no-eligible-held-out events.
+- Exact overall N0 diagnostics: NLS 0.4486658546, log-CRPS 0.1531903030, log-WIS 0.1191754877, coverage 0.7109826590, mean log width 0.4844452460, signed log residual +0.0641206788.
+- PIT low/middle/high thirds were 40/52/81; mean PIT 0.6062724549.
+- In-domain: 137 observations / NLS 0.1866065261 / 74.45% coverage. Out-of-domain: 36 / 1.4459471881 / 58.33%.
+- History depth: 1 session 48 obs/NLS 1.70898/60.4%; 2 = 44/0.84296/52.3%; 3 = 35/-0.39102/88.6%; 4-5 = 39/-0.54487/84.6%; 6+ = 7/-0.93807/100%.
+- Recomputed every retained event aggregate plus overall/PIT/domain/depth aggregate from all 173 scored-observation audits with no mismatch.
+- Canonical equipment coverage was zero across every reported owner; `n0DestinationContextResolvedForM0Count = 0`.
+- M0 relationship descriptor count remained zero; all 76 N0-available events reported `NO_EXPLICIT_RELATIONSHIP`; M0 had zero scored edges.
+- N1/M1/M2 remained `NOT_EVALUATED_REAL_HISTORY`.
+- Runtime 130106 ms (~2m 10.1s); peak heap 48958224 bytes (~46.69 MiB).
+
+DECISIONS:
+- N-BIO-7F is structurally closed.
+- Preserve N0's shallow-history/extrapolation/calibration weakness as baseline evidence; do not retune it from this inspected stream.
+- Do not fabricate historical equipment/load semantics or relationship edges.
+- Keep PD-004 OPEN for prospective equipment-bound, predeclared relationship evidence.
+- M0/N1/M1/M2 remain SHADOW/development-only and `BENCHMARK_V0` remains normal-product authority.
+- Downstream phases may use 7F structural interfaces but may not treat transfer output as validated prediction/prescription truth.
+
+CLOSURE VERDICT:
+`N-BIO-7F STRUCTURALLY CLOSED — EMPIRICAL EQUIPMENT-TRANSFER ACCURACY PENDING (PD-004 OPEN)`
+
+HEAD OUT:
+Physical-closure documentation commits follow on the same branch; no runtime/model code changed.
+
+NEXT:
+Proceed to the next roadmap phase when desired. Revisit PD-004 only after prospective canonical equipment/history makes a frozen directed relationship genuinely testable.
