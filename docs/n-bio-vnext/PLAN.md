@@ -507,7 +507,8 @@ N-BIO-7D   structurally closed — physical installed-history SetDemand/Exposure
 PD-002     OPEN — 7D empirical SetDemand/EffectiveDose calibration remains quarantined from structural success
 N-BIO-7E   structurally closed — physical Room15 temporal/context acceptance passed; capability baseline remains real-history champion; all 7E candidates SHADOW under PD-003
 PD-003     OPEN — 7E temporal/context calibration, biological interpretation and prospective usefulness remain quarantined
-N-BIO-7F   research-reconciled and preregistered — equipment semantic substrate + directed cross-profile transfer implementation next; SHADOW only
+N-BIO-7F   structurally closed — physical Room18 equipment/translation substrate and frozen N0 replay accepted; empirical transfer accuracy pending under PD-004; SHADOW only
+PD-004     OPEN — prospective canonical equipment-bound history + predeclared directed relationships required before M0/N1/M1/M2 real-history claims
 N-BIO-7G   later conditioning capability
 N-BIO-7H   later replay/validation closure where retained by the active roadmap
 N-BIO-8    later constrained programme-resolution/decision layer; collaboration gates mandatory
@@ -517,7 +518,7 @@ Native Cutover last
 
 N-BIO-7E establishes neutral persistent/transient statistical state and the generic context-association substrate without silently starting N-BIO-8 coaching policy. Recovery/Fatigue/Skill/Development naming remains evidence-dependent rather than mandatory merely because persistence scaffolding exists.
 
-N-BIO-7F is now the active next backend mission. Its research supports stable equipment history, local physical interpretation and uncertainty-aware relationship learning; it does not author universal equipment conversion or product-facing equipment UX.
+N-BIO-7F is structurally closed. Its accepted substrate supports stable equipment history, local physical interpretation, replay-safe directed-transfer research and explicit no-transfer comparison without authoring universal equipment conversion or product-facing equipment UX. Real-history transfer accuracy remains quarantined under PD-004; N-BIO-7G is the next backend phase if the roadmap continues.
 
 Conditioning, broader Health Connect/HR integration and product-facing adaptive programme behaviour remain later phases under their own gates.
 
