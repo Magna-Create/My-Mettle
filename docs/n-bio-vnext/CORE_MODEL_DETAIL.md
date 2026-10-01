@@ -64,8 +64,8 @@ Forward model implementation order (with same-profile capability structurally cl
 7. acute fatigue/recent-stimulus/recovery state
 8. SkillState + slow Development
 9. cross-profile similarity/translation
-10. conditioning capability consumers of temporal evidence
-11. only then experimental systemic/HR consumers
+10. pre-v1: defer advanced conditioning capability; retain evidence substrate only
+11. post-v1: conditioning capability consumers of temporal evidence, then experimental systemic/HR consumers if separately justified
 ```
 
 Each stage must be benchmarkable independently against the simpler predecessor.
@@ -196,6 +196,8 @@ Do not force repeated-contraction evidence into either the dynamic load×rep fro
 ---
 
 # 6. Conditioning capability
+
+> **Implementation priority update (2026-10-01):** the conditioning architecture below is retained as the original research-backed future direction, but advanced N-BIO-7G conditioning inference is deferred until after the first full v1 release. See [`NBIO_7G_CONDITIONING_POST_V1_DEFERRAL.md`](./NBIO_7G_CONDITIONING_POST_V1_DEFERRAL.md). The generic performance/temporal evidence substrate remains valid; these candidate models are not pre-v1 implementation requirements.
 
 **[RESEARCH-BACKED]** Conditioning shares the generic evidence substrate, not a universal skeletal-muscle adaptation unit.
 
