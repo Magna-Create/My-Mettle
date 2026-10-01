@@ -37,6 +37,10 @@ Start with the [`context-modules` author documentation](./context-modules/README
 
 Do not use the raw 7F report as an implementation specification. The curated guide records which raw proposals were accepted, modified, rejected or left open.
 
+## Conditioning roadmap deferral
+
+- [`NBIO_7G_CONDITIONING_POST_V1_DEFERRAL.md`](./NBIO_7G_CONDITIONING_POST_V1_DEFERRAL.md) — records the decision to retain the original conditioning research/architecture while deferring advanced N-BIO-7G conditioning capability inference until after the first full v1 release. Pre-v1 remains strength-training-first; existing generic cardio/temporal evidence support is retained for future compatibility.
+
 ## Implementation contracts and notes
 
 - [`TEMPORAL_FOUNDATION.md`](./TEMPORAL_FOUNDATION.md) — concrete N-BIO-6 temporal storage, scope, codec, revision and compatibility decisions. The live development database has since advanced to Room15; historical schema numbers describe the stage at which the contract was introduced.
