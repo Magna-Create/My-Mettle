@@ -509,18 +509,20 @@ N-BIO-7E   structurally closed — physical Room15 temporal/context acceptance p
 PD-003     OPEN — 7E temporal/context calibration, biological interpretation and prospective usefulness remain quarantined
 N-BIO-7F   structurally closed — physical Room18 equipment/translation substrate and frozen N0 replay accepted; empirical transfer accuracy pending under PD-004; SHADOW only
 PD-004     OPEN — prospective canonical equipment-bound history + predeclared directed relationships required before M0/N1/M1/M2 real-history claims
-N-BIO-7G   later conditioning capability
-N-BIO-7H   later replay/validation closure where retained by the active roadmap
-N-BIO-8    later constrained programme-resolution/decision layer; collaboration gates mandatory
+N-BIO-7G   DEFERRED TO POST-v1 — advanced conditioning capability is not a first-release blocker; see NBIO_7G_CONDITIONING_POST_V1_DEFERRAL.md
+N-BIO-7H   not required pre-v1 merely to close deferred 7G; retain only if a later active roadmap gives it independent scope
+N-BIO-8    next major pre-v1 backend/product-decision phase — constrained programme-resolution/decision layer; collaboration gates mandatory
 N-BIO-9    later context/Health/product integration and recomputation lifecycle; must consume the 7E context protocol
 Native Cutover last
 ```
 
 N-BIO-7E establishes neutral persistent/transient statistical state and the generic context-association substrate without silently starting N-BIO-8 coaching policy. Recovery/Fatigue/Skill/Development naming remains evidence-dependent rather than mandatory merely because persistence scaffolding exists.
 
-N-BIO-7F is structurally closed. Its accepted substrate supports stable equipment history, local physical interpretation, replay-safe directed-transfer research and explicit no-transfer comparison without authoring universal equipment conversion or product-facing equipment UX. Real-history transfer accuracy remains quarantined under PD-004; N-BIO-7G is the next backend phase if the roadmap continues.
+N-BIO-7F is structurally closed. Its accepted substrate supports stable equipment history, local physical interpretation, replay-safe directed-transfer research and explicit no-transfer comparison without authoring universal equipment conversion or product-facing equipment UX. Real-history transfer accuracy remains quarantined under PD-004.
 
-Conditioning, broader Health Connect/HR integration and product-facing adaptive programme behaviour remain later phases under their own gates.
+The original next backend phase was N-BIO-7G conditioning capability. That work is now deliberately **deferred until after the first full v1 release** because v1 is strength-training-first and cardio is a supporting concern (for example warm-up, cool-down and cutting) rather than a first-class adaptive capability target. The original conditioning research and generic cardio/temporal evidence substrate are retained for future use; see [`NBIO_7G_CONDITIONING_POST_V1_DEFERRAL.md`](./NBIO_7G_CONDITIONING_POST_V1_DEFERRAL.md).
+
+Broader Health Connect/HR conditioning inference remains post-v1 unless separately promoted. Pre-v1 product-facing adaptive programme behaviour remains governed by the N-BIO-8 collaboration/research/Figma gates.
 
 ## 20. N-BIO-8 / V8 direction
 
