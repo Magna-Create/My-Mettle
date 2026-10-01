@@ -408,17 +408,21 @@ Retrospectively inserting today's equipment assumptions into older observations 
 
 ## Current empirical state
 
-The corrected physical replay is development evidence, not independent acceptance. Privacy-bounded aggregate findings were:
+The final format-v2 physical structural-closure replay (2026-10-01; private export SHA-256 `d06255406fe23a28a725bb3dafc6757282d75b71952ea05d44b166c7d15223c4`) confirms the same development state with exact observation-level diagnostics. It is development evidence, not independent acceptance. Privacy-bounded aggregate findings were:
 
 - N0 available on 76/112 destination events and 173 held-out observations;
 - 25 events had no prior destination evidence and 11 had no eligible held-out evidence;
 - zero N0 numerical scoring failures;
-- descriptive observation-weighted N0 90% interval coverage was about 71.1% in the current stream;
+- descriptive observation-weighted N0 90% interval coverage was about 71.1% in the current stream, with mean PIT about 0.606 and a 40/52/81 low/middle/high-third PIT split;
+- in-domain held-out observations (137) had NLS about 0.187 and 74.5% coverage, while out-of-training-repetition-domain observations (36) had NLS about 1.446 and 58.3% coverage;
 - N0 behaviour improved materially with deeper independent-session support; this was not tuned away;
 - all 76 N0-available historical destination contexts remained equipment/load unresolved at their freeze;
 - explicit M0 relationship count was zero, so M0 real-history scoring was unavailable;
 - N1/M1/M2 remained `NOT_EVALUATED_REAL_HISTORY`;
+- canonical equipment coverage was 0 equipment instances, 0 equipment fact versions, 0 session actual-equipment bindings, 0 observation overrides and 0 observation load-semantics rows; no historical N0 destination context was M0-ready;
 - product authority and canonical/raw fingerprints remained unchanged.
+
+These results are sufficient for 7F structural closure because they verify the frozen no-transfer baseline, chronology, diagnostics, non-mutation and fail-closed missing-equipment behaviour. They do **not** establish transfer accuracy; PD-004 therefore remains OPEN.
 
 The N0 calibration findings do not authorise retrospective tuning of the frozen comparator after outcome inspection. They are retained as development evidence and should be used as strata when future frozen transfer candidates are evaluated.
 
