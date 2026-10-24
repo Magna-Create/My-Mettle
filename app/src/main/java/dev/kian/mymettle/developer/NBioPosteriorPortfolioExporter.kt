@@ -214,7 +214,7 @@ class NBioPosteriorPortfolioExporter(private val database: MyMettleDatabase) {
         writer.write(",\"selectedObservations\":${fit.selectedObservationIds.size}")
         writer.write(",\"posteriorEffectiveNodeCount\":${fit.posteriorEffectiveNodeCount}")
         writer.write(",\"posteriorNodeCount\":${fit.posteriorNodes.size}")
-        writer.write(",\"frontierMedianAtReferenceKg\":${requireNotNull(fit.frontierAtLatestSession.summary).median}")
+        writer.write(",\"frontierMedianAtReferenceKg\":${requireNotNull(fit.frontierAtLatestSession.summary).p50}")
         writer.write(",\"nodes\":[")
         fit.posteriorNodes.forEachIndexed { i, node ->
             if (i > 0) writer.write(",")
