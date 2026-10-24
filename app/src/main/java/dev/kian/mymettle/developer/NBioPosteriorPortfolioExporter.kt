@@ -37,42 +37,7 @@ data class NBioPosteriorPortfolioOption(
 class NBioPosteriorPortfolioExporter(private val database: MyMettleDatabase) {
     private val champion = DynamicTransferN0Champion()
 
-    fun options(): List<NBioPosteriorPortfolioOption> {
-        val history = readHistory()
-        val finalCutoff = history.revisions.maxOfOrNull { maxOf(it.recordedAt, it.sessionCompletedAt) }
-            ?: return emptyList()
-        return history.profiles.flatMap { (versionId, descriptor) ->
-            history.revisions.asSequence()
-                .filter { it.evidence.executionProfileVersionId.value == versionId }
-                .map { it.evidence.laterality }
-                .distinct()
-                .mapNotNull { side ->
-                    val current = currentEvidence(history, finalCutoff, versionId, side)
-                    val projection = DynamicResistanceEvidenceProjector.project(
-                        profile = descriptor.semantics,
-                        side = side,
-                        evidence = current,
-                        policy = NBio7FN0V1.evidencePolicy,
-                    )
-                    if (projection.evidence.isEmpty()) return@mapNotNull null
-                    NBioPosteriorPortfolioOption(
-                        executionProfileVersionId = versionId,
-                        side = side,
-                        label = descriptor.label,
-                        independentSessions = projection.independentSessionCount,
-                        eligibleObservations = projection.evidence.size,
-                        minRepetitions = projection.repDomain?.first,
-                        maxRepetitions = projection.repDomain?.last,
-                    )
-                }.toList()
-        }.sortedWith(
-            compareByDescending<NBioPosteriorPortfolioOption> { it.independentSessions }
-                .thenByDescending { (it.maxRepetitions ?: 0) - (it.minRepetitions ?: 0) }
-                .thenByDescending { it.eligibleObservations }
-                .thenBy { it.label }
-                .thenBy { it.side.storageValue },
-        )
-    }
+    fun options(): List<NBioPosteriorPortfolioOption> = optionsFromHistory(readHistory())
 
     /**
      * Streams nodes directly to Android's document output, avoiding a potentially massive in-memory
