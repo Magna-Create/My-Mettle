@@ -1,6 +1,7 @@
 package dev.kian.mymettle.ui
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -33,6 +34,8 @@ import dev.kian.mymettle.developer.NBio7FInstalledHistoryEvaluationReport
 import dev.kian.mymettle.developer.NBio7FInstalledHistoryEvaluator
 import dev.kian.mymettle.developer.NBioAdaptiveInferenceAcceptanceReport
 import dev.kian.mymettle.developer.NBioAdaptiveInferenceAcceptanceRunner
+import dev.kian.mymettle.developer.NBioPosteriorPortfolioExporter
+import dev.kian.mymettle.developer.NBioPosteriorPortfolioOption
 import dev.kian.mymettle.workout.TrainingMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -68,6 +71,11 @@ data class BiologyDeveloperUiState(
     val nBio7FRunning: Boolean = false,
     val nBio7FProgress: NBio7BAcceptanceProgress? = null,
     val nBio7FReport: NBio7FInstalledHistoryEvaluationReport? = null,
+    val posteriorOptionsLoading: Boolean = true,
+    val posteriorOptions: List<NBioPosteriorPortfolioOption> = emptyList(),
+    val posteriorSelectedKey: String? = null,
+    val posteriorExportRunning: Boolean = false,
+    val posteriorExportProgress: String? = null,
     val resetComplete: Boolean = false,
     val message: String? = null,
     val error: String? = null,
@@ -85,6 +93,7 @@ class BiologyDeveloperViewModel(
     private val nBio7DRunner: NBio7DCompleteAcceptanceRunner,
     private val nBio7ERunner: NBio7EStateContextAcceptanceRunner,
     private val nBio7FEvaluator: NBio7FInstalledHistoryEvaluator,
+    private val posteriorExporter: NBioPosteriorPortfolioExporter,
 ) : ViewModel() {
     var uiState by mutableStateOf(BiologyDeveloperUiState())
         private set
@@ -102,6 +111,8 @@ class BiologyDeveloperViewModel(
     }
 
     fun refresh() {
+        loadPosteriorOptions()
+
         viewModelScope.launch {
             uiState = uiState.copy(loading = true, error = null)
             runCatching { repository.snapshot() to contextDiagnosticsRepository.snapshot() }
@@ -117,6 +128,70 @@ class BiologyDeveloperViewModel(
                     )
                 }
                 .onFailure(::showError)
+        }
+    }
+
+    private fun loadPosteriorOptions() {
+        if (uiState.posteriorExportRunning) return
+        viewModelScope.launch {
+            uiState = uiState.copy(posteriorOptionsLoading = true)
+            runCatching { withContext(Dispatchers.IO) { posteriorExporter.options() } }
+                .onSuccess { options ->
+                    val selected = uiState.posteriorSelectedKey?.takeIf { key -> options.any { it.key == key } }
+                        ?: options.firstOrNull()?.key
+                    uiState = uiState.copy(
+                        posteriorOptionsLoading = false,
+                        posteriorOptions = options,
+                        posteriorSelectedKey = selected,
+                    )
+                }
+                .onFailure { error ->
+                    uiState = uiState.copy(posteriorOptionsLoading = false)
+                    showError(error)
+                }
+        }
+    }
+
+    fun selectPosteriorProfile(key: String) {
+        if (!uiState.posteriorExportRunning && uiState.posteriorOptions.any { it.key == key }) {
+            uiState = uiState.copy(posteriorSelectedKey = key)
+        }
+    }
+
+    fun exportPosteriorPortfolio(uri: Uri) {
+        if (anyLongAcceptanceRunning() || uiState.task.phase == BiologyTaskPhase.RUNNING) return
+        val selected = uiState.posteriorSelectedKey ?: return
+        val label = uiState.posteriorOptions.firstOrNull { it.key == selected }?.label ?: return
+        viewModelScope.launch {
+            uiState = uiState.copy(
+                posteriorExportRunning = true,
+                posteriorExportProgress = "Reading canonical exercise history",
+                error = null,
+            )
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    val stream = appContext.contentResolver.openOutputStream(uri, "wt")
+                        ?: error("Android could not open the selected posterior export document.")
+                    stream.bufferedWriter().use { writer ->
+                        posteriorExporter.export(selected, writer) { completed, total, detail ->
+                            viewModelScope.launch {
+                                uiState = uiState.copy(
+                                    posteriorExportProgress = "$completed/$total · $detail",
+                                )
+                            }
+                        }
+                    }
+                }
+            }.onSuccess {
+                uiState = uiState.copy(
+                    posteriorExportRunning = false,
+                    posteriorExportProgress = null,
+                    message = "N-BIO posterior visualisation exported for $label.",
+                )
+            }.onFailure { error ->
+                uiState = uiState.copy(posteriorExportRunning = false, posteriorExportProgress = null)
+                showError(error)
+            }
         }
     }
 
@@ -147,7 +222,7 @@ class BiologyDeveloperViewModel(
 
     private fun anyLongAcceptanceRunning(): Boolean =
         uiState.nBio7BAcceptanceRunning || uiState.adaptiveInferenceRunning || uiState.nBio7CCapabilityRunning ||
-            uiState.nBio7DRunning || uiState.nBio7ERunning || uiState.nBio7FRunning ||
+            uiState.nBio7DRunning || uiState.nBio7ERunning || uiState.nBio7FRunning || uiState.posteriorExportRunning ||
             uiState.nBio6VerificationRunning || uiState.nBio6LiteVerificationRunning
 
     fun runNBio6DeviceVerification() {
@@ -483,6 +558,7 @@ class BiologyDeveloperViewModelFactory(context: Context) : ViewModelProvider.Fac
                 database = database,
                 relationships = emptyList(),
             ),
+            posteriorExporter = NBioPosteriorPortfolioExporter(database),
         ) as T
     }
 }
