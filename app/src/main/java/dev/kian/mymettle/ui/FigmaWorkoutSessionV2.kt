@@ -88,6 +88,7 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import dev.kian.mymettle.domain.performance.Laterality
 import dev.kian.mymettle.domain.performance.LateralityMode
+import dev.kian.mymettle.domain.performance.MetricTarget
 import dev.kian.mymettle.domain.performance.PerformanceMetric
 import dev.kian.mymettle.domain.performance.QuantityDimension
 import dev.kian.mymettle.domain.performance.SchemaMetric
@@ -907,6 +908,12 @@ private fun WorkoutV2ObservationRow(
                     WorkoutV2MetricField(
                         value = draft.value(definition.metric),
                         label = workoutV2MetricFieldLabel(definition, draft.unit(definition.metric)),
+                        targetPreview = if (standardTwoMetricLayout) {
+                            workoutV2TargetPreview(
+                                set.metricTargets.firstOrNull { it.metric == definition.metric },
+                                definition.metric,
+                            )
+                        } else null,
                         enabled = enabled,
                         decimal = definition.metric.dimension !in setOf(QuantityDimension.COUNT, QuantityDimension.ORDINAL),
                         modifier = if (standardTwoMetricLayout) {
@@ -938,6 +945,7 @@ private fun WorkoutV2ObservationRow(
 private fun WorkoutV2MetricField(
     value: String,
     label: String,
+    targetPreview: WorkoutV2TargetPreview?,
     enabled: Boolean,
     decimal: Boolean,
     modifier: Modifier,
@@ -957,6 +965,43 @@ private fun WorkoutV2MetricField(
         shadowElevation = .75.dp,
     ) {
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+            if (targetPreview != null) {
+                Column(
+                    Modifier
+                        .width(115.dp)
+                        .fillMaxHeight()
+                        .background(WorkoutV2DarkCyan.copy(alpha = .23f))
+                        .padding(start = 9.dp, end = 5.dp),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        targetPreview.label,
+                        color = WorkoutV2Cyan.copy(alpha = .86f),
+                        fontSize = 8.5.sp,
+                        lineHeight = 10.sp,
+                        maxLines = 1,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            targetPreview.value,
+                            color = WorkoutV2Paper.copy(alpha = .88f),
+                            fontSize = 13.sp,
+                            lineHeight = 16.sp,
+                            maxLines = 1,
+                        )
+                        if (targetPreview.provenance.isNotEmpty()) {
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                targetPreview.provenance,
+                                color = WorkoutV2Cyan.copy(alpha = .55f),
+                                fontSize = 7.sp,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                }
+                Box(Modifier.width(.5.dp).fillMaxHeight().background(WorkoutV2Cyan.copy(alpha = .20f)))
+            }
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
@@ -986,8 +1031,14 @@ private fun WorkoutV2MetricField(
                         Modifier.fillMaxSize().padding(start = 13.dp, end = if (onCalculator == null) 13.dp else 4.dp, top = 5.dp, bottom = 5.dp),
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        Text(label, color = WorkoutV2Cyan.copy(alpha = .78f), fontSize = 10.sp, lineHeight = 11.sp)
-                        if (value.isEmpty()) Text("00", color = WorkoutV2Paper.copy(alpha = .38f), fontSize = 16.sp) else inner()
+                        Text(
+                            if (targetPreview != null) "Entered $label" else label,
+                            color = WorkoutV2Cyan.copy(alpha = .78f),
+                            fontSize = if (targetPreview != null) 9.sp else 10.sp,
+                            lineHeight = 11.sp,
+                            maxLines = 1,
+                        )
+                        if (value.isEmpty()) Text("—", color = WorkoutV2Paper.copy(alpha = .38f), fontSize = 16.sp) else inner()
                     }
                 },
             )
@@ -1565,6 +1616,40 @@ private fun WorkoutV2CardButton(text: String, onClick: () -> Unit, modifier: Mod
             maxLines = 1,
         )
     }
+}
+
+/**
+ * Prescribed metric preview. This is intentionally NOT an N0 forecast:
+ * BENCHMARK_V0 only exposes explicit plan targets or compatible same-profile history anchors.
+ * When neither exists, show an honest empty state rather than manufacturing a number.
+ */
+internal data class WorkoutV2TargetPreview(
+    val label: String,
+    val value: String,
+    val provenance: String,
+)
+
+internal fun workoutV2TargetPreview(target: MetricTarget?, metric: PerformanceMetric): WorkoutV2TargetPreview {
+    val caption = when (metric) {
+        PerformanceMetric.EXTERNAL_LOAD, PerformanceMetric.ASSISTANCE -> "Reference load"
+        PerformanceMetric.REPETITIONS -> "Target reps"
+        else -> "Target"
+    }
+    if (target == null || target.metric != metric) return WorkoutV2TargetPreview(caption, "—", "")
+    fun fmt(canonical: Double?): String = canonical?.let { target.workoutV2DisplayValue(it) } ?: "?"
+    val value = when (target.kind) {
+        TargetKind.EXACT -> fmt(target.lowerCanonical)
+        TargetKind.RANGE -> "${fmt(target.lowerCanonical)}–${fmt(target.upperCanonical)}"
+        TargetKind.MINIMUM -> "≥${fmt(target.lowerCanonical)}"
+        TargetKind.MAXIMUM -> "≤${fmt(target.upperCanonical)}"
+        TargetKind.OPEN -> "Open"
+    }
+    val provenance = when {
+        target.evidence == null -> "Plan"
+        target.evidence.source.contains("raw", ignoreCase = true) -> "Past"
+        else -> "Anchor"
+    }
+    return WorkoutV2TargetPreview(caption, value, provenance)
 }
 
 private fun workoutV2PrescriptionLabels(exercise: ActiveWorkoutExercise): List<String> {
