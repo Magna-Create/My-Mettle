@@ -22,7 +22,7 @@ class WorkoutV2TargetPreviewTest {
         )
         val preview = workoutV2TargetPreview(target, PerformanceMetric.EXTERNAL_LOAD)
         assertEquals("Reference load", preview.label)
-        assertEquals("22.5 kilogram", preview.value)
+        assertEquals("22.5 kg", preview.value)
         assertEquals("Plan", preview.provenance)
     }
 
