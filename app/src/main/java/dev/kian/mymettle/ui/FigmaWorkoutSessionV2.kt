@@ -1649,7 +1649,10 @@ internal fun workoutV2TargetPreview(target: MetricTarget?, metric: PerformanceMe
         target.evidence.source.contains("raw", ignoreCase = true) -> "Past"
         else -> "Anchor"
     }
-    return WorkoutV2TargetPreview(caption, value, provenance)
+    val displayedValue = if (metric in setOf(PerformanceMetric.EXTERNAL_LOAD, PerformanceMetric.ASSISTANCE) && target.kind != TargetKind.OPEN) {
+        "$value ${target.displayUnit.storageValue}"
+    } else value
+    return WorkoutV2TargetPreview(caption, displayedValue, provenance)
 }
 
 private fun workoutV2PrescriptionLabels(exercise: ActiveWorkoutExercise): List<String> {
