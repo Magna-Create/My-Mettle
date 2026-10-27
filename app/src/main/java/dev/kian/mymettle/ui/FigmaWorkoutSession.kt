@@ -188,6 +188,7 @@ internal fun FigmaWorkoutSession(
                     when {
                         state.swapTarget != null -> WorkoutSubstitutionContent(
                             current = state.swapTarget,
+                            kind = state.swapKind,
                             options = state.swapOptions,
                             loading = state.loadingSwapOptions,
                             onDismiss = onDismissSwap,
@@ -1259,6 +1260,7 @@ private fun WorkoutQuickSelectContent(
 @Composable
 private fun WorkoutSubstitutionContent(
     current: ActiveWorkoutExercise,
+    kind: WorkoutSwapKind,
     options: List<ExerciseSwapOption>,
     loading: Boolean,
     onDismiss: () -> Unit,
@@ -1269,6 +1271,7 @@ private fun WorkoutSubstitutionContent(
     val filtered = options.filter {
         query.isBlank() || it.exerciseName.contains(query, ignoreCase = true) || it.executionProfileName.contains(query, ignoreCase = true)
     }
+    val equipmentSwitch = kind == WorkoutSwapKind.EQUIPMENT
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -1279,6 +1282,29 @@ private fun WorkoutSubstitutionContent(
         ),
         verticalArrangement = Arrangement.spacedBy(metrics.dp(10)),
     ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(metrics.dp(6))) {
+                Text(
+                    if (equipmentSwitch) "Switch equipment" else "Substitute exercise",
+                    color = WorkoutCyan,
+                    fontSize = metrics.sp(25),
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    if (equipmentSwitch) "Choose another compatible setup for this exercise."
+                    else "Choose a target-compatible replacement exercise.",
+                    color = WorkoutPaperMuted,
+                    fontSize = metrics.sp(13),
+                )
+                if (current.sets.any { it.draftValues.isNotEmpty() }) {
+                    Text(
+                        "Switching will clear unlogged set entries.",
+                        color = WorkoutPaperMuted,
+                        fontSize = metrics.sp(12),
+                    )
+                }
+            }
+        }
         item {
             MettleExerciseSearchField(
                 value = query,
@@ -1321,7 +1347,7 @@ private fun WorkoutSubstitutionContent(
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = MettleIcons.SwapHoriz,
-                                    contentDescription = "Use ${option.exerciseName}",
+                                    contentDescription = if (equipmentSwitch) "Use ${option.executionProfileName}" else "Use ${option.exerciseName}",
                                     tint = WorkoutPaper,
                                     modifier = Modifier.size(metrics.dp(30)),
                                 )
@@ -1332,7 +1358,14 @@ private fun WorkoutSubstitutionContent(
                 }
             }
             if (filtered.isEmpty()) {
-                item { Text("No target-compatible replacements match that search.", color = WorkoutPaperMuted, modifier = Modifier.padding(metrics.dp(20))) }
+                item {
+                    Text(
+                        if (equipmentSwitch) "No other compatible equipment profiles are available."
+                        else "No target-compatible exercise replacements match this search.",
+                        color = WorkoutPaperMuted,
+                        modifier = Modifier.padding(metrics.dp(20)),
+                    )
+                }
             }
         }
         item {
