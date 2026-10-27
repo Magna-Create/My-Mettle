@@ -1624,7 +1624,9 @@ private fun WorkoutV2ExerciseActions(
             WorkoutV2CardButton("Rate", onRate, Modifier.weight(1f), metrics)
             MettleControlGlassSurface(
                 modifier = Modifier
-                    .size(metrics.dp(76))
+                    // 78 × 56 Figma units, adapted to the current 384 dp device width.
+                    .width(metrics.dp(66))
+                    .height(metrics.dp(48))
                     .onGloballyPositioned { coordinates ->
                         dockCentre = coordinates.localToRoot(
                             Offset(coordinates.size.width / 2f, coordinates.size.height / 2f),
@@ -1650,18 +1652,19 @@ private fun WorkoutV2ExerciseActions(
                             onDragCancel = swapGesture::cancel,
                         )
                     },
-                shape = CircleShape,
-                tint = WorkoutV2Cyan.copy(alpha = .06f),
-                baseColor = WorkoutV2DarkCyan.copy(alpha = .22f),
-                borderColor = WorkoutV2Cyan.copy(alpha = .34f),
+                shape = RoundedCornerShape(percent = 50),
+                // Secondary action: deliberately quieter than Complete.
+                tint = WorkoutV2Cyan.copy(alpha = .008f),
+                baseColor = WorkoutV2DarkCyan.copy(alpha = .10f),
+                borderColor = WorkoutV2Cyan.copy(alpha = .17f),
                 onClick = { swapGesture.open(exerciseId, dockCentre) },
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Icon(
-                        MettleIcons.Cycle,
+                        FigmaWorkoutSwapIcons.Cycle,
                         contentDescription = "Hold and flick to switch exercise or equipment",
-                        tint = WorkoutV2Cyan,
-                        modifier = Modifier.size(metrics.dp(32)),
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(metrics.dp(24)),
                     )
                 }
             }
