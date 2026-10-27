@@ -1,6 +1,7 @@
 package dev.kian.mymettle.ui
 
 import android.graphics.BitmapFactory
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
@@ -8,6 +9,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,6 +63,10 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.localToRoot
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -71,6 +77,7 @@ import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -139,7 +146,7 @@ internal fun FigmaWorkoutSessionV2(
     onOpenCalculator: (ActiveWorkoutExercise, PerformanceSetRecord, PerformanceMetric, Laterality?) -> Unit,
     onSaveDraft: (ActiveWorkoutExercise, PerformanceSetRecord, TrainSetDraft) -> Unit,
     onLogSet: (ActiveWorkoutExercise, PerformanceSetRecord, TrainSetDraft) -> Unit,
-    onSwapExercise: (ActiveWorkoutExercise) -> Unit,
+    onSwapExercise: (ActiveWorkoutExercise, WorkoutSwapKind) -> Unit,
     onSelectSwap: (ExerciseSwapOption) -> Unit,
     onDismissSwap: () -> Unit,
     onShowSets: (String?) -> Unit,
@@ -166,7 +173,7 @@ internal fun FigmaWorkoutSessionV2(
             onOpenCalculator = { exercise, set, metric -> onOpenCalculator(exercise, set, metric, null) },
             onSaveDraft = onSaveDraft,
             onLogSet = onLogSet,
-            onSwapExercise = onSwapExercise,
+            onSwapExercise = { exercise -> onSwapExercise(exercise, WorkoutSwapKind.EXERCISE) },
             onSelectSwap = onSelectSwap,
             onDismissSwap = onDismissSwap,
             onShowSets = onShowSets,
@@ -191,6 +198,8 @@ internal fun FigmaWorkoutSessionV2(
     val listState = rememberLazyListState()
     val viewportHazeState = rememberHazeState()
     val headerHazeState = rememberHazeState()
+    val swapGesture = remember { WorkoutSwapGestureState() }
+    var showEquipmentNotAvailable by remember { mutableStateOf(false) }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val viewportWidth = minOf(maxWidth, WorkoutV2ReferenceWidth.dp)
@@ -230,7 +239,7 @@ internal fun FigmaWorkoutSessionV2(
                         onOpenCalculator = onOpenCalculator,
                         onSaveDraft = onSaveDraft,
                         onLogSet = onLogSet,
-                        onSwap = onSwapExercise,
+                        swapGesture = swapGesture,
                         onToggleExercise = onToggleExercise,
                         onRateExercise = onRateExercise,
                         metrics = metrics,
@@ -240,6 +249,35 @@ internal fun FigmaWorkoutSessionV2(
             }
             CompositionLocalProvider(LocalMettleHazeState provides headerHazeState) {
                 WorkoutV2Header(workout, metrics, onOpenSettings, onOpenAccount)
+            }
+            if (swapGesture.exerciseId != null) {
+                WorkoutSwapGestureOverlay(
+                    gesture = swapGesture,
+                    onChoose = { exerciseId, choice ->
+                        val target = workout.exercises.firstOrNull { it.entity.id == exerciseId }
+                        if (target != null) {
+                            when (choice) {
+                                WorkoutSwapChoice.SWITCH_EQUIPMENT ->
+                                    onSwapExercise(target, WorkoutSwapKind.EQUIPMENT)
+                                WorkoutSwapChoice.SUBSTITUTE_EXERCISE ->
+                                    onSwapExercise(target, WorkoutSwapKind.EXERCISE)
+                                WorkoutSwapChoice.ADD_EQUIPMENT ->
+                                    showEquipmentNotAvailable = true
+                                WorkoutSwapChoice.CANCEL -> Unit
+                            }
+                        }
+                    },
+                )
+            }
+            if (showEquipmentNotAvailable) {
+                AlertDialog(
+                    onDismissRequest = { showEquipmentNotAvailable = false },
+                    title = { Text("Add equipment") },
+                    text = { Text("Creating a new equipment execution profile is not available yet. You can switch to a compatible existing profile instead.") },
+                    confirmButton = {
+                        TextButton(onClick = { showEquipmentNotAvailable = false }) { Text("OK") }
+                    },
+                )
             }
             if (state.workoutSurface in setOf(WorkoutSurface.FINISH, WorkoutSurface.DELETE_CONFIRM)) {
                 WorkoutExitOverlay(
@@ -297,7 +335,7 @@ private fun WorkoutV2ExerciseContent(
     onOpenCalculator: (ActiveWorkoutExercise, PerformanceSetRecord, PerformanceMetric, Laterality?) -> Unit,
     onSaveDraft: (ActiveWorkoutExercise, PerformanceSetRecord, TrainSetDraft) -> Unit,
     onLogSet: (ActiveWorkoutExercise, PerformanceSetRecord, TrainSetDraft) -> Unit,
-    onSwap: (ActiveWorkoutExercise) -> Unit,
+    swapGesture: WorkoutSwapGestureState,
     onToggleExercise: (ActiveWorkoutExercise) -> Unit,
     onRateExercise: (ActiveWorkoutExercise) -> Unit,
     metrics: WorkoutV2Metrics,
@@ -351,7 +389,7 @@ private fun WorkoutV2ExerciseContent(
                 onOpenCalculator = { set, metric, side -> onOpenCalculator(exercise, set, metric, side) },
                 onSaveDraft = { set, draft -> onSaveDraft(exercise, set, draft) },
                 onLogSet = { set, draft -> onLogSet(exercise, set, draft) },
-                onSwap = { onSwap(exercise) },
+                swapGesture = swapGesture,
                 onToggleExercise = { onToggleExercise(exercise) },
                 onRateExercise = { onRateExercise(exercise) },
                 metrics = metrics,
@@ -502,7 +540,7 @@ private fun WorkoutV2ExerciseCard(
     onOpenCalculator: (PerformanceSetRecord, PerformanceMetric, Laterality?) -> Unit,
     onSaveDraft: (PerformanceSetRecord, TrainSetDraft) -> Unit,
     onLogSet: (PerformanceSetRecord, TrainSetDraft) -> Unit,
-    onSwap: () -> Unit,
+    swapGesture: WorkoutSwapGestureState,
     onToggleExercise: () -> Unit,
     onRateExercise: () -> Unit,
     metrics: WorkoutV2Metrics,
@@ -651,7 +689,8 @@ private fun WorkoutV2ExerciseCard(
                         }
                     }
                     WorkoutV2ExerciseActions(
-                        onSwap = onSwap,
+                        swapGesture = swapGesture,
+                        exerciseId = exercise.entity.id,
                         onRate = onRateExercise,
                         onComplete = onToggleExercise,
                         allSetsComplete = sets.isNotEmpty() && sets.all { it.isCompleteFor(exercise.resolvedWorkoutLateralityMode()) },
@@ -989,15 +1028,7 @@ private fun WorkoutV2MetricField(
                             lineHeight = 16.sp,
                             maxLines = 1,
                         )
-                        if (targetPreview.provenance.isNotEmpty()) {
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                targetPreview.provenance,
-                                color = WorkoutV2Cyan.copy(alpha = .55f),
-                                fontSize = 7.sp,
-                                maxLines = 1,
-                            )
-                        }
+
                     }
                 }
                 Box(Modifier.width(.5.dp).fillMaxHeight().background(WorkoutV2Cyan.copy(alpha = .20f)))
@@ -1553,17 +1584,65 @@ private fun WorkoutV2Chip(text: String, metrics: WorkoutV2Metrics, success: Bool
 
 @Composable
 private fun WorkoutV2ExerciseActions(
-    onSwap: () -> Unit,
+    swapGesture: WorkoutSwapGestureState,
+    exerciseId: String,
     onRate: () -> Unit,
     onComplete: () -> Unit,
     allSetsComplete: Boolean,
     metrics: WorkoutV2Metrics,
 ) {
+    val view = LocalView.current
+    var dockCentre by remember { mutableStateOf(Offset.Zero) }
     Column(Modifier.padding(horizontal = metrics.dp(15), vertical = metrics.dp(16))) {
-        WorkoutV2CardButton("Substitute this exercise", onSwap, Modifier.fillMaxWidth(), metrics)
-        Spacer(Modifier.height(metrics.dp(12)))
-        Row(horizontalArrangement = Arrangement.spacedBy(metrics.dp(12))) {
-            WorkoutV2CardButton("Rate exercise", onRate, Modifier.weight(1f), metrics)
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(metrics.dp(10)),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            WorkoutV2CardButton("Rate", onRate, Modifier.weight(1f), metrics)
+            MettleControlGlassSurface(
+                modifier = Modifier
+                    .size(metrics.dp(76))
+                    .onGloballyPositioned { coordinates ->
+                        dockCentre = coordinates.localToRoot(
+                            Offset(coordinates.size.width / 2f, coordinates.size.height / 2f),
+                        )
+                    }
+                    .pointerInput(exerciseId) {
+                        var velocityTracker = VelocityTracker()
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = {
+                                velocityTracker = VelocityTracker()
+                                swapGesture.begin(exerciseId, dockCentre)
+                                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                            },
+                            onDrag = { change, delta ->
+                                change.consume()
+                                swapGesture.dragBy(delta)
+                                velocityTracker.addPosition(change.uptimeMillis, swapGesture.handleRoot)
+                            },
+                            onDragEnd = {
+                                val velocity = velocityTracker.calculateVelocity()
+                                swapGesture.finish(Offset(velocity.x, velocity.y))
+                            },
+                            onDragCancel = swapGesture::cancel,
+                        )
+                    },
+                shape = CircleShape,
+                tint = WorkoutV2Cyan.copy(alpha = .06f),
+                baseColor = WorkoutV2DarkCyan.copy(alpha = .22f),
+                borderColor = WorkoutV2Cyan.copy(alpha = .34f),
+                onClick = { swapGesture.open(exerciseId, dockCentre) },
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        MettleIcons.Cycle,
+                        contentDescription = "Hold and flick to switch exercise or equipment",
+                        tint = WorkoutV2Cyan,
+                        modifier = Modifier.size(metrics.dp(32)),
+                    )
+                }
+            }
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 if (allSetsComplete) {
                     Box(
@@ -1578,7 +1657,7 @@ private fun WorkoutV2ExerciseActions(
                             ),
                     )
                 }
-                WorkoutV2CardButton("Complete exercise", onComplete, Modifier.fillMaxWidth(), metrics)
+                WorkoutV2CardButton("Complete", onComplete, Modifier.fillMaxWidth(), metrics)
             }
         }
     }
@@ -1590,7 +1669,7 @@ private fun WorkoutV2CompletedActions(onRate: () -> Unit, onUndo: () -> Unit, me
         modifier = Modifier.padding(horizontal = metrics.dp(15), vertical = metrics.dp(20)),
         horizontalArrangement = Arrangement.spacedBy(metrics.dp(12)),
     ) {
-        WorkoutV2CardButton("Rate exercise", onRate, Modifier.weight(1f), metrics)
+        WorkoutV2CardButton("Rate", onRate, Modifier.weight(1f), metrics)
         WorkoutV2CardButton("Mark undone", onUndo, Modifier.weight(1f), metrics)
     }
 }
