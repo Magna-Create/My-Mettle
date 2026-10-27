@@ -210,7 +210,7 @@ internal fun WorkoutSwapGestureOverlay(
     ) {
         // The app header is already rendered beneath this overlay. Dim rather than replacing it.
         Box(
-            Modifier.fillMaxSize().padding(top = maxHeight * .122f)
+            Modifier.fillMaxSize().padding(top = maxHeight * .122f, bottom = maxHeight * .095f)
                 .background(Color(0xFF101C19).copy(alpha = .97f)),
         ) {
             Canvas(Modifier.fillMaxSize()) {
