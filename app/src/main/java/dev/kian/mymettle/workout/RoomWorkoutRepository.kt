@@ -564,9 +564,18 @@ class RoomWorkoutRepository(
         val sessionTargets = dao.sessionTargets(session.id).associateBy { it.id }
         val currentTargets = dao.sessionExerciseTargets(current.id).mapNotNull { sessionTargets[it.sessionTargetId] }
         val targetBySegment = currentTargets.associateBy { it.muscleSegmentId }
-        val exercises = dao.allActiveExercises().filterNot { it.id == current.exerciseId }
+        val exercises = dao.allActiveExercises()
+        // A different execution profile of the current exercise is an equipment switch;
+        // the default profile of a different exercise is an exercise substitution.
+        // Preserve profile identity so equipment changes never masquerade as a new exercise.
         val profiles = dao.executionProfiles(exercises.map { it.id }).groupBy { it.exerciseId }
-            .mapNotNull { (_, values) -> values.singleOrNull { it.isDefault } }
+            .flatMap { (exerciseId, values) ->
+                if (exerciseId == current.exerciseId) {
+                    values.filterNot { it.id == current.executionProfileId }
+                } else {
+                    values.filter { it.isDefault }.take(1)
+                }
+            }
         val versions = currentVersions(profiles.map { it.id })
         val bundles = loadVersionBundles(versions.values.map { it.id })
         val recruitment = dao.recruitmentAllocations(versions.values.map { it.recruitmentProfileVersionId })
