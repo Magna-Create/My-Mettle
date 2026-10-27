@@ -42,7 +42,7 @@ enum class WorkoutSurface {
     DELETE_CONFIRM,
 }
 
-internal enum class WorkoutSwapKind { EXERCISE, EQUIPMENT }
+enum class WorkoutSwapKind { EXERCISE, EQUIPMENT }
 
 data class N2WorkoutUiState(
     val loading: Boolean = true,
