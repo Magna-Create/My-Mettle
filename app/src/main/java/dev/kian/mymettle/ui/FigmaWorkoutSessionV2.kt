@@ -199,6 +199,7 @@ internal fun FigmaWorkoutSessionV2(
     val headerHazeState = rememberHazeState()
     val swapGesture = remember { WorkoutSwapGestureState() }
     var showEquipmentNotAvailable by remember { mutableStateOf(false) }
+    var showLoggedSwapUnavailable by remember { mutableStateOf(false) }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val viewportWidth = minOf(maxWidth, WorkoutV2ReferenceWidth.dp)
@@ -255,14 +256,20 @@ internal fun FigmaWorkoutSessionV2(
                     onChoose = { exerciseId, choice ->
                         val target = workout.exercises.firstOrNull { it.entity.id == exerciseId }
                         if (target != null) {
-                            when (choice) {
-                                WorkoutSwapChoice.SWITCH_EQUIPMENT ->
-                                    onSwapExercise(target, WorkoutSwapKind.EQUIPMENT)
-                                WorkoutSwapChoice.SUBSTITUTE_EXERCISE ->
-                                    onSwapExercise(target, WorkoutSwapKind.EXERCISE)
-                                WorkoutSwapChoice.ADD_EQUIPMENT ->
-                                    showEquipmentNotAvailable = true
-                                WorkoutSwapChoice.CANCEL -> Unit
+                            val changingProfile = choice == WorkoutSwapChoice.SWITCH_EQUIPMENT ||
+                                choice == WorkoutSwapChoice.SUBSTITUTE_EXERCISE
+                            if (changingProfile && target.sets.any { it.observations.isNotEmpty() }) {
+                                showLoggedSwapUnavailable = true
+                            } else {
+                                when (choice) {
+                                    WorkoutSwapChoice.SWITCH_EQUIPMENT ->
+                                        onSwapExercise(target, WorkoutSwapKind.EQUIPMENT)
+                                    WorkoutSwapChoice.SUBSTITUTE_EXERCISE ->
+                                        onSwapExercise(target, WorkoutSwapKind.EXERCISE)
+                                    WorkoutSwapChoice.ADD_EQUIPMENT ->
+                                        showEquipmentNotAvailable = true
+                                    WorkoutSwapChoice.CANCEL -> Unit
+                                }
                             }
                         }
                     },
@@ -275,6 +282,16 @@ internal fun FigmaWorkoutSessionV2(
                     text = { Text("Creating a new equipment execution profile is not available yet. You can switch to a compatible existing profile instead.") },
                     confirmButton = {
                         TextButton(onClick = { showEquipmentNotAvailable = false }) { Text("OK") }
+                    },
+                )
+            }
+            if (showLoggedSwapUnavailable) {
+                AlertDialog(
+                    onDismissRequest = { showLoggedSwapUnavailable = false },
+                    title = { Text("Exercise already started") },
+                    text = { Text("This exercise has recorded sets. Switching its execution profile or substituting it now would change the identity of that recorded work, so switching is unavailable.") },
+                    confirmButton = {
+                        TextButton(onClick = { showLoggedSwapUnavailable = false }) { Text("OK") }
                     },
                 )
             }
