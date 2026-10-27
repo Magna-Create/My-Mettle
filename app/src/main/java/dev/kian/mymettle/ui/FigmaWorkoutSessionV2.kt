@@ -1634,9 +1634,9 @@ private fun WorkoutV2ExerciseActions(
             WorkoutV2CardButton("Rate", onRate, Modifier.weight(1f), metrics)
             MettleControlGlassSurface(
                 modifier = Modifier
-                    // 78 × 56 Figma units, adapted to the current 384 dp device width.
-                    .width(metrics.dp(66))
-                    .height(metrics.dp(48))
+                    // 78 × 56 Figma units: approximately 66 × 47 dp on the S25 Ultra.
+                    .width(metrics.dp(78))
+                    .height(metrics.dp(56))
                     .onGloballyPositioned { coordinates ->
                         dockCentre = coordinates.localToRoot(
                             Offset(coordinates.size.width / 2f, coordinates.size.height / 2f),
