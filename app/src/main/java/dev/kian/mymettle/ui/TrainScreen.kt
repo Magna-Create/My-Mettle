@@ -152,7 +152,7 @@ fun TrainScreen(
         onLogSet = { exercise, set, draft ->
             persistDraft(viewModel, exercise, set, draft, logged = true)
         },
-        onSwapExercise = viewModel::requestExerciseSwap,
+        onSwapExercise = { exercise, kind -> viewModel.requestExerciseSwap(exercise, kind) },
         onSelectSwap = viewModel::swapExercise,
         onDismissSwap = viewModel::dismissExerciseSwap,
         onShowSets = viewModel::showWorkoutSets,
