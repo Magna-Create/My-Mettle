@@ -61,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
@@ -213,7 +214,16 @@ internal fun FigmaWorkoutSessionV2(
         ) {
             // Header glass samples the fully composited workout below it. The header itself stays
             // outside this source, preventing the recursive/black glass artefact seen on device.
-            Box(Modifier.fillMaxSize().hazeSource(headerHazeState)) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .hazeSource(headerHazeState)
+                    // Keep the original pointer stream alive during a hold/flick, but do
+                    // not GPU-render dozens of glass set controls behind an opaque modal.
+                    .drawWithContent {
+                        if (swapGesture.exerciseId == null) drawContent()
+                    },
+            ) {
                 WorkoutV2Backdrop(
                     modifier = Modifier.fillMaxSize().hazeSource(viewportHazeState),
                     onTap = { focusManager.clearFocus(force = true) },
