@@ -3,19 +3,24 @@ package dev.kian.mymettle.ui
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +32,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -34,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -147,6 +155,11 @@ internal fun resolveWorkoutSwapChoice(
     return hit(position + capped, .70f)
 }
 
+/**
+ * Figma 99:13817 and 99:13923. Coordinates are specified in the 453 × 983 design viewport,
+ * but transformed to the actual Compose viewport. No blurred copy of the workout remains:
+ * the modal area is an opaque surface, deliberately cheaper than multiple Haze captures.
+ */
 @Composable
 internal fun WorkoutSwapGestureOverlay(
     gesture: WorkoutSwapGestureState,
@@ -154,153 +167,215 @@ internal fun WorkoutSwapGestureOverlay(
 ) {
     val activeExerciseId = gesture.exerciseId ?: return
     val view = LocalView.current
-    var originRoot by remember { mutableStateOf(Offset.Zero) }
-    var widthPx by remember { mutableStateOf(0f) }
-    var heightPx by remember { mutableStateOf(0f) }
-    val activeCyan = Color(0xFFBBEBED)
+    val density = LocalDensity.current
+    val cyan = Color(0xFFBBEBED)
     val paper = Color(0xFFE1E4DA)
-    val field = Color(0xFF405D5C)
-
+    val targetFill = Color(0xFF4C6C6B)
     val targets = remember {
         listOf(
-            SwapTarget(WorkoutSwapChoice.SWITCH_EQUIPMENT, 154f, 526f, 120f, MettleIcons.CardsStack),
-            SwapTarget(WorkoutSwapChoice.ADD_EQUIPMENT, 298f, 526f, 120f, MettleIcons.AddChart),
-            SwapTarget(WorkoutSwapChoice.SUBSTITUTE_EXERCISE, 89f, 653f, 120f, MettleIcons.SwapHoriz),
-            SwapTarget(WorkoutSwapChoice.CANCEL, 363f, 653f, 120f, MettleIcons.Close),
+            SwapTarget(WorkoutSwapChoice.SWITCH_EQUIPMENT, 154f, 526f, 120f, FigmaWorkoutSwapIcons.SwitchEquipment),
+            SwapTarget(WorkoutSwapChoice.ADD_EQUIPMENT, 298f, 526f, 120f, FigmaWorkoutSwapIcons.AddEquipment),
+            SwapTarget(WorkoutSwapChoice.SUBSTITUTE_EXERCISE, 89f, 653f, 120f, FigmaWorkoutSwapIcons.SubstituteExercise),
+            SwapTarget(WorkoutSwapChoice.CANCEL, 363f, 653f, 120f, FigmaWorkoutSwapIcons.Cancel),
         )
     }
-    val handleLocal = gesture.handleRoot - originRoot
-    val hit = resolveWorkoutSwapChoice(handleLocal, Offset.Zero, widthPx, heightPx)
-    val (title, subtitle) = when (hit) {
-        WorkoutSwapChoice.SWITCH_EQUIPMENT -> "Switch" to "Switch equipment"
-        WorkoutSwapChoice.ADD_EQUIPMENT -> "Switch" to "Add equipment"
-        WorkoutSwapChoice.SUBSTITUTE_EXERCISE -> "Exercise" to "Substitute exercise"
-        WorkoutSwapChoice.CANCEL -> "Cancel" to "Return to workout"
-        null -> "Switch" to "Drag the handle"
-    }
-    val glow by animateFloatAsState(
-        targetValue = if (hit != null) 1f else 0f,
-        animationSpec = spring(stiffness = 360f),
-        label = "swap-gesture-glow",
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
+    val reveal by animateFloatAsState(
+        targetValue = if (shown) 1f else 0f,
+        animationSpec = tween(durationMillis = 190),
+        label = "workout-swap-overlay-reveal",
     )
     var lastHapticChoice by remember { mutableStateOf<WorkoutSwapChoice?>(null) }
-    LaunchedEffect(hit) {
-        if (hit != null && hit != lastHapticChoice) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-        lastHapticChoice = hit
-    }
-    LaunchedEffect(gesture.release?.generation) {
-        val release = gesture.release ?: return@LaunchedEffect
-        if (widthPx <= 0f || heightPx <= 0f) return@LaunchedEffect
-        val selected = resolveWorkoutSwapChoice(
-            release.positionRoot - originRoot, release.velocity, widthPx, heightPx,
-        )
-        gesture.dismiss()
-        if (selected != null) {
-            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-            onChoose(release.exerciseId, selected)
-        }
-    }
 
-    BoxWithConstraints(
-        Modifier.fillMaxSize().onGloballyPositioned {
-            originRoot = it.localToRoot(Offset.Zero)
-            widthPx = it.size.width.toFloat()
-            heightPx = it.size.height.toFloat()
-        },
-    ) {
-        // The app header is already rendered beneath this overlay. Dim rather than replacing it.
-        Box(
-            Modifier.fillMaxSize().padding(top = maxHeight * .122f, bottom = maxHeight * .095f)
-                .background(Color(0xFF101C19).copy(alpha = .97f)),
-        ) {
-            Canvas(Modifier.fillMaxSize()) {
-                drawRect(
-                    brush = Brush.radialGradient(
-                        colors = listOf(field.copy(alpha = .96f), field.copy(alpha = .46f), Color.Transparent),
-                        center = Offset(size.width / 2f, size.height * .90f),
-                        radius = size.height * .77f,
-                    ),
-                )
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        listOf(Color.Black.copy(alpha = .56f), Color.Transparent),
-                        endY = size.height * .34f,
-                    ),
-                )
+    BoxWithConstraints(Modifier.fillMaxSize().graphicsLayer { alpha = reveal }) {
+        val widthPx = constraints.maxWidth.toFloat()
+        val heightPx = constraints.maxHeight.toFloat()
+        fun x(ref: Float) = ref / 453f * widthPx
+        fun y(ref: Float) = ref / 983f * heightPx
+        fun dp(px: Float) = with(density) { px.toDp() }
+
+        // A pressed footer control preserves its original pointer stream.
+        // Display its handle at the designed anchor; only the finger's delta is transferred.
+        val handle = Offset(
+            x(227f) + if (gesture.dragging || gesture.release != null) gesture.handleRoot.x - gesture.dockRoot.x else 0f,
+            y(759f) + if (gesture.dragging || gesture.release != null) gesture.handleRoot.y - gesture.dockRoot.y else 0f,
+        )
+        val hit = resolveWorkoutSwapChoice(handle, Offset.Zero, widthPx, heightPx)
+        val title = when (hit) {
+            WorkoutSwapChoice.SUBSTITUTE_EXERCISE -> "Exercise"
+            WorkoutSwapChoice.CANCEL -> "Cancel"
+            else -> "Switch"
+        }
+        val subtitle = when (hit) {
+            WorkoutSwapChoice.SWITCH_EQUIPMENT -> "Switch equipment"
+            WorkoutSwapChoice.ADD_EQUIPMENT -> "Add equipment"
+            WorkoutSwapChoice.SUBSTITUTE_EXERCISE -> "Substitute exercise"
+            WorkoutSwapChoice.CANCEL -> "Return to workout"
+            null -> "Drag the handle"
+        }
+        val selectedGlow by animateFloatAsState(
+            targetValue = if (hit != null) 1f else 0f,
+            animationSpec = spring(stiffness = 360f),
+            label = "workout-swap-target-focus",
+        )
+        LaunchedEffect(hit) {
+            if (hit != null && hit != lastHapticChoice) {
+                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            }
+            lastHapticChoice = hit
+        }
+        LaunchedEffect(gesture.release?.generation) {
+            val release = gesture.release ?: return@LaunchedEffect
+            val location = Offset(
+                x(227f) + release.positionRoot.x - gesture.dockRoot.x,
+                y(759f) + release.positionRoot.y - gesture.dockRoot.y,
+            )
+            val choice = resolveWorkoutSwapChoice(location, release.velocity, widthPx, heightPx)
+            if (choice != null) {
+                gesture.dismiss()
+                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                onChoose(release.exerciseId, choice)
+            } else {
+                // An inaccurate release must not accidentally apply a substitution.
+                gesture.open(release.exerciseId, gesture.dockRoot)
             }
         }
+
+        // Covers the entire exercise viewport below the fixed header and above the hotbar.
+        // Unlike the first implementation, underlying set cards are fully obscured.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(top = maxHeight * .122f, bottom = maxHeight * .091f)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFF101914), Color(0xFF1F3430), Color(0xFF344D4C)),
+                    ),
+                ),
+        )
+        // Independent design surface: x=17, y=129, w=418, h=678.
+        Box(
+            Modifier
+                .offset { IntOffset(x(17f).roundToInt(), y(129f).roundToInt()) }
+                .size(dp(x(418f)), dp(y(678f)))
+                .clip(RoundedCornerShape(dp(x(24.7f))))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFF14221D), Color(0xFF162925), Color(0xFF344F4E)),
+                    ),
+                )
+                .border(
+                    width = .55.dp,
+                    color = cyan.copy(alpha = .06f),
+                    shape = RoundedCornerShape(dp(x(24.7f))),
+                ),
+        )
+
         Column(
-            Modifier.fillMaxWidth().padding(top = maxHeight * .195f),
+            Modifier
+                .offset { IntOffset(0, y(222f).roundToInt()) }
+                .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(title, color = activeCyan, fontSize = 43.sp, lineHeight = 50.sp, fontWeight = FontWeight.Medium)
+            Text(
+                text = title,
+                color = cyan,
+                fontSize = 43.sp,
+                lineHeight = 49.sp,
+                fontWeight = FontWeight.Medium,
+            )
             Spacer(Modifier.height(3.dp))
-            Text(subtitle, color = paper, fontSize = 20.sp, textAlign = TextAlign.Center)
+            Text(
+                text = subtitle,
+                color = paper,
+                fontSize = 20.sp,
+                lineHeight = 26.sp,
+                textAlign = TextAlign.Center,
+            )
         }
 
-        // The four large targets are separately tappable for accessibility and precise selection.
         targets.forEach { target ->
-            val xPx = target.x / 453f * widthPx
-            val yPx = target.y / 983f * heightPx
-            val targetPx = target.size / 453f * widthPx
-            val targetDp = with(androidx.compose.ui.platform.LocalDensity.current) { targetPx.toDp() }
+            val diameterPx = x(target.size)
             Box(
-                modifier = Modifier
+                Modifier
                     .offset {
                         IntOffset(
-                            (xPx - targetPx / 2f).roundToInt(),
-                            (yPx - targetPx / 2f).roundToInt(),
+                            (x(target.x) - diameterPx / 2f).roundToInt(),
+                            (y(target.y) - diameterPx / 2f).roundToInt(),
                         )
                     }
-                    .size(targetDp),
-                contentAlignment = Alignment.Center,
-            ) {
-                MettleControlGlassSurface(
-                    modifier = Modifier.fillMaxSize(),
-                    shape = CircleShape,
-                    baseColor = field.copy(alpha = .58f),
-                    tint = activeCyan.copy(alpha = if (hit == target.choice) .24f else .04f),
-                    borderColor = activeCyan.copy(alpha = if (hit == target.choice) .68f else .16f),
-                    onClick = {
+                    .size(dp(diameterPx))
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                targetFill.copy(alpha = if (hit == target.choice) .99f else .93f),
+                                Color(0xFF456462),
+                            ),
+                        ),
+                    )
+                    .border(
+                        width = if (hit == target.choice) 1.25.dp else .65.dp,
+                        color = cyan.copy(alpha = if (hit == target.choice) .66f else .20f),
+                        shape = CircleShape,
+                    )
+                    .clickable {
                         gesture.dismiss()
                         onChoose(activeExerciseId, target.choice)
                     },
-                ) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = target.icon,
-                            contentDescription = when (target.choice) {
-                                WorkoutSwapChoice.SWITCH_EQUIPMENT -> "Switch equipment"
-                                WorkoutSwapChoice.ADD_EQUIPMENT -> "Add equipment"
-                                WorkoutSwapChoice.SUBSTITUTE_EXERCISE -> "Substitute exercise"
-                                WorkoutSwapChoice.CANCEL -> "Cancel"
-                            },
-                            tint = activeCyan,
-                            modifier = Modifier.size(targetDp * .45f),
-                        )
-                    }
+                contentAlignment = Alignment.Center,
+            ) {
+                val glyphWidth = when (target.choice) {
+                    WorkoutSwapChoice.SWITCH_EQUIPMENT, WorkoutSwapChoice.ADD_EQUIPMENT -> 65f
+                    else -> 63f
                 }
+                Icon(
+                    imageVector = target.icon,
+                    contentDescription = when (target.choice) {
+                        WorkoutSwapChoice.SWITCH_EQUIPMENT -> "Switch equipment"
+                        WorkoutSwapChoice.ADD_EQUIPMENT -> "Add equipment"
+                        WorkoutSwapChoice.SUBSTITUTE_EXERCISE -> "Substitute exercise"
+                        WorkoutSwapChoice.CANCEL -> "Cancel"
+                    },
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(dp(x(glyphWidth))),
+                )
             }
         }
 
-        // Track the actual pressed control for one continuous hold–drag–release interaction.
-        val handlePx = 57f / 453f * widthPx
-        val handleDp = with(androidx.compose.ui.platform.LocalDensity.current) { handlePx.toDp() }
+        // Figma's handle is a 78 × 56 capsule, never a circular avatar.
+        val handleWidth = x(78f)
+        val handleHeight = y(56f)
+        val pill = RoundedCornerShape(percent = 50)
         Box(
-            Modifier.offset {
-                IntOffset((handleLocal.x - handlePx / 2).roundToInt(), (handleLocal.y - handlePx / 2).roundToInt())
-            }.size(handleDp),
+            Modifier
+                .offset {
+                    IntOffset(
+                        (handle.x - handleWidth / 2f).roundToInt(),
+                        (handle.y - handleHeight / 2f).roundToInt(),
+                    )
+                }
+                .size(dp(handleWidth), dp(handleHeight))
+                .clip(pill)
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            Color(0xFF456766).copy(alpha = .97f),
+                            Color(0xFF719796).copy(alpha = .85f + selectedGlow * .12f),
+                            Color(0xFF35514F),
+                        ),
+                    ),
+                )
+                .border(.85.dp, cyan.copy(alpha = .39f + selectedGlow * .28f), pill),
             contentAlignment = Alignment.Center,
         ) {
-            Box(
-                Modifier.fillMaxSize().background(
-                    Brush.radialGradient(listOf(activeCyan.copy(alpha = .20f + glow * .35f), field.copy(alpha = .65f))),
-                    CircleShape,
-                ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(MettleIcons.Cycle, contentDescription = "Dragged switch handle", tint = paper, modifier = Modifier.size(handleDp * .55f))
-            }
+            Icon(
+                imageVector = FigmaWorkoutSwapIcons.Cycle,
+                contentDescription = "Switch gesture handle",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(dp(x(24f))),
+            )
         }
     }
 }
