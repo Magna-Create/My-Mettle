@@ -1068,7 +1068,13 @@ private fun WorkoutV2MetricField(
                             lineHeight = 11.sp,
                             maxLines = 1,
                         )
-                        if (value.isEmpty()) Text("—", color = WorkoutV2Paper.copy(alpha = .38f), fontSize = 16.sp) else inner()
+                        Box {
+                            if (value.isEmpty()) {
+                                Text("—", color = WorkoutV2Paper.copy(alpha = .38f), fontSize = 16.sp)
+                            }
+                            // BasicTextField must keep its inner editor composed even when empty.
+                            inner()
+                        }
                     }
                 },
             )
