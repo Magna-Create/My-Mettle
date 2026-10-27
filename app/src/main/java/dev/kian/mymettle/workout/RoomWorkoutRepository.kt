@@ -403,6 +403,7 @@ class RoomWorkoutRepository(
             .firstOrNull { it.executionProfileId == replacementExecutionProfileId }
             ?: throw NativeWorkoutException("That replacement is no longer compatible with this session target.")
         val prescription = replacement.prescription
+        val exerciseChanged = replacement.exerciseId != current.exerciseId
         dao.deleteSessionExerciseTargets(current.id)
         dao.deleteSets(current.id)
         dao.upsertSessionExercises(
@@ -418,8 +419,12 @@ class RoomWorkoutRepository(
                     status = "planned",
                     startedAt = null,
                     completedAt = null,
-                    movementReason = USER_SUBSTITUTION_REASON,
-                    substitutedFromExerciseId = current.substitutedFromExerciseId ?: current.exerciseId,
+                    movementReason = if (exerciseChanged) USER_SUBSTITUTION_REASON else current.movementReason,
+                    substitutedFromExerciseId = if (exerciseChanged) {
+                        current.substitutedFromExerciseId ?: current.exerciseId
+                    } else {
+                        current.substitutedFromExerciseId
+                    },
                 ),
             ),
         )
