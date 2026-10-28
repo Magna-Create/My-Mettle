@@ -3,7 +3,11 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// Cloud Vision, placard and weight OCR do not require MNN or native JNI.
+def cloudOnly = providers.gradleProperty('lab2bCloudOnly').orNull == 'true'
 def prebuiltNative = providers.gradleProperty('lab2bPrebuiltNative').orNull == 'true'
+if (cloudOnly && prebuiltNative) throw new GradleException('Choose cloud-only OR prebuilt-native, not both')
+def needsNative = !cloudOnly
 // OCR-only builds do not use MNN/JNI. This is the normal Termux Cloud Vision route.
 def ocrOnly = providers.gradleProperty('lab2bOcrOnly').orNull == 'true'
 if (ocrOnly && prebuiltNative) throw new GradleException('Choose OCR-only or prebuilt native, not both')
@@ -38,6 +42,7 @@ android {
 
         if (!prebuiltNative && !ocrOnly) externalNativeBuild { cmake { arguments '-DANDROID_STL=c++_shared' } }
         buildConfigField 'String', 'RUNTIME_VERSION', '"MNN 3.6.1"'
+        buildConfigField 'boolean', 'CLOUD_ONLY_BUILD', cloudOnly.toString()
         buildConfigField 'boolean', 'OCR_ONLY', ocrOnly ? 'true' : 'false'
     }
 
