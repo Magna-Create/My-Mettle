@@ -496,7 +496,30 @@ private fun WorkoutV2WaveProgress(workout: ActiveWorkout, modifier: Modifier, me
                     }
                     lineTo(endX, y)
                 }
+                // Match the established WorkoutWaveProgress treatment used on the
+                // exercise/equipment selection screen: wide diffused cyan bands beneath
+                // the sharp wave and a soft radial halo behind the progress marker.
+                // The glow is painted in this existing Canvas (no extra Haze capture).
+                drawPath(
+                    path = path,
+                    color = WorkoutV2Cyan.copy(alpha = .07f),
+                    style = Stroke(metrics.dp(13).toPx()),
+                )
+                drawPath(
+                    path = path,
+                    color = WorkoutV2Cyan.copy(alpha = .18f),
+                    style = Stroke(metrics.dp(6).toPx()),
+                )
                 drawPath(path, WorkoutV2Cyan, style = Stroke(metrics.dp(2.1).toPx()))
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(WorkoutV2Cyan.copy(alpha = .22f), Color.Transparent),
+                        center = Offset(endX, y),
+                        radius = metrics.dp(19).toPx(),
+                    ),
+                    radius = metrics.dp(19).toPx(),
+                    center = Offset(endX, y),
+                )
                 drawLine(
                     WorkoutV2Paper,
                     Offset(endX, y - metrics.dp(9).toPx()),
