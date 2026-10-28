@@ -4,7 +4,7 @@
 
 ## 1. Goal and boundaries
 
-Enable a gym user to photograph a machine's weight stack **once**, see exactly which printed kg/lb column was recognised, correct any suspect readings and save verified equipment facts. **Do not require a second/add-on weight photograph**: supplementary microplates are a manual, machine-configured counter. A placard and logo remain optional evidence paths, ideally cropped from the same camera source when visible, or captured separately only if necessary. A live overlay should make framing easier rather than add steps.
+Enable a gym user to photograph a machine's weight stack **once**, see exactly which printed kg/lb column was recognised, correct any suspect readings and save verified equipment facts. **Do not require a second/add-on weight photograph**: supplementary microplates are a manual, machine-configured counter. A placard remains an optional OCR evidence path, preferably cropped from the same camera image when visible. Pictorial logo identification stays in the separate experimental OCR app until accepted. A live overlay should make framing easier rather than add steps.
 
 Pipeline and ownership:
 
@@ -14,7 +14,7 @@ camera / document picker
     → optional live CameraX overlay for text/column location (never authority)
     → one high-quality still, reusable source and optional crop(s)
     → ML Kit OCR: text + original geometry + image identity
-    → deterministic stack-column and optional placard/logo candidates
+    → deterministic stack-column and optional placard text candidates
     → lightweight exception-only human review and explicit confirmation
     → separate manual fractional/add-on denomination counters (NO OCR)
     → domain validation + canonical equipment fact/version (separate gate)
@@ -123,7 +123,7 @@ interface EquipmentOcrRecognizer {
 }
 interface EquipmentEvidenceInterpreter {
     fun stackCandidates(observation: OcrObservation, selection: ColumnSelection?): StackReviewDraft
-    fun placardCandidates(placard: OcrObservation, logo: OcrObservation?): PlacardReviewDraft
+    fun placardCandidates(placard: OcrObservation): PlacardReviewDraft
 }
 interface EquipmentFactReviewGateway {
     suspend fun validateAndSave(reviewed: ConfirmedEquipmentDraft): EquipmentSaveResult
