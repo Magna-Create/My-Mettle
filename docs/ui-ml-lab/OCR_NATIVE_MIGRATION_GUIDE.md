@@ -97,13 +97,37 @@ The inspected Native `EquipmentInstance` domain has equipment identity/facts and
 
 **Location and privacy:** device location access is optional and granted through the app at use time; an approximate location may not distinguish branches reliably. No location permission or precise coordinate is presumed available. If the user never wants auto-detection, the gym selector and last confirmed gym remain sufficient. Avoid uploading workout location to external services merely to guess venue identity. The Figma Gym/Exercise/Equipment Library redesign will own the eventual navigation; do not pre-empt it with new permanent screens.
 
-### Logo identification: remain in the experimental OCR branch until accepted
+### Logo identification: test official cloud lookup versus local matching IN THE OCR LAB
 
-The experimental Lab already offers optional logo cropping and conservative OCR wordmark detection. A proposed separate on-device recogniser would compare a reference logo gallery using standalone **XFeat** descriptors and geometric/RANSAC verification (without LightGlue initially), with an explicit unknown/reject result. This is a **research candidate**, not implemented, benchmarked or production-authorised.
+**Decision (28 October 2026):** keep all logo-identification experiments inside the separate `agent/lab2b-ocr-stack` Android app. Do **not** choose XFeat by default, do not add a new mandatory logo-capture step to Native, and do not merge API/cloud/model code into production before real-image acceptance.
 
-**Implementation boundary:** build and test the reference gallery, crop/descriptor pipeline, held-out recognition accuracy, false matches against unknown logos, speed/memory and lifecycle **inside `agent/lab2b-ocr-stack`'s separate Android harness**. Do not port logo code, trained assets or an untested match score into My Mettle Native or the Native Auto flow. Only after measured device acceptance and explicit migration review should a candidate for product integration be written. OCR placard field extraction can move forward independently.
+**What was and wasn't learned:** standalone XFeat (without LightGlue) was previously a proposed lightweight local matcher, but there is **no measured S25 Ultra XFeat end-to-end speed benchmark** in the retrieved Lab decisions. Slow Qwen/Gemma VLM tests do not prove that XFeat is slow. Benchmark rather than invent a performance conclusion. A simple ORB/AKAZE local matching baseline may be tried as a lower-complexity alternative, but it is also not yet proven on gym logos.
 
-A logo can suggest a manufacturer but must not itself assert a model, mechanical ratio, starting resistance or known gym. Keep image evidence and corrections separately traceable.
+**Official Google services, not an official Lens API:** Google does **not** expose a public official Google Lens visual-search API. It exposes [Cloud Vision Logo Detection](https://docs.cloud.google.com/vision/docs/detecting-logos), which returns known logo names/scores/bounding polygons, and [Cloud Vision Web Detection](https://docs.cloud.google.com/vision/docs/detecting-web), which returns web entities, similar/matching images and pages with matching images. Third-party commercial [SerpApi Google Lens](https://serpapi.com/google-lens-api) performs Lens scraping; it must not be treated as Google's own stable service contract. Do not confuse Google ML Kit on-device OCR with Cloud Vision remotely processed images.
+
+**Preferred Lab comparison sequence:**
+
+1. **Zero-cloud baseline:** OCR existing placard/wordmark text and match against a small reviewed manufacturer alias list. A supported wordmark is often enough, including without an image classifier.
+2. **Cloud logo:** after the shutter press, on explicit user consent, send only a tightly cropped logo region to a small test backend using `LOGO_DETECTION`; retain original string, returned score/box and failure/unknown state.
+3. **Cloud web fallback:** on logo-detection ambiguity/unknown only, try `WEB_DETECTION` for entities/related pages; use evidence from multiple results rather than accepting the first search-result title as a fact. Restrict to candidate manufacturers if appropriate, but always allow `unknown`. Evaluate both whole-image and tight logo-crop source if necessary.
+4. **Local alternative:** benchmark ORB/AKAZE and only then XFeat on the same accepted test set if cloud dependence, privacy or reliability warrants local recognition. Use a prebuilt gallery and geometric verification with explicit rejection.
+5. **Optional later multimodal adjudication:** only if needed, evaluate a remote vision-language model to *organise* contradictory candidate evidence into a proposed brand, not invent physics or claim a machine model as verified.
+
+**Example research output (not an implemented API schema):**
+```json
+{
+  "manufacturerCandidate": "example_brand",
+  "evidenceSources": ["ocr_wordmark", "cloud_logo", "web_entity"],
+  "status": "candidate_requires_review",
+  "verifiedByUser": false
+}
+```
+
+**Costs/security/privacy:** Cloud Vision is billed per image **and per feature**. As currently published, Logo Detection costs $1.50 per 1,000 paid feature units and Web Detection $3.50 per 1,000 paid feature units, with the first 1,000 monthly units per feature free; confirm current rates at [official pricing](https://cloud.google.com/vision/pricing) before implementation. Cloud calls require network, billing and safe authentication: use a backend, keep Cloud credentials out of the APK, crop away identifiable bystanders/backgrounds, provide a local-only/no-upload route, and disclose/consent to remote image processing. No background or continuous camera-frame uploads. A cloud call may be quicker *overall* than heavy local matching on some inputs, but network round-trip and service variability make absolute speed claims inappropriate until tested.
+
+**Experimental acceptance:** include Technogym, Life Fitness, Matrix, Hammer Strength, Panatta and less-familiar brands; negative samples with no logo, unknown brands, mirrored/reflected/logos under glare, stylised wordmarks and machine parts that resemble marks. Measure top-1 supported-brand correctness, false-positive **unknown** acceptance, coverage, per-stage latency, bandwidth/cost and failure-on-no-network. Compare on identical crops and whole-machine shots where appropriate. Report original responses alongside decisions; no fabricated confidence number or silently corrected manufacturer. A brand match can suggest an identity; it cannot itself assert machine model, resistance, pulley ratio or gym branch.
+
+**Gate:** once the experimental app demonstrates adequate accuracy and reliability, decide explicitly whether Native uses `on-device wordmark only`, `wordmark + optional cloud fallback`, or a tested local matcher. OCR stack/placard integration does not wait for this decision.
 
 ### CameraX implementation notes from current source
 
@@ -145,7 +169,7 @@ Data contract needs: source image identity/EXIF, crop-relative geometry, observe
 | **C — Placard fields** | Whole placard from the stack photo where possible, conservative labelled fields, manual corrections and "unknown". Logo recognition is **not** a Native dependency. | Reject model-ID typo repairs without evidence, invented starting load, unlabelled ratios and made-up manufacturer specifications. |
 | **D — Independent equipment save + Gym Library context** | Map confirmed candidates to standalone Native equipment instance/fact versions; separately create a gym/branch library, per-workout gym context and optional gym-scoped equipment-selection preferences after schema/UX gate. | Equipment is never owned by gym, geolocation never rewrites recorded equipment, auto-selection requires conservative match/manual fallback, backups and history preserve both contexts; no inference model promotion. |
 | **E — Live viewfinder guidance** | CameraX Preview + ImageAnalysis + Compose overlay for detected text/columns; reuse the SAME OCR observation geometry and full-resolution still/review adapters as B/C. Can be engineered in a separate gate but appears in the same user capture flow. | Must improve capture quality on held-out gym photos **without** false unit certainty, stale boxes or preview/render jank. Feature-flag until physical acceptance. |
-| **F — Lab-only logo experiment and optional vision** | Continue XFeat/reference-gallery logo tests in the **separate `agent/lab2b-ocr-stack` app**, then consider other vision tasks only if justified. Do not incorporate their code or assets in Native before a new explicit gate. | Require known and unknown-brand tests, rejection performance, runtime and lifecycle evidence; no implied Native acceptance. |
+| **F — Lab-only logo and web-recognition comparison** | In **`agent/lab2b-ocr-stack` only**, benchmark OCR wordmark matching, optional official Google Cloud Vision Logo/Web Detection, and ORB/AKAZE/XFeat local baselines if warranted. No product integration or credentials in the APK until a new gate. | Evaluate obscure/unknown brands, offline fallback, false acceptances, time/cost/consent/credential safety and runtime; no untested Native dependency. |
 
 Every stage gets a separate small PR, tests, a device acceptance sheet and a rollback route. LAB-2B itself stays isolated. Porting a Lab implementation is not permission to merge or cherry-pick its app/Gradle/JNI source wholesale.
 
@@ -194,7 +218,7 @@ Record, on S25 Ultra: recognition coverage of expected visible labels; false kg/
 - [ ] Measurements from held-out stacks, placards and awkward gym lighting recorded.
 - [ ] Single stack capture succeeds without any add-on photograph; **available denomination quantities** are saved/recalled per equipment instance, and no unselected availability becomes engaged load.
 - [ ] Gym Library, optional location match, fallback selector and **gym-contextual equipment suggestions** are designed/approved with Figma; equipment identity stays independent and historical actual-use bindings are unchanged.
-- [ ] Standalone logo gallery/XFeat is researched and physically tested **only in the OCR Lab app** before any separate Native migration decision.
+- [ ] **OCR Lab only**: test wordmark OCR, official Cloud Vision Logo/Web Detection and local ORB/AKAZE/XFeat only if justified; require unknown-brand rejection and privacy/latency/cost measurements before a separate Native decision.
 - [ ] Workout start never blocks on location; denied/ambiguous lookup has a manual gym selection fallback, and auto gym changes never mutate confirmed exercise equipment.
 - [ ] Live-overlay feature is optional and can be disabled without losing capture/review.
 - [ ] LAB-2B AI model assets/runtime are **not** shipped as a dependency of deterministic OCR.
