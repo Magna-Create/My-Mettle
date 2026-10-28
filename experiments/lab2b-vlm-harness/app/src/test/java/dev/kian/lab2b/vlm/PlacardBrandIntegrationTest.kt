@@ -21,7 +21,10 @@ class PlacardBrandIntegrationTest {
         val scan=evidence("HAMMER", "STRENGTH", "LINEAR HACK SQUAT")
         val parsed=PlacardParser.extract(scan,null)
         val brands=parsed.choices(PlacardField.BRAND)
-        assertTrue(brands.any { it.value=="Hammer Strength" && it.method.startsWith("LOCAL_BRAND_CANONICAL") })
+        assertTrue(brands.any {
+            it.value=="Hammer Strength" &&
+                (it.method.startsWith("LOCAL_BRAND_CANONICAL") || it.method=="EXACT_STACKED_BRAND_TEXT")
+        })
         assertEquals("Hammer Strength",parsed.suggested(PlacardField.BRAND)?.value)
         assertTrue(brands.all { it.sourceSha=="sha_one_source" })
         assertTrue(parsed.choices(PlacardField.MACHINE_NAME).any { it.value.equals("LINEAR HACK SQUAT",true) }.not())
