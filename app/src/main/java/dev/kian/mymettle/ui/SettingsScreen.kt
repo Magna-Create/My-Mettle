@@ -49,6 +49,7 @@ private const val FigmaDiagnosticReferenceHeight = 983f
 fun SettingsScreen(
     onOpenDeveloper: () -> Unit,
     onOpenBackups: () -> Unit,
+    onOpenIntelligence: () -> Unit,
     onOpenAccount: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -151,6 +152,31 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+
+                item {
+                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Text(
+                                "Intelligence",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                "Local recognition, optional cloud identification and future N-BIO preferences.",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            MettleGlassActionButton(
+                                onClick = onOpenIntelligence,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Open Intelligence")
+                            }
+                        }
+                    }
                 }
 
                 item {

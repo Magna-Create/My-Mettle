@@ -48,6 +48,7 @@ private const val LIBRARY_ROUTE = "library"
 private const val HISTORY_ROUTE = "history"
 private const val ACCOUNT_ROUTE = "account"
 private const val SETTINGS_ROUTE = "settings"
+private const val INTELLIGENCE_ROUTE = "settings/intelligence"
 private const val BACKUPS_ROUTE = "settings/backups"
 private const val BIOLOGY_DEVELOPER_ROUTE = "settings/biology-developer"
 
@@ -314,8 +315,16 @@ fun MyMettleApp() {
                                         launchSingleTop = true
                                     }
                                 },
+                                onOpenIntelligence = {
+                                    navController.navigate(INTELLIGENCE_ROUTE) {
+                                        launchSingleTop = true
+                                    }
+                                },
                                 onOpenAccount = { openMainDestination(ACCOUNT_ROUTE) },
                             )
+                        }
+                        composable(INTELLIGENCE_ROUTE) {
+                            IntelligenceSettingsScreen(onBack = { navController.popBackStack() })
                         }
                         composable(BACKUPS_ROUTE) {
                             BackupScreen(onBack = { navController.popBackStack() })
