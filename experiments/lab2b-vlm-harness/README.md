@@ -35,7 +35,7 @@ Diagnostics show requested backend, effective text/vision evidence, native timin
 
 ## Desktop / CI build
 
-Pins: Java 17, Gradle 9.1.0, AGP 8.13.0, Kotlin 2.2.0, SDK/target 35, minimum 31, NDK 27.3.13750724, CMake 3.22.1, ARM64 only. `gradlew` is a pin-checking launcher and requires Gradle on PATH.
+Pins: Java 17, Gradle 9.3.1, AGP 8.13.0, Kotlin 2.2.0, SDK/target 35, minimum 31, NDK 27.3.13750724, CMake 3.22.1, ARM64 only. `gradlew` is a pin-checking launcher and requires Gradle on PATH.
 
 ```bash
 cd experiments/lab2b-vlm-harness
@@ -49,26 +49,25 @@ sha256sum app/build/outputs/apk/debug/app-debug.apk
 
 Set ANDROID_HOME or local.properties; install ripgrep for the isolation check. The bootstrap downloads only the SHA-pinned MNN 3.6.1 official Android prebuilt and matching headers, not weights. It compiles one small JNI bridge, not MNN. The final runtime excludes GenieX. Native validation checks every APK `.so`, ARM64 machine, all LOAD alignments and congruence, and `zipalign -c -P 16 4`. This is static compatibility, not a 16 KB device boot test.
 
-## Termux rebuild fallback
+## Termux: normal lightweight OCR + Cloud Vision build
 
-The Actions artifact also contains `lab2b-native.zip` and `lab2b-native.sha256`, exported from the audited APK. Use the native bundle from the **same source revision**. The importer verifies the published ZIP hash, each library hash and the C++/adapter source hashes before activation. This avoids attempting to execute Linux x86_64 NDK tools on an ARM64 phone. It is a rebuild using verified native prebuilts; changing the native bridge requires desktop/CI rebuilding.
-
-With the existing Android SDK platform 35/build-tools and Gradle 9.1.0 configured in Termux, place these two artifact files in this harness directory, then run exactly:
+The same `./gradlew` command now **automatically reuses My Mettle's Gradle 9.3.1 bootstrap**, Termux's `aapt2` and a native-free `lab2bOcrOnly` build mode. **No `gh` authentication, native bundle, NDK, separate Gradle pin, or imported MNN libraries is necessary** just to test OCR or Google Cloud Vision. This mode does not expose the MNN model comparison UI; the full model harness remains available from its standalone desktop/CI-built APK.
 
 ```bash
-pkg install openjdk-17 aapt2 python
-cd ~/My-Mettle/experiments/lab2b-vlm-harness
-python tools/native_bundle.py import lab2b-native.zip --sha256 "$(awk '{print $1}' lab2b-native.sha256)"
-./gradlew --no-daemon -Plab2bPrebuiltNative=true \
-  -Pandroid.aapt2FromMavenOverride="$(command -v aapt2)" \
-  testDebugUnitTest assembleDebug lintDebug
-sha256sum app/build/outputs/apk/debug/app-debug.apk
-cp app/build/outputs/apk/debug/app-debug.apk ~/storage/downloads/LAB-2B-VLM-Harness-debug.apk
+cd ~/My-Mettle
+git fetch origin
+git switch agent/lab2b-cloud-vision-evaluation
+git pull --ff-only
+
+cd experiments/lab2b-vlm-harness
+./gradlew :app:assembleDebug --no-daemon && \
+  cp app/build/outputs/apk/debug/app-debug.apk \
+  /sdcard/Download/LAB-2B-CloudVision-0.6.2.apk
 ```
 
-Open the copied APK from Samsung My Files to install. `~/storage/downloads` requires Termux storage access (`termux-setup-storage` if not already granted).
+The `&&` is deliberate: never copy an old APK when Gradle exits with an error. The build itself bootstraps Gradle only if My Mettle has not already done so, exactly like the main app. The installed package is the same LAB-2B test package, `dev.kian.lab2b.vlm`. If installing a CI-signed APK over a Termux-signed APK fails due to different signing identities, uninstall the old test harness (which clears its private data and stored Cloud key), then install the new one. **The main My Mettle Native app is unaffected.**
 
-The prebuilt Gradle path is validated on the build host; physical Termux execution still needs Kian's device. These commands assume the same existing SDK/Gradle environment used for the earlier harness; `pkg` alone does not install Android SDK platforms or the pinned Gradle distribution. Downloading the already-built APK is the immediate installation route.
+To build the full MNN comparison APK, use the standalone GitHub CI artifacts and source-matched native bundle path described in earlier releases; the lightweight phone path deliberately avoids JNI and the bundled MNN runtime.
 
 ## Acceptance records
 
