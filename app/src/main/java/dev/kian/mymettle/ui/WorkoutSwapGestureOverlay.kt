@@ -286,10 +286,10 @@ internal fun WorkoutSwapGestureOverlay(
                 .clip(panelShape)
                 .background(
                     Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0f to Color(0xFF14221D).copy(alpha = .93f),
-                            .63f to Color(0xFF162925).copy(alpha = .76f),
-                            1f to Color(0xFF344F4E).copy(alpha = .04f),
+                        listOf(
+                            Color(0xFF14221D).copy(alpha = .93f),
+                            Color(0xFF162925).copy(alpha = .76f),
+                            Color(0xFF344F4E).copy(alpha = .04f),
                         ),
                     ),
                 )
