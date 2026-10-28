@@ -14,14 +14,30 @@
 4. Tap **Enter API key**, paste your key, save. The app uses Android Keystore AES-GCM + app-private preferences, with `android:allowBackup=false`. It will not display the stored value, add it to diagnostic JSON, ship it in the APK, or send it to GitHub. Delete/replace from the same screen. A local key in a compromised app/device is **not equivalent to a backend-held secret**.
 5. If you already photographed a placard, use **Draw logo box** and open Cloud Vision: the existing, EXIF-normalised **logo crop** is selected. Otherwise use **Choose image** on the Cloud Vision screen to pick a standalone photo.
 
-## Test sequence
+## Test sequence — offline brand lookup before paid cloud fallback
 
-- Inspect the selected image preview. Prefer a tight readable logo/wordmark crop without bystanders or identifying background features.
-- Tap **Test Logo Detection**. Confirm the upload in the explicit dialog. The client sends **one image and one `LOGO_DETECTION` feature** over HTTPS with the key only in `x-goog-api-key` request header. The prepared JPEG has a maximum dimension of ~1500 pixels and maximum encoded payload 3 MB.
+- Inspect the selected image preview. Prefer a readable logo/wordmark crop without bystanders or identifying background features.
+- **The app performs one local ML Kit text pass** on the selected photo and compares the text against a curated `ManufacturerCatalogue`, which is also used by `PlacardParser`. The catalogue stores compact keys (`lifefitness`, `hammerstrength`) and **independent display metadata** (word breaks 4 and 6 respectively). `technogym` has no display word break, preserving its real-world spelling. Matching ignores casing, spacing and punctuation, including wordmarks split into two adjacent OCR lines inside the same text block, without accepting substrings inside unrelated words.
+- Tap **Identify brand • OCR → cloud if unresolved**. A single distinct non-generic OCR match is displayed as a *suggestion* without an upload; ambiguous, generic or missing matches can offer an explicit **Logo Detection** fallback. **No hidden cloud call:** the user must confirm each upload.
+- For comparison, tap **Test Logo Detection** manually even when OCR succeeds. Confirm the upload in the explicit dialog. The client sends **one image and one `LOGO_DETECTION` feature** over HTTPS with the key only in `x-goog-api-key` request header. The prepared JPEG has a maximum dimension of ~1500 pixels and maximum encoded payload 3 MB.
 - Look for **named logos, API scores, elapsed time and KiB sent**. The result is **unverified evidence**. An empty response is explicitly reported as unknown.
 - Tap **Test Web Detection** separately, confirm again. This sends one `WEB_DETECTION` feature (a separately billable operation), showing web entity names/scores, best-guess labels and up to five related page URLs. No automatic fallback or double-charge hidden behind one button.
 - Repeat across brand/lighting/crop cases; compare both features against the same source. Try without network and with an unknown logo to check graceful failure.
 - The cloud response is **not** inserted into OCR review, equipment identity, or production facts. The UI keeps results in RAM only. API keys and raw responses are never added to LAB-2B diagnostic JSON.
+
+## Observed physical sample — 28 October 2026
+
+User-supplied LAB-2B device screenshots (one call per still photo) show:
+
+| Subject in photo | Cloud LOGO_DETECTION | Response | Upload | Interpretation |
+| --- | --- | --- | --- | --- |
+| Life Fitness chest-press placard | Life Fitness (0.970 API score) | 1,384 ms | 121 KiB | Name recognised |
+| Technogym placard | Technogym (0.992 API score) | 521 ms | 62 KiB | Name recognised |
+| Hammer Strength label | No named result | 809 ms | 147 KiB | False negative for prominent printed text |
+
+These are **three individual trials**, not a measured accuracy benchmark; they justify testing local wordmark OCR before paid cloud identification. The third image reads **Hammer Strength** (not Hammer Fitness). `hammerstrength` and `hammersport` remain separate keys; don't infer either from a generic "hammer". Web Detection did not return a useful result for the failed case according to user testing, but its raw response is unavailable for analysis.
+
+**Next physical checks:** local ML Kit OCR on all three images, especially the Hammer Strength label; brand alias false-positive cases; ambiguous multiple manufacturers; latency for offline-only success and cloud fallback; number of avoided cloud requests. Compare to the existing recorded Cloud responses. A correct brand name is still an unverified candidate until accepted.
 
 ## Acceptance matrix
 
@@ -31,7 +47,7 @@
 | Less-common / unknown brand | False-positive names; should remain unverified |
 | Partial/cropped logo or stylised wordmark | Compare full photo vs prepared logo crop |
 | Reflective machine, glare, low light, upside-down mark | Returned candidates and confidence score (if exposed) |
-| Logo absent, only OCR brand text present | Cloud correctly returns unknown or ambiguous candidates |
+| Logo absent, only OCR brand text present | Offline OCR can propose a manufacturer, and optional Cloud Vision remains manual |
 | Offline or key missing / API disabled / quota reached | Clear failure, no app crash |
 | Key deletion and restart | Secret no longer usable |
 | Existing weight/placard OCR flows | No changes to their results or export |
