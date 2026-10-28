@@ -5,6 +5,10 @@ on:
     paths:
       - 'experiments/lab2b-vlm-harness/**'
       - '.github/workflows/lab2b-harness.yml'
+  pull_request:
+    paths:
+      - 'experiments/lab2b-vlm-harness/**'
+      - '.github/workflows/lab2b-harness.yml'
   workflow_dispatch:
 permissions:
   contents: read
