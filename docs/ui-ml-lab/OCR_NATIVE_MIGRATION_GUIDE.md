@@ -18,7 +18,7 @@ camera / document picker
     → lightweight exception-only human review and explicit confirmation
     → separate manual fractional/add-on denomination counters (NO OCR)
     → domain validation + canonical equipment fact/version (separate gate)
-    → equipment location/branch association and current-gym availability (separate gate)
+    → gym-library context resolution at workout start; equipment remains independent
     → N-BIO observes canonical evidence only; never raw OCR guesses
 ```
 
@@ -78,27 +78,32 @@ Store exact integer grams or decimal values (e.g. `625 g`, avoiding floating-poi
 
 **Minimal steps is a front-end UX constraint, not permission to remove validation.** Engineering can release OCR, equipment authoring and live recognition in separate PRs, yet the target user journey is *open machine → frame one stack → capture → correct only uncertain fields → save*. Existing reviewed equipment should open directly; scanning is an add-new/correct-facts path, not a compulsory workout interruption.
 
-**Two internal modes, one coherent entry point:** `Auto` should first attempt a **known machine / current-gym library match** from previously reviewed instances and optional verified logo/model evidence, then present a compact confirmation summary; if the match is uncertain or unavailable, `Semi-auto` reveals the same camera capture with editable stack/placard fields. User need not choose an AI mode at the beginning. This preserves the earlier intended Auto-versus-Semi-auto distinction without maintaining two unrelated capture systems. An unreviewed logo match can be a candidate only, never a silent save. The intended default is **recognise/reuse before requiring a new scan**, which reduces repeated work when visiting a familiar gym branch.
+**Two internal modes, one coherent entry point:** `Auto` first offers previously reviewed **equipment choices** that fit the resolved current-gym context, then presents a compact confirmation; `Semi-auto` provides the same camera/review pipeline for unknown or ambiguous equipment. The gym context does not establish machine identity: a remembered equipment choice is a suggestion until confirmed for the current session. A user need not choose an AI mode before scanning. **Experimental logo recognition is excluded from the Native Auto path** until separately tested and accepted in the OCR Lab. Reuse known settings before asking for another scan.
 
-### Gyms, branches and defaults — required design, not currently verified in schema
+### Gym library and automatic session context — equipment stays independent
 
-Earlier product discussions called for gym/location capture and re-use across branches. In the currently inspected Native domain `EquipmentInstance` has identity/label/source and preferred/session bindings; it does **not** directly carry a Gym/Branch ID. Implementing the proposed UX needs a reviewed schema/ownership gate, not an assumption that a location table exists.
+**Product decision (28 October 2026):** keep the equipment library **independent of gym locations**. Add a separate **Gym Library** of saved venues/branches. The machine record has its own identity, reviewed configuration and versioned facts, whether it is used at one gym or several. Do **not** put a mandatory `gymId` or coordinates on `EquipmentInstance`, clone machines merely because a user switches branch, or make a Gym Library entry required for equipment authoring.
 
-Conceptually distinguish:
+The inspected Native `EquipmentInstance` domain has equipment identity/facts and preferred/session bindings but no explicit gym entity or session-gym resolution contract. The library and resolver therefore need their **own design/schema gate**. The actual equipment used for a set remains a session/historical fact; guessing a gym from a coordinate must not rewrite equipment identity, historical observations, or exercise execution profile.
 
-- **Gym organisation/brand** → **physical branch/location** → **equipment available at branch**, all optional for home/unknown gym.
-- **Equipment model or reusable description** from an independently identified manufacturer/model versus **actual equipment instance** with local calibration, configuration and provenance. Shared model recognition does not prove the physical machines are identical.
-- **Default/last-used branch** as user preference; **workout/session branch** as explicit context; **equipment availability at branch** as a searchable link. Never rewrite an earlier workout's equipment/branch history when a current default changes.
-- **Multi-branch availability** should allow known equivalent equipment *descriptions* to be suggested in different locations while maintaining separate physical instance identities and instance-specific facts. An actual physical machine cannot be presumed to inhabit two branches merely because its model appears in both.
-- **Location permission** is optional: a saved branch selection suffices, and a user can switch branches from the workout or library without re-entering equipment details. No obligatory GPS tracking or precise location storage.
+**Intended minimal journey:**
 
-The Figma equipment + exercise library redesign will determine the actual navigation, favourites/available relationships and display vocabulary; don't build a parallel library UI before those screens are agreed.
+1. **Gym Library**: user saves a gym name and optionally its branch/venue location. Default is the most recent **confirmed** gym, not necessarily the geographically nearest venue. A user may rename/remove venues and specify a different regular location.
+2. **Workout starts**: with explicit location permission, make one bounded current-location lookup and match against user-saved venues/branches with a conservative ambiguity/accuracy rule. When one match is sufficiently distinctive, propose/select the current gym for **this workout**, showing an unobtrusive editable indicator. If no valid match, permission is denied, location services are off, or multiple branches overlap, use the **saved gym selector**; the workout itself must never be blocked. Do not require continuous foreground GPS, background location permission or auto-created unverified gyms.
+3. **Equipment assignment inside a workout**: use the current gym context to **prioritise previously chosen equipment for that exercise/profile at this gym**; user can pick any independent equipment record, search the library, or create/correct a record via the one-photo OCR path. If the gym is unknown, offer the gym selector alongside the equipment choice, not a forced separate location step.
+4. **Context update**: when the current gym changes, recompute suggestions and any appropriate **uncommitted** exercise/equipment defaults. Do **not** silently replace equipment already confirmed/logged in the current session; a current-gym match is not proof of which physical machine is being used.
+5. **Learning and reuse**: remember an explicit user choice in a **gym + exercise/profile → preferred equipment** contextual selection record, or recent-use index, independently of the equipment record. This is a *usage preference* (and may be uncertain or absent), **not an intrinsic equipment-to-location ownership or availability mapping**. A physical machine or model is not silently duplicated, and corrections to its specification remain versioned.
+6. **History**: store the *resolved/confirmed workout gym*, where useful, as contextual session metadata; preserve actual chosen equipment bindings independently. Later default-gym changes, location corrections or geofence updates never retrospectively relabel equipment/load interpretation.
 
-### Logo identification: reinstate the separately planned on-device experiment
+**Location and privacy:** device location access is optional and granted through the app at use time; an approximate location may not distinguish branches reliably. No location permission or precise coordinate is presumed available. If the user never wants auto-detection, the gym selector and last confirmed gym remain sufficient. Avoid uploading workout location to external services merely to guess venue identity. The Figma Gym/Exercise/Equipment Library redesign will own the eventual navigation; do not pre-empt it with new permanent screens.
 
-The original placard path has an **optional logo crop** and conservative OCR text brand matching. That is not full pictorial logo recognition. A previous design discussion proposed a **local reference-logo gallery + standalone XFeat feature descriptors** (no LightGlue initially), followed by descriptor matching, geometric/RANSAC consistency checks, and an explicit **unknown** outcome. Preserve this as a **research candidate**, not an implemented feature or guaranteed best model. First test varied photographed logos, shiny/flat machines, reversed colours, old wordmarks and unknown manufacturers. Use a PC-built immutable gallery; don't run an expensive embedding model merely to identify a known cropped mark. Evaluate performance and false unknown-brand matches on-device before enabling Auto prefill.
+### Logo identification: remain in the experimental OCR branch until accepted
 
-A successful logo match may suggest a manufacturer. It does **not** confirm the machine model or establish resistance, mechanics, or settings, and must not overwrite a user-entered brand. Brand matching and placard OCR can share the same photo but require distinct evidence/provenance.
+The experimental Lab already offers optional logo cropping and conservative OCR wordmark detection. A proposed separate on-device recogniser would compare a reference logo gallery using standalone **XFeat** descriptors and geometric/RANSAC verification (without LightGlue initially), with an explicit unknown/reject result. This is a **research candidate**, not implemented, benchmarked or production-authorised.
+
+**Implementation boundary:** build and test the reference gallery, crop/descriptor pipeline, held-out recognition accuracy, false matches against unknown logos, speed/memory and lifecycle **inside `agent/lab2b-ocr-stack`'s separate Android harness**. Do not port logo code, trained assets or an untested match score into My Mettle Native or the Native Auto flow. Only after measured device acceptance and explicit migration review should a candidate for product integration be written. OCR placard field extraction can move forward independently.
+
+A logo can suggest a manufacturer but must not itself assert a model, mechanical ratio, starting resistance or known gym. Keep image evidence and corrections separately traceable.
 
 ### CameraX implementation notes from current source
 
@@ -137,10 +142,10 @@ Data contract needs: source image identity/EXIF, crop-relative geometry, observe
 | --- | --- | --- |
 | **A — Extraction foundation** | Create Native OCR module and deterministic parser/unit tests; use existing picked photos; adapt Lab OCR models and bounded source preparation. | No camera UI required; golden cases include `115.5→1155`, `59130`, `1lkg`, `134ka`, reversed units, duplicate/missing values and malformed OCR boxes. |
 | **B — Semi-auto stack capture** | One stack photo, Compose guided crop/column strip when needed, unit choice, exception-first row review, original-vs-filter comparison on demand and atomic draft/restore. Add-on weight OCR and its second photograph are **excluded**; offer manual denomination counters. | Tests cover crops/rotation, invalidation, user edits, lb→kg only after confirmation, counters/engagement semantics, stale cache, process death, battery/storage cost. Never fill missing stack values. |
-| **C — Placard and optional brand match** | Whole placard and logo region from the same source where possible, conservative labelled fields, manual corrections and "unknown"; evaluate known-logo gallery matching separately. | Reject model ID typos corrected without evidence, invented starting load, unlabelled ratio, made-up manufacturer specifications. |
-| **D — Canonical save and gym/branch association** | Map confirmed candidates to Native equipment instance/fact versions; introduce explicit optional gym/branch availability and current-location/default preference only after schema/UX gate. | Database migration and backup round-trip tests; historical equipment semantics unchanged; no inference model promotion. |
+| **C — Placard fields** | Whole placard from the stack photo where possible, conservative labelled fields, manual corrections and "unknown". Logo recognition is **not** a Native dependency. | Reject model-ID typo repairs without evidence, invented starting load, unlabelled ratios and made-up manufacturer specifications. |
+| **D — Independent equipment save + Gym Library context** | Map confirmed candidates to standalone Native equipment instance/fact versions; separately create a gym/branch library, per-workout gym context and optional gym-scoped equipment-selection preferences after schema/UX gate. | Equipment is never owned by gym, geolocation never rewrites recorded equipment, auto-selection requires conservative match/manual fallback, backups and history preserve both contexts; no inference model promotion. |
 | **E — Live viewfinder guidance** | CameraX Preview + ImageAnalysis + Compose overlay for detected text/columns; reuse the SAME OCR observation geometry and full-resolution still/review adapters as B/C. Can be engineered in a separate gate but appears in the same user capture flow. | Must improve capture quality on held-out gym photos **without** false unit certainty, stale boxes or preview/render jank. Feature-flag until physical acceptance. |
-| **F — Other optional vision** | Prototype standalone logo feature matching independently, then illustration segmentation, machine/masking and calibrated AR only if justified. | Not required for OCR; measure unknown-brand false acceptance, accuracy, latency and storage. No VLM/YOLO requirement by default. |
+| **F — Lab-only logo experiment and optional vision** | Continue XFeat/reference-gallery logo tests in the **separate `agent/lab2b-ocr-stack` app**, then consider other vision tasks only if justified. Do not incorporate their code or assets in Native before a new explicit gate. | Require known and unknown-brand tests, rejection performance, runtime and lifecycle evidence; no implied Native acceptance. |
 
 Every stage gets a separate small PR, tests, a device acceptance sheet and a rollback route. LAB-2B itself stays isolated. Porting a Lab implementation is not permission to merge or cherry-pick its app/Gradle/JNI source wholesale.
 
@@ -188,8 +193,9 @@ Record, on S25 Ultra: recognition coverage of expected visible labels; false kg/
 - [ ] Process death, file cleanup, bounded memory and cancel/retry demonstrated.
 - [ ] Measurements from held-out stacks, placards and awkward gym lighting recorded.
 - [ ] Single stack capture succeeds without any add-on photograph; **available denomination quantities** are saved/recalled per equipment instance, and no unselected availability becomes engaged load.
-- [ ] Gym branch association, default branch and historical source ownership are designed/approved with the Figma library experience.
-- [ ] Optional logo gallery/XFeat candidate has an unknown-brand rejection benchmark before any auto-prefill.
+- [ ] Gym Library, optional location match, fallback selector and **gym-contextual equipment suggestions** are designed/approved with Figma; equipment identity stays independent and historical actual-use bindings are unchanged.
+- [ ] Standalone logo gallery/XFeat is researched and physically tested **only in the OCR Lab app** before any separate Native migration decision.
+- [ ] Workout start never blocks on location; denied/ambiguous lookup has a manual gym selection fallback, and auto gym changes never mutate confirmed exercise equipment.
 - [ ] Live-overlay feature is optional and can be disabled without losing capture/review.
 - [ ] LAB-2B AI model assets/runtime are **not** shipped as a dependency of deterministic OCR.
 
