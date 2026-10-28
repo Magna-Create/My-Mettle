@@ -72,6 +72,12 @@ class PlacardActivity:AppCompatActivity() {
         val y=scroll.scrollY;root.removeAllViews();val owner=PlacardOwner
         text("Placard extraction • ${BuildConfig.VERSION_NAME}",23f)
         button("Switch to weight extraction") { startActivity(Intent(this,WeightScanActivity::class.java));finish() }
+        button("Test Cloud Vision with this logo/photo") {
+            val source = owner.capture(PlacardRegion.LOGO).image ?: owner.original
+            startActivity(Intent(this, CloudVisionActivity::class.java).apply {
+                source?.let { putExtra(CloudVisionActivity.IMAGE_PATH_EXTRA, it.normalisedPath) }
+            })
+        }
         text(owner.status)
         text("One photo, two boxes",20f)
         text("Crop the whole placard, then its logo if useful. Fields are extracted from the text automatically. No model download or load.")
