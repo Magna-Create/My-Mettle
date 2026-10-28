@@ -180,7 +180,9 @@ fun NativeRestTimerOverlay() {
                         } else {
                             Row(
                                 Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                // Same outer bounds as the cancel/minimise row below. The
+                                // circles distribute the spare width rather than stretching.
+                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 TimerCircle("−15s") { controller.adjust(-15) }
@@ -240,8 +242,10 @@ private fun TimerWaveProgress(fraction: Float, modifier: Modifier = Modifier) {
             cap = StrokeCap.Round,
         )
         if (endX > 0f) {
-            val amplitude = 3.6.dp.toPx()
-            val wavelength = 18.dp.toPx().coerceAtLeast(1f)
+            val amplitude = 3.2.dp.toPx()
+            // One cycle spans twice as much distance as the original 18dp wave:
+            // retain the glow without producing a tightly zig-zagged track.
+            val wavelength = 36.dp.toPx().coerceAtLeast(1f)
             val step = 1.5.dp.toPx().coerceAtLeast(1f)
             val wave = Path().apply {
                 moveTo(0f, y)
@@ -280,7 +284,7 @@ private fun TimerWaveProgress(fraction: Float, modifier: Modifier = Modifier) {
 private fun TimerCircle(label: String, onClick: () -> Unit) {
     MettleControlGlassSurface(
         modifier = Modifier.size(84.dp),
-        shape = RoundedCornerShape(24.dp),
+        shape = CircleShape,
         tint = TimerCyan.copy(alpha = .13f),
         baseColor = Color(0xFF4C6C6B).copy(alpha = .30f),
         borderColor = TimerCyan.copy(alpha = .43f),
@@ -296,8 +300,8 @@ private fun TimerCircle(label: String, onClick: () -> Unit) {
 @Composable
 private fun TimerCircle(icon: ImageVector, description: String, onClick: () -> Unit) {
     MettleControlGlassSurface(
-        modifier = Modifier.size(width = 100.dp, height = 84.dp),
-        shape = RoundedCornerShape(27.dp),
+        modifier = Modifier.size(84.dp),
+        shape = CircleShape,
         tint = TimerCyan.copy(alpha = .16f),
         baseColor = Color(0xFF527573).copy(alpha = .34f),
         borderColor = TimerCyan.copy(alpha = .47f),
