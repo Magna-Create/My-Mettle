@@ -14,6 +14,23 @@
 4. Tap **Enter API key**, paste your key, save. The app uses Android Keystore AES-GCM + app-private preferences, with `android:allowBackup=false`. It will not display the stored value, add it to diagnostic JSON, ship it in the APK, or send it to GitHub. Delete/replace from the same screen. A local key in a compromised app/device is **not equivalent to a backend-held secret**.
 5. If you already photographed a placard, use **Draw logo box** and open Cloud Vision: the existing, EXIF-normalised **logo crop** is selected. Otherwise use **Choose image** on the Cloud Vision screen to pick a standalone photo.
 
+## Integrated placard workflow (28 October 2026)
+
+The **Placard Extraction** activity is now the **primary one-photo entry point**. Taking or importing a photo immediately runs ML Kit OCR and applies the shared canonical-key manufacturer catalogue to the **same** placard evidence, along with labelled model/exercise/resistance fields. There is no separate step to identify the brand. A placard crop and optional logo crop are refinement tools only; changing either crop or its OCR filter automatically refreshes the extracted candidates and invalidates stale review.
+
+For unrecognised, conflicting or generic manufacturer text, the **same placard review screen** offers **Find manufacturer online (optional)**. The user confirms an explicitly described **single** Cloud Vision `LOGO_DETECTION` upload using the previously entered private API key. When available, a logo crop is sent; otherwise the prepared placard image is used. The returned name(s) appear as **review-only Brand candidates** in the same existing Review/Correct control, never as silently accepted identities. Confirmation and export remain under the existing placard review process.
+
+The stand-alone Cloud Vision test screen remains available as an **advanced research tool**, not required during normal placard capture. The account key is shared via the same encrypted app-private key vault, never stored in equipment/placard export. The local draft stores only source-bound unverified cloud name candidates for correct review restoration; crop/source changes invalidate them. This remains Lab-only and is **not** Native integration.
+
+### Acceptance checks for this combined workflow
+
+- One selected photo → OCR result and candidate brand/fields without tapping `Read` or visiting the Cloud Vision activity.
+- Hammer Strength two-line wordmark → canonical Brand suggestion with the original OCR text/source identity.
+- A local distinct brand → no automatically initiated paid request. Unknown/generic/conflicting brands → optional Cloud Vision button and consent.
+- Cloud result → selectable **Brand** candidate with explicit human review, preserving independent model/starting-resistance fields.
+- New photo, crop or profile → stale reviewed brand/cloud observations are cleared. Draft and export contain no key or raw service response.
+- Re-run/restart, no-network, missing key, missing logo crop, known brand and unknown brand remain workable.
+
 ## Test sequence — offline brand lookup before paid cloud fallback
 
 - Inspect the selected image preview. Prefer a readable logo/wordmark crop without bystanders or identifying background features.
