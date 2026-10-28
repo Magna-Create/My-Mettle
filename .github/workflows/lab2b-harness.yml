@@ -28,7 +28,7 @@ jobs:
       # The old android-actions/setup-android action fails on the removed 'tools' package.
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.1.0'
+          gradle-version: '9.3.1'
       - name: Install source verifier prerequisite
         run: sudo apt-get update && sudo apt-get install -y ripgrep
       - name: Install pinned Android tools
@@ -74,4 +74,18 @@ jobs:
             experiments/lab2b-vlm-harness/app/build/outputs/lab2b-native.sha256
             experiments/lab2b-vlm-harness/app/build/reports/tests/testDebugUnitTest/
             experiments/lab2b-vlm-harness/app/build/reports/lint-results-debug.html
+          if-no-files-found: error
+      - name: Verify lightweight OCR-only build (Termux equivalent)
+        working-directory: experiments/lab2b-vlm-harness
+        run: |
+          ./gradlew --no-daemon -Plab2bOcrOnly=true testDebugUnitTest assembleDebug lintDebug
+          if unzip -Z1 app/build/outputs/apk/debug/app-debug.apk | grep -E '\\.so
+; then
+            echo "OCR-only APK unexpectedly packages native libraries" >&2
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lab2b-ocr-cloudvision-lite-debug
+          path: experiments/lab2b-vlm-harness/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
