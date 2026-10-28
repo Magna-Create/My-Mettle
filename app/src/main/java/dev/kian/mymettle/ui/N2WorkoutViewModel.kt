@@ -42,6 +42,8 @@ enum class WorkoutSurface {
     DELETE_CONFIRM,
 }
 
+enum class WorkoutSwapKind { EXERCISE, EQUIPMENT }
+
 data class N2WorkoutUiState(
     val loading: Boolean = true,
     val hasProgramme: Boolean = false,
@@ -54,6 +56,7 @@ data class N2WorkoutUiState(
     val focusedExerciseId: String? = null,
     val swapTarget: ActiveWorkoutExercise? = null,
     val swapOptions: List<ExerciseSwapOption> = emptyList(),
+    val swapKind: WorkoutSwapKind = WorkoutSwapKind.EXERCISE,
     val loadingSwapOptions: Boolean = false,
     val savingSetupPhoto: Boolean = false,
     val setupDetails: WorkoutSetupDetails? = null,
@@ -281,11 +284,12 @@ class N2WorkoutViewModel(
         }
     }
 
-    fun requestExerciseSwap(exercise: ActiveWorkoutExercise) {
+    fun requestExerciseSwap(exercise: ActiveWorkoutExercise, kind: WorkoutSwapKind = WorkoutSwapKind.EXERCISE) {
         val workout = uiState.workout ?: return
         if (workout.session.status != "active" || exercise.sets.any { it.observations.isNotEmpty() }) return
         uiState = uiState.copy(
             swapTarget = exercise,
+            swapKind = kind,
             swapOptions = emptyList(),
             loadingSwapOptions = true,
             error = null,
@@ -293,7 +297,11 @@ class N2WorkoutViewModel(
         viewModelScope.launch {
             runCatching { repository.swapOptions(exercise.entity.id) }
                 .onSuccess { options ->
-                    uiState = uiState.copy(swapOptions = options, loadingSwapOptions = false)
+                    val compatible = options.filter { option ->
+                        if (kind == WorkoutSwapKind.EQUIPMENT) option.exerciseId == exercise.entity.exerciseId
+                        else option.exerciseId != exercise.entity.exerciseId
+                    }
+                    uiState = uiState.copy(swapOptions = compatible, loadingSwapOptions = false)
                 }
                 .onFailure { error ->
                     uiState = uiState.copy(swapTarget = null, loadingSwapOptions = false)
