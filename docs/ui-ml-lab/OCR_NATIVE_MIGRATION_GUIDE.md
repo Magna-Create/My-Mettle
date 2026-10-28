@@ -4,19 +4,21 @@
 
 ## 1. Goal and boundaries
 
-Enable a gym user to photograph a machine's weight stack and placard, see which kg/lb columns and printed specifications were actually read, correct them, then explicitly save verified equipment facts. A later optional *live camera guide* may improve framing and confidence before capture. It is not required for the first production OCR feature.
+Enable a gym user to photograph a machine's weight stack **once**, see exactly which printed kg/lb column was recognised, correct any suspect readings and save verified equipment facts. **Do not require a second/add-on weight photograph**: supplementary microplates are a manual, machine-configured counter. A placard and logo remain optional evidence paths, ideally cropped from the same camera source when visible, or captured separately only if necessary. A live overlay should make framing easier rather than add steps.
 
 Pipeline and ownership:
 
 ```text
 camera / document picker
     → privately copied, EXIF-normalised source photograph
-    → guided crop(s) and optional filter comparison
+    → optional live CameraX overlay for text/column location (never authority)
+    → one high-quality still, reusable source and optional crop(s)
     → ML Kit OCR: text + original geometry + image identity
-    → deterministic unit/column and placard candidates
-    → explicit human review, correction, provenance
+    → deterministic stack-column and optional placard/logo candidates
+    → lightweight exception-only human review and explicit confirmation
+    → separate manual fractional/add-on denomination counters (NO OCR)
     → domain validation + canonical equipment fact/version (separate gate)
-    → optional equipment binding/availability
+    → equipment location/branch association and current-gym availability (separate gate)
     → N-BIO observes canonical evidence only; never raw OCR guesses
 ```
 
@@ -26,7 +28,7 @@ Do not confuse **observed print**, **interpretation**, **derived proposals** and
 
 | Evidence / behaviour | Current source of truth | Migration decision |
 | --- | --- | --- |
-| Guided main-stack + optional add-on capture, crop, save | [LAB_2B_OCR_STACK_WORKFLOW](https://github.com/Magna-Create/My-Mettle/blob/agent/lab2b-ocr-stack/docs/ui-ml-lab/research/LAB_2B_OCR_STACK_WORKFLOW.md), `WeightScanActivity.kt`, `WeightScanOwner.kt` | Port *behaviour* to Compose/ViewModel; do not port the experiment's raw `Activity` layout. |
+| Historical main-stack + optional add-on capture, crop, save | [LAB_2B_OCR_STACK_WORKFLOW](https://github.com/Magna-Create/My-Mettle/blob/agent/lab2b-ocr-stack/docs/ui-ml-lab/research/LAB_2B_OCR_STACK_WORKFLOW.md), `WeightScanActivity.kt`, `WeightScanOwner.kt` | Port main-stack OCR and review *behaviour*, not the experimental add-on second-photo workflow or raw `Activity` layout. Replace add-on OCR with manual denomination counters. |
 | Unit/column uncertainty and sloped manual selector | [LAB_2B_OCR_COLUMNS](https://github.com/Magna-Create/My-Mettle/blob/agent/lab2b-ocr-stack/docs/ui-ml-lab/research/LAB_2B_OCR_COLUMNS.md), `WeightColumns.kt`, `ColumnEditor.kt` | Retain normalized coordinates, user-confirmed kg/lb, explicit multi-number geometry, and manual fallback. |
 | Accepted review and implausible numeric labels | [LAB_2B_OCR_REVIEW_FREEZE](https://github.com/Magna-Create/My-Mettle/blob/agent/lab2b-ocr-stack/docs/ui-ml-lab/research/LAB_2B_OCR_REVIEW_FREEZE.md), `WeightOcrParser.kt` | Preserve `>=1000 kg` attention warning and unchecked default; no silent decimal insertion or numeric upper cutoff. |
 | Placard crop plus optional logo crop | [LAB_2B_PLACARD_EXTRACTION](https://github.com/Magna-Create/My-Mettle/blob/agent/lab2b-ocr-stack/docs/ui-ml-lab/research/LAB_2B_PLACARD_EXTRACTION.md), `PlacardOwner.kt`, `PlacardParser.kt`, `StartingResistanceParser.kt` | Port labelled evidence and review, not catalog/spec guesses or equipment recognition. |
@@ -47,12 +49,62 @@ The Lab documentation links deliberately point to the OCR branch because those f
 2. **Never infer kg from decimal position, left/right position or an lb:kg ratio.** Paired columns can suggest candidates, including sloping strips, but unit ownership remains explicitly confirmed.
 3. **Cropping and preprocessing are experiments, not universal enhancements.** In supplied stack photos, some unit damage appeared **after** crop. ORIGINAL is the baseline. Greyscale contrast, sharpen and threshold each retain their own exact-input hash. Never silently blend or vote values from filters.
 4. **Do not fabricate a regular stack.** A real stack included alternating 6/7 kg increments; gap/outlier heuristics are warnings, not missing weights. Main stack labels represent cumulative **settings**, not individual plate masses.
-5. **Add-on selection and machine mechanics are separate.** Repeat text does not imply add-on plate count or whether engaged; unknown pulley ratios/starting resistance remain unknown.
+5. **Add-on selection and machine mechanics are separate.** Replace add-on image recognition with explicit denomination/count controls. A photographed add-on label, count, or presence does not establish whether a plate is engaged; unknown pulley ratios/starting resistance remain unknown.
 6. **Track every invalidation.** Changing photo/crop/filter/column or unit invalidates stale OCR and/or review according to the recorded rules. A new image must never inherit old inclusion flags.
 7. **Expose observability.** Keep image hash, orientation, pixel dimensions, crop/filter identity, geometry, OCR timing, cache hit and edit provenance. Never invent confidence percentages if the recognizer does not supply them.
 8. **Use atomic, bounded storage.** Lab stores private source/crop/filter assets and atomic draft JSON. Preserve restore-after-force-close semantics, keep image decoding bounded (documented 16 MP / 4096 edge), off-main-thread work, and bounded cache; do not copy test absolute file paths into production entities.
 9. **Keep model research separate.** The prior NPU route failed packaging portability gates; MNN/GPU results are not a proven camera-recognition contract. A deterministic OCR + review release should ship without multi-GB model dependencies.
 10. **Avoid brand-to-physics leaps.** An OCR-supported manufacturer or model name does not establish pulley ratio, rail angle, starting resistance, effective resistance or muscle contribution.
+
+## 3A. Product decision — one stack photo and manual add-on counters (28 Oct 2026)
+
+The experimental 0.4 workflow split main stack and optional add-on photographs. **That is historical Lab behaviour, NOT the proposed Native production UX.** A single stack photo is enough to extract the machine's selectable printed settings. Any fractional/microplate options are deliberately entered rather than OCR-scanned.
+
+**Candidate design:** an optional compact **Add-on weights** section with denomination on the main visual axis and a `− [count] +` cluster beside it, analogous to the user's supplied stepped-control reference. Initially offer machine-configurable denominations `5 kg`, `2.5 kg`, `1.5 kg`, `1.25 kg` and `0.625 kg`. Do not assume every machine supports every denomination: show only configured/available ones for the current equipment instance; allow the user to add/remove available denominations in equipment editing. Count starts at **0** for a new session unless an actually saved and explicit engaged state is recalled. Do not silently treat previously seen inventory as currently engaged resistance.
+
+Conceptual rows (not approved final Figma proportions):
+
+```text
+5 kg      [ − ]  0  [ + ]
+2.5 kg    [ − ]  1  [ + ]
+1.5 kg    [ − ]  0  [ + ]
+1.25 kg   [ − ]  0  [ + ]
+0.625 kg  [ − ]  0  [ + ]
+```
+
+To avoid avoidable repeated data entry, separate **configured availability** (which denominations this equipment actually has, persisted) from **engagement today** (count applied to this set/session, explicit and mutable). If the same physical stack uses one toggle/add-on instead of independent plates, configure maximum count `1`. No auto-inferred quantity, no automatic count multiplication, no manual count on every set when it is unchanged: retain the value until the user changes it, with visible current-session state.
+
+Store exact integer milligram/gram or decimal values (e.g. `625 g`, not error-prone floating approximations) and separate count. Keep total indicated stack setting distinct from auxiliary applied mass; do **not** infer its effect on equivalent external load without known load accounting, mechanical application, and `TOTAL/PER_SIDE` semantics. Some independent left/right additions need per-side tracking. User must be able to state whether a configured weight applies once, per side, or as a paired total; don't automatically double it. This must remain compatible with the existing N-BIO equipment/entry-basis contract.
+
+**Minimal steps is a front-end UX constraint, not permission to remove validation.** Engineering can release OCR, equipment authoring and live recognition in separate PRs, yet the target user journey is *open machine → frame one stack → capture → correct only uncertain fields → save*. Existing reviewed equipment should open directly; scanning is an add-new/correct-facts path, not a compulsory workout interruption.
+
+### Gyms, branches and defaults — required design, not currently verified in schema
+
+Earlier product discussions called for gym/location capture and re-use across branches. In the currently inspected Native domain `EquipmentInstance` has identity/label/source and preferred/session bindings; it does **not** directly carry a Gym/Branch ID. Implementing the proposed UX needs a reviewed schema/ownership gate, not an assumption that a location table exists.
+
+Conceptually distinguish:
+
+- **Gym organisation/brand** → **physical branch/location** → **equipment available at branch**, all optional for home/unknown gym.
+- **Equipment model or reusable description** from an independently identified manufacturer/model versus **actual equipment instance** with local calibration, configuration and provenance. Shared model recognition does not prove the physical machines are identical.
+- **Default/last-used branch** as user preference; **workout/session branch** as explicit context; **equipment availability at branch** as a searchable link. Never rewrite an earlier workout's equipment/branch history when a current default changes.
+- **Multi-branch availability** should allow known equivalent equipment *descriptions* to be suggested in different locations while maintaining separate physical instance identities and instance-specific facts. An actual physical machine cannot be presumed to inhabit two branches merely because its model appears in both.
+- **Location permission** is optional: a saved branch selection suffices, and a user can switch branches from the workout or library without re-entering equipment details. No obligatory GPS tracking or precise location storage.
+
+The Figma equipment + exercise library redesign will determine the actual navigation, favourites/available relationships and display vocabulary; don't build a parallel library UI before those screens are agreed.
+
+### Logo identification: reinstate the separately planned on-device experiment
+
+The original placard path has an **optional logo crop** and conservative OCR text brand matching. That is not full pictorial logo recognition. A previous design discussion proposed a **local reference-logo gallery + standalone XFeat feature descriptors** (no LightGlue initially), followed by descriptor matching, geometric/RANSAC consistency checks, and an explicit **unknown** outcome. Preserve this as a **research candidate**, not an implemented feature or guaranteed best model. First test varied photographed logos, shiny/flat machines, reversed colours, old wordmarks and unknown manufacturers. Use a PC-built immutable gallery; don't run an expensive embedding model merely to identify a known cropped mark. Evaluate performance and false unknown-brand matches on-device before enabling Auto prefill.
+
+A successful logo match may suggest a manufacturer. It does **not** confirm the machine model or establish resistance, mechanics, or settings, and must not overwrite a user-entered brand. Brand matching and placard OCR can share the same photo but require distinct evidence/provenance.
+
+### CameraX implementation notes from current source
+
+The isolated Lab `OcrProcessor.kt` uses ML Kit text recognition on a **saved normalized PNG**, and already copies `TextBlock` / `Line` `boundingBox` and `cornerPoints` into `OcrEvidence`. The `CropEditor` and `ColumnEditor` operate on a still/source image. **No pre-shutter ML Kit live camera overlay exists in that test app.** Reuse the recogniser, box shapes, fitted column logic and UI concept; switch the input source to CameraX `ImageAnalysis` for preview. Draw those recognised polygons over `PreviewView` after correct orientation/scale/crop transforms. No need for a separate bitmap crop for every live OCR box. Save/crop the still at high resolution **after** capture; that is the source of reviewed authority.
+
+As of 28 October 2026, the official AndroidX Camera release notes list **1.6.2 stable** (existing Native pin: 1.6.1), with 1.7.0-rc01 available but not stable. Prefer the narrowly scoped **1.6.2** upgrade when implementing CameraX overlay, using a dedicated dependency-change PR and compiling/regression-testing existing camera features. No need to adopt RC or 3D AR for OCR.
+
+---
 
 ## 4. Safe Native integration shape
 
@@ -73,7 +125,7 @@ interface EquipmentFactReviewGateway {
 
 These are **illustrative seams**, not existing project APIs. Align final names/types with current `EquipmentId`, `EquipmentInstance`, `EquipmentFactVersion`, `EquipmentFactProvenance`, existing equipment repository, execution-profile identity and session binding semantics. Use a schema adapter only **after** evidence-review gates pass. Never make image file paths or ephemeral OCR text the equipment primary key.
 
-Suggested UI state: `EMPTY → CAPTURING/IMPORTING → CROPPING → ANALYSING → REVIEW_REQUIRED → VERIFIED_DRAFT → SAVING → SAVED`, plus `FAILED` and `CANCELLED`. A capture can be independently reset without silently overwriting another capture. A reviewed draft must be invalidated by an upstream evidence change. Distinguish **Use this session**, **Save as available equipment** and **Make default** if those binding features are actually implemented; otherwise omit/disable rather than faking the distinction.
+Suggested internal UI state: `EMPTY → CAPTURING/IMPORTING → optional CROPPING → ANALYSING → REVIEW_IF_NEEDED → VERIFIED_DRAFT → SAVING → SAVED`, plus `FAILED` and `CANCELLED`. These are implementation states, **not required separate screens or taps**. The main-stack photo can be reset without discarding independently confirmed equipment metadata. A reviewed draft must be invalidated by an upstream evidence change. Distinguish **Use this session**, **Save as available equipment** and **Make default** if those binding features are actually implemented; otherwise omit/disable rather than faking the distinction.
 
 Data contract needs: source image identity/EXIF, crop-relative geometry, observed text/elements, candidate field and unit, corrected value, `observed/interpreted/derived/human-corrected` provenance, versioned confirmation, model recognizer/filter versions, and unknown/ambiguous states. Persist only what is necessary for audit/user correction under a clear retention policy; capture/session caches must be bounded and deletable. Do not use `WeightScanOwner`/process singletons as a production lifecycle owner.
 
@@ -82,17 +134,17 @@ Data contract needs: source image identity/EXIF, crop-relative geometry, observe
 | Stage | Actual implementation | Acceptance / do-not-do |
 | --- | --- | --- |
 | **A — Extraction foundation** | Create Native OCR module and deterministic parser/unit tests; use existing picked photos; adapt Lab OCR models and bounded source preparation. | No camera UI required; golden cases include `115.5→1155`, `59130`, `1lkg`, `134ka`, reversed units, duplicate/missing values and malformed OCR boxes. |
-| **B — Semi-auto stack capture** | Compose guided manual crop, sloped column strip, unit choice, optional add-on, explicit row review, original-vs-filter comparison on demand, atomic draft/restore. | Tests cover crops/rotation, invalidation, user edits, lb→kg only after confirmation, cache stale rejection, process death, battery/storage cost. Never fill missing values. |
-| **C — Placard facts** | Whole placard and optional logo crop, conservative labelled fields, manual corrections and "unknown", user confirmation. | Reject model ID typos corrected without evidence, invented starting load, unlabelled ratio, made-up manufacturer specifications. |
-| **D — Canonical save adapter** | Map confirmed candidates to Native equipment instance/fact versions using current schema and repository APIs; explicit local session binding if agreed. | Database migration and backup round-trip tests; historical equipment semantics unchanged; no inference model promotion. |
-| **E — Live viewfinder guidance** | CameraX Preview + ImageAnalysis + Compose overlay for detected text/columns; full-resolution still capture then standard B/C review. | Must improve capture quality on held-out gym photos **without** false unit certainty, stale boxes or preview/render jank. Feature-flag until physical acceptance. |
-| **F — Optional visual recognizers** | Separate research for logo retrieval, illustration segmentation, machine/masking and calibrated AR if needed. | Not required for OCR; measure unknown-brand false acceptance, accuracy, latency and storage. No VLM/YOLO requirement by default. |
+| **B — Semi-auto stack capture** | One stack photo, Compose guided crop/column strip when needed, unit choice, exception-first row review, original-vs-filter comparison on demand and atomic draft/restore. Add-on weight OCR and its second photograph are **excluded**; offer manual denomination counters. | Tests cover crops/rotation, invalidation, user edits, lb→kg only after confirmation, counters/engagement semantics, stale cache, process death, battery/storage cost. Never fill missing stack values. |
+| **C — Placard and optional brand match** | Whole placard and logo region from the same source where possible, conservative labelled fields, manual corrections and "unknown"; evaluate known-logo gallery matching separately. | Reject model ID typos corrected without evidence, invented starting load, unlabelled ratio, made-up manufacturer specifications. |
+| **D — Canonical save and gym/branch association** | Map confirmed candidates to Native equipment instance/fact versions; introduce explicit optional gym/branch availability and current-location/default preference only after schema/UX gate. | Database migration and backup round-trip tests; historical equipment semantics unchanged; no inference model promotion. |
+| **E — Live viewfinder guidance** | CameraX Preview + ImageAnalysis + Compose overlay for detected text/columns; reuse the SAME OCR observation geometry and full-resolution still/review adapters as B/C. Can be engineered in a separate gate but appears in the same user capture flow. | Must improve capture quality on held-out gym photos **without** false unit certainty, stale boxes or preview/render jank. Feature-flag until physical acceptance. |
+| **F — Other optional vision** | Prototype standalone logo feature matching independently, then illustration segmentation, machine/masking and calibrated AR only if justified. | Not required for OCR; measure unknown-brand false acceptance, accuracy, latency and storage. No VLM/YOLO requirement by default. |
 
 Every stage gets a separate small PR, tests, a device acceptance sheet and a rollback route. LAB-2B itself stays isolated. Porting a Lab implementation is not permission to merge or cherry-pick its app/Gradle/JNI source wholesale.
 
 ## 6. Live camera overlay: viable, but **2D first**
 
-**Product concept:** let the camera show *what is currently visible to the recognizer* before shutter press. Draw a soft, stable outline/strip over a visible kg or lb number column; show detected unit text only when the text genuinely provides evidence; lightly prompt "Move closer", "Reduce glare", or "Hold steady" based on measurable input, not a fabricated recognition-confidence score. The user should know the **preview is provisional**; a high-resolution still photo and review decide what is saved.
+**Product concept:** let the camera show *what is currently visible to the recognizer* before shutter press, with **no add-on weight scanning**. Draw a soft, stable outline/strip over a visible kg or lb number column; show detected unit text only when the text genuinely provides evidence; lightly prompt "Move closer", "Reduce glare", or "Hold steady" based on measurable input, not a fabricated recognition-confidence score. The user should know the **preview is provisional**; a high-resolution still photo and review decide what is saved.
 
 ### Recommended pipeline
 
@@ -133,6 +185,9 @@ Record, on S25 Ultra: recognition coverage of expected visible labels; false kg/
 - [ ] Room migration/backup/replay and historical-equipment interpretation unchanged.
 - [ ] Process death, file cleanup, bounded memory and cancel/retry demonstrated.
 - [ ] Measurements from held-out stacks, placards and awkward gym lighting recorded.
+- [ ] Single stack capture succeeds without any add-on photograph; denomination counts and per-side semantics are correctly saved/recalled.
+- [ ] Gym branch association, default branch and historical source ownership are designed/approved with the Figma library experience.
+- [ ] Optional logo gallery/XFeat candidate has an unknown-brand rejection benchmark before any auto-prefill.
 - [ ] Live-overlay feature is optional and can be disabled without losing capture/review.
 - [ ] LAB-2B AI model assets/runtime are **not** shipped as a dependency of deterministic OCR.
 
