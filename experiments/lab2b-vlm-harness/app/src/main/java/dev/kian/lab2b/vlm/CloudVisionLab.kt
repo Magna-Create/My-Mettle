@@ -3,6 +3,8 @@ package dev.kian.lab2b.vlm
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.content.pm.PackageManager
+import java.security.MessageDigest
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
@@ -138,6 +140,16 @@ internal object CloudVisionLabClient {
     private const val ENDPOINT = "https://vision.googleapis.com/v1/images:annotate"
     private const val MAX_UPLOAD = 3_000_000
 
+    /** The installed APK's certificate may differ between GitHub CI and Termux builds. */
+    fun signingSha1(context: Context): String? = runCatching {
+        val info = context.packageManager.getPackageInfo(
+            context.packageName, PackageManager.GET_SIGNING_CERTIFICATES,
+        )
+        val signature = info.signingInfo?.apkContentsSigners?.firstOrNull() ?: return@runCatching null
+        MessageDigest.getInstance("SHA-1").digest(signature.toByteArray())
+            .joinToString("") { "%02X".format(it) }
+    }.getOrNull()
+
     /** Expects a source already normalised/cropped into private LAB-2B storage. */
     fun call(context: Context, privateImagePath: String, apiKey: String, feature: CloudVisionFeature): CloudVisionEvidence {
         val source = File(privateImagePath).canonicalFile
@@ -164,6 +176,10 @@ internal object CloudVisionLabClient {
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             // No secret in URL, source, diagnostics, or exception strings.
             connection.setRequestProperty("x-goog-api-key", apiKey)
+            // Required when a Google Cloud API key is Android app-restricted.
+            // Google documents that these headers can be spoofed; they are a defence in depth.
+            connection.setRequestProperty("X-Android-Package", context.packageName)
+            signingSha1(context)?.let { connection.setRequestProperty("X-Android-Cert", it) }
             connection.outputStream.use { it.write(payload) }
             val code = connection.responseCode
             if (code !in 200..299) {
