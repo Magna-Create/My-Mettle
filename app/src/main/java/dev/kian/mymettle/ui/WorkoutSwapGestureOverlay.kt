@@ -4,7 +4,7 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,6 +40,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -88,8 +90,18 @@ internal class WorkoutSwapGestureState {
         release = null
     }
 
-    fun begin(id: String, dock: Offset) {
+    /** The first long-press may start anywhere on a scrolled exercise card. */
+    fun begin(id: String, dock: Offset, pressedRoot: Offset) {
         open(id, dock)
+        handleRoot = pressedRoot
+        dragging = true
+    }
+
+    /** The handle in the already-open selector must support another hold/flick. */
+    fun beginOnOverlay(pressedRoot: Offset) {
+        if (exerciseId == null) return
+        release = null
+        handleRoot = pressedRoot
         dragging = true
     }
 
@@ -105,15 +117,23 @@ internal class WorkoutSwapGestureState {
         release = WorkoutSwapRelease(id, handleRoot, velocity, generation)
     }
 
-    fun cancel() {
+    /** An off-target release or cancelled gesture leaves the selector ready for another try. */
+    fun resetHandle() {
         dragging = false
-        dismiss()
+        release = null
+        handleRoot = dockRoot
+    }
+
+    fun cancel() {
+        resetHandle()
     }
 
     fun dismiss() {
         exerciseId = null
         dragging = false
         release = null
+        dockRoot = Offset.Zero
+        handleRoot = Offset.Zero
     }
 }
 
@@ -187,20 +207,28 @@ internal fun WorkoutSwapGestureOverlay(
         label = "workout-swap-overlay-reveal",
     )
     var lastHapticChoice by remember { mutableStateOf<WorkoutSwapChoice?>(null) }
+    var overlayRoot by remember { mutableStateOf(Offset.Zero) }
+    var handleTopLeftRoot by remember { mutableStateOf(Offset.Zero) }
 
-    BoxWithConstraints(Modifier.fillMaxSize().graphicsLayer { alpha = reveal }) {
+    BoxWithConstraints(
+        Modifier
+            .fillMaxSize()
+            .onGloballyPositioned { overlayRoot = it.localToRoot(Offset.Zero) }
+            .graphicsLayer { alpha = reveal },
+    ) {
         val widthPx = constraints.maxWidth.toFloat()
         val heightPx = constraints.maxHeight.toFloat()
         fun x(ref: Float) = ref / 453f * widthPx
         fun y(ref: Float) = ref / 983f * heightPx
         fun dp(px: Float) = with(density) { px.toDp() }
 
-        // A pressed footer control preserves its original pointer stream.
-        // Display its handle at the designed anchor; only the finger's delta is transferred.
-        val handle = Offset(
-            x(227f) + if (gesture.dragging || gesture.release != null) gesture.handleRoot.x - gesture.dockRoot.x else 0f,
-            y(759f) + if (gesture.dragging || gesture.release != null) gesture.handleRoot.y - gesture.dockRoot.y else 0f,
-        )
+        // When a long press begins on ANY exercise-card footer, the handle appears directly
+        // beneath that finger. An ordinary tap opens the menu with the handle at its Figma dock.
+        val handle = if (gesture.dragging || gesture.release != null) {
+            gesture.handleRoot - overlayRoot
+        } else {
+            Offset(x(227f), y(759f))
+        }
         val hit = resolveWorkoutSwapChoice(handle, Offset.Zero, widthPx, heightPx)
         val title = when (hit) {
             WorkoutSwapChoice.SUBSTITUTE_EXERCISE -> "Exercise"
@@ -227,48 +255,48 @@ internal fun WorkoutSwapGestureOverlay(
         }
         LaunchedEffect(gesture.release?.generation) {
             val release = gesture.release ?: return@LaunchedEffect
-            val location = Offset(
-                x(227f) + release.positionRoot.x - gesture.dockRoot.x,
-                y(759f) + release.positionRoot.y - gesture.dockRoot.y,
-            )
+            val location = release.positionRoot - overlayRoot
             val choice = resolveWorkoutSwapChoice(location, release.velocity, widthPx, heightPx)
             if (choice != null) {
                 gesture.dismiss()
                 view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                 onChoose(release.exerciseId, choice)
             } else {
-                // An inaccurate release must not accidentally apply a substitution.
-                gesture.open(release.exerciseId, gesture.dockRoot)
+                // No selected target: restore the dock and allow a fresh hold/flick.
+                gesture.resetHandle()
             }
         }
 
-        // Covers the entire exercise viewport below the fixed header and above the hotbar.
-        // Unlike the first implementation, underlying set cards are fully obscured.
-        Box(
-            Modifier
-                .fillMaxSize()
-                .padding(top = maxHeight * .122f, bottom = maxHeight * .091f)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFF101914), Color(0xFF1F3430), Color(0xFF344D4C)),
-                    ),
-                ),
+        // EXACTLY the same radial-gradient renderer as the ordinary WorkoutV2Backdrop.
+        // This fills the entire viewport, including the area sampled by the floating hotbar.
+        WorkoutV2Backdrop(Modifier.fillMaxSize())
+
+        // The inset panel extends below the hotbar rather than ending in a dark colour strip.
+        // Its lower fill gently fades into the same workout gradient.
+        val panelShape = RoundedCornerShape(
+            topStart = dp(x(24.7f)),
+            topEnd = dp(x(24.7f)),
+            bottomStart = 0.dp,
+            bottomEnd = 0.dp,
         )
-        // Independent design surface: x=17, y=129, w=418, h=678.
         Box(
             Modifier
                 .offset { IntOffset(x(17f).roundToInt(), y(129f).roundToInt()) }
-                .size(dp(x(418f)), dp(y(678f)))
-                .clip(RoundedCornerShape(dp(x(24.7f))))
+                .size(dp(x(418f)), dp(heightPx - y(129f) + y(45f)))
+                .clip(panelShape)
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0xFF14221D), Color(0xFF162925), Color(0xFF344F4E)),
+                        colorStops = arrayOf(
+                            0f to Color(0xFF14221D).copy(alpha = .93f),
+                            .63f to Color(0xFF162925).copy(alpha = .76f),
+                            1f to Color(0xFF344F4E).copy(alpha = .04f),
+                        ),
                     ),
                 )
                 .border(
                     width = .55.dp,
                     color = cyan.copy(alpha = .06f),
-                    shape = RoundedCornerShape(dp(x(24.7f))),
+                    shape = panelShape,
                 ),
         )
 
@@ -357,6 +385,27 @@ internal fun WorkoutSwapGestureOverlay(
                     )
                 }
                 .size(dp(handleWidth), dp(handleHeight))
+                .onGloballyPositioned { handleTopLeftRoot = it.localToRoot(Offset.Zero) }
+                .pointerInput(activeExerciseId) {
+                    var tracker = VelocityTracker()
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { pressedLocal ->
+                            tracker = VelocityTracker()
+                            gesture.beginOnOverlay(handleTopLeftRoot + pressedLocal)
+                            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        },
+                        onDrag = { change, delta ->
+                            change.consume()
+                            gesture.dragBy(delta)
+                            tracker.addPosition(change.uptimeMillis, gesture.handleRoot)
+                        },
+                        onDragEnd = {
+                            val velocity = tracker.calculateVelocity()
+                            gesture.finish(Offset(velocity.x, velocity.y))
+                        },
+                        onDragCancel = gesture::resetHandle,
+                    )
+                }
                 .clip(pill)
                 .background(
                     Brush.linearGradient(
