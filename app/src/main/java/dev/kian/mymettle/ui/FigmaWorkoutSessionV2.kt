@@ -61,7 +61,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
@@ -214,16 +213,9 @@ internal fun FigmaWorkoutSessionV2(
         ) {
             // Header glass samples the fully composited workout below it. The header itself stays
             // outside this source, preventing the recursive/black glass artefact seen on device.
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .hazeSource(headerHazeState)
-                    // Keep the original pointer stream alive during a hold/flick, but do
-                    // not GPU-render dozens of glass set controls behind an opaque modal.
-                    .drawWithContent {
-                        if (swapGesture.exerciseId == null) drawContent()
-                    },
-            ) {
+            // The header and hotbar glass sample this live Haze source.
+            // Never suppress its draw while showing a modal; that was blacking out glass.
+            Box(Modifier.fillMaxSize().hazeSource(headerHazeState)) {
                 WorkoutV2Backdrop(
                     modifier = Modifier.fillMaxSize().hazeSource(viewportHazeState),
                     onTap = { focusManager.clearFocus(force = true) },
@@ -320,8 +312,8 @@ internal fun FigmaWorkoutSessionV2(
 }
 
 @Composable
-private fun WorkoutV2Backdrop(modifier: Modifier = Modifier, onTap: () -> Unit) {
-    Canvas(modifier.clickable(onClick = onTap)) {
+internal fun WorkoutV2Backdrop(modifier: Modifier = Modifier, onTap: (() -> Unit)? = null) {
+    Canvas(if (onTap != null) modifier.clickable(onClick = onTap) else modifier) {
         drawRect(WorkoutV2Ink)
         drawRect(
             brush = Brush.radialGradient(
@@ -1625,6 +1617,7 @@ private fun WorkoutV2ExerciseActions(
 ) {
     val view = LocalView.current
     var dockCentre by remember { mutableStateOf(Offset.Zero) }
+    var dockTopLeftRoot by remember { mutableStateOf(Offset.Zero) }
     Column(Modifier.padding(horizontal = metrics.dp(15), vertical = metrics.dp(16))) {
         Row(
             Modifier.fillMaxWidth(),
@@ -1638,6 +1631,7 @@ private fun WorkoutV2ExerciseActions(
                     .width(metrics.dp(78))
                     .height(metrics.dp(56))
                     .onGloballyPositioned { coordinates ->
+                        dockTopLeftRoot = coordinates.localToRoot(Offset.Zero)
                         dockCentre = coordinates.localToRoot(
                             Offset(coordinates.size.width / 2f, coordinates.size.height / 2f),
                         )
@@ -1645,9 +1639,11 @@ private fun WorkoutV2ExerciseActions(
                     .pointerInput(exerciseId) {
                         var velocityTracker = VelocityTracker()
                         detectDragGesturesAfterLongPress(
-                            onDragStart = {
+                            onDragStart = { pressedLocal ->
                                 velocityTracker = VelocityTracker()
-                                swapGesture.begin(exerciseId, dockCentre)
+                                // Compose reports the local DOWN position: preserve it in root
+                                // coordinates so the floating handle begins beneath the thumb.
+                                swapGesture.begin(exerciseId, dockCentre, dockTopLeftRoot + pressedLocal)
                                 view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                             },
                             onDrag = { change, delta ->
