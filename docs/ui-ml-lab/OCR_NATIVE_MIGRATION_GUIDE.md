@@ -78,6 +78,8 @@ Store exact integer grams or decimal values (e.g. `625 g`, avoiding floating-poi
 
 **Minimal steps is a front-end UX constraint, not permission to remove validation.** Engineering can release OCR, equipment authoring and live recognition in separate PRs, yet the target user journey is *open machine → frame one stack → capture → correct only uncertain fields → save*. Existing reviewed equipment should open directly; scanning is an add-new/correct-facts path, not a compulsory workout interruption.
 
+**Two internal modes, one coherent entry point:** `Auto` should first attempt a **known machine / current-gym library match** from previously reviewed instances and optional verified logo/model evidence, then present a compact confirmation summary; if the match is uncertain or unavailable, `Semi-auto` reveals the same camera capture with editable stack/placard fields. User need not choose an AI mode at the beginning. This preserves the earlier intended Auto-versus-Semi-auto distinction without maintaining two unrelated capture systems. An unreviewed logo match can be a candidate only, never a silent save. The intended default is **recognise/reuse before requiring a new scan**, which reduces repeated work when visiting a familiar gym branch.
+
 ### Gyms, branches and defaults — required design, not currently verified in schema
 
 Earlier product discussions called for gym/location capture and re-use across branches. In the currently inspected Native domain `EquipmentInstance` has identity/label/source and preferred/session bindings; it does **not** directly carry a Gym/Branch ID. Implementing the proposed UX needs a reviewed schema/ownership gate, not an assumption that a location table exists.
