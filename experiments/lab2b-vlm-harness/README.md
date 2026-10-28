@@ -1,3 +1,5 @@
+> **0.6.2 Cloud Vision experiment:** a separately accessible **Google Cloud Vision** screen now supports an app-entered, Keystore-encrypted API key, reuse of the same placard/logo crop and individual, explicitly confirmed `LOGO_DETECTION` / `WEB_DETECTION` requests. It does not require an MNN model, alter OCR review, or feed results into Native. See [Cloud Vision setup and test guide](docs/CLOUD_VISION_EVALUATION.md). Results require a real Google Cloud project/key and S25 Ultra device testing; a source build is not evidence of brand-recognition accuracy.
+
 > **0.3 extension:** see `docs/ui-ml-lab/research/LAB_2B_THINKING_CROPS.md` for thinking controls, E4B, reviewed crops, measured result export and current Termux commands. Earlier build hashes and instructions below describe 0.2. Physical acceptance of the extension is pending.
 
 # LAB-2B VLM Harness
