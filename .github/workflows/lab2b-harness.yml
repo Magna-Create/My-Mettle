@@ -24,14 +24,19 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      # ubuntu-latest already includes the Android SDK command-line tools.
+      # The old android-actions/setup-android action fails on the removed 'tools' package.
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.1.0'
       - name: Install source verifier prerequisite
         run: sudo apt-get update && sudo apt-get install -y ripgrep
       - name: Install pinned Android tools
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.3.13750724' 'cmake;3.22.1'
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.3.13750724' 'cmake;3.22.1'
       - name: Fetch and verify runtime only (no models)
         run: python3 experiments/lab2b-vlm-harness/tools/prepare_mnn.py
       - name: Source and binary isolation
