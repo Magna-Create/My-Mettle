@@ -190,7 +190,10 @@ class WeightScanActivity : AppCompatActivity() {
         text("This is a LAB-2B JSON draft with source evidence, corrections and warnings. My Mettle production import is not connected.")
         button("Save reviewed JSON",owner.canExport()) { exporter.launch("lab2b-ocr-stack-${System.currentTimeMillis()}.json") }
         button("Copy diagnostic JSON") { copy(owner.json().toString(2)) }
-        button("Open model comparison harness") { startActivity(Intent(this,MainActivity::class.java)); finish() }
+        // Termux cloud/OCR builds do not package MNN native libraries.
+        if (!BuildConfig.OCR_ONLY) {
+            button("Open model comparison harness") { startActivity(Intent(this,MainActivity::class.java)); finish() }
+        }
         scroll.post { scroll.scrollTo(0,y) }
     }
 }
