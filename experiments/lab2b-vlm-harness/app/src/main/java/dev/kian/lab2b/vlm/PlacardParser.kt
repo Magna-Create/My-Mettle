@@ -22,9 +22,9 @@ data class PlacardExtraction(val candidates: List<PlacardCandidate>) {
 /** Label-specific text extraction, not equipment catalogue lookup or visual recognition. */
 object PlacardParser {
     const val VERSION="placard-rules-2"
-    val brands=listOf("Life Fitness","Technogym","Precor","Matrix","Hammer Strength","Cybex","Panatta",
-        "Atlantis","Nautilus","Hoist","Prime","TuffStuff","Watson","Pulse","Spirit","Star Trac",
-        "Body-Solid","Eleiko","Keiser","Freemotion","Gym80","Torque Fitness","Arsenal Strength")
+    // Keep the legacy placard extraction list in sync with the canonical-key
+    // catalogue used by OCR-first and optional Cloud Vision evaluation.
+    val brands = ManufacturerCatalogue.brands.map { it.displayName }
     private val machineNames=listOf("chest press","incline chest press","decline chest press","shoulder press","leg press",
         "hack squat","pendulum squat","belt squat","leg extension","leg curl","seated leg curl","lying leg curl",
         "lat pulldown","lat pull down","low row","seated row","high row","pullover","pec fly","pec deck",
