@@ -114,6 +114,11 @@ class WeightScanActivity : AppCompatActivity() {
         val owner=WeightScanOwner; val c=owner.capture(); val main=owner.capture(CapturePart.MAIN_STACK); val addon=owner.capture(CapturePart.ADD_ON)
         text("OCR weight stack • ${BuildConfig.VERSION_NAME}",24f)
         button("Switch to placard extraction") { startActivity(Intent(this,PlacardActivity::class.java));finish() }
+        button("Cloud Vision logo/web test") {
+            startActivity(Intent(this,CloudVisionActivity::class.java).apply {
+                c.image?.let { putExtra(CloudVisionActivity.IMAGE_PATH_EXTRA,it.normalisedPath) }
+            })
+        }
         text("No model load needed. Image → bundled OCR → kg extraction → human review → JSON draft.")
         text(owner.status,16f)
         text("1 · Choose the capture",20f)
