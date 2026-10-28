@@ -92,6 +92,14 @@ object PlacardParser {
             // The canonical keys ignore case/spacing, including "HAMMER / STRENGTH"
             // on two lines. Generic/ambiguous names remain review-only candidates.
             ManufacturerCatalogue.match(e).forEach { match ->
+                // Preserve the original OCR line geometry/raw formatting when the
+                // existing placard rules already found this brand in this region.
+                // Do not duplicate a single manufacturer's choice just because
+                // two independent local rules agree on its printed name.
+                if(found.any {
+                    it.field == PlacardField.BRAND && it.value == match.manufacturer &&
+                    it.region == region && it.sourceSha == e.sourceImageSha256
+                }) return@forEach
                 found += PlacardCandidate(
                     field = PlacardField.BRAND,
                     value = match.manufacturer,
