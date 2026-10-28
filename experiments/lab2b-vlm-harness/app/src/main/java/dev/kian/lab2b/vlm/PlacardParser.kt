@@ -21,7 +21,7 @@ data class PlacardExtraction(val candidates: List<PlacardCandidate>) {
 }
 /** Label-specific text extraction, not equipment catalogue lookup or visual recognition. */
 object PlacardParser {
-    const val VERSION="placard-rules-2"
+    const val VERSION="placard-rules-3"
     // Keep the legacy placard extraction list in sync with the canonical-key
     // catalogue used by OCR-first and optional Cloud Vision evaluation.
     val brands = ManufacturerCatalogue.brands.map { it.displayName }
@@ -38,7 +38,7 @@ object PlacardParser {
     private val machine=Regex("^(?:machine(?: name)?|equipment name|exercise name)\\s*[:=]\\s*(.*)$",RegexOption.IGNORE_CASE)
     private val model=Regex("^(?:model(?: (?:no\\.?|number|id))?|product code)\\b\\s*[:=#-]?\\s*(.*)$",RegexOption.IGNORE_CASE)
     private val brand=Regex("^(?:brand|manufacturer)\\s*[:=]\\s*(.*)$",RegexOption.IGNORE_CASE)
-    fun extract(placard:OcrEvidence?,logo:OcrEvidence?):PlacardExtraction {
+    fun extract(placard:OcrEvidence?,logo:OcrEvidence?,cloudCandidates:List<PlacardCandidate> = emptyList()):PlacardExtraction {
         val found=mutableListOf<PlacardCandidate>()
         fun scan(e:OcrEvidence,region:PlacardRegion) {
             val lines=e.blocks.flatMap { it.lines }.sortedWith(compareBy({it.box?.top ?: Int.MAX_VALUE},{it.box?.left ?: Int.MAX_VALUE}))
@@ -88,7 +88,26 @@ object PlacardParser {
                 }
             }
         }
-        placard?.let { scan(it,PlacardRegion.PLACARD) }; logo?.let { scan(it,PlacardRegion.LOGO) }
+        fun addCatalogueMatches(e:OcrEvidence,region:PlacardRegion) {
+            // The canonical keys ignore case/spacing, including "HAMMER / STRENGTH"
+            // on two lines. Generic/ambiguous names remain review-only candidates.
+            ManufacturerCatalogue.match(e).forEach { match ->
+                found += PlacardCandidate(
+                    field = PlacardField.BRAND,
+                    value = match.manufacturer,
+                    raw = match.raw,
+                    region = region,
+                    sourceSha = e.sourceImageSha256,
+                    box = null, // The matched OCR text is recorded; no invented merged box.
+                    method = if(match.kind == ManufacturerCatalogue.MatchKind.REVIEW_ONLY)
+                        "LOCAL_BRAND_REVIEW_CANDIDATE"
+                    else "LOCAL_BRAND_CANONICAL_${match.kind.name}",
+                )
+            }
+        }
+        placard?.let { scan(it,PlacardRegion.PLACARD); addCatalogueMatches(it,PlacardRegion.PLACARD) }
+        logo?.let { scan(it,PlacardRegion.LOGO); addCatalogueMatches(it,PlacardRegion.LOGO) }
+        found += cloudCandidates.filter { it.field == PlacardField.BRAND && it.method.startsWith("CLOUD_LOGO_REVIEW_CANDIDATE") }
         return PlacardExtraction(found.distinctBy { listOf(it.field,it.value,it.raw,it.region,it.box,it.method) })
     }
     private fun editDistanceOne(a:String,b:String):Boolean {
