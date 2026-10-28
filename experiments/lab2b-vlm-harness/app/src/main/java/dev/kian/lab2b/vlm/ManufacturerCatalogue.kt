@@ -3,73 +3,97 @@ package dev.kian.lab2b.vlm
 import java.text.Normalizer
 import java.util.Locale
 
-/** Experimental, auditable manufacturer/brand alias catalogue.
+/**
+ * Normalised manufacturer keys for offline OCR matching. Spaces, case and punctuation
+ * are not part of identity; display word breaks and exceptional brand casing are metadata.
  *
- * Entries are brand identities, NOT equipment models or claims of gym availability.
- * Brands from the existing PlacardParser are the baseline; additions and aliases below
- * remain deliberately conservative. A common generic word is only a review candidate,
- * never a reason to skip the Cloud fallback. No network or language model required.
+ * This is an initial curated list, not a verified exhaustive catalogue. A brand is
+ * evidence for a manufacturer only: never equipment model, mechanics or gym location.
  */
 internal object ManufacturerCatalogue {
-    internal data class Brand(val name: String, val aliases: List<String> = emptyList(), val generic: Boolean = false)
+    internal data class Brand(
+        val key: String,
+        val spacesAfter: List<Int> = emptyList(),
+        val aliasKeys: List<String> = emptyList(),
+        val generic: Boolean = false,
+        val displayOverride: String? = null,
+    ) {
+        init {
+            require(key.matches(Regex("[a-z0-9]+"))) { "Brand keys must be lower-case and compact" }
+            require(aliasKeys.all { it.matches(Regex("[a-z0-9]+")) }) { "Aliases must be compact keys" }
+            require(spacesAfter == spacesAfter.distinct().sorted() && spacesAfter.all { it in 1 until key.length }) {
+                "Invalid word break for $key"
+            }
+        }
 
-    // Initial curated coverage, not a comprehensive worldwide manufacturer database.
-    // "Hammer Strength" is distinct from "Life Fitness" even though they share ownership.
-    // Do not treat "Hammer Fitness" as an alias for "Hammer Strength".
+        val displayName: String
+            get() {
+                displayOverride?.let { return it }
+                val boundaries = listOf(0) + spacesAfter + key.length
+                return boundaries.zipWithNext { from, to ->
+                    key.substring(from, to).replaceFirstChar { it.titlecase(Locale.ROOT) }
+                }.joinToString(" ")
+            }
+    }
+
+    // Indices are zero-based CHARACTER COUNTS where a new display word begins:
+    // lifefitness breaks after character 4 -> Life Fitness
+    // hammerstrength breaks after character 6 -> Hammer Strength
+    // technogym has NO break -> Technogym (the manufacturer's actual spelling).
+    // Special case/typographic forms keep an explicit displayOverride.
     internal val brands: List<Brand> = listOf(
-        Brand("Life Fitness", listOf("lifefitness")),
-        Brand("Hammer Strength", listOf("hammerstrength")),
-        Brand("Technogym", listOf("techno gym")),
-        Brand("Matrix", listOf("matrix fitness"), generic = true),
-        Brand("Precor"),
-        Brand("Cybex", listOf("cybex international")),
-        Brand("Nautilus"),
-        Brand("Star Trac", listOf("startrac")),
-        Brand("Panatta"),
-        Brand("Gym80", listOf("gym 80", "gym-eighty", "gym eighty")),
-        Brand("Hoist", listOf("hoist fitness"), generic = true),
-        Brand("Freemotion", listOf("free motion", "freemotion fitness")),
-        Brand("Atlantis", listOf("atlantis strength"), generic = true),
-        Brand("Prime", listOf("prime fitness"), generic = true),
-        Brand("Arsenal Strength"),
-        Brand("Watson", listOf("watson gym equipment", "watson strength"), generic = true),
-        Brand("TuffStuff", listOf("tuff stuff fitness")),
-        Brand("Pulse", listOf("pulse fitness"), generic = true),
-        Brand("Spirit", listOf("spirit fitness"), generic = true),
-        Brand("Keiser"),
-        Brand("Eleiko"),
-        Brand("Torque Fitness"),
-        Brand("Body-Solid", listOf("body solid", "bodysolid")),
-        Brand("Assault Fitness", listOf("assaultfitness")),
-        Brand("Concept2", listOf("concept 2")),
-        Brand("Wattbike"),
-        Brand("Woodway"),
-        Brand("WaterRower", listOf("water rower")),
-        Brand("StairMaster", listOf("stair master")),
-        Brand("Schwinn"),
-        Brand("Exigo"),
-        Brand("Escape Fitness"),
-        Brand("Jordan Fitness"),
-        Brand("Attack Fitness"),
-        Brand("Vision Fitness"),
-        Brand("Hammer Sport", listOf("hammer sport fitness")), // Different name from Hammer Strength.
-        Brand("Booty Builder", listOf("bootybuilder")),
-        Brand("GluteBuilder", listOf("glute builder")),
-        Brand("DRAX", generic = true),
-        Brand("TECA"),
-        Brand("BH Fitness"),
-        Brand("Impulse Fitness"),
-        Brand("SportsArt", listOf("sports art")),
-        Brand("True Fitness", listOf("true fitness"), generic = true),
-        Brand("Octane Fitness"),
-        Brand("Power Plate"),
-        Brand("VersaClimber", listOf("versa climber")),
-        Brand("StairMaster"),
-        Brand("NOHRD"),
-        Brand("Sorinex"),
-        Brand("Rogue Fitness"),
-        Brand("REP Fitness"),
-    ).distinctBy { it.name }
+        Brand("lifefitness", spacesAfter = listOf(4)),
+        Brand("hammerstrength", spacesAfter = listOf(6)),
+        Brand("technogym"),
+        Brand("matrix", aliasKeys = listOf("matrixfitness"), generic = true),
+        Brand("precor"),
+        Brand("cybex", aliasKeys = listOf("cybexinternational")),
+        Brand("nautilus"),
+        Brand("startrac", spacesAfter = listOf(4)),
+        Brand("panatta"),
+        Brand("gym80", aliasKeys = listOf("gymeighty"), displayOverride = "Gym80"),
+        Brand("hoist", aliasKeys = listOf("hoistfitness"), generic = true),
+        Brand("freemotion", aliasKeys = listOf("freemotionfitness")),
+        Brand("atlantis", aliasKeys = listOf("atlantisstrength"), generic = true),
+        Brand("prime", aliasKeys = listOf("primefitness"), generic = true),
+        Brand("arsenalstrength", spacesAfter = listOf(7)),
+        Brand("watson", aliasKeys = listOf("watsongymequipment", "watsonstrength"), generic = true),
+        Brand("tuffstuff", displayOverride = "TuffStuff", aliasKeys = listOf("tuffstufffitness")),
+        Brand("pulse", aliasKeys = listOf("pulsefitness"), generic = true),
+        Brand("spirit", aliasKeys = listOf("spiritfitness"), generic = true),
+        Brand("keiser"),
+        Brand("eleiko"),
+        Brand("torquefitness", spacesAfter = listOf(6)),
+        Brand("bodysolid", displayOverride = "Body-Solid"),
+        Brand("assaultfitness", spacesAfter = listOf(7)),
+        Brand("concept2", displayOverride = "Concept2"),
+        Brand("wattbike"),
+        Brand("woodway"),
+        Brand("waterrower", displayOverride = "WaterRower"),
+        Brand("stairmaster", displayOverride = "StairMaster"),
+        Brand("schwinn"),
+        Brand("exigo"),
+        Brand("escapefitness", spacesAfter = listOf(6)),
+        Brand("jordanfitness", spacesAfter = listOf(6)),
+        Brand("attackfitness", spacesAfter = listOf(6)),
+        Brand("visionfitness", spacesAfter = listOf(6)),
+        Brand("hammersport", spacesAfter = listOf(6), aliasKeys = listOf("hammersportfitness")),
+        Brand("bootybuilder", spacesAfter = listOf(5)),
+        Brand("glutebuilder", displayOverride = "GluteBuilder"),
+        Brand("drax", displayOverride = "DRAX", generic = true),
+        Brand("teca", displayOverride = "TECA"),
+        Brand("bhfitness", displayOverride = "BH Fitness", spacesAfter = listOf(2)),
+        Brand("impulsefitness", spacesAfter = listOf(7)),
+        Brand("sportsart", displayOverride = "SportsArt"),
+        Brand("truefitness", spacesAfter = listOf(4), generic = true),
+        Brand("octanefitness", spacesAfter = listOf(6)),
+        Brand("powerplate", spacesAfter = listOf(5)),
+        Brand("versaclimber", displayOverride = "VersaClimber"),
+        Brand("nohrd", displayOverride = "NOHRD"),
+        Brand("sorinex"),
+        Brand("roguefitness", spacesAfter = listOf(5)),
+        Brand("repfitness", displayOverride = "REP Fitness", spacesAfter = listOf(3)),
+    )
 
     internal enum class MatchKind { EXACT_PHRASE, STACKED_WORDMARK, REVIEW_ONLY }
     internal data class Match(
@@ -79,10 +103,10 @@ internal object ManufacturerCatalogue {
         val reason: String,
     )
 
-    /**
-     * Replaces punctuation with boundaries before matching. Ensures that e.g.
-     * 'Matrix' doesn't match 'matrixes' and 'Pulse' doesn't match 'impulse'.
-     * No edit-distance/fuzzy auto-selection or ungrounded letter substitution.
+    /** OCR can vary spacing/case/punctuation; normalise input tokens without
+     * accepting a brand name in the *middle* of an unrelated token.
+     * E.g. "Hammer Strength" and "HAMMERSTRENGTH" both match "hammerstrength";
+     * "Pulse" does not match "Impulse Fitness" and "Matrix" does not match "matrixes".
      */
     private fun tokens(raw: String): List<String> {
         val latin = Normalizer.normalize(raw, Normalizer.Form.NFKD)
@@ -91,50 +115,59 @@ internal object ManufacturerCatalogue {
         return Regex("[a-z0-9]+").findAll(latin).map { it.value }.toList()
     }
 
-    private fun matched(haystack: List<String>, needle: List<String>): Boolean {
-        if (needle.isEmpty() || needle.size > haystack.size) return false
-        return haystack.windowed(needle.size).any { it == needle }
+    /** Bound the OCR "in string" search to at most four adjacent tokens.
+     * This supports arbitrary spaces within a wordmark while preserving token
+     * boundaries. It is not an unsafe String.contains on the entire OCR document.
+     */
+    private fun containsCanonicalPhrase(words: List<String>, key: String): Boolean {
+        for (i in words.indices) {
+            var combined = ""
+            for (j in i until minOf(words.size, i + 4)) {
+                combined += words[j]
+                if (combined == key) return true
+                if (!key.startsWith(combined)) break
+            }
+        }
+        return false
     }
 
     private fun evaluate(raw: String, stacked: Boolean): List<Match> {
-        val hay = tokens(raw)
-        if (hay.isEmpty()) return emptyList()
-        val result = mutableListOf<Match>()
-        for (brand in brands) {
-            val candidates = listOf(brand.name) + brand.aliases
-            val alias = candidates.firstOrNull { candidate ->
-                val expected = tokens(candidate)
-                matched(hay, expected) ||
-                    // A logo often OCRs 'TECHNOGYM' and 'LIFEFITNESS' without a space.
-                    (expected.size > 1 && matched(hay, listOf(expected.joinToString(""))))
-            } ?: continue
-            val aliasTokens = tokens(alias)
-            val isShortGeneric = brand.generic && aliasTokens.size == 1
+        val words = tokens(raw)
+        if (words.isEmpty()) return emptyList()
+        return brands.mapNotNull { brand ->
+            // Longer alias first so "Matrix Fitness" outranks the ambiguous
+            // "Matrix" even if both compact forms are found in the same line.
+            val matchedKey = (brand.aliasKeys + brand.key)
+                .sortedByDescending { it.length }
+                .firstOrNull { containsCanonicalPhrase(words, it) } ?: return@mapNotNull null
+            val reviewOnly = brand.generic && matchedKey == brand.key
             val kind = when {
-                isShortGeneric -> MatchKind.REVIEW_ONLY
+                reviewOnly -> MatchKind.REVIEW_ONLY
                 stacked -> MatchKind.STACKED_WORDMARK
                 else -> MatchKind.EXACT_PHRASE
             }
-            result += Match(brand.name, raw, kind,
-                if (isShortGeneric) "Generic single word; needs confirmation"
-                else if (stacked) "Text on adjacent OCR lines"
-                else "Case-insensitive whole-token phrase or known alias")
+            Match(
+                manufacturer = brand.displayName,
+                raw = raw,
+                kind = kind,
+                reason = when {
+                    reviewOnly -> "Generic brand text; confirmation or stronger evidence needed"
+                    stacked -> "Canonical brand found across adjacent OCR lines"
+                    else -> "Case/spacing-insensitive exact canonical phrase or reviewed alias"
+                },
+            )
         }
-        return result
     }
 
-    /** Search actual OCR line text, then two adjacent lines as one stacked wordmark. */
+    /** Match a list of lines from one contiguous OCR region. */
     fun match(lines: List<String>): List<Match> {
         val matches = buildList {
             lines.forEachIndexed { index, line ->
                 addAll(evaluate(line, stacked = false))
-                // Across a line break only join one adjacent pair, not the entire placard.
                 if (index + 1 < lines.size) {
                     val next = lines[index + 1]
                     val combined = "$line $next"
                     val joined = evaluate(combined, stacked = true).filter { m ->
-                        // Must genuinely cross the boundary, not rediscover a name
-                        // already present on either individual line.
                         evaluate(line, false).none { it.manufacturer == m.manufacturer } &&
                             evaluate(next, false).none { it.manufacturer == m.manufacturer }
                     }
@@ -143,20 +176,25 @@ internal object ManufacturerCatalogue {
             }
         }
         return matches.distinctBy { it.manufacturer to it.kind }
-            .sortedWith(compareBy<Match> { if (it.kind == MatchKind.REVIEW_ONLY) 1 else 0 }.thenBy { it.manufacturer })
+            .sortedWith(compareBy<Match> { if (it.kind == MatchKind.REVIEW_ONLY) 1 else 0 }
+                .thenBy { it.manufacturer })
     }
 
     fun match(evidence: OcrEvidence): List<Match> {
-        // Use structured OCR lines rather than fullText; don't join unrelated columns.
-        val lines = evidence.blocks.flatMap { block ->
-            if (block.lines.isEmpty()) listOf(block.text) else block.lines.map { it.text }
-        }
-        return match(lines)
+        // Never join the last line of one unrelated text block with the first
+        // line of the next. Keep multi-line matches within the same OCR block.
+        return evidence.blocks.flatMap { block ->
+            match(if (block.lines.isEmpty()) listOf(block.text) else block.lines.map { it.text })
+        }.distinctBy { it.manufacturer to it.kind }
+            .sortedWith(compareBy<Match> { if (it.kind == MatchKind.REVIEW_ONLY) 1 else 0 }
+                .thenBy { it.manufacturer })
     }
 
-    /** A single strong exact/stacked match is evidence to suggest; NEVER proof of a model. */
+    /** A single distinctive OCR brand is a suggestion, NOT a verified fact. */
     fun uniqueStrongCandidate(matches: List<Match>): Match? =
         matches.filter { it.kind != MatchKind.REVIEW_ONLY }
             .map { it.manufacturer }.distinct().singleOrNull()
-            ?.let { brand -> matches.firstOrNull { it.manufacturer == brand && it.kind != MatchKind.REVIEW_ONLY } }
+            ?.let { selected ->
+                matches.firstOrNull { it.manufacturer == selected && it.kind != MatchKind.REVIEW_ONLY }
+            }
 }
