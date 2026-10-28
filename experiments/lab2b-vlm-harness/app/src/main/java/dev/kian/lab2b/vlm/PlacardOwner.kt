@@ -20,6 +20,9 @@ object PlacardOwner {
     private var listener:(()->Unit)?=null
     private val captures=linkedMapOf<PlacardRegion,PlacardCapture>()
     private val cache=linkedMapOf<String,OcrEvidence>()
+    // Only named candidates and provenance, never cloud credentials or response bodies.
+    private var cloudBrands:List<PlacardCandidate> = emptyList()
+    var cloudStatus:String = "";private set
     val review=PlacardReview()
     var original:SelectedImageInfo?=null;private set
     var busy=false;private set
@@ -44,25 +47,54 @@ object PlacardOwner {
             }
         }
     }
-    private fun recompute() { review.replace(PlacardParser.extract(capture(PlacardRegion.PLACARD).evidence,capture(PlacardRegion.LOGO).evidence)) }
+    private fun recompute() {
+        review.replace(PlacardParser.extract(
+            capture(PlacardRegion.PLACARD).evidence,
+            capture(PlacardRegion.LOGO).evidence,
+            cloudBrands,
+        ))
+    }
+    private fun invalidateCloud() { cloudBrands=emptyList();cloudStatus="" }
     fun importImage(uri:Uri) { if(busy) { pendingImport=uri;return };operation("Preparing source photo…") {
         val image=withContext(Dispatchers.IO) { StorageIo.copyImage(context,uri,"lab2b/placards/images") }
-        original=image;captures.clear();captures[PlacardRegion.PLACARD]=PlacardCapture(image=image);recompute()
+        original=image;captures.clear();invalidateCloud()
+        captures[PlacardRegion.PLACARD]=PlacardCapture(image=image)
+        // Single user action: taking/selecting a photo immediately runs placard
+        // extraction and manufacturer matching; no second "identify" screen.
+        recogniseCaptures()
     } }
     fun crop(kind:PlacardRegion,region:CropRegion) { val source=original ?: return
         operation("Preparing ${kind.name.lowercase()} crop…") {
             val image=withContext(Dispatchers.Default) { CropImages.prepare(source,region) }
-            captures[kind]=PlacardCapture(region,image,capture(kind).profile);recompute()
+            captures[kind]=PlacardCapture(region,image,capture(kind).profile)
+            invalidateCloud()
+            recogniseCaptures()
         }
     }
-    fun clearLogo() { operation("Clearing logo crop…") { captures.remove(PlacardRegion.LOGO);recompute() } }
-    fun clear() { operation("Clearing placard test…") { original=null;captures.clear();cache.clear();recompute() } }
+    fun clearLogo() { operation("Clearing logo crop…") {
+        captures.remove(PlacardRegion.LOGO)
+        invalidateCloud()
+        recompute()
+    } }
+    fun clear() { operation("Clearing placard test…") {
+        original=null;captures.clear();cache.clear();invalidateCloud();recompute()
+    } }
     fun profile(kind:PlacardRegion,value:OcrEnhancement) { if(capture(kind).profile==value) return
-        operation("Changing OCR input…") { val c=capture(kind);captures[kind]=PlacardCapture(c.region,c.image,value);recompute() }
+        operation("Changing OCR input…") {
+            val c=capture(kind)
+            captures[kind]=PlacardCapture(c.region,c.image,value)
+            invalidateCloud()
+            recogniseCaptures()
+        }
     }
-    fun run() { operation("Reading placard and logo…") {
+    fun run() { operation("Reading placard and identifying manufacturer…") {
+        invalidateCloud()
+        recogniseCaptures()
+    } }
+
+    private suspend fun recogniseCaptures() {
         require(capture(PlacardRegion.PLACARD).image!=null) { "Choose a photo first" }
-        // Clear previous reviewed fields before a retry, including a failed retry.
+        // A refreshed image/filter invalidates prior field confirmation.
         review.replace(PlacardExtraction(emptyList()))
         PlacardRegion.entries.forEach { kind ->
             val old=capture(kind);val image=old.image ?: return@forEach
@@ -75,7 +107,39 @@ object PlacardOwner {
             captures[kind]=old.copy(input=input,evidence=evidence,totalMs=(System.nanoTime()-start)/1_000_000,cacheHit=cached!=null)
         }
         recompute()
-    } }
+    }
+    /**
+     * Optional, explicitly consented cloud lookup within the SAME placard review.
+     * No web request occurs merely by taking a photo. Offline OCR is authoritative
+     * evidence only for its observed text, and the cloud name remains review-only.
+     */
+    fun lookupCloudBrand() {
+        val source = capture(PlacardRegion.LOGO).image
+            ?: capture(PlacardRegion.PLACARD).image
+            ?: original ?: return
+        operation("Checking logo with Google Cloud Vision…") {
+            val key = CloudVisionKeyVault(context).read()
+                ?: error("No stored Cloud Vision key. Configure the key on this screen.")
+            val result = withContext(Dispatchers.IO) {
+                CloudVisionLabClient.call(context, source.normalisedPath, key, CloudVisionFeature.LOGO)
+            }
+            cloudBrands = result.candidates.take(8).map { item ->
+                PlacardCandidate(
+                    field=PlacardField.BRAND,
+                    value=item.name,
+                    raw="Cloud Vision LOGO_DETECTION; API score " + (item.score?.toString() ?: "not provided"),
+                    region=if(capture(PlacardRegion.LOGO).image != null) PlacardRegion.LOGO else PlacardRegion.PLACARD,
+                    sourceSha=source.normalisedSha256,
+                    box=null,
+                    method="CLOUD_LOGO_REVIEW_CANDIDATE",
+                )
+            }
+            cloudStatus=if(cloudBrands.isEmpty())
+                "Google Cloud: no named logo found (${result.elapsedMs} ms). Manufacturer remains unknown."
+            else "Google Cloud: ${cloudBrands.size} unverified logo candidate(s) (${result.elapsedMs} ms); review Brand to select."
+            recompute()
+        }
+    }
     fun choose(field:PlacardField,selection:PlacardSelection) { operation("Saving field review…") { review.choose(field,selection) } }
     fun confirm() { operation("Saving confirmation…") { review.confirm(capture(PlacardRegion.PLACARD).evidence!=null) } }
     fun export(uri:Uri) { if(busy) { pendingExport=uri;return };operation("Saving placard JSON…") {
@@ -98,6 +162,7 @@ object PlacardOwner {
                 .put("origin",s?.origin ?: "NOT_ESTABLISHED").put("evidence",s?.candidate?.let(::candidate) ?: JSONObject.NULL))
         } })
         .put("candidates",JSONArray(review.extraction.candidates.map(::candidate)))
+        .put("cloud_brand_candidates",JSONArray(cloudBrands.map(::candidate)))
         .put("captures",JSONObject().also { all -> PlacardRegion.entries.forEach { region ->
             val c=capture(region)
             all.put(region.name,JSONObject().put("crop",c.region?.let { JSONArray(listOf(it.left,it.top,it.right,it.bottom)) } ?: JSONObject.NULL)
@@ -119,6 +184,20 @@ object PlacardOwner {
             require(evidence==null || input?.normalisedSha256==evidence.sourceImageSha256) { "Saved OCR source mismatch" }
             val region=c.optJSONArray("crop")?.let { CropRegion(kind.name,it.getDouble(0),it.getDouble(1),it.getDouble(2),it.getDouble(3)) }
             captures[kind]=PlacardCapture(region,image,OcrEnhancement.valueOf(c.getString("profile")),input,evidence,if(c.isNull("total_ms")) null else c.getLong("total_ms"),c.optBoolean("cache_hit"))
+        }
+        // Only trust cloud observations associated with a restored and intact OCR
+        // image. A new crop/source must never inherit a previous brand result.
+        val availableSources=captures.values.mapNotNull { it.image?.normalisedSha256 }.toSet()
+        val cloud=data.optJSONArray("cloud_brand_candidates")
+        cloudBrands=if(cloud == null) emptyList() else (0 until cloud.length()).mapNotNull { n ->
+            val c=cloud.optJSONObject(n) ?: return@mapNotNull null
+            val method=c.optString("method")
+            val region=runCatching { PlacardRegion.valueOf(c.optString("region")) }.getOrNull()
+                ?: return@mapNotNull null
+            val sourceSha=c.optString("source_sha256")
+            val value=c.optString("value").takeIf { it.isNotBlank() && it.length<=160 } ?: return@mapNotNull null
+            if(!method.startsWith("CLOUD_LOGO_REVIEW_CANDIDATE") || sourceSha !in availableSources) return@mapNotNull null
+            PlacardCandidate(PlacardField.BRAND,value,c.optString("raw"),region,sourceSha,null,method)
         }
         recompute()
         // Changed extraction rules require a new review, not an old confirmation applied to new candidates.

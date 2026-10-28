@@ -3,7 +3,11 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// OCR and Cloud Vision require no MNN/JNI. Normal Termux builds select this
+// light mode automatically in the standalone harness wrapper.
 def prebuiltNative = providers.gradleProperty('lab2bPrebuiltNative').orNull == 'true'
+def ocrOnly = providers.gradleProperty('lab2bOcrOnly').orNull == 'true'
+if (ocrOnly && prebuiltNative) throw new GradleException('Choose OCR-only or prebuilt native, not both')
 if (prebuiltNative) {
     def manifestFile = file('../.deps/prebuilt/manifest.json')
     if (!manifestFile.isFile()) throw new GradleException('Import the source-matched native bundle first')
@@ -19,22 +23,23 @@ if (prebuiltNative) {
 
 android {
     namespace 'dev.kian.lab2b.vlm'
-    if (!prebuiltNative) ndkVersion '27.3.13750724'
+    if (!prebuiltNative && !ocrOnly) ndkVersion '27.3.13750724'
     compileSdk 35
 
     defaultConfig {
         applicationId 'dev.kian.lab2b.vlm'
         minSdk 31
         targetSdk 35
-        versionCode 8
-        versionName '0.6.1-ocr-review'
+        versionCode 9
+        versionName '0.6.2-cloud-vision-lab'
 
         ndk {
             abiFilters 'arm64-v8a'
         }
 
-        if (!prebuiltNative) externalNativeBuild { cmake { arguments '-DANDROID_STL=c++_shared' } }
+        if (!prebuiltNative && !ocrOnly) externalNativeBuild { cmake { arguments '-DANDROID_STL=c++_shared' } }
         buildConfigField 'String', 'RUNTIME_VERSION', '"MNN 3.6.1"'
+        buildConfigField 'boolean', 'OCR_ONLY', ocrOnly ? 'true' : 'false'
     }
 
     buildTypes {
@@ -59,9 +64,9 @@ android {
         // Use the STL shipped as part of the verified MNN release, consistently.
         jniLibs.pickFirsts += ['**/libc++_shared.so']
     }
-    sourceSets.main.assets.srcDirs += ['../third_party']
-    sourceSets.main.jniLibs.srcDirs = [prebuiltNative ? '../.deps/prebuilt' : '../.deps/jniLibs']
-    if (!prebuiltNative) externalNativeBuild { cmake { path 'src/main/cpp/CMakeLists.txt'; version '3.22.1' } }
+    if (!ocrOnly) sourceSets.main.assets.srcDirs += ['../third_party']
+    sourceSets.main.jniLibs.srcDirs = ocrOnly ? [] : [prebuiltNative ? '../.deps/prebuilt' : '../.deps/jniLibs']
+    if (!prebuiltNative && !ocrOnly) externalNativeBuild { cmake { path 'src/main/cpp/CMakeLists.txt'; version '3.22.1' } }
 
     buildFeatures {
         buildConfig true
@@ -78,4 +83,5 @@ dependencies {
     implementation 'androidx.exifinterface:exifinterface:1.3.7'
 
     testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303' // JVM implementation for Cloud Vision JSON contract tests
 }

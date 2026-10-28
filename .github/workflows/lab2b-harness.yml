@@ -1,7 +1,11 @@
 name: LAB-2B standalone harness
 on:
   push:
-    branches: [agent/ui-ml-lab, agent/lab2b-ocr-stack]
+    branches: [agent/ui-ml-lab, agent/lab2b-ocr-stack, agent/lab2b-cloud-vision-evaluation]
+    paths:
+      - 'experiments/lab2b-vlm-harness/**'
+      - '.github/workflows/lab2b-harness.yml'
+  pull_request:
     paths:
       - 'experiments/lab2b-vlm-harness/**'
       - '.github/workflows/lab2b-harness.yml'
@@ -20,14 +24,19 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      # ubuntu-latest already includes the Android SDK command-line tools.
+      # The old android-actions/setup-android action fails on the removed 'tools' package.
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.1.0'
+          gradle-version: '9.3.1'
       - name: Install source verifier prerequisite
         run: sudo apt-get update && sudo apt-get install -y ripgrep
       - name: Install pinned Android tools
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.3.13750724' 'cmake;3.22.1'
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.3.13750724' 'cmake;3.22.1'
       - name: Fetch and verify runtime only (no models)
         run: python3 experiments/lab2b-vlm-harness/tools/prepare_mnn.py
       - name: Source and binary isolation
@@ -65,4 +74,18 @@ jobs:
             experiments/lab2b-vlm-harness/app/build/outputs/lab2b-native.sha256
             experiments/lab2b-vlm-harness/app/build/reports/tests/testDebugUnitTest/
             experiments/lab2b-vlm-harness/app/build/reports/lint-results-debug.html
+          if-no-files-found: error
+      - name: Verify lightweight OCR-only build (Termux equivalent)
+        working-directory: experiments/lab2b-vlm-harness
+        run: |
+          ./gradlew --no-daemon -Plab2bOcrOnly=true testDebugUnitTest assembleDebug lintDebug
+          # ML Kit legitimately bundles its own OCR native library. Reject MNN only.
+          if unzip -Z1 app/build/outputs/apk/debug/app-debug.apk | grep -E 'lib/(arm64-v8a/)?(libMNN[^/]*|libllm|liblab2b_mnn|libc[+][+]_shared)[.]so$'; then
+            echo "OCR-only APK unexpectedly includes the MNN model runtime" >&2
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lab2b-ocr-cloudvision-lite-debug
+          path: experiments/lab2b-vlm-harness/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

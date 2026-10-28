@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.text.InputType
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -19,6 +20,7 @@ class PlacardActivity:AppCompatActivity() {
     private lateinit var scroll:ScrollView
     private var cameraPath:String?=null
     private var diagnostics=false
+    private val keyVault by lazy { CloudVisionKeyVault(applicationContext) }
     private val picker=registerForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let(PlacardOwner::importImage) }
     private val camera=registerForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if(ok) cameraPath?.let { PlacardOwner.importImage(uri(File(it))) } }
     private val exporter=registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { it?.let(PlacardOwner::export) }
@@ -56,6 +58,52 @@ class PlacardActivity:AppCompatActivity() {
                 .setView(column).setPositiveButton("Apply") { _,_ -> PlacardOwner.crop(kind,editor.region(kind.name)) }.setNegativeButton("Cancel",null).show()
         } catch(e:Exception) { Toast.makeText(this,e.message,Toast.LENGTH_LONG).show() }
     }
+    private fun enterCloudKey() {
+        val field=EditText(this).apply {
+            hint="Google Cloud Vision API key"
+            inputType=InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            filters=arrayOf(android.text.InputFilter.LengthFilter(256))
+        }
+        val dialog=AlertDialog.Builder(this)
+            .setTitle("Personal Google Cloud Vision key")
+            .setMessage("The key is encrypted in this test app's private storage, never committed or exported. Restrict it to the Cloud Vision API and set a quota. No upload occurs while saving.")
+            .setView(field)
+            .setPositiveButton("Save",null)
+            .setNegativeButton("Cancel",null).create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                try {
+                    keyVault.store(field.text.toString())
+                    field.text?.clear()
+                    dialog.dismiss()
+                    Toast.makeText(this,"Key saved locally. Select online logo lookup when needed.",Toast.LENGTH_LONG).show()
+                    render()
+                } catch (_:Exception) {
+                    field.error="Enter an API key, not service-account JSON."
+                }
+            }
+        }
+        dialog.show()
+    }
+    private fun offerCloudBrand() {
+        if(!keyVault.hasKey()) {
+            enterCloudKey()
+            return
+        }
+        val source=PlacardOwner.capture(PlacardRegion.LOGO).image
+            ?: PlacardOwner.capture(PlacardRegion.PLACARD).image ?: return
+        AlertDialog.Builder(this)
+            .setTitle("Check manufacturer online?")
+            .setMessage(
+                "ML Kit could not establish one distinctive manufacturer. Send ONE prepared " +
+                    (if(PlacardOwner.capture(PlacardRegion.LOGO).image!=null) "logo crop" else "placard photo") +
+                    " to Google Cloud Vision Logo Detection? The request uses your personal API key and may incur usage charges. " +
+                    "Only the selected image is uploaded; the brand remains unverified until you review it."
+            )
+            .setPositiveButton("Send once") { _,_ -> PlacardOwner.lookupCloudBrand() }
+            .setNegativeButton("Not now",null)
+            .show()
+    }
     private fun fieldOptions(field:PlacardField) {
         val choices=PlacardOwner.review.extraction.choices(field)
         val labels=choices.map { "${it.value}\n${it.region.name}: ${it.raw}\n${it.method}" } + listOf("Leave unknown / clear","Enter correction manually")
@@ -73,12 +121,12 @@ class PlacardActivity:AppCompatActivity() {
         text("Placard extraction • ${BuildConfig.VERSION_NAME}",23f)
         button("Switch to weight extraction") { startActivity(Intent(this,WeightScanActivity::class.java));finish() }
         text(owner.status)
-        text("One photo, two boxes",20f)
-        text("Crop the whole placard, then its logo if useful. Fields are extracted from the text automatically. No model download or load.")
+        text("One photo • automatic extraction",20f)
+        text("Take or choose a photo. ML Kit reads placard fields and matches manufacturer text immediately. Crop only if something was missed; a separate logo box is optional. No model download or second brand screen.")
         button("Take photo") { photograph() };button("Choose image") { picker.launch(arrayOf("image/*")) }
         owner.original?.let { text(it.sourceName) }
-        button("1 · Draw placard box",owner.original!=null) { crop(PlacardRegion.PLACARD) }
-        button("2 · Draw logo box",owner.original!=null) { crop(PlacardRegion.LOGO) }
+        button("Refine placard crop (optional)",owner.original!=null) { crop(PlacardRegion.PLACARD) }
+        button("Refine logo crop (optional)",owner.original!=null) { crop(PlacardRegion.LOGO) }
         button("Skip / clear logo box",owner.original!=null) { owner.clearLogo() }
         PlacardRegion.entries.forEach { kind -> val c=owner.capture(kind)
             if(c.image!=null) {
@@ -90,8 +138,21 @@ class PlacardActivity:AppCompatActivity() {
                 c.evidence?.let { text("${kind.name} OCR ${it.processingMs} ms ${if(c.cacheHit) "(cached; original timing)" else "(fresh)"}; total ${c.totalMs} ms") }
             }
         }
-        button("Read placard + logo",owner.original!=null) { owner.run() }
+        button("Re-read OCR (optional)",owner.original!=null) { owner.run() }
         text("What we found",20f)
+        text("The Brand field now includes matches from the same local OCR pass. No cloud request is needed when one distinctive wordmark is recognised.",13f)
+        val suggestedBrand=owner.review.extraction.suggested(PlacardField.BRAND)
+        if(owner.capture(PlacardRegion.PLACARD).evidence!=null) {
+            if(suggestedBrand==null) {
+                text("Manufacturer unresolved or ambiguous: optionally use Google Logo Detection from here.",13f)
+                button("Find manufacturer online (optional)") { offerCloudBrand() }
+            } else {
+                text("Local manufacturer suggestion: ${suggestedBrand.value} • ${suggestedBrand.method}",15f)
+                button("Compare logo online (optional)") { offerCloudBrand() }
+            }
+            if(!keyVault.hasKey()) button("Configure personal Cloud Vision key") { enterCloudKey() }
+            if(owner.cloudStatus.isNotBlank()) text(owner.cloudStatus,13f)
+        }
         text("Blank means not established. Missing specifications need no manual entry. Conflicting or spelling-only matches need a choice.")
         PlacardField.entries.forEach { field ->
             val s=owner.review.selection(field);val choices=owner.review.extraction.choices(field)
@@ -109,7 +170,13 @@ class PlacardActivity:AppCompatActivity() {
             text("${kind.name}: source ${e.sourceImageSha256}",12f);button("Copy ${kind.name.lowercase()} OCR") { copy(OcrFormatter.format(e,true)) };text(OcrFormatter.format(e,true),12f)
         } }
         button("Clear placard test",owner.original!=null) { AlertDialog.Builder(this).setMessage("Clear this photo, both crops and all extracted fields?").setPositiveButton("Clear") { _,_ -> owner.clear() }.setNegativeButton("Cancel",null).show() }
-        text("LAB-2B draft export. Production import and machine masking are not connected.",12f)
+        button("Advanced Cloud Vision logo/web tests") {
+            val source=owner.capture(PlacardRegion.LOGO).image ?: owner.original
+            startActivity(Intent(this,CloudVisionActivity::class.java).apply {
+                source?.let { putExtra(CloudVisionActivity.IMAGE_PATH_EXTRA,it.normalisedPath) }
+            })
+        }
+        text("LAB-2B draft export. Manufacturer candidates need review; production import and machine masking are not connected.",12f)
         scroll.post { scroll.scrollTo(0,y) }
     }
 }

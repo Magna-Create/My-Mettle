@@ -114,6 +114,11 @@ class WeightScanActivity : AppCompatActivity() {
         val owner=WeightScanOwner; val c=owner.capture(); val main=owner.capture(CapturePart.MAIN_STACK); val addon=owner.capture(CapturePart.ADD_ON)
         text("OCR weight stack • ${BuildConfig.VERSION_NAME}",24f)
         button("Switch to placard extraction") { startActivity(Intent(this,PlacardActivity::class.java));finish() }
+        button("Cloud Vision logo/web test") {
+            startActivity(Intent(this,CloudVisionActivity::class.java).apply {
+                c.image?.let { putExtra(CloudVisionActivity.IMAGE_PATH_EXTRA,it.normalisedPath) }
+            })
+        }
         text("No model load needed. Image → bundled OCR → kg extraction → human review → JSON draft.")
         text(owner.status,16f)
         text("1 · Choose the capture",20f)
@@ -185,7 +190,10 @@ class WeightScanActivity : AppCompatActivity() {
         text("This is a LAB-2B JSON draft with source evidence, corrections and warnings. My Mettle production import is not connected.")
         button("Save reviewed JSON",owner.canExport()) { exporter.launch("lab2b-ocr-stack-${System.currentTimeMillis()}.json") }
         button("Copy diagnostic JSON") { copy(owner.json().toString(2)) }
-        button("Open model comparison harness") { startActivity(Intent(this,MainActivity::class.java)); finish() }
+        // Termux cloud/OCR builds do not package MNN native libraries.
+        if (!BuildConfig.OCR_ONLY) {
+            button("Open model comparison harness") { startActivity(Intent(this,MainActivity::class.java)); finish() }
+        }
         scroll.post { scroll.scrollTo(0,y) }
     }
 }
