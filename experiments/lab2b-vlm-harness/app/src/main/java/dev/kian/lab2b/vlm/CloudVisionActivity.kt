@@ -40,25 +40,37 @@ class CloudVisionActivity : AppCompatActivity() {
     private var busy = false
     private var status = "Choose a photo (or reuse your existing placard/logo crop)."
     private var lastResult: CloudVisionEvidence? = null
+    private var localMatches: List<ManufacturerCatalogue.Match> = emptyList()
+    private var localOcrMs: Long? = null
+    private var localSourcePath: String? = null
+    private var localExtractedText: String = ""
 
     private val picker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null && !busy) {
             busy = true
             status = "Preparing the selected image locally…"
             lastResult = null
+            localMatches = emptyList()
+            localOcrMs = null
+            localSourcePath = null
+            localExtractedText = ""
+            imagePath = null
             render()
+            var prepared = false
             scope.launch {
                 try {
                     val img = withContext(Dispatchers.IO) {
                         StorageIo.copyImage(this@CloudVisionActivity, uri, "lab2b/cloud-vision-images")
                     }
                     imagePath = img.normalisedPath
+                    prepared = true
                     status = "Image prepared locally. Nothing uploaded yet."
                 } catch (_: Exception) {
                     status = "Could not prepare image. Choose a supported image under 64 MB."
                 } finally {
                     busy = false
                     render()
+                    if (prepared) runLocalOcr(false)
                 }
             }
         }
@@ -81,6 +93,7 @@ class CloudVisionActivity : AppCompatActivity() {
             insets
         }
         render()
+        if (imagePath != null) runLocalOcr(false)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -146,6 +159,80 @@ class CloudVisionActivity : AppCompatActivity() {
             }
         }
         dialog.show()
+    }
+
+    /**
+     * One on-device ML Kit OCR pass over the same normalized image already displayed.
+     * No cloud API call is made until the explicit "Send once" confirmation.
+     */
+    private fun runLocalOcr(offerCloudFallback: Boolean) {
+        val path = imagePath?.takeIf(::allowedImage) ?: return
+        if (busy) return
+        if (localSourcePath == path && localOcrMs != null) {
+            if (offerCloudFallback && ManufacturerCatalogue.uniqueStrongCandidate(localMatches) == null) {
+                request(CloudVisionFeature.LOGO)
+            }
+            return
+        }
+        busy = true
+        lastResult = null
+        localMatches = emptyList()
+        localOcrMs = null
+        localExtractedText = ""
+        localSourcePath = null
+        status = "Reading manufacturer text locally with ML Kit…"
+        render()
+        scope.launch {
+            var shouldOfferCloud = false
+            try {
+                val ocr = withContext(Dispatchers.Default) {
+                    OcrProcessor.recogniseLocalPath(path)
+                }
+                if (imagePath != path) return@launch
+                localMatches = ManufacturerCatalogue.match(ocr)
+                localOcrMs = ocr.processingMs
+                localSourcePath = path
+                localExtractedText = ocr.fullText.take(2000)
+                val strong = ManufacturerCatalogue.uniqueStrongCandidate(localMatches)
+                shouldOfferCloud = strong == null && offerCloudFallback
+                status = when {
+                    strong != null ->
+                        "OCR suggests ${strong.manufacturer} from printed text. No cloud request needed. Confirm the actual label."
+                    localMatches.isNotEmpty() ->
+                        "OCR found ambiguous or generic names. Review them or use optional Cloud Vision."
+                    else ->
+                        "OCR found no catalogue manufacturer. Cloud Vision is available as an optional fallback."
+                }
+            } catch (_: Exception) {
+                if (imagePath == path) {
+                    localSourcePath = path
+                    status = "Local OCR could not read this image. Cloud Vision remains available."
+                    shouldOfferCloud = offerCloudFallback
+                }
+            } finally {
+                busy = false
+                render()
+                if (shouldOfferCloud && imagePath == path && vault.hasKey()) {
+                    request(CloudVisionFeature.LOGO)
+                }
+            }
+        }
+    }
+
+    private fun identifyManufacturer() {
+        val path = imagePath?.takeIf(::allowedImage) ?: return
+        if (localSourcePath == path && localOcrMs != null) {
+            if (ManufacturerCatalogue.uniqueStrongCandidate(localMatches) == null) {
+                if (vault.hasKey()) request(CloudVisionFeature.LOGO)
+                else status = "Enter your Cloud Vision key to try an optional online fallback."
+                render()
+            } else {
+                status = "Offline OCR found a suggested manufacturer. No paid request made."
+                render()
+            }
+        } else {
+            runLocalOcr(offerCloudFallback = true)
+        }
     }
 
     private fun request(feature: CloudVisionFeature) {
@@ -245,7 +332,32 @@ class CloudVisionActivity : AppCompatActivity() {
         }
         text("Only the selected crop is sent. Prefer an existing logo crop to reduce background details.", 13f)
 
-        text("3 · Explicit online tests", 19f)
+        text("3 · Offline OCR first", 19f)
+        text("The prepared image is read locally with ML Kit; wordmarks are compared against a curated manufacturer alias list (case-insensitive). No online upload for this step.", 13f)
+        if (path != null && localSourcePath != path && !busy) {
+            button("Run manufacturer OCR", true) { runLocalOcr(false) }
+        }
+        if (busy && status.contains("locally")) text("Local OCR in progress…")
+        localOcrMs?.let { ms ->
+            text("ML Kit OCR: ${ms} ms • ${ManufacturerCatalogue.brands.size} manufacturer names in local catalogue", 15f)
+            val strong = ManufacturerCatalogue.uniqueStrongCandidate(localMatches)
+            if (strong != null) {
+                text("Suggested: ${strong.manufacturer} • ${strong.kind} • printed \"${strong.raw}\"", 16f)
+                text("This is an OCR-backed suggestion, not a confirmed equipment identity.", 13f)
+            } else if (localMatches.isEmpty()) {
+                text("No catalogue brand recognised in the local text. Unknown is valid.", 15f)
+            } else {
+                text("More than one or generic brand candidate; do not auto-select.", 15f)
+            }
+            localMatches.take(8).forEach { candidate ->
+                text("${candidate.manufacturer}: ${candidate.kind} • \"${candidate.raw}\"", 13f)
+            }
+        }
+        button("Identify brand • OCR → cloud if unresolved", path != null) {
+            identifyManufacturer()
+        }
+        text("No cloud call is made when one distinctive wordmark is recognised. Unresolved results offer an explicitly confirmed Logo Detection request.", 13f)
+        text("4 · Manual online tests (optional)", 19f)
         button("Test Logo Detection • one request", path != null && vault.hasKey()) {
             request(CloudVisionFeature.LOGO)
         }
@@ -262,7 +374,7 @@ class CloudVisionActivity : AppCompatActivity() {
             if (result.bestGuess.isNotEmpty()) text("Google best guesses (not verified): ${result.bestGuess.joinToString()}")
             if (result.matchingPages.isNotEmpty()) text("Related pages (unverified):\n${result.matchingPages.joinToString("\n")}")
         }
-        text("Responses are session-only. We never write the API key, result, or photo to JSON exports. A candidate does not prove the manufacturer, machine model or mechanics.", 13f)
+        text("Cloud results and OCR candidates are session-only and do not enter equipment facts. The encrypted API key is never written to JSON exports. A brand candidate does not prove machine model or mechanics.", 13f)
         button("Back to OCR harness") { finish() }
         scroll.post { scroll.scrollTo(0, y) }
     }
