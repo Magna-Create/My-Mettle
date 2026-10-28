@@ -219,6 +219,11 @@ class CloudVisionActivity : AppCompatActivity() {
                 .show()
         }
         text("Enable Cloud Vision API and billing in your Google Cloud project; restrict the key to Cloud Vision and set quota/billing alerts. No service-account JSON is needed.", 13f)
+        text(
+            "Android key restriction: package ${packageName} • installed signing SHA-1 " +
+                (CloudVisionLabClient.signingSha1(this) ?: "unavailable"),
+            12f,
+        )
 
         text("2 · Source image", 19f)
         val path = imagePath?.takeIf(::allowedImage)
