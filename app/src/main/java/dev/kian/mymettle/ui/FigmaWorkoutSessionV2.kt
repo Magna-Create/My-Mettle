@@ -72,6 +72,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -1699,17 +1700,31 @@ private fun WorkoutV2ExerciseActions(
             }
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 if (allSetsComplete) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth(.82f)
-                            .height(metrics.dp(18))
-                            .align(Alignment.BottomCenter)
-                            .blur(metrics.dp(12))
-                            .background(
-                                Brush.horizontalGradient(listOf(Color.Transparent, WorkoutV2Green.copy(alpha = .68f), Color.Transparent)),
-                                CircleShape,
-                            ),
-                    )
+                    // The previous 18dp blurred rectangle was cropped at its own layer bounds,
+                    // producing a straight-edged green patch beneath Complete. Paint a contained
+                    // elliptical radial fall-off instead: zero alpha before every canvas edge.
+                    // This remains behind (not inside) the clipped glass button.
+                    Canvas(Modifier.matchParentSize()) {
+                        val centre = Offset(size.width * .5f, size.height * .68f)
+                        val radius = size.width * .46f
+                        withTransform({
+                            scale(scaleX = 1f, scaleY = .32f, pivot = centre)
+                        }) {
+                            drawCircle(
+                                brush = Brush.radialGradient(
+                                    colorStops = arrayOf(
+                                        0f to WorkoutV2Green.copy(alpha = .52f),
+                                        .48f to WorkoutV2Green.copy(alpha = .24f),
+                                        1f to Color.Transparent,
+                                    ),
+                                    center = centre,
+                                    radius = radius,
+                                ),
+                                radius = radius,
+                                center = centre,
+                            )
+                        }
+                    }
                 }
                 WorkoutV2CardButton("Complete", onComplete, Modifier.fillMaxWidth(), metrics)
             }
