@@ -79,7 +79,7 @@ jobs:
         working-directory: experiments/lab2b-vlm-harness
         run: |
           ./gradlew --no-daemon -Plab2bOcrOnly=true testDebugUnitTest assembleDebug lintDebug
-          if unzip -Z1 app/build/outputs/apk/debug/app-debug.apk | grep -E '\.so$'; then
+          if unzip -Z1 app/build/outputs/apk/debug/app-debug.apk | grep -E '[.]so' ; then
             echo "OCR-only APK unexpectedly packages native libraries" >&2
             exit 1
           fi
