@@ -6,6 +6,14 @@
 >
 > Read this document with [`ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md`](./ADAPTIVE_INFERENCE_ARCHITECTURE_PLAN.md). The adaptive-inference document is an authoritative additive supplement for mathematical-model, inference-solver and backend architecture. [`CONTEXT_MODULE_ARCHITECTURE.md`](./CONTEXT_MODULE_ARCHITECTURE.md) defines the N-BIO-7E extension requirements; [`NBIO_7E_STATE_CONTEXT_CONTRACT.md`](./NBIO_7E_STATE_CONTEXT_CONTRACT.md) governs the implemented v1 candidate. [`NBIO_7F_EQUIPMENT_TRANSLATION_CONTRACT.md`](./NBIO_7F_EQUIPMENT_TRANSLATION_CONTRACT.md) governs the research-reconciled N-BIO-7F implementation boundary, and [`RESEARCH_EQUIPMENT_TRANSLATION_GUIDE.md`](./RESEARCH_EQUIPMENT_TRANSLATION_GUIDE.md) records the curated evidence/design synthesis. [`PRODUCT_ROADMAP_GATES.md`](./PRODUCT_ROADMAP_GATES.md) remains authoritative for collaboration/research/Figma and product-safety gates.
 
+## Interim product priority: Native Stable daily use (16 November 2026)
+
+**Delivery sequencing decision, not a change to N-BIO model mathematics or current authority:** establish a reliable Native Stable build before resuming new N-BIO-8/9 behaviour and full graphics-engine work. Bring forward safe Room migration, media-inclusive backup, workout usability, optional effort/RIR and equipment/context recording. Conduct the one-time Lite history migration as a separate **manually reviewed** task. A future separately installed Lab build may read canonical Stable evidence through a versioned, local, read-only interface; it must not edit Stable history.
+
+The normal product remains on the established benchmark where experimental V7 outputs are quarantined. Evidence-first development means building reversible candidate behaviour and measurement, **not** silently promoting uncalibrated inference, claiming measured physiology or abandoning strict data integrity.
+
+Authoritative implementation boundaries continue below; delivery details are in [Native Stable Cutover](../NATIVE_STABLE_CUTOVER.md), [Stable–Lab Evidence Bridge](../STABLE_LAB_EVIDENCE_BRIDGE.md), and [Prospective Evidence and Experiments](./PROSPECTIVE_EVIDENCE_AND_EXPERIMENTS.md). See [plain-English interpretation](../for-humans/NBIO_GUIDE.md) for planning conversations.
+
 ## 1. Purpose
 
 N-BIO exists to turn immutable training/performance evidence into versioned, uncertainty-aware state that may later support safe programme decisions. The system must remain capable of changing its models without rewriting historical facts.
