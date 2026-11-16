@@ -2,6 +2,12 @@
 
 Use this directory in the following order.
 
+## Human-readable overview and current delivery priority
+
+Before planning a new N-BIO implementation, consult [the human-facing N-BIO guide](../for-humans/NBIO_GUIDE.md), [Native Stable cutover](../NATIVE_STABLE_CUTOVER.md), and [the evidence-first experimental plan](./PROSPECTIVE_EVIDENCE_AND_EXPERIMENTS.md).
+
+**16 November 2026 direction:** the immediate priority is a data-safe Native daily driver with optional effort, equipment and context logging. V8/V9 and aggressive backend/graphics optimisation are paused as delivery milestones, not cancelled. PD-001–004 remain open empirical investigations; their remaining evidence can be gathered and evaluated prospectively while Stable is used, without granting SHADOW predictions automatic workout authority. The detailed mathematical/model/authority contracts below are unchanged.
+
 ## Authority
 
 1. [`PLAN.md`](./PLAN.md) — overarching phase/architecture/acceptance contract.
