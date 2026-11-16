@@ -8,6 +8,14 @@
 
 ---
 
+## Interim collaboration priority: daily-use evidence first (16 November 2026)
+
+The near-term work is [Native Stable Cutover](../NATIVE_STABLE_CUTOVER.md): reliable daily workout capture and data safety ahead of new V8/V9 coaching or a full interface-rendering rewrite. Proposed early inputs include optional **RIR/failure reporting**, **manual equipment identity/actual-use capture**, and **timestamped, retrospectively distinguishable context episodes**.
+
+These proposals are **not finished UI contracts**. Review optionality, field semantics, error correction, default-vs-session equipment selection and related Figma interactions with the user before implementation. Follow the existing rule that uncertain predictions can be tentative suggestions but cannot masquerade as measured physiology or silently author high-impact changes. See [evidence-first experiments](./PROSPECTIVE_EVIDENCE_AND_EXPERIMENTS.md).
+
+The Local Stable–Lab evidence bridge is proposed as a pull-only, read-only boundary; see [STABLE_LAB_EVIDENCE_BRIDGE.md](../STABLE_LAB_EVIDENCE_BRIDGE.md). The original research/design gates and cutover safety conditions below **remain in force**.
+
 # 1. Why this supplement exists
 
 N-BIO-6 and N-BIO-7 are primarily evidence/inference foundations. From late N-BIO-7 onward, however, several decisions become inseparable from user experience, user intent, equipment context and product policy.
