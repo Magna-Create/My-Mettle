@@ -8,6 +8,20 @@ This repository is the canonical native application. The first product scope is 
 
 Migration reference: `Magna-Create/My-Mettle-Lite-Legacy`.
 
+## November 2026 delivery direction (planned, not yet implemented)
+
+The next priority is **Native Stable Cutover**: make the existing Kotlin workout app trustworthy and useful for daily use, collect optional RIR/effort, equipment and context evidence, and keep unvalidated N-BIO models non-authoritative. Pause major V8/V9 work and the full graphics overhaul until Stable data capture is reliable.
+
+Stable will own permanent workout history; a separately installed Dev/Lab application will eventually read versioned evidence via a **local, user-approved, read-only connector**. Lab must never mutate Stable data. The one-time Lite → Native historical migration will be **manually reviewed in a separate workstream**, not delegated silently to a general-purpose converter.
+
+**These documents record the plan, not completed product features:**
+
+- [Stable release scope and safety/cutover gates](docs/NATIVE_STABLE_CUTOVER.md)
+- [Proposed Stable → Lab evidence bridge](docs/STABLE_LAB_EVIDENCE_BRIDGE.md)
+- [Evidence capture, PD-001–004 investigations, models and performance](docs/n-bio-vnext/PROSPECTIVE_EVIDENCE_AND_EXPERIMENTS.md)
+- [Reusable UI and hybrid graphics direction](docs/GRAPHICS_AND_COMPONENT_LIBRARY.md)
+- [Plain-English project/N-BIO guide](docs/for-humans/README.md)
+
 ## Android identity
 
 - Release: `dev.kian.mymettle` — **My Mettle**
