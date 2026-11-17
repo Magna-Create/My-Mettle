@@ -12,7 +12,7 @@ This does **not** mean uncertainty automatically authorises a strong clinical/bi
 
 ## Shared evaluation loop for PD-001 through PD-004
 
-1. Capture canonical evidence with identity, units, execution/equipment semantics, timestamps and correction provenance.
+1. Capture canonical evidence with identity, units, **actual set-level execution variation**, equipment semantics, timestamps and correction provenance.
 2. Freeze the candidate and a simple benchmark's **pre-outcome** predictive distribution and model/config/solver version.
 3. Observe the user's actual outcome and any effort/equipment/context metadata without overwriting the earlier prediction.
 4. Score eligible held-out observations chronologically; report calibration, bias, error, coverage, failure and runtime/energy. Count independent episodes, not duplicate rows, where appropriate.
@@ -33,6 +33,14 @@ A small optional **probe** may collect otherwise unobservable information, e.g. 
 | PD-004 equipment transfer (7F) | Does known equipment context improve predictions across machines/profiles? | Per-set machine binding, model/instance/facts/angle/entry basis; A/B evidence | Better cross-profile transfer within tested relationships; not universal mechanical equivalence |
 
 The existing PD entries remain OPEN until their independent evidence-backed closure conditions are met. Data collection and provisional product usefulness do not silently close them.
+
+## Set-level execution variants: prerequisite for meaningful progression evidence
+
+**Stable requirement; not yet implemented:** for progressive exercises such as dragon flags, capture the **actual form/lever variant per performed set**, separate from the exercise name, equipment and RIR. A bent-knee ascent with a straight-leg descent is a meaningful asymmetric single variation. A set that changes technique between repetitions is **mixed**, and must either carry a known breakdown or remain mixed/unknown; never silently treat all repetitions as equivalent.
+
+Existing set observations already reference a versioned execution profile, but the appropriate mapping from user-selectable variants to exercise execution profiles and explicit phase/mixed-set representation requires implementation and design review. Preserve named, versioned presets and per-set provenance; do not infer performance equivalence or universal stage multipliers before empirical testing. This improves PD-001/PD-002 and future V8 decision evidence.
+
+See [per-set execution variants](../SET_EXECUTION_VARIANTS.md) for minimum UI, semantic distinctions, migration and acceptance.
 
 ## Optional set-level effort capture
 
