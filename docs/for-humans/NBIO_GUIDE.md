@@ -25,6 +25,12 @@ The short version: **remember → estimate → compare → eventually recommend*
 
 A model being **structurally complete** means its code, mathematical invariants, replay and defined tests passed a stated gate. It does **not** certify that its biological interpretation or predictions are accurate for every person.
 
+## Why some exercises need a set configurator
+
+A dragon flag performed with bent knees is not directly comparable to one performed with straight legs. Nor is "bent going up, straight going down" necessarily the same as either. My Mettle Stable needs a small **variation selector for each relevant set**, so the app records what actually happened rather than assuming all repetitions of a named exercise are equivalent. Mixed variations can be marked mixed without demanding detailed rep-by-rep tracking.
+
+This is a **data-quality feature needed before reliable daily use**, not another big model to design. Technical details: [per-set execution variants](../SET_EXECUTION_VARIANTS.md).
+
 ## The four postponed investigations
 
 ### PD-001: Can N-BIO estimate your capabilities accurately?
