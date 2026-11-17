@@ -35,6 +35,7 @@ Stable updates still need tested, explicit Room migrations and compatibility che
 | Area | Stable milestone |
 | --- | --- |
 | Workout loop | Programme/day/mode, start/resume, set editing, rest timer, exercise completion, session completion, history; preserve existing behavioural parity |
+| Execution variations | **Required before daily use for relevant exercises:** lightweight per-set configurator for stage/form (e.g. dragon flag bent, half-bent, bent-up/straight-down, straight); preserve actual execution, mixed/unknown state and historical versioning. See [execution variants](./SET_EXECUTION_VARIANTS.md). |
 | RIR / effort | Optional observation per completed set; distinguish estimated reps-in-reserve, technical failure, actual unsuccessful rep and early stopping; unknown remains unknown |
 | Equipment | Manual machine/implement identity, additional equipment, permanent preference versus session-only override, relevant setup/calibration facts, and historical equipment binding |
 | Context | Timestamped optional episodes (e.g. holiday, unwell, training break) including explicit resolution, retrospectively recorded status and overlap |
@@ -42,7 +43,7 @@ Stable updates still need tested, explicit Room migrations and compatibility che
 | N-BIO | Keep current dependable product behaviour; collect richer evidence for V7/V8; do not invent unvalidated coaching authority |
 | Diagnostics | Crash/error visibility, export/restore and basic latency/energy measurement appropriate for daily use |
 
-The complete equipment camera scanner, angle-measuring workflow, advanced visualisation, model parameter editor and automated coaching are **later options**, not blockers for first daily use. Any user-facing equipment or effort interaction should be reviewed against the design/product gates before implementing.
+The minimal per-set variation selector is **in scope** for Stable because the movement's execution can fundamentally change the meaning of reps. The complete equipment camera scanner, angle-measuring workflow, advanced visualisation, model parameter editor and automated coaching are **later options**, not blockers for first daily use. Any user-facing equipment or effort interaction should be reviewed against the design/product gates before implementing.
 
 ## One-time Lite migration is a separate, manually reviewed task
 
@@ -65,7 +66,7 @@ No daily-driver cutover until all of the following pass on an installed device:
 1. Stable's destructive fallback and reset paths are disabled or inaccessible; incompatible/newer schema opens fail safely without destroying history.
 2. Explicit migration tests cover the schema versions that a Stable upgrade could encounter, with integrity checks and a recoverable failure path.
 3. Native full export → restore → representative workout/history replay succeeds. **Current implementation backs up Room tables, not external setup-photo bytes; media-inclusive recovery is outstanding** (see NATIVE_BACKUP_FORMAT.md).
-4. Routine history, session states, set history, photos, notes, and timers survive the curated Lite migration and installed-device smoke tests.
+4. Routine history, session states, per-set execution variations, set history, photos, notes, and timers survive the curated Lite migration and installed-device smoke tests.
 5. Process death, interrupted sessions, app upgrade, background timer behaviour and duplicate submit actions are tested.
 6. An initial period of real Stable workouts confirms usability before retiring Lite as the daily driver.
 7. A minimal Stable → Lab evidence bridge can be validated independently, or explicitly deferred without blocking the **data-safe** Stable launch. The bridge is desirable early but must not delay basic reliable recording indefinitely.
@@ -76,7 +77,7 @@ Retain an independently restorable Lite backup until the real-world cutover is a
 
 1. Freeze feature scope; identify an exact source commit; document current migration/data-safety gaps.
 2. Resolve Stable database safety and media-complete backup/restore.
-3. Implement the minimal RIR/effort and equipment logging path; verify immutable evidence and corrections.
+3. Implement the minimal per-set execution-variation configurator, RIR/effort and equipment logging paths; verify immutable evidence and corrections.
 4. Reduce costly workout-screen glass and validate smooth interaction/thermal behaviour.
 5. Run manually reviewed Lite migration in its own workstream and validate on-device.
 6. Establish Stable daily use; then build/verify the pull-only Lab evidence bridge.
@@ -86,6 +87,7 @@ Retain an independently restorable Lite backup until the real-world cutover is a
 
 ## Still to decide during implementation
 
+- Exact set variation selector and preset semantics for progressive/multi-stage exercises (including distinct ascent and descent forms), with user sign-off; avoid compulsory per-rep tracking.
 - Exact RIR/failure input design and optionality (Figma/user sign-off).
 - Minimum manual equipment setup fields and session-vs-default selection.
 - Release signing, rollback, app-update and backup location policy.
