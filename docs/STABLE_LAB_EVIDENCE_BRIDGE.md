@@ -36,6 +36,7 @@ The exposed model is an **interchange schema independent of Room**. At minimum:
 - Stable canonical identifiers, entity type, schema/semantic version, origin, creation/observation/effective/revision timestamps.
 - Programme/routine/exercise/execution-profile identity needed to interpret each observation.
 - Completed session and set observations with entered and canonical metric units, side/laterality, source attribution and corrections.
+- User-confirmed per-set execution variant/preset ID and semantic version (including asymmetric ascent/descent where applicable), optional within-set stage breakdown, mixed/unknown state and later corrections; see [execution variants](./SET_EXECUTION_VARIANTS.md).
 - User-reported effort: RIR estimate, failure type, omitted/unknown state and interpretation version.
 - Equipment model/instance, versioned fact/calibration assertions and historical exercise/set bindings.
 - Optional context evidence/episodes including start/end, explicit resolution, retrospective vs contemporaneous authoring and privacy/consent metadata.
@@ -69,6 +70,7 @@ These are three separate contracts. Do not disguise a database dump as a long-te
 - Lab queries allowed evidence after explicit pairing; unrelated apps cannot.
 - Lab cannot modify Stable through provider calls, crafted URIs or oversized/malformed requests.
 - Stable and Lab remain independent when Lab clears its database or is uninstalled.
+- A changed/corrected execution-variant selection propagates without silently revising older model evaluations.
 - A correction or deletion in Stable propagates to the next Lab read; imported duplicate IDs are idempotent.
 - Retrospective annotations preserve their original recording times.
 - Interrupted, partial and unsupported-version reads fail visibly and can safely retry.
