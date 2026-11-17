@@ -18,6 +18,7 @@ Stable will own permanent workout history; a separately installed Dev/Lab applic
 
 - [Stable release scope and safety/cutover gates](docs/NATIVE_STABLE_CUTOVER.md)
 - [Proposed Stable → Lab evidence bridge](docs/STABLE_LAB_EVIDENCE_BRIDGE.md)
+- [Required per-set execution-variation configurator for stage-dependent exercises](docs/SET_EXECUTION_VARIANTS.md)
 - [Evidence capture, PD-001–004 investigations, models and performance](docs/n-bio-vnext/PROSPECTIVE_EVIDENCE_AND_EXPERIMENTS.md)
 - [Reusable UI and hybrid graphics direction](docs/GRAPHICS_AND_COMPONENT_LIBRARY.md)
 - [Plain-English project/N-BIO guide](docs/for-humans/README.md)
