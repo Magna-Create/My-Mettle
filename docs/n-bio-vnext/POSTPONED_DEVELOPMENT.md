@@ -6,6 +6,14 @@
 
 ---
 
+## Working with these investigations while using Native Stable
+
+**16 November 2026 clarification:** PD-001–004 are primarily empirical questions; they are **not** four automatic blockers to a safe workout recorder. A Stable release can collect higher-quality evidence (optional RIR/failure, equipment bindings, timestamped context episodes) while versioned candidate models remain SHADOW/non-authoritative. Predictions may be frozen before outcomes and compared prospectively against the existing baseline. Negative or inconclusive results must remain visible.
+
+For the proposed capture and experimental method see [PROSPECTIVE_EVIDENCE_AND_EXPERIMENTS.md](./PROSPECTIVE_EVIDENCE_AND_EXPERIMENTS.md); for non-technical explanations see [NBIO_GUIDE.md](../for-humans/NBIO_GUIDE.md). **No PD status or product-authority restriction changes** as a result of this plan. Real-history adequacy, independent episodes, measurement semantics and the original closure conditions below still govern promotion.
+
+---
+
 # PD-001 — N-BIO-7C empirical capability accuracy validation
 
 ## Status

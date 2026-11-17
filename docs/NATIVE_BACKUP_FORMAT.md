@@ -1,5 +1,13 @@
 # My Mettle Native full-backup format
 
+## Important Stable cutover gap (16 November 2026)
+
+**This contract currently covers Room application tables; it does not itself package app-private exercise setup photograph files.** Migrated photographs are referenced by Room rows but stored separately under application files. A table-only JSON backup is therefore **not yet complete disaster recovery for all user media**. Add a media-aware archive/restore contract with integrity checks before Stable becomes the authoritative daily driver; validate it on an installed device.
+
+The example below includes a historical Room 14 schema value. For a new cutover or restore, read the actual Room schema version from current code; the example is not an assurance of compatibility with the latest N-BIO feature branch.
+
+The planned [Stable–Lab evidence bridge](./STABLE_LAB_EVIDENCE_BRIDGE.md) and [model/experiment snapshot](./n-bio-vnext/PROSPECTIVE_EVIDENCE_AND_EXPERIMENTS.md) are different interchange contracts and **must not be treated as recovery backups**.
+
 ## Purpose
 
 The Native full backup is the restoration contract for My Mettle Native.
@@ -21,7 +29,7 @@ A backup records:
 
 Restore requires the backup `databaseSchemaVersion` to equal the Room schema currently opened by the app. A mismatch is rejected before database mutation. During pre-cutover development, an older backup should be translated to the latest Native format rather than silently guessed/migrated by the restore UI.
 
-The current N-BIO-7A.5 database is Room 14. Because the backup discovers application tables from the live schema rather than maintaining a second table list, Room 14 snapshots include `note_interpretation_run` and `context_annotation` alongside their canonical raw owners such as `session_review` and `exercise_reflection`. Raw note text and derived interpretation/provenance therefore round-trip as distinct state.
+The historical N-BIO-7A.5 database was Room 14. Because the backup discovers application tables from the live schema rather than maintaining a second table list, Room 14 snapshots include `note_interpretation_run` and `context_annotation` alongside their canonical raw owners such as `session_review` and `exercise_reflection`. Raw note text and derived interpretation/provenance therefore round-trip as distinct state.
 
 A Room 13 Native backup is intentionally rejected by Room 14 under this exact-schema policy; it must be translated to the current Native format before restore.
 

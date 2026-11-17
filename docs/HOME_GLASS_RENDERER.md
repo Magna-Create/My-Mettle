@@ -1,5 +1,13 @@
 # Daily Update adaptive layout and glass renderer
 
+## Near-term Stable simplification vs future graphics work
+
+**Proposed, not implemented (16 November 2026):** retain Jetpack Compose and the existing working glass framework for now. In the Native Stable workout/exercise area, replace costly live glass with simpler surfaces where necessary for smooth interaction. Keep header/hotbar glass only if sustained real-device performance remains acceptable. The full renderer/material/component-library overhaul is explicitly deferred until a safe daily-driver build exists.
+
+The later design direction is a modular Compose component library, reusable configurable materials, retained/shared scene sources and selective position-aware glass shaders, with an independently scheduled 3D viewport for the N-BIO character when justified. A shader cannot sample arbitrary Compose content purely because it knows its position. See [Graphics and Component Library](./GRAPHICS_AND_COMPONENT_LIBRARY.md) for assumptions, limitations and experiments.
+
+The existing Haze implementation documented below remains the **current** implementation until code and benchmarks demonstrate a replacement.
+
 ## Layout contract
 
 The Daily Update prototype is authored against a 453-unit-wide frame. The Android implementation reads the current app window through Material 3 Adaptive rather than inspecting physical display pixels:

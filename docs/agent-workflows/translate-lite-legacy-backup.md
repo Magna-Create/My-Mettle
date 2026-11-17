@@ -2,6 +2,12 @@
 
 Use the installed `translate-my-mettle-backup` skill when asked to prepare or enrich a Lite Legacy JSON export for the Kotlin Native app. This repository file preserves the project-specific contract beside its changing implementation.
 
+## Current one-time cutover policy (16 November 2026)
+
+The user's initial Lite → Native daily-driver migration is **manually reviewed in a separate conversation**, with uncertain historical facts decided case by case. Do not automatically run a generic translation or infer recruitment/equipment semantics from display labels. Existing import helpers and the translation skill remain available **only as tools for executing explicitly approved mappings and validating the resulting artefact**.
+
+See [Native Stable Cutover](../NATIVE_STABLE_CUTOVER.md) and [migration contract](../MIGRATION.md). Do not place personal Lite backups, annotated dates, photos or health data in the public repository. This workflow describes technical enrichment mechanics; it is not approval to perform a live migration without the user's review.
+
 ## Source of truth
 
 Read the current implementation before changing an export:

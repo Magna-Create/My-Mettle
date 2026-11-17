@@ -1,5 +1,15 @@
 # Native migration contract
 
+## November 2026: manually reviewed Lite → Native cutover
+
+The next product milestone is [Native Stable Cutover](./NATIVE_STABLE_CUTOVER.md). Historical exercise **execution stage/lever** (e.g. fully bent vs bent-up/straight-down dragon flags) must also be manually reviewed when reconstructable; do not infer observed variants from exercise titles, target RIR or technique instructions. Retain unknown stage if not verifiable. See [per-set execution variants](./SET_EXECUTION_VARIANTS.md).
+
+The user's **first authoritative migration is a separate, manually reviewed workstream/conversation**, not a one-click generic translation job. Use a fresh Lite export once any ongoing Lite session is finished; review historical exercise execution, equipment meanings, programme versions, source timing, historical context and unknown fields with the user. Preserve original raw evidence and provenance; any custom script/import path may only execute those reviewed decisions, not invent semantics.
+
+Existing LegacyV6 reader/importer and reviewed recruitment-supplement infrastructure can be reused and tested, but **normal Native backup UI currently does not import Lite JSON**. Do not conflate these mechanisms. Migration validation must include immutable history and setup media; no personal export should be committed to this public repo.
+
+The prior frozen source branch and automatic translation workflow remain technical reference material; they do not override the deliberately manual cutover decision. See [Stable–Lab Evidence Bridge](./STABLE_LAB_EVIDENCE_BRIDGE.md) for **subsequent** read-only sharing of canonical Native evidence (a different problem from Lite history migration).
+
 ## Source of truth
 
 The migration source is `Magna-Create/My-Mettle-Lite-Legacy`.

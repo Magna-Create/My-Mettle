@@ -2,6 +2,12 @@
 
 > **Status:** N-BIO-7B.X engineering audit, 2026-08-31. This document concerns numerical execution only. It does not select or change the mathematical N-BIO model and does not authorize product behaviour changes.
 
+## 16 November 2026 operational priority
+
+The **implemented numerical reference is Kotlin/JVM**. C++/NEON, Rust/NEON, Vulkan and LiteRT/NPU remain candidates **only after** representative benchmark evidence; the presence of a device accelerator is not sufficient justification. The first product milestone is the [Native Stable daily driver](../NATIVE_STABLE_CUTOVER.md) with optional richer evidence collection, not a compulsory native rewrite.
+
+Proceed in two complementary directions: finish a functional Kotlin end-to-end evaluation path and eliminate avoidable recomputation; then profile bottlenecks and compare isolated C++ and, where warranted, Rust SIMD kernels against the same Kotlin result for numerical fidelity, latency, battery/energy, memory and JNI/FFI overhead. A future implementation may use both algorithmic reuse **and** NEON acceleration. See [evidence/experiment plan](./PROSPECTIVE_EVIDENCE_AND_EXPERIMENTS.md). Existing solver authority and validation gates below are unchanged.
+
 ## 1. Decision boundary
 
 N-BIO deliberately separates:
